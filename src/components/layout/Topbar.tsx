@@ -21,59 +21,59 @@ export default function Topbar() {
   const title = TITLES[pathname] || 'Dashboard'
 
   return (
-    <header className="h-20 border-b border-slate-200 bg-white sticky top-0 z-40 px-10 flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-          <span>ACPROBEC</span>
-          <ChevronRight size={12} className="text-slate-300" />
-          <span className="text-[#4f7ef8]">{title}</span>
+    <header className="topbar sticky top-0 z-40 px-6 h-[var(--topbar-h)] flex items-center justify-between">
+      <div className="topbar-left flex items-center gap-[10px]">
+        <div className="breadcrumb text-[12px] text-[var(--text3)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
+          ACPROBEC 
+          <span className="breadcrumb-sep opacity-40">/</span> 
+          <span className="text-[var(--text1)] font-bold text-[13px]">{title}</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-8">
-        <div className="hidden lg:flex items-center bg-slate-50 rounded-xl px-4 py-2.5 gap-3 border border-slate-200 focus-within:ring-4 focus-within:ring-[#4f7ef8]/5 transition-all w-80">
+      <div className="topbar-right flex items-center gap-[10px]">
+        <div className="hidden lg:flex items-center bg-slate-50 rounded-lg px-4 py-2 gap-3 border border-slate-200 focus-within:ring-4 focus-within:ring-[var(--accent)]/5 transition-all w-72">
           <Search size={16} className="text-slate-400" />
           <input 
             type="text" 
-            placeholder="Pesquisar registros..." 
-            className="bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400 w-full font-medium"
+            placeholder="Pesquisar..." 
+            className="bg-transparent border-none outline-none text-[12.5px] text-slate-700 placeholder:text-slate-400 w-full font-medium"
           />
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 pr-4 border-r border-slate-200">
-             <button 
-               className="p-2.5 text-slate-400 hover:text-[#ef4444] hover:bg-red-50 rounded-xl transition-all"
-               title="Limpar Filtros"
-             >
-               <Trash2 size={18} />
-             </button>
-             <button 
-               className="p-2.5 text-slate-400 hover:text-[#4f7ef8] hover:bg-blue-50 rounded-xl transition-all relative"
-               title="Notificações"
-             >
-               <Bell size={18} />
-               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#ef4444] rounded-full border-2 border-white"></span>
-             </button>
-          </div>
+        <div className="flex items-center gap-2">
+           <button 
+             className="btn btn-outline btn-icon w-[34px] h-[34px] p-0 flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)] transition-all"
+             title="Limpar Filtros"
+           >
+             <Trash2 size={16} />
+           </button>
+           <button 
+             className="btn btn-outline btn-icon w-[34px] h-[34px] p-0 flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)] transition-all relative"
+             title="Notificações"
+           >
+             <Bell size={16} />
+             <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border border-white"></span>
+           </button>
+        </div>
 
-          <div className="flex items-center gap-3">
-             <button 
-               onClick={() => router.push('/importar')}
-               className="flex items-center gap-2 bg-white text-slate-700 text-xs font-bold px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
-             >
-               <Download size={14} className="text-slate-400" />
-               <span>Importar</span>
-             </button>
-             
-             <button 
-               onClick={() => window.print()}
-               className="flex items-center gap-2 bg-[#4f7ef8] text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-[#3d65d4] transition-all shadow-lg shadow-blue-500/20 active:scale-95"
-             >
-               <FileText size={14} />
-               <span>Exportar PDF</span>
-             </button>
-          </div>
+        <div className="h-6 w-[1px] bg-slate-200 mx-1"></div>
+
+        <div className="flex items-center gap-2">
+           <button 
+             onClick={() => router.push('/importar')}
+             className="btn btn-outline h-[34px] px-4 py-0 flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)] transition-all text-[12px] font-medium"
+           >
+             <Download size={14} />
+             <span>Importar</span>
+           </button>
+           
+           <button 
+             onClick={() => window.print()}
+             className="btn btn-primary h-[34px] px-4 py-0 flex items-center gap-2 rounded-[var(--radius-sm)] text-white text-[12px] font-medium transition-all"
+           >
+             <FileText size={14} />
+             <span>Exportar PDF</span>
+           </button>
         </div>
       </div>
     </header>

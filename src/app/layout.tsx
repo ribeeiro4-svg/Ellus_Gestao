@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { DM_Sans, DM_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const dmSans = DM_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ['300', '400', '500', '600', '700'],
+  variable: "--font-dm-sans",
+});
+
+const dmMono = DM_Mono({
+  subsets: ["latin"],
+  weight: ['400', '500'],
+  variable: "--font-dm-mono",
 });
 
 export const metadata: Metadata = {
-  title: "ACPROBEC Dashboard | Gestão Inteligente",
-  description: "Sistema de gestão financeira e de associados para ACPROBEC. Desenvolvido por INOVACONT.",
+  title: "Dashboard — ACPROBEC · INOVACONT",
+  description: "Sistema de gestão inteligente. Especialista em gestão de associações e benefícios.",
 };
 
 export default function RootLayout({
@@ -18,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} h-full antialiased`}>
-      <body className="min-h-full">
+    <html lang="pt-BR" className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}>
+      <body className="font-sans min-h-full">
         {children}
       </body>
     </html>

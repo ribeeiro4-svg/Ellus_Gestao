@@ -1,148 +1,215 @@
 'use client'
-import KpiCard from '@/components/ui/KpiCard'
-import ChartCard from '@/components/ui/ChartCard'
-import BarChart from '@/components/charts/BarChart'
-import LineChart from '@/components/charts/LineChart'
+import React, { useState } from 'react'
 import { 
   DollarSign, 
   Users, 
-  Target, 
-  ArrowUpRight, 
   Briefcase, 
   Activity,
   Calendar
 } from 'lucide-react'
+import KpiCard from '@/components/ui/KpiCard'
+import ChartCard from '@/components/ui/ChartCard'
+import ChartModal from '@/components/ui/ChartModal'
+import SplashScreen from '@/components/ui/SplashScreen'
 import { fmtR, MESES } from '@/lib/utils/formatters'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  Filler,
+} from 'chart.js'
+import { Bar, Doughnut } from 'react-chartjs-2'
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+)
 
 export default function DashboardPage() {
-  // MOCK DATA - Substituir pelos hooks reais após configurar Supabase
-  const kpis = [
-    { title: 'Receita Mensal', value: fmtR(42500), trend: 12, trendLabel: 'vs mês ant.', icon: <DollarSign />, color: 'emerald' as const },
-    { title: 'Associados Ativos', value: '1,240', trend: 5.2, trendLabel: 'novos este mês', icon: <Users />, color: 'blue' as const },
-    { title: 'Inadimplência', value: '4.8%', trend: -1.5, trendLabel: 'redução', icon: <Activity />, color: 'red' as const },
-    { title: 'Projetos Ativos', value: '12', icon: <Briefcase />, color: 'indigo' as const },
-  ]
+  const [activeChart, setActiveChart] = useState<any>(null)
 
   const labels = MESES
   const receitaData = [32000, 35000, 38000, 31000, 42000, 45000, 48000, 41000, 43000, 49000, 52000, 42500]
-  const despesaData = [28000, 29000, 31000, 30500, 32000, 34000, 36000, 33000, 35000, 37000, 39000, 38000]
+  const despesaData = [28000, 26000, 30000, 32000, 31000, 29000, 33000, 35000, 32000, 34000, 36000, 34000]
+  const resultadoData = receitaData.map((v, i) => v - despesaData[i])
+
+  const chartConfigs: any = {
+    receita: {
+      title: 'Receita × Despesa × Resultado Mensal',
+      subtitle: 'Visão completa do ano — ACPROBEC · INOVACONT',
+      chartType: 'bar',
+      insights: [
+        { label: 'Melhor Mês', value: 'Novembro', color: 'var(--green)', sub: 'R$ 52.000 em receita' },
+        { label: 'Receita Total', value: fmtR(receitaData.reduce((a, b) => a + b, 0)), color: 'var(--green)', sub: 'acumulado no ano' },
+        { label: 'Despesa Total', value: fmtR(despesaData.reduce((a, b) => a + b, 0)), color: 'var(--red)', sub: 'acumulado no ano' },
+        { label: 'Resultado Líquido', value: fmtR(receitaData.reduce((a, b) => a + b, 0) - despesaData.reduce((a, b) => a + b, 0)), color: 'var(--green)', sub: 'margem positiva' },
+      ],
+      chartData: {
+        labels,
+        datasets: [
+          { label: 'Receita', data: receitaData, backgroundColor: 'rgba(45, 140, 111, 0.75)', borderRadius: 5 },
+          { label: 'Despesa', data: despesaData, backgroundColor: 'rgba(239, 68, 68, 0.65)', borderRadius: 5 },
+          { label: 'Resultado', data: resultadoData, type: 'line', borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true, borderWidth: 2.5, pointRadius: 4 },
+        ]
+      },
+      tableData: {
+        headers: ['Mês', 'Receita', 'Despesa', 'Resultado'],
+        rows: MESES.map((m, i) => [m, fmtR(receitaData[i]), fmtR(despesaData[i]), fmtR(resultadoData[i])])
+      }
+    },
+    associados: {
+      title: 'Situação dos Associados — ACPROBEC',
+      subtitle: 'Distribuição por status atual da carteira',
+      chartType: 'doughnut',
+      insights: [
+        { label: 'Total', value: '1,240', color: 'var(--accent)', sub: 'associados cadastrados' },
+        { label: 'Ativos', value: '1,120', color: 'var(--green)', sub: '90% da carteira' },
+        { label: 'Inadimplentes', value: '85', color: 'var(--red)', sub: 'precisam de cobrança' },
+        { label: 'Inativos', value: '35', color: '#9ca3af', sub: 'desligados' },
+      ],
+      chartData: {
+        labels: ['Ativos', 'Inadimplentes', 'Inativos'],
+        datasets: [{
+          data: [1120, 85, 35],
+          backgroundColor: ['#10b981', '#ef4444', '#9ca3af'],
+          hoverOffset: 10,
+          borderWidth: 3,
+          borderColor: '#fff'
+        }]
+      },
+      tableData: {
+        headers: ['Status', 'Qtd', '%'],
+        rows: [
+          ['Ativo', 1120, '90%'],
+          ['Inadimplente', 85, '7%'],
+          ['Inativo', 35, '3%'],
+        ]
+      }
+    }
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Header com Saudação */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="animate-in fade-in duration-500">
+      <div className="page-header">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Bem-vindo, Admin 👋</h2>
-          <p className="text-slate-500 text-sm mt-1">Aqui está o que está acontecendo com a ACPROBEC hoje.</p>
-        </div>
-        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-          <Calendar size={16} className="text-blue-600" />
-          <span className="text-xs font-bold text-slate-700">{new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Dashboard Executivo</h1>
+          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Bem-vindo(a), acompanhe o desempenho geral em tempo real.</p>
         </div>
       </div>
 
-      {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpis.map((kpi, i) => (
-          <KpiCard key={i} {...kpi} />
-        ))}
+      <div className="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <KpiCard title="Receita Mensal" value={fmtR(42500)} trend={12} trendLabel="vs mês ant." icon={<DollarSign size={20} />} category="success" />
+        <KpiCard title="Associados Ativos" value="1,240" trend={5.2} trendLabel="novos este mês" icon={<Users size={20} />} category="info" />
+        <KpiCard title="Inadimplência" value="4.8%" trend={-1.5} trendLabel="redução" icon={<Activity size={20} />} category="error" />
+        <KpiCard title="Metas Batidas" value="8/12" trendLabel="no período" icon={<Briefcase size={20} />} category="purple" />
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <ChartCard 
-          title="Fluxo de Caixa" 
-          subtitle="Receitas vs Despesas (2024)"
-          actions={
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                <div className="w-2 h-2 rounded-full bg-blue-600"></div> RECEITA
-              </span>
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                <div className="w-2 h-2 rounded-full bg-slate-200"></div> DESPESA
-              </span>
+      <div className="charts-grid grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-2">
+          <ChartCard 
+            title="Evolução Financeira" 
+            subtitle="Receita vs Despesa"
+            onClick={() => setActiveChart(chartConfigs.receita)}
+          >
+            <div className="h-[300px] mt-4">
+              <Bar 
+                data={chartConfigs.receita.chartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } },
+                  scales: {
+                    y: { grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                  }
+                }}
+              />
             </div>
-          }
-        >
-          <BarChart 
-            labels={labels} 
-            datasets={[
-              { label: 'Receita', data: receitaData, backgroundColor: '#2563eb', borderRadius: 6 },
-              { label: 'Despesa', data: despesaData, backgroundColor: '#e2e8f0', borderRadius: 6 },
-            ]} 
-          />
-        </ChartCard>
+          </ChartCard>
+        </div>
 
-        <ChartCard 
-          title="Evolução de Associados" 
-          subtitle="Crescimento da base ativa"
-        >
-          <LineChart 
-            labels={labels} 
-            datasets={[
-              { 
-                label: 'Ativos', 
-                data: [1050, 1080, 1100, 1090, 1120, 1150, 1180, 1200, 1210, 1230, 1245, 1240], 
-                borderColor: '#10b981', 
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                fill: true
-              }
-            ]} 
-          />
-        </ChartCard>
-      </div>
-
-      {/* Recent Activity / Goals Table Preview */}
-      <div className="grid grid-cols-1 gap-8">
-        <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <h4 className="text-base font-bold text-slate-900 tracking-tight">Metas Estratégicas</h4>
-            <button className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors">Ver todas →</button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Meta</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Responsável</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Progresso</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest text-right">Prazo</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {[
-                  { meta: 'Redução de Inadimplência', resp: 'Maria Silva', prog: 85, color: 'emerald', prazo: '30 Mai, 2024' },
-                  { meta: 'Expansão de Benefícios', resp: 'João Souza', prog: 40, color: 'blue', prazo: '15 Jun, 2024' },
-                  { meta: 'Reforma da Sede', resp: 'Carlos Lima', prog: 15, color: 'amber', prazo: '20 Jul, 2024' },
-                ].map((row, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-bold text-slate-900">{row.meta}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold">{row.resp[0]}</div>
-                        <span className="text-xs text-slate-600 font-medium">{row.resp}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex-1 max-w-[120px] h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full bg-${row.color}-500`} style={{ width: `${row.prog}%`, backgroundColor: row.color === 'emerald' ? '#10b981' : row.color === 'blue' ? '#2563eb' : '#f59e0b' }}></div>
-                        </div>
-                        <span className="text-[11px] font-bold text-slate-500">{row.prog}%</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className="text-xs font-medium text-slate-400">{row.prazo}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div>
+          <ChartCard 
+            title="Status Cartéira" 
+            subtitle="Associados"
+            onClick={() => setActiveChart(chartConfigs.associados)}
+          >
+            <div className="h-[300px] mt-4">
+              <Doughnut 
+                data={chartConfigs.associados.chartData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, padding: 20 } }
+                  },
+                  cutout: '70%'
+                }}
+              />
+            </div>
+          </ChartCard>
         </div>
       </div>
+
+      <div className="table-card bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Últimos Lançamentos</h2>
+          <Calendar size={18} className="text-gray-400" />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-gray-50/50">
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Data</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrição</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Valor</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              <tr className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-6 py-4 text-xs font-medium text-gray-500">15/04/2024</td>
+                <td className="px-6 py-4 text-xs font-bold text-gray-900">Mensalidade - Associado #124</td>
+                <td className="px-6 py-4 text-xs font-bold text-emerald-600">R$ 150,00</td>
+                <td className="px-6 py-4">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 uppercase tracking-wider">Pago</span>
+                </td>
+              </tr>
+              <tr className="hover:bg-gray-50/50 transition-colors">
+                <td className="px-6 py-4 text-xs font-medium text-gray-500">14/04/2024</td>
+                <td className="px-6 py-4 text-xs font-bold text-gray-900">Serviços Contábeis - INOVA</td>
+                <td className="px-6 py-4 text-xs font-bold text-red-600">- R$ 2.450,00</td>
+                <td className="px-6 py-4">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-50 text-red-700 uppercase tracking-wider">Saída</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ChartModal 
+        isOpen={!!activeChart}
+        onClose={() => setActiveChart(null)}
+        {...activeChart}
+      />
+
+      <SplashScreen />
     </div>
   )
 }

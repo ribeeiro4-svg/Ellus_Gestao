@@ -11,41 +11,48 @@ interface KpiCardProps {
 }
 
 export default function KpiCard({ title, value, trend, trendLabel, icon, category = 'primary' }: KpiCardProps) {
-  const categoryMap = {
-    primary: { border: 'border-t-[#4f7ef8]', iconBg: 'bg-[#4f7ef8]/10', iconText: 'text-[#4f7ef8]' },
-    success: { border: 'border-t-[#10b981]', iconBg: 'bg-[#10b981]/10', iconText: 'text-[#10b981]' },
-    warning: { border: 'border-t-[#f59e0b]', iconBg: 'bg-[#f59e0b]/10', iconText: 'text-[#f59e0b]' },
-    error:   { border: 'border-t-[#ef4444]', iconBg: 'bg-[#ef4444]/10', iconText: 'text-[#ef4444]' },
-    info:    { border: 'border-t-[#0f1829]', iconBg: 'bg-[#0f1829]/10', iconText: 'text-[#0f1829]' },
-    purple:  { border: 'border-t-[#8b5cf6]', iconBg: 'bg-[#8b5cf6]/10', iconText: 'text-[#8b5cf6]' },
+  const categoryColors = {
+    primary: 'var(--accent)',
+    success: 'var(--green)',
+    warning: 'var(--orange)',
+    error:   'var(--red)',
+    info:    'var(--navy)',
+    purple:  'var(--purple)',
   }
 
   const trendPositive = trend !== undefined && trend >= 0
-  const style = categoryMap[category]
+  const kpiColor = categoryColors[category]
 
   return (
-    <div className={`bg-white p-7 rounded-2xl shadow-sm border ${style.border} border-t-4 border-slate-100 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50 group`}>
-      <div className="flex items-start justify-between">
-        <div className={`p-4 rounded-xl transition-all duration-500 group-hover:scale-110 ${style.iconBg} ${style.iconText}`}>
-          {icon}
-        </div>
-        {trend !== undefined && (
-          <div className={`flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg ${
-            trendPositive ? 'text-[#10b981] bg-[#10b981]/10' : 'text-[#ef4444] bg-[#ef4444]/10'
-          }`}>
-            {trendPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-            <span>{Math.abs(trend)}%</span>
-          </div>
-        )}
+    <div 
+      className="kpi-card p-4.5 group"
+      style={{ '--kpi-color': kpiColor } as any}
+    >
+      <div className="kpi-label flex items-center gap-1 text-[10.5px] font-bold text-[var(--text3)] uppercase tracking-[0.9px] mb-2">
+        <span className="opacity-70 group-hover:scale-110 transition-transform duration-300">
+           {icon}
+        </span>
+        {title}
       </div>
       
-      <div className="mt-8">
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.15em]">{title}</p>
-        <div className="flex items-baseline gap-2 mt-2.5">
-          <h3 className="text-3xl font-bold text-[#0f1829] tracking-tight">{value}</h3>
-          {trendLabel && <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{trendLabel}</span>}
-        </div>
+      <div className="kpi-value text-[26px] font-bold text-[var(--text1)] leading-none tracking-[-0.5px] mb-1">
+        {value}
       </div>
+      
+      {trendLabel && (
+        <div className="kpi-sub text-[11px] text-[var(--text3)] font-normal">
+          {trendLabel}
+        </div>
+      )}
+
+      {trend !== undefined && (
+        <div className={`kpi-delta mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold 
+          ${trendPositive ? 'up bg-[var(--green-light)] text-[var(--green-dark)]' : 'down bg-[var(--red-light)] text-[var(--red-dark)]'}`}
+        >
+          {trendPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          <span>{Math.abs(trend)}%</span>
+        </div>
+      )}
     </div>
   )
 }

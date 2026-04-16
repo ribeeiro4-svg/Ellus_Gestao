@@ -6,20 +6,21 @@ interface ChartCardProps {
   subtitle?: string
   children: ReactNode
   actions?: ReactNode
+  onClick?: () => void
 }
 
-export default function ChartCard({ title, subtitle, children, actions }: ChartCardProps) {
+export default function ChartCard({ title, subtitle, children, actions, onClick }: ChartCardProps) {
   return (
-    <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-8">
+    <div className={`chart-card ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
+      <div className="chart-header">
         <div>
-          <h4 className="text-base font-bold text-slate-900 tracking-tight">{title}</h4>
-          {subtitle && <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider mt-1">{subtitle}</p>}
+          <div className="chart-title">{title}</div>
+          {subtitle && <div className="chart-subtitle">{subtitle}</div>}
         </div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+        {actions && <div className="chart-actions flex items-center gap-2">{actions}</div>}
       </div>
       
-      <div className="flex-1 min-h-[300px] w-full relative">
+      <div className="chart-wrap min-h-[300px] w-full relative">
         {children}
       </div>
     </div>

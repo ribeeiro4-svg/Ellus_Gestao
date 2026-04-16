@@ -68,20 +68,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.1),transparent),radial-gradient(circle_at_bottom_left,rgba(37,99,235,0.05),transparent)] font-sans">
-      <div className="w-full max-w-[420px] animate-in fade-in zoom-in duration-500">
-        <div className="bg-white rounded-[24px] shadow-2xl p-10 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1.5 bg-blue-600"></div>
+    <div className="min-h-screen bg-[#071a12] flex items-center justify-center p-6 relative overflow-hidden font-sans">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-20" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'56\' height=\'100\'%3E%3Cpath d=\'M28 66L0 50V18L28 2l28 16v32L28 66z\' fill=\'none\' stroke=\'%232d8c6f\' stroke-width=\'0.8\'/%3E%3C/svg%3E")', backgroundSize: '56px 100px' }}></div>
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(45,140,111,0.15)_0%,transparent_70%)] pointer-events-none"></div>
+
+      <div className="w-full max-w-[420px] relative z-10 animate-in fade-in zoom-in duration-500">
+        <div className="bg-white rounded-[24px] shadow-2xl p-10 relative overflow-hidden border border-white/10">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-[#2d8c6f]"></div>
           
           <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 mb-6 shadow-sm border border-blue-100">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#2d8c6f]/5 text-[#2d8c6f] mb-6 shadow-sm border border-[#2d8c6f]/10">
               <ShieldCheck size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">ACPROBEC</h2>
-            <p className="text-sm text-slate-500 mt-2 font-medium">
-              {view === 'login' && 'Bem-vindo de volta! Faça seu login.'}
-              {view === 'signup' && 'Crie sua conta gratuita agora.'}
-              {view === 'reset' && 'Recupere seu acesso ao sistema.'}
+            <h2 className="text-3xl font-bold text-[#0e2d22] tracking-tight">ACPROBEC</h2>
+            <p className="text-[13px] text-slate-500 mt-2 font-medium">
+              {view === 'login' && 'Dashboard Inteligente de Gestão'}
+              {view === 'signup' && 'Cadastre-se na plataforma ACPROBEC.'}
+              {view === 'reset' && 'Recuperação de acesso.'}
             </p>
           </div>
 

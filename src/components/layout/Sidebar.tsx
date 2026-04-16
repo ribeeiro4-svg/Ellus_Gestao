@@ -69,73 +69,70 @@ export default function Sidebar() {
     router.push('/login')
   }
 
+  const isActive = (path: string) => pathname === path
+
   return (
-    <nav className="flex flex-col w-[var(--sidebar-w)] h-screen fixed left-0 top-0 bg-[#0f1829] text-white border-r border-white/5 z-50">
-      <div className="p-8 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#4f7ef8] flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">
+    <aside className="sidebar w-[var(--sidebar-w)] h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden overflow-y-auto scrollbar-none transition-transform duration-300">
+      <div className="sidebar-logo p-[22px_22px_18px] border-b border-white/5 relative">
+        <div className="logo-badge flex items-center gap-2 mb-1.5">
+          <div className="logo-icon w-8 h-8 rounded-[9px] flex items-center justify-center text-white text-[15px] font-bold">
             A
           </div>
-          <div>
-            <div className="text-xl font-bold tracking-tight text-white leading-none">ACPROBEC</div>
-            <div className="text-[10px] text-slate-500 font-bold tracking-widest uppercase mt-1">
-              Dashboard SaaS
-            </div>
-          </div>
+          <div className="logo-title text-[15px] font-bold text-white tracking-tight">ACPROBEC</div>
+        </div>
+        <div className="logo-sub text-[9.5px] text-white/35 mt-0.5 tracking-[0.8px] font-medium uppercase">DASHBOARD INTELIGENTE</div>
+        <div className="logo-divider flex items-center gap-2 mt-2.5 text-[9px] text-white/20 tracking-[0.6px] font-bold after:flex-1 after:h-[1px] after:bg-white/5 before:flex-1 before:h-[1px] before:bg-white/5">
+          INOVACONT
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 space-y-8 custom-scrollbar">
+      <nav className="flex-1 py-4">
         {MENU.map(({ section, items }) => (
-          <div key={section} className="space-y-1.5">
-            <div className="px-4 text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em] mb-3">
+          <div key={section} className="sidebar-section py-2">
+            <div className="sidebar-label text-[9.5px] font-bold text-white/20 tracking-[1.4px] uppercase px-5 pb-2">
               {section}
             </div>
-            {items.map(({ href, icon: Icon, label }) => {
-              const active = pathname === href
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-300 group relative ${
-                    active 
-                      ? 'bg-[#4f7ef8]/10 text-white font-semibold' 
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {active && (
-                    <div className="absolute left-0 w-1 h-6 bg-[#4f7ef8] rounded-r-full shadow-[0_0_15px_rgba(79,126,248,0.5)]"></div>
-                  )}
-                  <Icon 
-                    size={20} 
-                    className={active ? 'text-[#4f7ef8]' : 'text-slate-500 group-hover:text-slate-300 transition-colors'} 
-                  />
-                  <span>{label}</span>
-                </Link>
-              )
-            })}
-          </div>
-        ))}
-      </div>
-
-      <div className="p-6">
-        <div className="px-4 py-4 rounded-2xl bg-white/5 border border-white/5 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500"></div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate">Gestão Áurea</p>
-              <p className="text-[10px] text-slate-500 truncate">Administrador</p>
+            <div className="space-y-0.5">
+              {items.map(({ href, icon: Icon, label }) => {
+                const active = isActive(href)
+                return (
+                  <div
+                    key={href}
+                    onClick={() => router.push(href)}
+                    className={`nav-item flex items-center gap-[10px] px-5 py-2.5 cursor-pointer transition-all text-[12.5px] relative 
+                      ${active ? 'active' : 'text-white/45 hover:text-white/90 hover:bg-white/5'}`}
+                  >
+                    <div className="nav-icon w-7 h-7 rounded-lg flex items-center justify-center text-[13px] bg-white/5 transition-all">
+                      <Icon size={14} />
+                    </div>
+                    <span className="font-medium">{label}</span>
+                    {active && <div className="absolute inset-[0_8px] rounded-lg -z-10 bg-white/10" />}
+                  </div>
+                )
+              })}
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 text-[11px] font-bold text-[#ef4444] hover:text-red-300 transition-colors w-full px-1"
-          >
-            <LogOut size={14} />
-            <span>Encerrar Sessão</span>
+        ))}
+      </nav>
+
+      <div className="sidebar-footer mt-auto p-5 border-t border-white/5 relative z-10 flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40">
+             <Users size={16} />
+          </div>
+          <div className="flex-1">
+             <p className="text-[11px] font-bold text-white/80">Gestão Áurea</p>
+             <p className="text-[9px] text-white/20 uppercase tracking-tighter">Administrador</p>
+          </div>
+          <button onClick={logout} className="text-white/20 hover:text-red-400 transition-colors">
+            <LogOut size={16} />
           </button>
         </div>
+        <div>
+           <p className="text-[10px] text-white/25 font-medium">© 2024 ACPROBEC</p>
+           <p className="text-[8px] text-white/10 mt-0.5">SISTEMA DE GESTÃO SaaS</p>
+        </div>
       </div>
-    </nav>
+    </aside>
   )
 }
