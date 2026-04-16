@@ -24,6 +24,7 @@ export default function ImportPage() {
   
   const [loading, setLoading] = React.useState(false)
   const [feedback, setFeedback] = React.useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [preview, setPreview] = React.useState<{ type: 'financeiro' | 'associados' | 'prolabore', data: any[] } | null>(null)
   
   const downloadTemplate = (type: 'financeiro' | 'associados' | 'prolabore') => {
     let data: any[][] = []
@@ -116,8 +117,7 @@ export default function ImportPage() {
           recorrencia_ativa: String(row['Recorrência Ativa']).toLowerCase() === 'sim',
           conciliado: false
         }))
-        await bulkFinanceiro(mapped)
-        setFeedback({ type: 'success', message: `${mapped.length} lançamentos financeiros importados com sucesso!` })
+        setPreview({ type: 'financeiro', data: mapped })
       } 
       else if ('CPF / CNPJ' in firstRow || 'Data Ingresso' in firstRow) {
         // Associados
@@ -131,8 +131,7 @@ export default function ImportPage() {
           mensalidade: Number(row.Mensalidade || 0),
           status: String(row.Status || 'ativo').toLowerCase() as any
         }))
-        await bulkAssociados(mapped)
-        setFeedback({ type: 'success', message: `${mapped.length} associados cadastrados/atualizados com sucesso!` })
+        setPreview({ type: 'associados', data: mapped })
       }
       else if ('Nome do Diretor' in firstRow && 'Mês Início' in firstRow) {
         // Pró-labore
@@ -151,14 +150,37 @@ export default function ImportPage() {
         }, {})
         
         const newProLabores: ProLaboreItem[] = Object.values(grouped)
-        await salvarCenario({ ...cenario, pro_labores: newProLabores })
-        setFeedback({ type: 'success', message: `Quadro de Pró-labore atualizado com ${newProLabores.length} diretores!` })
+        setPreview({ type: 'prolabore', data: newProLabores })
       } else {
         throw new Error('Modelo de planilha não reconhecido. Use os modelos disponíveis para download.')
       }
     } catch (err: any) {
       console.error(err)
       setFeedback({ type: 'error', message: err.message || 'Erro ao processar arquivo.' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const confirmImport = async () => {
+    if (!preview || !tenantId) return
+    setLoading(true)
+    try {
+      if (preview.type === 'financeiro') {
+        const { error } = await bulkFinanceiro(preview.data)
+        if (error) throw new Error(typeof error === 'string' ? error : (error as any).message)
+        setFeedback({ type: 'success', message: `${preview.data.length} lançamentos financeiros importados!` })
+      } else if (preview.type === 'associados') {
+        const res = await bulkAssociados(preview.data)
+        if (res.error) throw new Error(typeof res.error === 'string' ? res.error : (res.error as any).message)
+        setFeedback({ type: 'success', message: `${preview.data.length} associados importados com sucesso!` })
+      } else if (preview.type === 'prolabore') {
+        await salvarCenario({ ...cenario, pro_labores: preview.data })
+        setFeedback({ type: 'success', message: `Quadro de Pró-labore atualizado!` })
+      }
+      setPreview(null)
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Erro ao salvar dados.' })
     } finally {
       setLoading(false)
     }
@@ -193,8 +215,15 @@ export default function ImportPage() {
   return (
     <div className="dashboard-content animate-in fade-in duration-500 flex flex-col flex-1">
       <div className="page-header mb-8">
-        <div>
-          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Suba suas planilhas para atualizar o sistema em massa.</p>
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Importação de Dados</h1>
+            <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Suba suas planilhas para atualizar o sistema em massa.</p>
+          </div>
+          <div className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Conta Ativa</div>
+            <div className="text-[11px] font-black text-gray-600 truncate max-w-[150px]">{tenantId || 'Carregando...'}</div>
+          </div>
         </div>
       </div>
 
@@ -277,56 +306,140 @@ export default function ImportPage() {
               <div className="flex gap-3">
                 <AlertCircle size={16} className="text-amber-600 shrink-0" />
                 <p className="text-[10px] text-amber-800 leading-normal">
-                  <strong>Importante:</strong> Não altere os nomes das colunas (cabeçalho) dos modelos para evitar erros de leitura pelo sistema.
+                  <strong>Importante:</strong> Não altere os nomes das colunas (cabeçalhos) dos modelos para evitar erros de leitura.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Upload Section */}
+        {/* Upload & Preview Section */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <label 
-            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileUpload(e); }}
-            className={`table-card p-8 flex flex-col items-center justify-center text-center border-2 border-dashed transition-all bg-gray-50/50 flex-1 cursor-pointer 
-              ${isDragging ? 'border-emerald-500 bg-emerald-50/30' : 'border-gray-200 hover:border-emerald-300'}`}
-          >
-            <input 
-              type="file" 
-              ref={fileInputRef}
-              className="hidden" 
-              accept=".xlsx,.xls,.csv" 
-              onChange={handleFileUpload}
-            />
-            <div className="w-16 h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center text-emerald-600 mb-6 border border-gray-100 animate-bounce-slow">
-              <Upload size={32} />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Arraste seus arquivos aqui</h3>
-            <p className="text-sm text-gray-500 mb-8 max-w-sm">
-              Suporta arquivos .xlsx, .csv e .json. O sistema processará os dados e atualizará o dashboard instantaneamente.
-            </p>
-            <button 
-              onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
-              className={`px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all flex items-center gap-2 ${loading || !tenantId ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={loading || !tenantId}
+          {!preview ? (
+            <label 
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileUpload(e); }}
+              className={`table-card p-8 flex flex-col items-center justify-center text-center border-2 border-dashed transition-all bg-gray-50/50 flex-1 cursor-pointer 
+                ${isDragging ? 'border-emerald-500 bg-emerald-50/30' : 'border-gray-200 hover:border-emerald-300'}`}
             >
-              {loading ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin" />
-                  PROCESSANDO...
-                </>
-              ) : !tenantId ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin" />
-                  IDENTIFICANDO CONTA...
-                </>
-              ) : 'Selecionar Arquivo'}
-            </button>
-          </label>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                className="hidden" 
+                accept=".xlsx,.xls,.csv" 
+                onChange={handleFileUpload}
+              />
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center text-emerald-600 mb-6 border border-gray-100 animate-bounce-slow">
+                <Upload size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Arraste seus arquivos aqui</h3>
+              <p className="text-sm text-gray-500 mb-8 max-w-sm">
+                Suporta arquivos .xlsx, .csv e .json. O sistema processará os dados e pedirá sua confirmação.
+              </p>
+              <button 
+                onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
+                className={`px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all flex items-center gap-2 ${loading || !tenantId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={loading || !tenantId}
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    PROCESSANDO...
+                  </>
+                ) : !tenantId ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    IDENTIFICANDO CONTA...
+                  </>
+                ) : 'Selecionar Arquivo'}
+              </button>
+            </label>
+          ) : (
+            <div className="flex flex-col gap-6 animate-in zoom-in-95 duration-300">
+              <div className="table-card p-0 overflow-hidden flex flex-col h-full bg-white border-2 border-emerald-500/20 shadow-2xl">
+                <div className="p-4 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-emerald-900 capitalize">Preview: {preview.type}</h3>
+                    <p className="text-[10px] text-emerald-700">{preview.data.length} registros identificados prontos para salvar.</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setPreview(null)}
+                      className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      Descartar
+                    </button>
+                    <button 
+                      onClick={confirmImport}
+                      disabled={loading || !tenantId}
+                      className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/10 flex items-center gap-2"
+                    >
+                      {loading ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                      Confirmar e Salvar Agora
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="overflow-auto max-h-[400px]">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-gray-50 border-b border-gray-100">
+                      <tr>
+                        {preview.type === 'associados' && (
+                          <>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Nome</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">CPF/CNPJ</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Mensalidade</th>
+                          </>
+                        )}
+                        {preview.type === 'financeiro' && (
+                          <>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Data</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Descrição</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Valor</th>
+                          </>
+                        )}
+                        {preview.type === 'prolabore' && (
+                          <>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Diretor</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Períodos</th>
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {preview.data.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                          {preview.type === 'associados' && (
+                            <>
+                              <td className="p-3 text-xs font-bold text-gray-700">{item.nome}</td>
+                              <td className="p-3 text-xs text-gray-500">{item.cpf || '-'}</td>
+                              <td className="p-3 text-xs font-black text-emerald-600">R$ {item.mensalidade}</td>
+                            </>
+                          )}
+                          {preview.type === 'financeiro' && (
+                            <>
+                              <td className="p-3 text-xs text-gray-500">{new Date(item.data).toLocaleDateString()}</td>
+                              <td className="p-3 text-xs font-medium text-gray-700">{item.descricao}</td>
+                              <td className="p-3 text-xs font-black text-emerald-600">R$ {item.valor}</td>
+                            </>
+                          )}
+                          {preview.type === 'prolabore' && (
+                            <>
+                              <td className="p-3 text-xs font-bold text-gray-700">{item.nome}</td>
+                              <td className="p-3 text-xs text-gray-500">{item.periodos?.length} períodos definidos</td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-auto">
             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                 <CheckCircle2 size={16} />
