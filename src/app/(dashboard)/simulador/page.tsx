@@ -33,7 +33,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineEleme
 const ANOS = [2024, 2025, 2026, 2027, 2028]
 
 export default function SimuladorPage() {
-  const { cenario, setCenario, visao, setVisao, salvarCenario, carregarDadosReais, loading, syncing, calculos, projecaoAnual } = useProjecao()
+  const { cenario, setCenario, visao, setVisao, salvarCenario, limparTudo, carregarDadosReais, loading, syncing, calculos, projecaoAnual } = useProjecao()
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
@@ -41,6 +41,13 @@ export default function SimuladorPage() {
     await salvarCenario(cenario)
     setIsSaving(false)
     alert('Simulação salva com sucesso!')
+  }
+
+  const handleReset = async () => {
+    if (confirm('Deseja apagar todas as configurações e rascunhos desta simulação?')) {
+      await limparTudo()
+      window.location.reload()
+    }
   }
 
   // Ações de Diretores
@@ -211,6 +218,14 @@ export default function SimuladorPage() {
            >
              <Save size={14} />
              {isSaving ? 'SALVANDO...' : 'SALVAR'}
+           </button>
+
+           <button 
+             onClick={handleReset}
+             className="px-3 py-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all flex items-center gap-2"
+             title="Resetar Simulação"
+           >
+             <Trash2 size={16} />
            </button>
         </div>
       </div>
