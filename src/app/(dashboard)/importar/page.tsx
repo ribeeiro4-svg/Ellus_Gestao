@@ -387,9 +387,14 @@ export default function ImportPage() {
                       <tr>
                         {preview.type === 'associados' && (
                           <>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Código</th>
                             <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Nome</th>
                             <th className="p-3 text-[10px] font-black text-gray-400 uppercase">CPF/CNPJ</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Categoria</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Email</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Ingresso</th>
                             <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Mensalidade</th>
+                            <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Status</th>
                           </>
                         )}
                         {preview.type === 'financeiro' && (
@@ -412,9 +417,20 @@ export default function ImportPage() {
                         <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                           {preview.type === 'associados' && (
                             <>
+                              <td className="p-3 text-xs text-gray-400 font-mono">{item.codigo}</td>
                               <td className="p-3 text-xs font-bold text-gray-700">{item.nome}</td>
-                              <td className="p-3 text-xs text-gray-500">{item.cpf || '-'}</td>
+                              <td className="p-3 text-xs text-gray-500 whitespace-nowrap">{item.cpf || '-'}</td>
+                              <td className="p-3 text-xs text-gray-500">{item.categoria}</td>
+                              <td className="p-3 text-xs text-gray-500">{item.email}</td>
+                              <td className="p-3 text-xs text-gray-500 whitespace-nowrap">{new Date(item.data_ingresso).toLocaleDateString()}</td>
                               <td className="p-3 text-xs font-black text-emerald-600">R$ {item.mensalidade}</td>
+                              <td className="p-3">
+                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                  item.status === 'ativo' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                }`}>
+                                  {item.status}
+                                </span>
+                              </td>
                             </>
                           )}
                           {preview.type === 'financeiro' && (
