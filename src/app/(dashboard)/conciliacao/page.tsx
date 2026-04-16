@@ -171,8 +171,8 @@ export default function ConciliacaoPage() {
                     </div>
                     <div>
                       <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{fmtData(item.bank.date)}</div>
-                      <div className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{item.bank.memo}</div>
-                      <div className="text-xs font-extrabold text-gray-500">{fmtR(item.bank.amount)}</div>
+                      <div className="text-sm font-bold text-gray-900 break-words leading-tight">{item.bank.memo}</div>
+                      <div className="text-xs font-extrabold text-gray-500 mt-1">{fmtR(item.bank.amount)}</div>
                     </div>
                   </div>
 
