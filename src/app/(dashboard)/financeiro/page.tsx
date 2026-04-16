@@ -231,7 +231,7 @@ export default function FinanceiroPage() {
           { name: 'data', label: 'Data', type: 'date', required: true },
           { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
             { value: 'Mensalidades', label: 'Mensalidades' },
-            { value: 'ADESÃO', label: 'ADESÃO' },
+            { value: 'ADESÃO', label: 'Adesão' },
             { value: 'Patrocínios', label: 'Patrocínios' },
             { value: 'Eventos', label: 'Eventos' },
             { value: 'Serviços', label: 'Serviços' },

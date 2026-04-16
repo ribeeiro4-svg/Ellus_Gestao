@@ -38,6 +38,8 @@ export interface Lancamento {
   troco_via_pix?: boolean
   recorrencia_ativa?: boolean
   conta_id?: string
+  conciliado?: boolean
+  banco_transacao_id?: string
   created_at: string
   updated_at: string
 }

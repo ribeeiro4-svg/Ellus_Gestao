@@ -65,5 +65,13 @@ export function useFinanceiro() {
     return { error }
   }
 
-  return { lancamentos, loading, inserir, atualizar, remover, inserirBulk, limparTudo, refresh: fetch }
+  const conciliar = async (id: string, bancoId: string) => {
+    const { error } = await sb.from('lancamentos')
+      .update({ conciliado: true, banco_transacao_id: bancoId })
+      .eq('id', id)
+    if (!error) fetch()
+    return { error }
+  }
+
+  return { lancamentos, loading, inserir, atualizar, remover, inserirBulk, limparTudo, conciliar, refresh: fetch }
 }

@@ -16,7 +16,8 @@ import {
   Download,
   LogOut,
   Settings,
-  Calculator
+  Calculator,
+  FileCheck
 } from 'lucide-react'
 
 const MENU = [
@@ -34,6 +35,7 @@ const MENU = [
       { href: '/simulador', icon: Calculator, label: 'Simulador' },
       { href: '/receitas', icon: TrendingUp, label: 'Receitas' },
       { href: '/despesas', icon: TrendingDown, label: 'Despesas' },
+      { href: '/conciliacao', icon: FileCheck, label: 'Conciliação OFX' },
     ]
   },
   { 
