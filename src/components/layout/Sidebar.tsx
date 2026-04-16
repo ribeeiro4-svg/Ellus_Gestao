@@ -60,6 +60,7 @@ const MENU = [
     section: 'Dados', 
     items: [
       { href: '/importar', icon: Download, label: 'Importar Dados' },
+      { href: '/configuracoes', icon: Settings, label: 'Configurações' },
     ]
   },
 ]

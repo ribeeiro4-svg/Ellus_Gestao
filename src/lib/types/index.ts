@@ -36,8 +36,19 @@ export interface Lancamento {
   forma_pagamento?: FormaPagamento
   valor_recebido?: number
   troco_via_pix?: boolean
+  recorrencia_ativa?: boolean
+  conta_id?: string
   created_at: string
   updated_at: string
+}
+
+export interface ContaBancaria {
+  id: string
+  tenant_id: string
+  nome: string // Ex: Bradesco, Cora, Caixa
+  tipo: 'corrente' | 'poupanca' | 'caixa_fisico'
+  saldo_inicial: number
+  created_at: string
 }
 
 export interface LancamentoInput extends Omit<Lancamento, 'id' | 'tenant_id' | 'created_at' | 'updated_at'> {}

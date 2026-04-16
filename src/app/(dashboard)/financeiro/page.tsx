@@ -7,18 +7,20 @@ import {
 } from 'chart.js'
 import { Chart, Line } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
+import { useContas } from '@/lib/hooks/useContas'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { Plus, BarChart2 } from 'lucide-react'
+import { Plus, BarChart2, RefreshCw } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 export default function FinanceiroPage() {
   const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
+  const { contas } = useContas()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -84,9 +86,22 @@ export default function FinanceiroPage() {
       header: 'Descrição', key: 'descricao', render: (i: any) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>
-          <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span>
+          <div className="flex gap-2">
+            <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span>
+            {i.recorrencia_ativa && (
+              <span className="flex items-center gap-1 text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 rounded uppercase">
+                <RefreshCw size={8} /> Recorrente
+              </span>
+            )}
+          </div>
         </div>
       )
+    },
+    {
+      header: 'Conta', key: 'conta_id', render: (i: any) => {
+        const c = contas.find(ca => ca.id === i.conta_id)
+        return <span className="text-[11px] font-bold text-gray-500 uppercase">{c?.nome || '--'}</span>
+      }
     },
     {
       header: 'Tipo', key: 'tipo', render: (i: any) => (
@@ -222,6 +237,13 @@ export default function FinanceiroPage() {
             { value: 'Serviços', label: 'Serviços' },
             { value: 'Outros', label: 'Outros' },
           ]},
+          { 
+            name: 'conta_id', 
+            label: 'Conta Bancária / Destino', 
+            type: 'select', 
+            required: true,
+            options: contas.map(c => ({ value: c.id, label: c.nome }))
+          },
           { name: 'status', label: 'Status', type: 'select', required: true, options: [
             { value: 'pago', label: 'Pago / Recebido' },
             { value: 'aberto', label: 'Aberto / Pendente' },
@@ -247,6 +269,11 @@ export default function FinanceiroPage() {
             type: 'checkbox', 
             showIf: (f) => f.forma_pagamento === 'Dinheiro' && f.valor_recebido > f.valor,
             placeholder: 'Devolver troco via PIX'
+          },
+          { 
+            name: 'recorrencia_ativa', 
+            label: 'Recorrência Ativa?', 
+            type: 'checkbox',
           },
         ]}
       />
