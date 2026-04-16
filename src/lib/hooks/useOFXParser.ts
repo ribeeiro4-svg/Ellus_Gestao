@@ -8,6 +8,7 @@ export interface OFXTransaction {
   amount: number
   memo: string
   fitid: string
+  metodo_inferido?: 'PIX' | 'Boleto' | 'Transferência'
   cpf_extraido?: string
 }
 
@@ -52,6 +53,18 @@ export function useOFXParser() {
       const trnAmtRaw = /<TRNAMT>\s*([-+]?[0-9]*[.,]?[0-9]+)/i.exec(content)?.[1] || '0'
       const amount = Math.abs(parseFloat(trnAmtRaw.replace(',', '.')))
 
+      // Inferência automática da forma de pagamento
+      let inferedMethod: 'PIX' | 'Boleto' | 'Transferência' | undefined = undefined
+      const upperMemo = cleanMemo.toUpperCase()
+      
+      if (upperMemo.includes('PIX')) {
+        inferedMethod = 'PIX'
+      } else if (upperMemo.includes('PAGAMENTO RECEBIDO') || upperMemo.includes('BOLETO') || upperMemo.includes('TITULO') || upperMemo.includes('COBRANCA') || upperMemo.includes('LIQUIDACAO')) {
+        inferedMethod = 'Boleto'
+      } else if (upperMemo.includes('TRANSFERENCIA') || upperMemo.includes('TRANSF')) {
+        inferedMethod = 'Transferência'
+      }
+
       transactions.push({
         id: fitid || Math.random().toString(36).substring(7),
         type: type.includes('DEP') || type.includes('CREDIT') ? 'CREDIT' : 'DEBIT',
@@ -59,6 +72,7 @@ export function useOFXParser() {
         amount,
         memo: cleanMemo,
         fitid,
+        metodo_inferido: inferedMethod,
         cpf_extraido: extractCPF(cleanMemo)
       })
     }

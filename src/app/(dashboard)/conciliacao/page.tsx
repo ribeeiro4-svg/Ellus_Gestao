@@ -120,7 +120,8 @@ export default function ConciliacaoPage() {
         valor: t.bank.amount,
         data: t.bank.date,
         categoria: t.suggestedCategory,
-        conta_id: selectedContaId, 
+        conta_id: selectedContaId,
+        forma_pagamento: t.bank.metodo_inferido, // Adicionando forma de pagamento
         status: 'pago',
         conciliado: true,
         banco_transacao_id: t.bank.fitid,
@@ -183,6 +184,7 @@ export default function ConciliacaoPage() {
       associado_id: m?.assocMatch?.id || '',
       categoria: m?.suggestedCategory || 'Mensalidades',
       conta_id: selectedContaId,
+      forma_pagamento: selectedExtrato.metodo_inferido, // Pré-preenche modal
       tipo: 'receita',
       status: 'pago'
     }
