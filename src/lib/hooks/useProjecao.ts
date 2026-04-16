@@ -4,12 +4,14 @@ import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { CenarioSimulacao, ProLaboreItem, CenarioInput, ProLaborePeriodo } from '@/lib/types'
 
+const CUR_YEAR = new Date().getFullYear()
+
 const DEFAULT_CENARIO: CenarioSimulacao = {
   id: 'temp',
   tenant_id: '',
   nome: 'Simulação Inicial',
   mes_referencia: new Date().getMonth(),
-  ano_referencia: new Date().getFullYear(),
+  ano_referencia: CUR_YEAR,
   num_associados: 100,
   valor_mensalidade: 150,
   despesas_fixas: 5000,
@@ -20,8 +22,8 @@ const DEFAULT_CENARIO: CenarioSimulacao = {
       id: '1', 
       nome: 'Diretor Presidente', 
       periodos: [
-        { id: 'p1', valor: 2500, mes_inicio: 0, mes_fim: 5 },
-        { id: 'p2', valor: 3000, mes_inicio: 6 }
+        { id: 'p1', valor: 2500, mes_inicio: 0, ano_inicio: CUR_YEAR, mes_fim: 5, ano_fim: CUR_YEAR },
+        { id: 'p2', valor: 3000, mes_inicio: 6, ano_inicio: CUR_YEAR }
       ]
     }
   ],
@@ -69,12 +71,17 @@ export function useProjecao() {
   // Cálculos dinâmicos
   const totalReceita = cenario.num_associados * cenario.valor_mensalidade
 
-  // Cálculo complexo de Pró-labore baseado no mês de referência
+  // Cálculo complexo de Pró-labore baseado no mês/ano de referência
+  const targetSerial = cenario.ano_referencia * 12 + cenario.mes_referencia
+
   const totalProLabores = cenario.pro_labores.reduce((totalDirector, director) => {
     const periodActive = director.periodos.find(p => {
-      const startOk = p.mes_inicio <= cenario.mes_referencia
-      const endOk = p.mes_fim === undefined || p.mes_fim >= cenario.mes_referencia
-      return startOk && endOk
+      const startSerial = p.ano_inicio * 12 + p.mes_inicio
+      const endSerial = p.ano_fim !== undefined 
+        ? (p.ano_fim * 12 + (p.mes_fim ?? 11)) 
+        : 999999
+      
+      return targetSerial >= startSerial && targetSerial <= endSerial
     })
     return totalDirector + (periodActive?.valor || 0)
   }, 0)

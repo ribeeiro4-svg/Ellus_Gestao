@@ -45,7 +45,12 @@ export default function SimuladorPage() {
     const newDir = {
       id: Math.random().toString(),
       nome: 'Novo Cargo',
-      periodos: [{ id: Math.random().toString(), valor: 0, mes_inicio: 0 }]
+      periodos: [{ 
+        id: Math.random().toString(), 
+        valor: 0, 
+        mes_inicio: cenario.mes_referencia,
+        ano_inicio: cenario.ano_referencia
+      }]
     }
     setCenario({ ...cenario, pro_labores: [...cenario.pro_labores, newDir] })
   }
@@ -67,7 +72,12 @@ export default function SimuladorPage() {
       ...cenario,
       pro_labores: cenario.pro_labores.map(d => {
         if (d.id !== directorId) return d
-        const newPeriod = { id: Math.random().toString(), valor: 0, mes_inicio: d.periodos.length }
+        const newPeriod = { 
+          id: Math.random().toString(), 
+          valor: 0, 
+          mes_inicio: cenario.mes_referencia,
+          ano_inicio: cenario.ano_referencia
+        }
         return { ...d, periodos: [...d.periodos, newPeriod] }
       })
     })
@@ -167,7 +177,7 @@ export default function SimuladorPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Receita Projetada" value={fmtR(calculos.totalReceita)} icon={<TrendingUp size={20} />} category="success" trendLabel={`Base: ${cenario.num_associados} Assoc.`} />
-        <KpiCard title="Total em Folha" value={fmtR(calculos.totalFolha)} icon={<Users size={20} />} category="error" trendLabel={`Em ${MESES[cenario.mes_referencia]}`} />
+        <KpiCard title="Total em Folha" value={fmtR(calculos.totalFolha)} icon={<Users size={20} />} category="error" trendLabel={`Em ${MESES[cenario.mes_referencia]}/${cenario.ano_referencia}`} />
         <KpiCard 
           title="Resultado Simulado" 
           value={fmtR(calculos.resultado)} 
@@ -268,10 +278,14 @@ export default function SimuladorPage() {
 
                    <div className="space-y-3 mb-6">
                       {dir.periodos.map(period => {
-                        const isActive = period.mes_inicio <= cenario.mes_referencia && (period.mes_fim === undefined || period.mes_fim >= cenario.mes_referencia)
+                        const targetSerial = cenario.ano_referencia * 12 + cenario.mes_referencia
+                        const periodStart = period.ano_inicio * 12 + period.mes_inicio
+                        const periodEnd = period.ano_fim !== undefined ? (period.ano_fim * 12 + (period.mes_fim ?? 11)) : 999999
+                        const isActive = targetSerial >= periodStart && targetSerial <= periodEnd
+
                         return (
-                          <div key={period.id} className={`flex items-center gap-2 p-3 rounded-2xl border transition-all ${isActive ? 'bg-emerald-50/50 border-emerald-100 ring-1 ring-emerald-500/20' : 'bg-slate-50 border-slate-100'}`}>
-                             <div className="flex-1 flex items-center gap-2">
+                          <div key={period.id} className={`flex flex-col gap-2 p-3 rounded-2xl border transition-all ${isActive ? 'bg-emerald-50/50 border-emerald-100 ring-1 ring-emerald-500/20' : 'bg-slate-50 border-slate-100'}`}>
+                             <div className="flex items-center gap-2 border-b border-slate-100/50 pb-2 mb-1">
                                <span className="text-[10px] font-bold text-slate-300">R$</span>
                                <input 
                                  type="number" 
@@ -279,28 +293,33 @@ export default function SimuladorPage() {
                                  onChange={(e) => updatePeriod(dir.id, period.id, 'valor', Number(e.target.value))}
                                  className="w-full bg-transparent border-none outline-none font-extrabold text-sm text-gray-700"
                                />
+                               <button onClick={() => removePeriod(dir.id, period.id)} className="text-slate-200 hover:text-rose-500 transition-colors p-1">
+                                 <Trash2 size={12} />
+                               </button>
                              </div>
-                             <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-slate-100">
-                               <select 
-                                 value={period.mes_inicio} 
-                                 onChange={(e) => updatePeriod(dir.id, period.id, 'mes_inicio', Number(e.target.value))}
-                                 className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase"
-                               >
-                                 {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                               </select>
+                             <div className="flex flex-wrap items-center gap-2">
+                               <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-slate-100">
+                                 <span className="text-[8px] font-bold text-slate-300 uppercase">De:</span>
+                                 <select value={period.mes_inicio} onChange={(e) => updatePeriod(dir.id, period.id, 'mes_inicio', Number(e.target.value))} className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase">
+                                   {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                                 </select>
+                                 <select value={period.ano_inicio} onChange={(e) => updatePeriod(dir.id, period.id, 'ano_inicio', Number(e.target.value))} className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase">
+                                   {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
+                                 </select>
+                               </div>
                                <ChevronRight size={10} className="text-slate-200" />
-                               <select 
-                                 value={period.mes_fim ?? ''} 
-                                 onChange={(e) => updatePeriod(dir.id, period.id, 'mes_fim', e.target.value === '' ? undefined : Number(e.target.value))}
-                                 className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase"
-                               >
-                                 <option value="">∞</option>
-                                 {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                               </select>
+                               <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-slate-100">
+                                 <span className="text-[8px] font-bold text-slate-300 uppercase">A:</span>
+                                 <select value={period.mes_fim ?? ''} onChange={(e) => updatePeriod(dir.id, period.id, 'mes_fim', e.target.value === '' ? undefined : Number(e.target.value))} className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase">
+                                   <option value="">∞</option>
+                                   {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                                 </select>
+                                 <select value={period.ano_fim ?? ''} onChange={(e) => updatePeriod(dir.id, period.id, 'ano_fim', e.target.value === '' ? undefined : Number(e.target.value))} className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase">
+                                   <option value="">∞</option>
+                                   {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
+                                 </select>
+                               </div>
                              </div>
-                             <button onClick={() => removePeriod(dir.id, period.id)} className="text-slate-200 hover:text-rose-500 transition-colors p-1">
-                               <Trash2 size={12} />
-                             </button>
                           </div>
                         )
                       })}

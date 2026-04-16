@@ -154,7 +154,9 @@ export interface ProLaborePeriodo {
   id: string
   valor: number
   mes_inicio: number // 0-11
+  ano_inicio: number
   mes_fim?: number // 0-11
+  ano_fim?: number
 }
 
 export interface ProLaboreItem {
