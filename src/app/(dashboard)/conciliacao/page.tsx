@@ -40,9 +40,9 @@ export default function ConciliacaoPage() {
     }
   }, [contas, selectedContaId])
   
-  // Lógica de matching inteligente
+  // Lógica de matching inteligente e FILTRAGEM
   const matchedTransactions = useMemo(() => {
-    return extrato.map(ext => {
+    const allMatches = extrato.map(ext => {
       // 1. Prioridade 1: Busca associado pelo CPF/CNPJ exato extraído do memo
       const cpfMatch = ext.cpf_extraido ? associados.find(a => {
         const cleanA = (a.cpf || '').replace(/[^\d]/g, '')
@@ -73,8 +73,9 @@ export default function ConciliacaoPage() {
         suggestedCategory = jaTemLancamento ? 'Mensalidades' : 'ADESÃO'
       }
 
-      // 4. Busca lançamentos com valor exato e data próxima
+      // 4. Busca lançamentos no sistema
       const matches = lancamentos.filter(l => {
+        if (l.banco_transacao_id && l.banco_transacao_id === ext.fitid) return true
         const diffDate = Math.abs(new Date(l.data).getTime() - new Date(ext.date).getTime())
         const daysDiff = diffDate / (1000 * 60 * 60 * 24)
         const valMatch = Math.abs(l.valor - ext.amount) < 0.01
@@ -91,6 +92,9 @@ export default function ConciliacaoPage() {
         similarCount: matches.length
       }
     })
+
+    // REGRA: Exibir apenas o que NÃO tem match perfeito no sistema (Pendentes de conciliação/lançamento)
+    return allMatches.filter(m => !m.match)
   }, [extrato, lancamentos, associados])
 
   // Transações que podem ser lançadas em lote
