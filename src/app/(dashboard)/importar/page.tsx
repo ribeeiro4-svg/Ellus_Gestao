@@ -18,10 +18,10 @@ export default function ImportPage() {
     
     if (type === 'financeiro') {
       data = [
-        ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status', 'Forma Pagamento', 'Valor Recebido', 'Troco via PIX'],
-        ['2024-04-01', 'Mensalidade Abril', 'Mensalidade', 'Receita', 150.00, 'Recebido', 'PIX', 150.00, 'Não'],
-        ['2024-04-05', 'Aluguel Escritório', 'Infraestrutura', 'Despesa', 2500.00, 'Pago', 'Transferência', 2500.00, 'Não'],
-        ['2024-04-10', 'Adesão Novo Membro', 'ADESÃO', 'Receita', 200.00, 'Recebido', 'Dinheiro', 250.00, 'Sim']
+        ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status', 'Forma Pagamento', 'Nome da Conta', 'Recorrência Ativa', 'Valor Recebido', 'Troco via PIX'],
+        ['2024-04-01', 'Mensalidade Abril', 'Mensalidade', 'Receita', 150.00, 'Recebido', 'PIX', 'Cora ACPROBEC', 'Sim', 150.00, 'Não'],
+        ['2024-04-05', 'Aluguel Escritório', 'Infraestrutura', 'Despesa', 2500.00, 'Pago', 'Transferência', 'Bradesco Principal', 'Sim', 2500.00, 'Não'],
+        ['2024-04-10', 'Adesão Novo Membro', 'ADESÃO', 'Receita', 200.00, 'Recebido', 'Dinheiro', 'Caixa Físico', 'Não', 250.00, 'Sim']
       ]
       filename = 'modelo_financeiro_acprobec.xlsx'
     } else if (type === 'associados') {
