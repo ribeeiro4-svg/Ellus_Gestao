@@ -33,25 +33,41 @@ export default function ConciliacaoPage() {
   // Lógica de matching inteligente
   const matchedTransactions = useMemo(() => {
     return extrato.map(ext => {
-      // 1. Busca associado pelo CPF extraído do memo
+      // 1. Prioridade 1: Busca associado pelo CPF/CNPJ exato extraído do memo
       const cpfMatch = ext.cpf_extraido ? associados.find(a => {
         const cleanA = (a.cpf || '').replace(/[^\d]/g, '')
         const cleanB = (ext.cpf_extraido || '').replace(/[^\d]/g, '')
         return cleanA === cleanB && cleanA.length >= 11
       }) : null
 
-      // 2. Busca lançamentos com valor exato e data próxima
+      // 2. Prioridade 2: Busca por NOME (Se CPF falhar)
+      // Removemos termos comuns do banco para focar no nome do pagador
+      const memoLimpo = ext.memo.toUpperCase()
+        .replace('PIX RECEBIDO', '')
+        .replace('TRANSFERENCIA', '')
+        .replace('RECEBIDA', '')
+        .trim()
+      
+      const nameMatch = !cpfMatch ? associados.find(a => {
+        const nomeA = a.nome.toUpperCase().trim()
+        return memoLimpo.includes(nomeA) || nomeA.includes(memoLimpo)
+      }) : null
+
+      const finalAssoc = cpfMatch || nameMatch
+
+      // 3. Busca lançamentos com valor exato e data próxima (Para conciliar faturas já geradas)
       const matches = lancamentos.filter(l => {
         const diffDate = Math.abs(new Date(l.data).getTime() - new Date(ext.date).getTime())
         const daysDiff = diffDate / (1000 * 60 * 60 * 24)
         const valMatch = Math.abs(l.valor - ext.amount) < 0.01
-        return valMatch && daysDiff <= 4 && !l.conciliado
+        return valMatch && daysDiff <= 7 && !l.conciliado
       })
       
       return {
         bank: ext,
         match: matches[0] || null,
-        assocMatch: cpfMatch || null,
+        assocMatch: finalAssoc || null,
+        isCpfMatch: !!cpfMatch,
         similarCount: matches.length
       }
     })
@@ -185,19 +201,26 @@ export default function ConciliacaoPage() {
                       </div>
                     ) : item.assocMatch ? (
                       <div className="flex items-center gap-3 w-full animate-in fade-in zoom-in duration-300">
-                        <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-200">
-                          <Users size={16} />
+                        <div className={`w-8 h-8 rounded-lg text-white flex items-center justify-center shadow-lg 
+                          ${item.isCpfMatch ? 'bg-emerald-500 shadow-emerald-200' : 'bg-blue-500 shadow-blue-200'}`}>
+                          {item.isCpfMatch ? <CheckCircle2 size={16} /> : <Users size={16} />}
                         </div>
                         <div className="flex-1">
-                          <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1">
-                            CPF Identificado <span className="text-gray-300 ml-1">•</span> <span className="text-gray-400 capitalize">Associado</span>
+                          <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1
+                            ${item.isCpfMatch ? 'text-emerald-600' : 'text-blue-600'}`}>
+                            {item.isCpfMatch ? 'CPF Identificado' : 'Sugestão por Nome'} 
+                            <span className="text-gray-300 ml-1">•</span> 
+                            <span className="text-gray-400 capitalize">Associado</span>
                           </div>
                           <div className="text-xs font-bold text-gray-800">{item.assocMatch.nome}</div>
-                          <div className="text-[10px] text-gray-400">Clique em Criar Lançamento para vincular</div>
+                          <div className="text-[10px] text-gray-400">
+                            {item.isCpfMatch ? 'Vínculo automático via documento' : 'Confirme se o nome está correto'}
+                          </div>
                         </div>
                         <button 
                           onClick={() => handleQuickCreate(item.bank)}
-                          className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100 uppercase"
+                          className={`px-4 py-2 text-white text-[10px] font-black rounded-lg transition-all shadow-md uppercase
+                            ${item.isCpfMatch ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-100'}`}
                         >
                           Criar e Vincular
                         </button>
