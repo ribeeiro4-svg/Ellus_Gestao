@@ -55,7 +55,17 @@ export default function ConciliacaoPage() {
 
       const finalAssoc = cpfMatch || nameMatch
 
-      // 3. Busca lançamentos com valor exato e data próxima (Para conciliar faturas já geradas)
+      // 3. Regra de Categoria (Adesão vs Mensalidade)
+      let suggestedCategory = 'Mensalidades'
+      if (finalAssoc) {
+        // Verifica se o associado já tem ALGO recebido no sistema
+        const jaTemLancamento = lancamentos.some(l => 
+          l.associado_id === finalAssoc.id && l.status === 'pago' && l.tipo === 'receita'
+        )
+        suggestedCategory = jaTemLancamento ? 'Mensalidades' : 'ADESÃO'
+      }
+
+      // 4. Busca lançamentos com valor exato e data próxima (Para conciliar faturas já geradas)
       const matches = lancamentos.filter(l => {
         const diffDate = Math.abs(new Date(l.data).getTime() - new Date(ext.date).getTime())
         const daysDiff = diffDate / (1000 * 60 * 60 * 24)
@@ -68,6 +78,8 @@ export default function ConciliacaoPage() {
         match: matches[0] || null,
         assocMatch: finalAssoc || null,
         isCpfMatch: !!cpfMatch,
+        suggestedCategory,
+        isFirstPayment: suggestedCategory === 'ADESÃO',
         similarCount: matches.length
       }
     })
@@ -209,12 +221,13 @@ export default function ConciliacaoPage() {
                           <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1
                             ${item.isCpfMatch ? 'text-emerald-600' : 'text-blue-600'}`}>
                             {item.isCpfMatch ? 'CPF Identificado' : 'Sugestão por Nome'} 
+                            {item.isFirstPayment && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] border border-amber-200 animate-pulse">🌟 ADESÃO</span>}
                             <span className="text-gray-300 ml-1">•</span> 
                             <span className="text-gray-400 capitalize">Associado</span>
                           </div>
                           <div className="text-xs font-bold text-gray-800">{item.assocMatch.nome}</div>
                           <div className="text-[10px] text-gray-400">
-                            {item.isCpfMatch ? 'Vínculo automático via documento' : 'Confirme se o nome está correto'}
+                            {item.isFirstPayment ? 'Primeira receita detectada! Classificado como Adesão.' : 'Mensalidade recorrente identificada.'}
                           </div>
                         </div>
                         <button 
@@ -254,7 +267,7 @@ export default function ConciliacaoPage() {
         initialData={selectedExtrato ? {
           descricao: selectedExtrato.memo,
           associado_id: matchedTransactions.find(m => m.bank.id === selectedExtrato.id)?.assocMatch?.id || '',
-          categoria: 'Mensalidades',
+          categoria: matchedTransactions.find(m => m.bank.id === selectedExtrato.id)?.suggestedCategory || 'Mensalidades',
           status: 'pago'
         } : null}
         onSubmit={handleSalvarNovo}
