@@ -188,6 +188,15 @@ export default function ConciliacaoPage() {
     }
   }, [selectedExtrato, matchedTransactions, selectedContaId])
 
+  // Cálculos de Totais do Extrato
+  const totals = useMemo(() => {
+    return extrato.reduce((acc, curr) => {
+      if (curr.amount > 0) acc.entradas += curr.amount
+      else acc.saidas += Math.abs(curr.amount)
+      return acc
+    }, { entradas: 0, saidas: 0 })
+  }, [extrato])
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
@@ -254,11 +263,26 @@ export default function ConciliacaoPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           <div className="table-card overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/30 font-bold">
-              <h2 className="text-sm font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2">
-                <Search size={16} className="text-indigo-600" /> Transações do Extrato ({extrato.length})
-              </h2>
-              <button onClick={() => setExtrato([])} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-indigo-50 px-3 py-1 rounded-full">
+            <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between bg-gray-50/30 gap-4">
+              <div className="flex items-center gap-6">
+                <h2 className="text-sm font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2">
+                  <Search size={16} className="text-indigo-600" /> Transações ({extrato.length})
+                </h2>
+                
+                <div className="flex items-center gap-4 bg-white/50 px-4 py-2 rounded-2xl border border-gray-200/50">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black text-green-500 uppercase tracking-widest leading-none mb-1">Total Entradas</span>
+                    <span className="text-xs font-black text-green-600 tracking-tight">{fmtR(totals.entradas)}</span>
+                  </div>
+                  <div className="w-px h-6 bg-gray-200 mx-1" />
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black text-red-500 uppercase tracking-widest leading-none mb-1">Total Saídas</span>
+                    <span className="text-xs font-black text-red-600 tracking-tight">{fmtR(totals.saidas)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={() => setExtrato([])} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-white border border-gray-100 px-4 py-1.5 rounded-full shadow-sm">
                 Trocar Arquivo
               </button>
             </div>
