@@ -15,8 +15,12 @@ export default function SplashScreen() {
   const [isVisible, setIsVisible] = useState(true)
   const [isExiting, setIsExiting] = useState(false)
   const [showEnterBtn, setShowEnterBtn] = useState(false)
+  const [customLogo, setCustomLogo] = useState<string | null>(null)
 
   useEffect(() => {
+    const savedLogo = localStorage.getItem('acprobec_custom_logo')
+    if (savedLogo) setCustomLogo(savedLogo)
+
     // Progress bar animation
     const steps = [
       { delay: 0, pct: 20, msg: LOADING_MESSAGES[0] },
@@ -74,8 +78,12 @@ export default function SplashScreen() {
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-[340px] px-6">
         <div className="mb-10 text-center animate-bounce-slow">
-           <div className="w-20 h-20 bg-gradient-to-br from-[#2d8c6f] to-[#34d399] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-2xl shadow-[#2d8c6f]/40 mb-4 mx-auto">
-             AC
+           <div className="w-20 h-20 bg-gradient-to-br from-[#2d8c6f] to-[#34d399] rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-2xl shadow-[#2d8c6f]/40 mb-4 mx-auto overflow-hidden">
+             {customLogo ? (
+               <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
+             ) : (
+               'AC'
+             )}
            </div>
            <h1 className="text-3xl font-bold text-white tracking-widest">ACPROBEC</h1>
            <p className="text-[10px] text-[rgba(255,255,255,0.3)] tracking-[0.3em] font-medium mt-2 uppercase">Gestão Inteligente INOVACONT</p>

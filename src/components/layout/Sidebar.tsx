@@ -1,4 +1,5 @@
 'use client'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -13,7 +14,8 @@ import {
   Briefcase, 
   Calendar, 
   Download,
-  LogOut
+  LogOut,
+  Settings
 } from 'lucide-react'
 
 const MENU = [
@@ -63,6 +65,18 @@ export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const sb = createClient()
+  
+  const [customLogo, setCustomLogo] = useState<string | null>(null)
+  const [customName, setCustomName] = useState('Gestão Áurea')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedLogo = localStorage.getItem('acprobec_custom_logo')
+      const savedName = localStorage.getItem('acprobec_user_name')
+      if (savedLogo) setCustomLogo(savedLogo)
+      if (savedName) setCustomName(savedName)
+    }
+  }, [])
 
   const logout = async () => {
     await sb.auth.signOut()
@@ -75,12 +89,16 @@ export default function Sidebar() {
     <aside className="sidebar w-[var(--sidebar-w)] h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden overflow-y-auto scrollbar-none transition-transform duration-300">
       <div className="sidebar-logo p-[22px_22px_18px] border-b border-white/5 relative">
         <div className="logo-badge flex items-center gap-2 mb-1.5">
-          <div className="logo-icon w-8 h-8 rounded-[9px] flex items-center justify-center text-white text-[15px] font-bold">
-            A
+          <div className="logo-icon w-8 h-8 rounded-[9px] flex items-center justify-center text-white text-[15px] font-bold bg-gradient-to-br from-[#2d8c6f] to-[#34d399] overflow-hidden">
+            {customLogo ? (
+              <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              'AC'
+            )}
           </div>
           <div className="logo-title text-[15px] font-bold text-white tracking-tight">ACPROBEC</div>
         </div>
-        <div className="logo-sub text-[9.5px] text-white/35 mt-0.5 tracking-[0.8px] font-medium uppercase">DASHBOARD INTELIGENTE</div>
+        <div className="logo-sub text-[9.5px] text-white/35 mt-0.5 tracking-[0.8px] font-medium uppercase">GESTÃO INTELIGENTE</div>
         <div className="logo-divider flex items-center gap-2 mt-2.5 text-[9px] text-white/20 tracking-[0.6px] font-bold after:flex-1 after:h-[1px] after:bg-white/5 before:flex-1 before:h-[1px] before:bg-white/5">
           INOVACONT
         </div>
@@ -117,20 +135,27 @@ export default function Sidebar() {
 
       <div className="sidebar-footer mt-auto p-5 border-t border-white/5 relative z-10 flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40">
-             <Users size={16} />
+          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 overflow-hidden">
+             {customLogo ? (
+               <img src={customLogo} alt="Logo" className="w-full h-full object-cover opacity-60" />
+             ) : (
+               <Users size={16} />
+             )}
           </div>
-          <div className="flex-1">
-             <p className="text-[11px] font-bold text-white/80">Gestão Áurea</p>
+          <div className="flex-1 overflow-hidden">
+             <p className="text-[11px] font-bold text-white/80 truncate">{customName}</p>
              <p className="text-[9px] text-white/20 uppercase tracking-tighter">Administrador</p>
           </div>
-          <button onClick={logout} className="text-white/20 hover:text-red-400 transition-colors">
+          <button onClick={() => router.push('/configuracoes')} className="text-white/20 hover:text-white transition-colors" title="Configurações">
+            <Settings size={16} />
+          </button>
+          <button onClick={logout} className="text-white/20 hover:text-red-400 transition-colors" title="Sair">
             <LogOut size={16} />
           </button>
         </div>
         <div>
            <p className="text-[10px] text-white/25 font-medium">© 2024 ACPROBEC</p>
-           <p className="text-[8px] text-white/10 mt-0.5">SISTEMA DE GESTÃO SaaS</p>
+           <p className="text-[8px] text-white/10 mt-0.5">ESTRUTURA SaaS PROFISSIONAL</p>
         </div>
       </div>
     </aside>
