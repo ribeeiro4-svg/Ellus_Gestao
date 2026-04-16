@@ -38,6 +38,33 @@ export default function ImportPage() {
     XLSX.writeFile(wb, filename)
   }
 
+  const [isDragging, setIsDragging] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
+    let file: File | null = null
+    if ('files' in e.target && e.target.files) {
+      file = e.target.files[0]
+    } else if ('dataTransfer' in e && e.dataTransfer.files) {
+      file = e.dataTransfer.files[0]
+    }
+
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (evt) => {
+        const bstr = evt.target?.result
+        const wb = XLSX.read(bstr, { type: 'binary' })
+        const wsname = wb.SheetNames[0]
+        const ws = wb.Sheets[wsname]
+        const data = XLSX.utils.sheet_to_json(ws)
+        console.log('Dados importados:', data)
+        alert(`${data.length} registros identificados. Iniciando processamento...`)
+        // Future: call useFinanceiro().inserirBulk(data)
+      }
+      reader.readAsBinaryString(file)
+    }
+  }
+
   return (
     <div className="dashboard-content animate-in fade-in duration-500 flex flex-col flex-1">
       <div className="page-header mb-8">
@@ -109,7 +136,20 @@ export default function ImportPage() {
 
         {/* Upload Section */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="table-card p-8 flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-200 hover:border-emerald-300 transition-all bg-gray-50/50 flex-1">
+          <label 
+            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFileUpload(e); }}
+            className={`table-card p-8 flex flex-col items-center justify-center text-center border-2 border-dashed transition-all bg-gray-50/50 flex-1 cursor-pointer 
+              ${isDragging ? 'border-emerald-500 bg-emerald-50/30' : 'border-gray-200 hover:border-emerald-300'}`}
+          >
+            <input 
+              type="file" 
+              ref={fileInputRef}
+              className="hidden" 
+              accept=".xlsx,.xls,.csv" 
+              onChange={handleFileUpload}
+            />
             <div className="w-16 h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center text-emerald-600 mb-6 border border-gray-100 animate-bounce-slow">
               <Upload size={32} />
             </div>
@@ -117,10 +157,13 @@ export default function ImportPage() {
             <p className="text-sm text-gray-500 mb-8 max-w-sm">
               Suporta arquivos .xlsx, .csv e .json. O sistema processará os dados e atualizará o dashboard instantaneamente.
             </p>
-            <button className="px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all">
+            <button 
+              onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
+              className="px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all pointer-events-none"
+            >
               Selecionar Arquivo
             </button>
-          </div>
+          </label>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-3">
