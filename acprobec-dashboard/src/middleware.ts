@@ -17,13 +17,13 @@ export async function middleware(request: NextRequest) {
     supabaseKey,
     {
       cookies: {
-        get(name) { return request.cookies.get(name)?.value },
-        set(name, value, opts) {
+        get(name: string) { return request.cookies.get(name)?.value },
+        set(name: string, value: string, opts: any) {
           request.cookies.set({ name, value, ...opts })
           response = NextResponse.next({ request: { headers: request.headers } })
           response.cookies.set({ name, value, ...opts })
         },
-        remove(name, opts) {
+        remove(name: string, opts: any) {
           request.cookies.set({ name, value: '', ...opts })
           response = NextResponse.next({ request: { headers: request.headers } })
           response.cookies.set({ name, value: '', ...opts })
