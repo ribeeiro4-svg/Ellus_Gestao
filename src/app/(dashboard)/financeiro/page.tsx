@@ -20,12 +20,13 @@ import { Plus, BarChart2, RefreshCw } from 'lucide-react'
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 export default function FinanceiroPage() {
-  const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
+  const { lancamentos, loading, inserir, atualizar, remover, removerBulk } = useFinanceiro()
   const { contas } = useContas()
   const { associados } = useAssociados()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   /* ── Dados para gráficos ── */
   const { recMensal, despMensal } = useMemo(() => {
@@ -78,11 +79,33 @@ export default function FinanceiroPage() {
     if (confirm('Excluir este lançamento?')) await remover(id)
   }
 
+  const handleBulkDelete = async () => {
+    if (confirm(`Excluir ${selectedIds.length} lançamentos selecionados?`)) {
+      await removerBulk(selectedIds)
+      setSelectedIds([])
+    }
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === lancamentos.length) setSelectedIds([])
+    else setSelectedIds(lancamentos.map(l => l.id))
+  }
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
   const fontSm = { size: 10 }
   const gridFaint = { color: 'rgba(0,0,0,.04)' }
 
   /* ── Colunas ── */
   const columns = [
+    { 
+      header: <input type="checkbox" checked={selectedIds.length === lancamentos.length && lancamentos.length > 0} onChange={toggleSelectAll} className="rounded border-gray-300" />,
+      key: 'select',
+      className: 'w-10',
+      render: (i: any) => <input type="checkbox" checked={selectedIds.includes(i.id)} onChange={() => toggleSelectOne(i.id)} className="rounded border-gray-300" />
+    },
     { header: 'Data', key: 'data', render: (i: any) => <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{fmtData(i.data)}</span> },
     {
       header: 'Descrição', key: 'descricao', render: (i: any) => (
@@ -221,7 +244,28 @@ export default function FinanceiroPage() {
       </div>
 
       {/* ── Tabela ── */}
-      <DataTable columns={columns} data={lancamentos} loading={loading} />
+      <div className="flex flex-col gap-4">
+        {selectedIds.length > 0 && (
+          <div className="flex items-center justify-between bg-red-50 border border-red-100 p-4 rounded-2xl animate-in fade-in slide-in-from-top-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+              </div>
+              <div>
+                <span className="text-sm font-bold text-red-900">{selectedIds.length} Itens selecionados</span>
+                <p className="text-xs text-red-600">As ações realizadas aqui removerão definitivamente os registros.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setSelectedIds([])} className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors">Cancelar</button>
+              <button onClick={handleBulkDelete} className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-red-200 hover:bg-red-700 transition-all">
+                Excluir em Lote
+              </button>
+            </div>
+          </div>
+        )}
+        <DataTable columns={columns as any} data={lancamentos} loading={loading} />
+      </div>
 
       <CrudModal
         isOpen={isModalOpen}

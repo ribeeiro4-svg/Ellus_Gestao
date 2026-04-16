@@ -48,6 +48,13 @@ export function useFinanceiro() {
     return { error }
   }
 
+  const removerBulk = async (ids: string[]) => {
+    if (!ids.length) return { error: null }
+    const { error } = await sb.from('lancamentos').delete().in('id', ids)
+    if (!error) fetch()
+    return { error }
+  }
+
   const inserirBulk = async (items: LancamentoInput[]) => {
     if (!tenantId) {
       console.error('Tentativa de inserirBulk financeiro sem tenant_id')
@@ -77,5 +84,5 @@ export function useFinanceiro() {
     return { error }
   }
 
-  return { lancamentos, loading, inserir, atualizar, remover, inserirBulk, limparTudo, conciliar, refresh: fetch }
+  return { lancamentos, loading, inserir, atualizar, remover, removerBulk, inserirBulk, limparTudo, conciliar, refresh: fetch }
 }
