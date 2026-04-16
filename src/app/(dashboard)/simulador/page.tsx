@@ -419,7 +419,7 @@ export default function SimuladorPage() {
                     legend: { display: false },
                     tooltip: {
                       callbacks: {
-                        label: (ctx) => `Resultado: ${fmtR(ctx.parsed.y)}`
+                        label: (ctx) => `Resultado: ${fmtR(ctx.parsed.y || 0)}`
                       }
                     }
                   }

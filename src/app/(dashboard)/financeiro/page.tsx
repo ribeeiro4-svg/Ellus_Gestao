@@ -199,7 +199,14 @@ export default function FinanceiroPage() {
           { name: 'descricao', label: 'Descrição', type: 'text', required: true },
           { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
           { name: 'data', label: 'Data', type: 'date', required: true },
-          { name: 'categoria', label: 'Categoria', type: 'text', required: true },
+          { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
+            { value: 'Mensalidades', label: 'Mensalidades' },
+            { value: 'ADESÃO', label: 'ADESÃO' },
+            { value: 'Patrocínios', label: 'Patrocínios' },
+            { value: 'Eventos', label: 'Eventos' },
+            { value: 'Serviços', label: 'Serviços' },
+            { value: 'Outros', label: 'Outros' },
+          ]},
           { name: 'status', label: 'Status', type: 'select', required: true, options: [
             { value: 'pago', label: 'Pago / Recebido' },
             { value: 'aberto', label: 'Aberto / Pendente' },
@@ -212,6 +219,20 @@ export default function FinanceiroPage() {
             { value: 'Transferência', label: 'Transferência' },
             { value: 'Cartão', label: 'Cartão' },
           ]},
+          { 
+            name: 'valor_recebido', 
+            label: 'Valor Recebido (R$)', 
+            type: 'number', 
+            showIf: (f) => f.forma_pagamento === 'Dinheiro',
+            placeholder: 'Para cálculo de troco'
+          },
+          { 
+            name: 'troco_via_pix', 
+            label: 'Troco em PIX?', 
+            type: 'checkbox', 
+            showIf: (f) => f.forma_pagamento === 'Dinheiro' && f.valor_recebido > f.valor,
+            placeholder: 'Devolver troco via PIX'
+          },
         ]}
       />
     </div>

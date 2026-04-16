@@ -192,7 +192,7 @@ export function useProjecao() {
     carregarDadosReais,
     loading,
     syncing,
-    calculos,
+    calculos: { ...calculos, reservaAlvo },
     projecaoAnual: projecaoMeses
   }
 }

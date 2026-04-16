@@ -34,6 +34,8 @@ export interface Lancamento {
   valor: number
   status: StatusLancamento
   forma_pagamento?: FormaPagamento
+  valor_recebido?: number
+  troco_via_pix?: boolean
   created_at: string
   updated_at: string
 }

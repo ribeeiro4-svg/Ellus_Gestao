@@ -5,10 +5,11 @@ import { X, Check, Loader2 } from 'lucide-react'
 interface Field {
   name: string
   label: string
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea'
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox'
   options?: { value: string; label: string }[]
   required?: boolean
   placeholder?: string
+  showIf?: (formData: any) => boolean
 }
 
 interface CrudModalProps {
@@ -104,107 +105,121 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
         {/* Body */}
         <form onSubmit={handleSubmit}>
           <div style={{ padding: '20px 24px', display: 'grid', gap: 14 }}>
-            {fields.map(field => (
-              <div key={field.name} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text2)', display: 'block' }}>
-                  {field.label}{field.required && <span style={{ color: 'var(--red)' }}> *</span>}
-                </label>
+            {fields.map(field => {
+              if (field.showIf && !field.showIf(formData)) return null
 
-                {field.type === 'select' ? (
-                  <div>
-                    {field.name === 'forma_pagamento' ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        {[{ value: '', label: '— Nenhuma' }, ...(field.options || [])].map(opt => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => handleChange(field.name, opt.value)}
-                            style={{
-                              padding: '5px 12px',
-                              borderRadius: 20,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              border: `1.5px solid ${formData[field.name] === opt.value ? 'var(--accent)' : 'var(--border)'}`,
-                              background: formData[field.name] === opt.value ? 'rgba(45,140,111,.12)' : 'var(--surface2)',
-                              color: formData[field.name] === opt.value ? 'var(--accent)' : 'var(--text2)',
-                              transition: 'var(--trans-fast)',
-                            }}
-                          >
-                            {opt.value && PAGAMENTO_ICONS[opt.value] ? `${PAGAMENTO_ICONS[opt.value]} ` : ''}{opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <select
-                        required={field.required}
-                        value={formData[field.name] || ''}
-                        onChange={e => handleChange(field.name, e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          border: '1.5px solid var(--border)',
-                          borderRadius: 'var(--radius-sm)',
-                          fontSize: 13,
-                          fontFamily: 'inherit',
-                          color: 'var(--text1)',
-                          background: 'var(--surface)',
-                          outline: 'none',
-                          cursor: 'pointer',
-                          transition: 'var(--trans-fast)',
-                        }}
-                      >
-                        <option value="" disabled>Selecione...</option>
-                        {field.options?.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                ) : field.type === 'textarea' ? (
-                  <textarea
-                    required={field.required}
-                    value={formData[field.name] || ''}
-                    placeholder={field.placeholder}
-                    onChange={e => handleChange(field.name, e.target.value)}
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      border: '1.5px solid var(--border)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: 13,
-                      fontFamily: 'inherit',
-                      color: 'var(--text1)',
-                      background: 'var(--surface)',
-                      outline: 'none',
-                      resize: 'vertical',
-                      transition: 'var(--trans-fast)',
-                    }}
-                  />
-                ) : (
-                  <input
-                    type={field.type}
-                    required={field.required}
-                    placeholder={field.placeholder}
-                    value={formData[field.name] || ''}
-                    onChange={e => handleChange(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      border: '1.5px solid var(--border)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: 13,
-                      fontFamily: 'inherit',
-                      color: 'var(--text1)',
-                      background: 'var(--surface)',
-                      outline: 'none',
-                      transition: 'var(--trans-fast)',
-                    }}
-                  />
-                )}
-              </div>
-            ))}
+              return (
+                <div key={field.name} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text2)', display: 'block' }}>
+                    {field.label}{field.required && <span style={{ color: 'var(--red)' }}> *</span>}
+                  </label>
+
+                  {field.type === 'select' ? (
+                    <div>
+                      {field.name === 'forma_pagamento' ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {[{ value: '', label: '— Nenhuma' }, ...(field.options || [])].map(opt => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => handleChange(field.name, opt.value)}
+                              style={{
+                                padding: '5px 12px',
+                                borderRadius: 20,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                border: `1.5px solid ${formData[field.name] === opt.value ? 'var(--accent)' : 'var(--border)'}`,
+                                background: formData[field.name] === opt.value ? 'rgba(45,140,111,.12)' : 'var(--surface2)',
+                                color: formData[field.name] === opt.value ? 'var(--accent)' : 'var(--text2)',
+                                transition: 'var(--trans-fast)',
+                              }}
+                            >
+                              {opt.value && PAGAMENTO_ICONS[opt.value] ? `${PAGAMENTO_ICONS[opt.value]} ` : ''}{opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <select
+                          required={field.required}
+                          value={formData[field.name] || ''}
+                          onChange={e => handleChange(field.name, e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            border: '1.5px solid var(--border)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 13,
+                            fontFamily: 'inherit',
+                            color: 'var(--text1)',
+                            background: 'var(--surface)',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            transition: 'var(--trans-fast)',
+                          }}
+                        >
+                          <option value="" disabled>Selecione...</option>
+                          {field.options?.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  ) : field.type === 'textarea' ? (
+                    <textarea
+                      required={field.required}
+                      value={formData[field.name] || ''}
+                      placeholder={field.placeholder}
+                      onChange={e => handleChange(field.name, e.target.value)}
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        border: '1.5px solid var(--border)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: 13,
+                        fontFamily: 'inherit',
+                        color: 'var(--text1)',
+                        background: 'var(--surface)',
+                        outline: 'none',
+                        resize: 'vertical',
+                        transition: 'var(--trans-fast)',
+                      }}
+                    />
+                  ) : field.type === 'checkbox' ? (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input 
+                        type="checkbox"
+                        checked={!!formData[field.name]}
+                        onChange={e => handleChange(field.name, e.target.checked)}
+                        style={{ cursor: 'pointer', width: 16, height: 16 }}
+                      />
+                      <span className="text-sm font-medium text-slate-600">{field.placeholder || field.label}</span>
+                    </div>
+                  ) : (
+                    <input
+                      type={field.type}
+                      required={field.required}
+                      placeholder={field.placeholder}
+                      value={formData[field.name] || ''}
+                      onChange={e => handleChange(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        border: '1.5px solid var(--border)',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: 13,
+                        fontFamily: 'inherit',
+                        color: 'var(--text1)',
+                        background: 'var(--surface)',
+                        outline: 'none',
+                        transition: 'var(--trans-fast)',
+                      }}
+                    />
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           {/* Footer */}
