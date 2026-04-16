@@ -10,7 +10,10 @@ import {
   Trash2, 
   Save, 
   Calculator,
-  UserPlus
+  UserPlus,
+  Calendar,
+  ChevronRight,
+  Clock
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -24,39 +27,73 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController)
 
+const ANOS = [2024, 2025, 2026, 2027, 2028]
+
 export default function SimuladorPage() {
   const { cenario, setCenario, salvarCenario, calculos, loading } = useProjecao()
   const [isSaving, setIsSaving] = useState(false)
-
-  const handleAddProLabore = () => {
-    const newItem = { 
-      id: Math.random().toString(), 
-      nome: 'Novo Diretor', 
-      valor: 0, 
-      mes_inicio: undefined, 
-      mes_fim: undefined 
-    }
-    setCenario({ ...cenario, pro_labores: [...cenario.pro_labores, newItem] })
-  }
-
-  const handleRemoveProLabore = (id: string) => {
-    setCenario({ ...cenario, pro_labores: cenario.pro_labores.filter(p => p.id !== id) })
-  }
-
-  const handleProLaboreChange = (id: string, field: 'nome' | 'valor' | 'mes_inicio' | 'mes_fim', value: string | number | undefined) => {
-    setCenario({
-      ...cenario,
-      pro_labores: cenario.pro_labores.map(p => 
-        p.id === id ? { ...p, [field]: value } : p
-      )
-    })
-  }
 
   const handleSave = async () => {
     setIsSaving(true)
     await salvarCenario(cenario)
     setIsSaving(false)
-    alert('Cenário salvo com sucesso!')
+    alert('Simulação salva com sucesso!')
+  }
+
+  // Ações de Diretores
+  const addDirector = () => {
+    const newDir = {
+      id: Math.random().toString(),
+      nome: 'Novo Cargo',
+      periodos: [{ id: Math.random().toString(), valor: 0, mes_inicio: 0 }]
+    }
+    setCenario({ ...cenario, pro_labores: [...cenario.pro_labores, newDir] })
+  }
+
+  const removeDirector = (id: string) => {
+    setCenario({ ...cenario, pro_labores: cenario.pro_labores.filter(d => d.id !== id) })
+  }
+
+  const updateDirectorName = (id: string, nome: string) => {
+    setCenario({
+      ...cenario,
+      pro_labores: cenario.pro_labores.map(d => d.id === id ? { ...d, nome } : d)
+    })
+  }
+
+  // Ações de Períodos (Aninhados)
+  const addPeriod = (directorId: string) => {
+    setCenario({
+      ...cenario,
+      pro_labores: cenario.pro_labores.map(d => {
+        if (d.id !== directorId) return d
+        const newPeriod = { id: Math.random().toString(), valor: 0, mes_inicio: d.periodos.length }
+        return { ...d, periodos: [...d.periodos, newPeriod] }
+      })
+    })
+  }
+
+  const removePeriod = (directorId: string, periodId: string) => {
+    setCenario({
+      ...cenario,
+      pro_labores: cenario.pro_labores.map(d => {
+        if (d.id !== directorId) return d
+        return { ...d, periodos: d.periodos.filter(p => p.id !== periodId) }
+      })
+    })
+  }
+
+  const updatePeriod = (directorId: string, periodId: string, field: string, value: any) => {
+    setCenario({
+      ...cenario,
+      pro_labores: cenario.pro_labores.map(d => {
+        if (d.id !== directorId) return d
+        return {
+          ...d,
+          periodos: d.periodos.map(p => p.id === periodId ? { ...p, [field]: value } : p)
+        }
+      })
+    })
   }
 
   const chartData = {
@@ -85,29 +122,52 @@ export default function SimuladorPage() {
 
   return (
     <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20">
-      <div className="page-header flex justify-between items-center">
+      <div className="page-header flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
             <Calculator className="text-[#2d8c6f]" />
-            Simulador de Projeções
+            Simulador Estratégico
           </h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
-            Crie cenários hipotéticos para planejar o futuro da associação.
+            Crie cenários hipotéticos comparando períodos e metas.
           </p>
         </div>
-        <button 
-          onClick={handleSave}
-          disabled={isSaving}
-          className="btn-primary px-6 py-2.5 rounded-xl flex items-center gap-2 text-sm font-bold transition-all disabled:opacity-50"
-        >
-          <Save size={18} />
-          {isSaving ? 'Salvando...' : 'Salvar Cenário'}
-        </button>
+        
+        <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md border border-white/60 p-2 rounded-2xl shadow-sm">
+           <div className="flex items-center gap-2 px-3 border-r border-slate-100">
+             <Calendar size={14} className="text-[#2d8c6f]" />
+             <select 
+               value={cenario.mes_referencia} 
+               onChange={(e) => setCenario({...cenario, mes_referencia: Number(e.target.value)})}
+               className="bg-transparent border-none outline-none text-[11px] font-bold text-gray-700 uppercase tracking-widest cursor-pointer"
+             >
+               {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+             </select>
+           </div>
+           <div className="flex items-center gap-2 px-3 border-r border-slate-100">
+             <Clock size={14} className="text-[#2d8c6f]" />
+             <select 
+               value={cenario.ano_referencia} 
+               onChange={(e) => setCenario({...cenario, ano_referencia: Number(e.target.value)})}
+               className="bg-transparent border-none outline-none text-[11px] font-bold text-gray-700 uppercase tracking-widest cursor-pointer"
+             >
+               {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
+             </select>
+           </div>
+           <button 
+             onClick={handleSave} 
+             disabled={isSaving}
+             className="px-4 py-2 bg-[#2d8c6f] text-white text-[11px] font-bold rounded-xl hover:bg-[#26735a] transition-all flex items-center gap-2 ml-2"
+           >
+             <Save size={14} />
+             {isSaving ? 'SALVANDO...' : 'SALVAR'}
+           </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Receita Projetada" value={fmtR(calculos.totalReceita)} icon={<TrendingUp size={20} />} category="success" trendLabel="Recorrente Mensal" />
-        <KpiCard title="Despesa Projetada" value={fmtR(calculos.totalDespesas)} icon={<TrendingDown size={20} />} category="error" trendLabel="Total de Saídas" />
+        <KpiCard title="Receita Projetada" value={fmtR(calculos.totalReceita)} icon={<TrendingUp size={20} />} category="success" trendLabel={`Base: ${cenario.num_associados} Assoc.`} />
+        <KpiCard title="Total em Folha" value={fmtR(calculos.totalFolha)} icon={<Users size={20} />} category="error" trendLabel={`Em ${MESES[cenario.mes_referencia]}`} />
         <KpiCard 
           title="Resultado Simulado" 
           value={fmtR(calculos.resultado)} 
@@ -115,174 +175,156 @@ export default function SimuladorPage() {
           category={calculos.resultado >= 0 ? 'success' : 'error'} 
           trendLabel={`Margem de ${fmtPct(calculos.margem)}`}
         />
-        <KpiCard title="Reserva de 3 Meses" value={fmtR(calculos.reservaAlvo)} icon={<PiggyBank size={20} />} category="info" trendLabel="Meta de Segurança" />
+        <KpiCard title="Reserva Necessária" value={fmtR(calculos.reservaAlvo)} icon={<PiggyBank size={20} />} category="info" trendLabel={`Cobre ${cenario.reserva_meses_alvo} meses`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Painel de Controles */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-8">
+          {/* Parâmetros Gerais */}
           <div className="chart-card bg-white/80 backdrop-blur-md border border-white/60 rounded-3xl p-8 shadow-sm">
-            <h2 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-              <Plus className="text-[#2d8c6f] w-5 h-5" />
-              Parâmetros da Simulação
+            <h2 className="text-sm font-bold text-gray-400 mb-6 uppercase tracking-[2px] flex items-center gap-2">
+              <Plus className="text-[#2d8c6f] w-4 h-4" />
+              Parâmetros Operacionais
             </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-4">
                 <label className="block">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Número de Associados</span>
-                  <input 
-                    type="number" 
-                    value={cenario.num_associados}
-                    onChange={(e) => setCenario({...cenario, num_associados: Number(e.target.value)})}
-                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all"
-                  />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Associados</span>
+                  <input type="number" value={cenario.num_associados} onChange={(e) => setCenario({...cenario, num_associados: Number(e.target.value)})}
+                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
                 </label>
                 <label className="block">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Valor da Mensalidade (R$)</span>
-                  <input 
-                    type="number" 
-                    value={cenario.valor_mensalidade}
-                    onChange={(e) => setCenario({...cenario, valor_mensalidade: Number(e.target.value)})}
-                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Folha Base (Outros Funcionários)</span>
-                  <input 
-                    type="number" 
-                    value={cenario.folha_pagamento}
-                    onChange={(e) => setCenario({...cenario, folha_pagamento: Number(e.target.value)})}
-                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all"
-                  />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Mensalidade (R$)</span>
+                  <input type="number" value={cenario.valor_mensalidade} onChange={(e) => setCenario({...cenario, valor_mensalidade: Number(e.target.value)})}
+                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
                 </label>
               </div>
-
               <div className="space-y-4">
                 <label className="block">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Custos Fixos Mensais</span>
-                  <input 
-                    type="number" 
-                    value={cenario.despesas_fixas}
-                    onChange={(e) => setCenario({...cenario, despesas_fixas: Number(e.target.value)})}
-                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all"
-                  />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Custos Fixos</span>
+                  <input type="number" value={cenario.despesas_fixas} onChange={(e) => setCenario({...cenario, despesas_fixas: Number(e.target.value)})}
+                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
                 </label>
                 <label className="block">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Média de Despesas Variáveis</span>
-                  <input 
-                    type="number" 
-                    value={cenario.despesas_variaveis}
-                    onChange={(e) => setCenario({...cenario, despesas_variaveis: Number(e.target.value)})}
-                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all"
-                  />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Folha Base</span>
+                  <input type="number" value={cenario.folha_pagamento} onChange={(e) => setCenario({...cenario, folha_pagamento: Number(e.target.value)})}
+                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
+                </label>
+              </div>
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Média Variáveis</span>
+                  <input type="number" value={cenario.despesas_variaveis} onChange={(e) => setCenario({...cenario, despesas_variaveis: Number(e.target.value)})}
+                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
                 </label>
                 <label className="block">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Meses de Reserva Alvo</span>
-                  <select 
-                    value={cenario.reserva_meses_alvo}
-                    onChange={(e) => setCenario({...cenario, reserva_meses_alvo: Number(e.target.value)})}
-                    className="w-full h-12 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all"
-                  >
-                    {[1, 2, 3, 6, 12].map(n => <option key={n} value={n}>{n} Meses</option>)}
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Meses Reserva</span>
+                  <select value={cenario.reserva_meses_alvo} onChange={(e) => setCenario({...cenario, reserva_meses_alvo: Number(e.target.value)})}
+                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold text-gray-700 text-sm">
+                    {[1, 3, 6, 12].map(n => <option key={n} value={n}>{n} Meses</option>)}
                   </select>
                 </label>
               </div>
             </div>
           </div>
 
-          <div className="chart-card bg-white/80 backdrop-blur-md border border-white/60 rounded-3xl p-8 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Users className="text-[#2d8c6f] w-5 h-5" />
-                Pró-labores da Diretoria
-              </h2>
-              <button 
-                onClick={handleAddProLabore}
-                className="flex items-center gap-2 px-4 py-2 bg-[#2d8c6f]/10 text-[#2d8c6f] text-[11px] font-bold rounded-xl hover:bg-[#2d8c6f]/20 transition-all uppercase tracking-widest"
-              >
-                <UserPlus size={14} />
-                Adicionar Sócio/Diretor
-              </button>
+          {/* Seção de Pró-labores (Cards de Diretores) */}
+          <div className="space-y-6">
+            <div className="flex justify-between items-center px-2">
+               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-[2px] flex items-center gap-2">
+                 <Users className="text-[#2d8c6f] w-4 h-4" />
+                 Pró-labores da Diretoria
+               </h2>
+               <button 
+                 onClick={addDirector}
+                 className="flex items-center gap-2 px-4 py-2 bg-[#2d8c6f]/10 text-[#2d8c6f] text-[10px] font-bold rounded-xl hover:bg-[#2d8c6f]/20 transition-all uppercase tracking-widest"
+               >
+                 <UserPlus size={14} />
+                 Novo Diretor
+               </button>
             </div>
 
-            <div className="space-y-3">
-              {cenario.pro_labores.length === 0 ? (
-                <div className="text-center py-8 text-slate-400 text-sm italic">
-                  Nenhum pró-labore cadastrado.
-                </div>
-              ) : (
-                cenario.pro_labores.map((p) => (
-                  <div key={p.id} className="flex flex-col md:flex-row gap-4 items-center bg-slate-50/50 p-4 rounded-3xl border border-slate-100 group">
-                    <div className="flex-1 flex gap-3 items-center min-w-[200px] w-full">
-                      <input 
-                        type="text" 
-                        value={p.nome}
-                        placeholder="Cargo / Nome"
-                        onChange={(e) => handleProLaboreChange(p.id, 'nome', e.target.value)}
-                        className="flex-1 bg-transparent border-none outline-none font-bold text-gray-700 text-sm"
-                      />
-                      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-                        <span className="text-[10px] font-bold text-slate-400">R$</span>
-                        <input 
-                          type="number" 
-                          value={p.valor}
-                          onChange={(e) => handleProLaboreChange(p.id, 'valor', Number(e.target.value))}
-                          className="w-24 bg-transparent border-none outline-none font-bold text-gray-700 text-sm text-right"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">De</span>
-                        <select 
-                          value={p.mes_inicio ?? ''}
-                          onChange={(e) => handleProLaboreChange(p.id, 'mes_inicio', e.target.value === '' ? undefined : Number(e.target.value))}
-                          className="bg-white border border-slate-100 rounded-lg px-2 py-1 text-[11px] font-bold text-gray-600 outline-none"
-                        >
-                          <option value="">-</option>
-                          {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">A</span>
-                        <select 
-                          value={p.mes_fim ?? ''}
-                          onChange={(e) => handleProLaboreChange(p.id, 'mes_fim', e.target.value === '' ? undefined : Number(e.target.value))}
-                          className="bg-white border border-slate-100 rounded-lg px-2 py-1 text-[11px] font-bold text-gray-600 outline-none"
-                        >
-                          <option value="">A partir</option>
-                          {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                        </select>
-                      </div>
-                      <button 
-                        onClick={() => handleRemoveProLabore(p.id)}
-                        className="text-slate-300 hover:text-rose-500 p-2 transition-colors md:opacity-0 group-hover:opacity-100"
-                      >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               {cenario.pro_labores.map(dir => (
+                 <div key={dir.id} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
+                   <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => removeDirector(dir.id)} className="text-slate-200 hover:text-rose-500 transition-colors">
                         <Trash2 size={16} />
                       </button>
-                    </div>
-                  </div>
-                ))
-              )}
+                   </div>
+                   
+                   <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 rounded-2xl bg-[#2d8c6f]/10 flex items-center justify-center text-[#2d8c6f]">
+                        <Users size={18} />
+                      </div>
+                      <input 
+                        type="text" 
+                        value={dir.nome} 
+                        onChange={(e) => updateDirectorName(dir.id, e.target.value)}
+                        className="bg-transparent border-none outline-none font-bold text-gray-800 text-base placeholder:text-slate-300 w-full"
+                        placeholder="Cargo/Diretor"
+                      />
+                   </div>
+
+                   <div className="space-y-3 mb-6">
+                      {dir.periodos.map(period => {
+                        const isActive = period.mes_inicio <= cenario.mes_referencia && (period.mes_fim === undefined || period.mes_fim >= cenario.mes_referencia)
+                        return (
+                          <div key={period.id} className={`flex items-center gap-2 p-3 rounded-2xl border transition-all ${isActive ? 'bg-emerald-50/50 border-emerald-100 ring-1 ring-emerald-500/20' : 'bg-slate-50 border-slate-100'}`}>
+                             <div className="flex-1 flex items-center gap-2">
+                               <span className="text-[10px] font-bold text-slate-300">R$</span>
+                               <input 
+                                 type="number" 
+                                 value={period.valor} 
+                                 onChange={(e) => updatePeriod(dir.id, period.id, 'valor', Number(e.target.value))}
+                                 className="w-full bg-transparent border-none outline-none font-extrabold text-sm text-gray-700"
+                               />
+                             </div>
+                             <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-slate-100">
+                               <select 
+                                 value={period.mes_inicio} 
+                                 onChange={(e) => updatePeriod(dir.id, period.id, 'mes_inicio', Number(e.target.value))}
+                                 className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase"
+                               >
+                                 {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                               </select>
+                               <ChevronRight size={10} className="text-slate-200" />
+                               <select 
+                                 value={period.mes_fim ?? ''} 
+                                 onChange={(e) => updatePeriod(dir.id, period.id, 'mes_fim', e.target.value === '' ? undefined : Number(e.target.value))}
+                                 className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase"
+                               >
+                                 <option value="">∞</option>
+                                 {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                               </select>
+                             </div>
+                             <button onClick={() => removePeriod(dir.id, period.id)} className="text-slate-200 hover:text-rose-500 transition-colors p-1">
+                               <Trash2 size={12} />
+                             </button>
+                          </div>
+                        )
+                      })}
+                   </div>
+
+                   <button 
+                     onClick={() => addPeriod(dir.id)}
+                     className="w-full py-2 bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-widest rounded-xl hover:bg-slate-100 hover:text-[#2d8c6f] transition-all border border-dashed border-slate-200"
+                   >
+                     + Adicionar Período
+                   </button>
+                 </div>
+               ))}
             </div>
-            {cenario.pro_labores.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center px-2">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Pró-labore</span>
-                <span className="text-lg font-black text-[#2d8c6f]">{fmtR(calculos.totalProLabores)}</span>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Painel Lateral Visual */}
+        {/* Panel Lateral Visual */}
         <div className="space-y-6">
           <ChartCard 
-            title="Distribuição Mensal" 
-            subtitle="Cenário Simulado"
+            title="Distribuição Projetada" 
+            subtitle={`Referência: ${MESES[cenario.mes_referencia]} / ${cenario.ano_referencia}`}
           >
-            <div className="h-[300px] mt-6">
+            <div className="h-[280px] mt-6">
               <Bar 
                 data={chartData} 
                 options={{ 
@@ -296,30 +338,46 @@ export default function SimuladorPage() {
                 }} 
               />
             </div>
+            <div className="mt-8 space-y-4">
+               <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pró-labore no Mês</span>
+                  <span className="text-sm font-black text-[#2d8c6f]">{fmtR(calculos.totalProLabores)}</span>
+               </div>
+               <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Margem Líquida Estimada</span>
+                  <span className={`text-sm font-black ${calculos.resultado >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {fmtPct(calculos.margem)}
+                  </span>
+               </div>
+            </div>
           </ChartCard>
 
-          <div className={`p-8 rounded-3xl border transition-all duration-500 scale-100 hover:scale-[1.02] ${
+          <div className={`p-8 rounded-[40px] border transition-all duration-500 scale-100 hover:scale-[1.02] ${
             calculos.resultado >= 0 
-              ? 'bg-gradient-to-br from-emerald-500 to-emerald-700 border-emerald-400 shadow-xl shadow-emerald-500/20' 
-              : 'bg-gradient-to-br from-rose-500 to-rose-700 border-rose-400 shadow-xl shadow-rose-500/20'
+              ? 'bg-gradient-to-br from-[#1a1c1e] to-[#2d3035] border-white/5 shadow-2xl' 
+              : 'bg-gradient-to-br from-rose-600 to-rose-800 border-rose-500 shadow-2xl'
           }`}>
-            <h3 className="text-white font-bold text-lg mb-2">Diagnóstico de Saúde</h3>
-            <p className="text-white/80 text-xs leading-relaxed mb-6 font-medium">
-              {calculos.resultado >= 0 
-                ? 'Este cenário apresenta um SUPERÁVIT sustentável. A associação tem capacidade de investimento e formação de reserva.' 
-                : 'Este cenário resultará em DÉFICIT mensal. Recomenda-se reduzir custos fixos ou aumentar a mensalidade dos associados.'}
+            <h3 className="text-white font-bold text-lg mb-2">Resumo Panorâmico</h3>
+            <p className="text-white/40 text-[11px] leading-relaxed mb-8">
+              Simulação baseada no comportamento operacional e na folha de pagamentos ativa para o período de referência.
             </p>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center py-2 border-b border-white/10">
-                <span className="text-white/60 text-[10px] font-bold uppercase">Folha / Receita</span>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center py-2 border-b border-white/5">
+                <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Folha vs Receita</span>
                 <span className="text-white font-bold text-sm">
                   {fmtPct((calculos.totalFolha / calculos.totalReceita) * 100)}
                 </span>
               </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-white/60 text-[10px] font-bold uppercase">Breakeven</span>
+              <div className="flex justify-between items-center py-2 border-b border-white/5">
+                <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Ponto de Equilíbrio</span>
                 <span className="text-white font-bold text-sm">
-                  {Math.ceil(calculos.totalDespesas / cenario.valor_mensalidade)} Assoc.
+                   ~ {Math.ceil(calculos.totalDespesas / cenario.valor_mensalidade)} Associados
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Superávit Mensal</span>
+                <span className={`text-lg font-black ${calculos.resultado >= 0 ? 'text-[#34d399]' : 'text-rose-400'}`}>
+                   {fmtR(calculos.resultado)}
                 </span>
               </div>
             </div>

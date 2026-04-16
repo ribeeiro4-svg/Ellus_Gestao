@@ -150,29 +150,37 @@ export interface Orcamento {
 export interface OrcamentoInput extends Omit<Orcamento, 'id' | 'tenant_id' | 'created_at'> {}
 
 // ─── Simulador de Cenários ────────────────────────────────────────────────
+export interface ProLaborePeriodo {
+  id: string
+  valor: number
+  mes_inicio: number // 0-11
+  mes_fim?: number // 0-11
+}
+
 export interface ProLaboreItem {
   id: string
   nome: string
-  valor: number
-  mes_inicio?: number // 0-11
-  mes_fim?: number // 0-11
+  periodos: ProLaborePeriodo[]
 }
 
 export interface CenarioSimulacao {
   id: string
   tenant_id: string
   nome: string
+  mes_referencia: number // Mes que estamos simulando no dashboard
+  ano_referencia: number
   num_associados: number
   valor_mensalidade: number
   despesas_fixas: number
   despesas_variaveis: number
   folha_pagamento: number // Base (outros funcionários)
-  pro_labores: ProLaboreItem[] // Lista dinâmica de diretores
+  pro_labores: ProLaboreItem[] // Lista dinâmica de diretores com seus períodos
   reserva_meses_alvo: number // Ex: 3 meses
   created_at: string
 }
 
 export interface CenarioInput extends Omit<CenarioSimulacao, 'id' | 'tenant_id' | 'created_at'> {}
+
 
 // ─── API Response ──────────────────────────────────────────────────────────
 export interface ApiResponse<T> {
