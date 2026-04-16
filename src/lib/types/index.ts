@@ -22,6 +22,7 @@ export interface Usuario {
 // ─── Financeiro ────────────────────────────────────────────────────────────
 export type TipoLancamento = 'receita' | 'despesa'
 export type StatusLancamento = 'pago' | 'aberto' | 'parcial' | 'cancelado'
+export type FormaPagamento = 'Dinheiro' | 'PIX' | 'Boleto' | 'Transferência' | 'Cartão' | undefined
 
 export interface Lancamento {
   id: string
@@ -32,6 +33,7 @@ export interface Lancamento {
   tipo: TipoLancamento
   valor: number
   status: StatusLancamento
+  forma_pagamento?: FormaPagamento
   created_at: string
   updated_at: string
 }

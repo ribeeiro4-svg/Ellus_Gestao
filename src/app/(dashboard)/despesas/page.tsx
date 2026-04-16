@@ -59,6 +59,11 @@ export default function DespesasPage() {
       key: 'status', 
       render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> 
     },
+    { 
+      header: 'Pagamento', 
+      key: 'forma_pagamento', 
+      render: (i: any) => <span className="text-xs font-bold text-slate-500">{i.forma_pagamento || '-'}</span> 
+    },
     {
       header: '',
       key: 'acoes',
@@ -127,6 +132,13 @@ export default function DespesasPage() {
             { value: 'pago', label: 'Pago' },
             { value: 'aberto', label: 'Aberto/Pendente' },
             { value: 'atrasado', label: 'Atrasado' }
+          ]},
+          { name: 'forma_pagamento', label: 'Forma de Pagamento', type: 'select', required: false, options: [
+            { value: 'Dinheiro', label: 'Dinheiro' },
+            { value: 'PIX', label: 'PIX' },
+            { value: 'Boleto', label: 'Boleto' },
+            { value: 'Transferência', label: 'Transferência' },
+            { value: 'Cartão', label: 'Cartão' }
           ]}
         ]}
       />
