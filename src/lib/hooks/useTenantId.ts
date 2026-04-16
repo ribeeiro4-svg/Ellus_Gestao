@@ -10,19 +10,21 @@ export function useTenantId() {
     sb.auth.getUser().then(({ data }) => {
       if (data.user) {
         sb.from('usuarios').select('tenant_id').eq('id', data.user.id).single()
-          .then(({ data: u, error }) => { 
+          .then(({ data: u }) => { 
             if (u) setTenantId(u.tenant_id)
-            else {
-              console.warn('User found in Auth but not in public.usuarios table or no tenant assigned.')
-              // Optional: set a default tenant or leave as null but we must trigger a state change to wake up other hooks
-              // For now, if not found, we don't have a reliable way to solve it without data.
-            }
           })
       } else {
-        console.warn('No active session found in useTenantId.')
+        // Modo Demonstração com Persistência em Banco (Sandbox)
+        let gid = typeof window !== 'undefined' ? localStorage.getItem('acprobec_guest_id') : null
+        if (!gid) {
+          gid = typeof self !== 'undefined' && self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
+          if (typeof window !== 'undefined') localStorage.setItem('acprobec_guest_id', gid)
+        }
+        setTenantId(gid)
       }
     })
   }, [])
 
   return tenantId
 }
+

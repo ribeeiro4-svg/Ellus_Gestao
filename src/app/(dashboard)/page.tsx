@@ -39,16 +39,14 @@ export default function DashboardPage() {
   const [activeChart, setActiveChart] = useState<any>(null)
 
   const handleClearAll = async () => {
-    if (confirm('ATENÇÃO: Isso apagará TODOS os dados (financeiro, associados, metas e projetos). Continuar?')) {
+    if (confirm('ATENÇÃO: Isso apagará TODOS os seus dados do banco de dados Cloud. Continuar?')) {
       await Promise.all([limpFin(), limpAssoc(), limpMetas(), limpProjetos()])
       
-      // Limpa chaves de demonstração local
-      localStorage.removeItem('acprobec_financeiro_demo')
-      localStorage.removeItem('acprobec_associados_demo')
-      localStorage.removeItem('acprobec_metas_demo')
-      localStorage.removeItem('acprobec_projetos_demo')
+      // Remove o ID de visitante para resetar a identidade caso queira começar totalmente do zero
+      localStorage.removeItem('acprobec_guest_id')
 
-      alert('Dados removidos com sucesso.')
+      alert('Dados removidos com sucesso. A página será reiniciada.')
+      window.location.reload()
     }
   }
 
