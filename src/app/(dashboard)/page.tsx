@@ -17,6 +17,7 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useMetas } from '@/lib/hooks/useMetas'
 import { useProjetos } from '@/lib/hooks/useProjetos'
+import { useProjecao } from '@/lib/hooks/useProjecao'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, LineElement,
@@ -36,11 +37,12 @@ export default function DashboardPage() {
   const { associados, loading: loadingAssoc, limparTudo: limpAssoc } = useAssociados()
   const { limparTudo: limpMetas } = useMetas()
   const { limparTudo: limpProjetos } = useProjetos()
+  const { limparTudo: limpSim } = useProjecao()
   const [activeChart, setActiveChart] = useState<any>(null)
 
   const handleClearAll = async () => {
     if (confirm('ATENÇÃO: Isso apagará TODOS os seus dados do banco de dados Cloud. Continuar?')) {
-      await Promise.all([limpFin(), limpAssoc(), limpMetas(), limpProjetos()])
+      await Promise.all([limpFin(), limpAssoc(), limpMetas(), limpProjetos(), limpSim()])
       
       // Remove o ID de visitante para resetar a identidade caso queira começar totalmente do zero
       localStorage.removeItem('acprobec_guest_id')

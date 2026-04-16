@@ -70,6 +70,12 @@ export function useProjecao() {
     return { error }
   }
 
+  const limparTudo = async () => {
+    if (!tenantId) return
+    await sb.from('cenarios_simulacao').delete().eq('tenant_id', tenantId)
+    setCenario(DEFAULT_CENARIO)
+  }
+
   const carregarDadosReais = async () => {
     if (!tenantId) return
     setSyncing(true)
@@ -189,6 +195,7 @@ export function useProjecao() {
     visao,
     setVisao,
     salvarCenario,
+    limparTudo,
     carregarDadosReais,
     loading,
     syncing,
