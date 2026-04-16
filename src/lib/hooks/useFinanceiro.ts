@@ -12,8 +12,16 @@ export function useFinanceiro() {
 
   const fetch = useCallback(async () => {
     if (!tenantId) {
-      // If we don't have a tenant yet, we shouldn't be stuck forever if the hook is still initializing
-      // But usually, we wait for useTenantId to resolve.
+      // Modo Demonstração (Bypass de Login) ou Sandbox
+      setLancamentos([
+        { id: '1', data: '2026-04-10', descricao: 'Mensalidade Associação Abril', categoria: 'Mensalidades', tipo: 'receita', valor: 15300.00, status: 'pago', created_at: '2026-04-10', updated_at: '2026-04-10' },
+        { id: '2', data: '2026-04-12', descricao: 'Patrocínio Evento Anual', categoria: 'Patrocínios', tipo: 'receita', valor: 8500.00, status: 'pendente', created_at: '2026-04-12', updated_at: '2026-04-12' },
+        { id: '3', data: '2026-04-15', descricao: 'Consultoria Financeira', categoria: 'Serviços', tipo: 'receita', valor: 3200.00, status: 'pago', created_at: '2026-04-15', updated_at: '2026-04-15' },
+        { id: '4', data: '2026-04-05', descricao: 'Aluguel Escritório SP', categoria: 'Infraestrutura', tipo: 'despesa', valor: 3500.00, status: 'pago', created_at: '2026-04-05', updated_at: '2026-04-05' },
+        { id: '5', data: '2026-04-08', descricao: 'Marketing Digital ACPROBEC', categoria: 'Publicidade', tipo: 'despesa', valor: 1200.00, status: 'pendente', created_at: '2026-04-08', updated_at: '2026-04-08' },
+        { id: '6', data: '2026-04-18', descricao: 'Materiais Gráficos do Evento', categoria: 'Suprimentos', tipo: 'despesa', valor: 850.00, status: 'aberto', created_at: '2026-04-18', updated_at: '2026-04-18' },
+      ] as Lancamento[])
+      setLoading(false)
       return
     }
     setLoading(true)
@@ -30,7 +38,7 @@ export function useFinanceiro() {
     } finally {
       setLoading(false)
     }
-  }, [tenantId])
+  }, [tenantId, sb])
 
   useEffect(() => { fetch() }, [fetch])
 
