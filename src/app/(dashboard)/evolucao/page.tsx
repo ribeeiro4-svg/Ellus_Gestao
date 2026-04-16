@@ -10,10 +10,15 @@ import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, LineElement,
   PointElement, Title, Tooltip, Legend, Filler,
+  BarController, LineController
 } from 'chart.js'
 import { Chart, Line } from 'react-chartjs-2'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler)
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement, LineElement, 
+  PointElement, Title, Tooltip, Legend, Filler,
+  BarController, LineController
+)
 
 export default function EvolucaoPage() {
   const { lancamentos, loading: loadFin } = useFinanceiro()

@@ -89,28 +89,31 @@ export default function SplashScreen() {
            <p className="text-[10px] text-[rgba(255,255,255,0.3)] tracking-[0.3em] font-medium mt-2 uppercase">Gestão Inteligente INOVACONT</p>
         </div>
 
-        {/* Loader Wrapper */}
-        <div className={`w-full transition-all duration-500 ${showEnterBtn ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
-          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
-            <div 
-              className="h-full bg-gradient-to-r from-[#2d8c6f] to-[#34d399] rounded-full transition-all duration-300 shadow-[0_0_12px_rgba(45,140,111,0.5)]" 
-              style={{ width: `${progress}%` }}
-            />
+        {/* Content Wrapper for Progress/Button */}
+        <div className="w-full relative min-h-[80px] flex items-center justify-center">
+          {/* Loader */}
+          <div className={`w-full transition-all duration-500 absolute ${showEnterBtn ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 p-[1px]">
+              <div 
+                className="h-full bg-gradient-to-r from-[#2d8c6f] to-[#34d399] rounded-full transition-all duration-300 shadow-[0_0_12px_rgba(45,140,111,0.5)]" 
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="text-center mt-4 h-5">
+              <p className="text-[11px] text-[rgba(255,255,255,0.4)] tracking-wide font-medium">{message}</p>
+            </div>
           </div>
-          <div className="text-center mt-4 h-5">
-            <p className="text-[11px] text-[rgba(255,255,255,0.4)] tracking-wide font-medium">{message}</p>
-          </div>
-        </div>
 
-        {/* Enter Button */}
-        <button 
-          onClick={handleEnter}
-          className={`absolute bottom-[-120px] transition-all duration-700 w-full h-14 bg-white text-[#0e2d22] rounded-xl font-bold text-sm shadow-2xl shadow-black/20 transform ${
-            showEnterBtn ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0 pointer-events-none'
-          } active:scale-[0.98] active:bg-gray-100`}
-        >
-          ACESSAR DASHBOARD
-        </button>
+          {/* Enter Button */}
+          <button 
+            onClick={handleEnter}
+            className={`transition-all duration-700 w-full h-14 bg-white text-[#0e2d22] rounded-xl font-bold text-sm shadow-2xl shadow-black/20 transform ${
+              showEnterBtn ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+            } active:scale-[0.98] active:bg-gray-100 uppercase tracking-widest`}
+          >
+            ACESSAR DASHBOARD
+          </button>
+        </div>
       </div>
 
       <style jsx>{`

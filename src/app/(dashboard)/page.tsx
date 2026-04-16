@@ -16,30 +16,16 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import {
   Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-  Filler,
+  CategoryScale, LinearScale, BarElement, LineElement,
+  PointElement, Title, Tooltip, Legend, Filler, ArcElement,
+  BarController, LineController, DoughnutController
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
 
 ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
+  CategoryScale, LinearScale, BarElement, LineElement, 
+  PointElement, ArcElement, Title, Tooltip, Legend, Filler,
+  BarController, LineController, DoughnutController
 )
 
 export default function DashboardPage() {
@@ -145,10 +131,11 @@ export default function DashboardPage() {
     }
   }
 
-  if (loading) return <SplashScreen />
-
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col flex-1 h-full min-h-0">
+    <div className="flex flex-col flex-1 h-full min-h-0 relative">
+      {loading && <SplashScreen />}
+      
+      <div className={`animate-in fade-in duration-500 flex flex-col flex-1 h-full ${loading ? 'opacity-0' : 'opacity-100'}`}>
       <div className="page-header">
         <div>
           <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Dashboard Executivo</h1>
@@ -260,6 +247,7 @@ export default function DashboardPage() {
         onClose={() => setActiveChart(null)}
         {...activeChart}
       />
+      </div>
     </div>
   )
 }

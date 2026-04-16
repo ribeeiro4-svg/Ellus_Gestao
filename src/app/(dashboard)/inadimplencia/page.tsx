@@ -5,10 +5,14 @@ import DataTable from '@/components/ui/DataTable'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, fmtPct } from '@/lib/utils/formatters'
 import { AlertTriangle, TrendingDown, Users, ShieldAlert } from 'lucide-react'
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
+import { 
+  Chart as ChartJS, 
+  ArcElement, Tooltip, Legend, 
+  DoughnutController 
+} from 'chart.js'
 import { Doughnut } from 'react-chartjs-2'
 
-ChartJS.register(ArcElement, Tooltip, Legend)
+ChartJS.register(ArcElement, Tooltip, Legend, DoughnutController)
 
 export default function InadimplenciaPage() {
   const { associados, loading } = useAssociados()
