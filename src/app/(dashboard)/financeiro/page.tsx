@@ -45,8 +45,23 @@ export default function FinanceiroPage() {
 
   const margens = recMensal.map((v, i) => v > 0 ? Math.round((v - despMensal[i]) / v * 100) : 0)
 
-  const totalRec = recMensal.reduce((a, b) => a + b, 0)
-  const totalDesp = despMensal.reduce((a, b) => a + b, 0)
+  const { totalRec, totalDesp, saldoCaixa, saldoBanco } = useMemo(() => {
+    let tr = 0, td = 0, sc = 0, sb = 0
+    lancamentos.forEach(l => {
+      const v = l.valor || 0
+      if (l.tipo === 'receita') {
+        tr += v
+        if (l.forma_pagamento === 'Dinheiro') sc += v
+        else sb += v
+      } else {
+        td += v
+        if (l.forma_pagamento === 'Dinheiro') sc -= v
+        else sb -= v
+      }
+    })
+    return { totalRec: tr, totalDesp: td, saldoCaixa: sc, saldoBanco: sb }
+  }, [lancamentos])
+
   const resultado = totalRec - totalDesp
 
   /* ── CRUD helpers ── */
@@ -115,19 +130,19 @@ export default function FinanceiroPage() {
           </div>
           <div>
             <div className="page-title">Fluxo de Caixa</div>
-            <div className="page-subtitle">Gestão de todos os lançamentos — ACPROBEC</div>
+            <div className="page-subtitle">Gestão diferenciada de Caixa e Bancos — ACPROBEC</div>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {/* Mini KPIs no header */}
           {[
-            { label: 'Receitas', value: fmtR(totalRec), color: 'var(--green)' },
-            { label: 'Despesas', value: fmtR(totalDesp), color: 'var(--red)' },
-            { label: 'Resultado', value: fmtR(Math.abs(resultado)), color: resultado >= 0 ? 'var(--green)' : 'var(--red)' },
+            { label: '💰 Em Caixa', value: fmtR(saldoCaixa), color: 'var(--accent)' },
+            { label: '🏦 Conta Bancária', value: fmtR(saldoBanco), color: 'var(--blue)' },
+            { label: '📊 Resultado Total', value: fmtR(Math.abs(resultado)), color: resultado >= 0 ? 'var(--green)' : 'var(--red)' },
           ].map(k => (
-            <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 16px', textAlign: 'center', minWidth: 90 }}>
+            <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 16px', textAlign: 'center', minWidth: 120 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{k.label}</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: k.color }}>{k.value}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: k.color }}>{k.value}</div>
             </div>
           ))}
           <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}>
