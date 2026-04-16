@@ -164,7 +164,20 @@ export default function ImportPage() {
   }
 
   const confirmImport = async () => {
-    if (!preview || !tenantId) return
+    console.log('[Import] Iniciando confirmação...', { hasPreview: !!preview, tenantId })
+    
+    if (!preview) {
+      setFeedback({ type: 'error', message: 'Nenhum dado para importar.' })
+      return
+    }
+
+    if (!tenantId || tenantId === 'LOADING') {
+      const msg = tenantId === 'LOADING' ? 'Aguardando identificação da conta...' : 'Erro: Conta não identificada. Verifique se o vínculo no banco de dados foi feito corretamente.'
+      setFeedback({ type: 'error', message: msg })
+      console.error('[Import] Falha na confirmação:', msg)
+      return
+    }
+
     setLoading(true)
     try {
       if (preview.type === 'financeiro') {
@@ -181,6 +194,7 @@ export default function ImportPage() {
       }
       setPreview(null)
     } catch (err: any) {
+      console.error('[Import] Erro no salvamento:', err)
       setFeedback({ type: 'error', message: err.message || 'Erro ao salvar dados.' })
     } finally {
       setLoading(false)
@@ -223,7 +237,9 @@ export default function ImportPage() {
           </div>
           <div className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Conta Ativa</div>
-            <div className="text-[11px] font-black text-gray-600 truncate max-w-[150px]">{tenantId || 'Carregando...'}</div>
+            <div className="text-[11px] font-black text-gray-600 truncate max-w-[150px]">
+              {tenantId === 'LOADING' ? 'Carregando...' : (tenantId || 'Não Identificada')}
+            </div>
           </div>
         </div>
       </div>

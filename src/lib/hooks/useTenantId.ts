@@ -4,34 +4,49 @@ import { createClient } from '@/lib/supabase/client'
 
 export function useTenantId() {
   const [tenantId, setTenantId] = useState<string | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
   
   useEffect(() => {
     const sb = createClient()
     
-    // Tenta obter o usuário logado
-    sb.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        // Se logado, busca o tenant_id vinculado na tabela de usuários
-        // Adicionamos um atraso opcional ou retry se necessário, mas o principal é buscar o dado real
-        sb.from('usuarios')
-          .select('tenant_id')
-          .eq('id', data.user.id)
-          .single()
-          .then(({ data: u, error }) => { 
-            if (u && u.tenant_id) {
-              setTenantId(u.tenant_id)
-            } else {
-              console.warn('Usuário logado mas sem tenant_id vinculado na tabela public.usuarios')
-              // Se não encontrar vínculo, não setamos nada para evitar IDs fantasmas
-              setTenantId(null)
-            }
-          })
-      } else {
-        console.warn('Nenhum usuário logado. O sistema de demonstração por cookies foi desativado para evitar erros de banco.')
+    async function resolveTenant() {
+      try {
+        console.log('[TenantService] Iniciando resolução de conta...')
+        const { data: { user } } = await sb.auth.getUser()
+        
+        if (user) {
+          console.log('[TenantService] Usuário logado:', user.email)
+          const { data: u, error } = await sb.from('usuarios')
+            .select('tenant_id')
+            .eq('id', user.id)
+            .single()
+          
+          if (error) {
+            console.error('[TenantService] Erro ao buscar vínculo na tabela usuarios:', error.message)
+            setTenantId(null)
+          } else if (u && u.tenant_id) {
+            console.log('[TenantService] Conta identificada:', u.tenant_id)
+            setTenantId(u.tenant_id)
+          } else {
+            console.warn('[TenantService] Usuário sem tenant_id no banco.')
+            setTenantId(null)
+          }
+        } else {
+          console.warn('[TenantService] Nenhum usuário autenticado encontrado.')
+          setTenantId(null)
+        }
+      } catch (err) {
+        console.error('[TenantService] Erro crítico na resolução:', err)
         setTenantId(null)
+      } finally {
+        setIsLoaded(true)
       }
-    })
+    }
+
+    resolveTenant()
   }, [])
 
+  // Se não carregou ainda, retornamos undefined para a UI saber a diferença entre "Carregando" e "Não encontrado (null)"
+  if (!isLoaded) return 'LOADING'
   return tenantId
 }
