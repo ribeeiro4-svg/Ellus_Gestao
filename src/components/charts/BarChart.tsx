@@ -20,6 +20,9 @@ ChartJS.register(
   Legend
 )
 
+// Configuração Global de Eixos e Fontes
+ChartJS.defaults.font.family = "'DM Sans', sans-serif";
+
 interface BarChartProps {
   labels: string[]
   datasets: {
@@ -40,31 +43,39 @@ export default function BarChart({ labels, datasets, stacked = false }: BarChart
         position: 'bottom' as const,
         labels: {
           usePointStyle: true,
-          padding: 20,
-          font: { size: 11, weight: 'bold' },
+          padding: 25,
+          color: '#64748b',
+          font: { size: 11, weight: 700 },
         },
       },
       tooltip: {
-        backgroundColor: '#fff',
-        titleColor: '#0f172a',
-        bodyColor: '#475569',
-        borderColor: '#e2e8f0',
-        borderWidth: 1,
+        backgroundColor: '#0f1829',
+        bodyFont: { size: 12, weight: 500 },
+        titleFont: { size: 13, weight: 700 },
         padding: 12,
-        boxPadding: 6,
+        cornerRadius: 12,
         usePointStyle: true,
+        boxPadding: 8,
       },
     },
     scales: {
       x: {
         stacked,
         grid: { display: false },
-        ticks: { font: { size: 10 } },
+        ticks: { 
+          color: '#94a3b8',
+          font: { size: 10, weight: 500 } 
+        },
       },
       y: {
         stacked,
-        grid: { color: '#f1f5f9' },
-        ticks: { font: { size: 10 } },
+        grid: { color: '#f1f5f9', drawTicks: false },
+        border: { display: false },
+        ticks: { 
+          color: '#94a3b8',
+          font: { size: 10, weight: 500 },
+          padding: 10
+        },
       },
     },
   }
@@ -74,6 +85,7 @@ export default function BarChart({ labels, datasets, stacked = false }: BarChart
     datasets: datasets.map(ds => ({
       ...ds,
       barThickness: 24,
+      borderRadius: 6,
       maxBarThickness: 32,
     })),
   }
