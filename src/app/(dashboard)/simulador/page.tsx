@@ -188,7 +188,7 @@ export default function SimuladorPage() {
         <KpiCard title="Reserva Necessária" value={fmtR(calculos.reservaAlvo)} icon={<PiggyBank size={20} />} category="info" trendLabel={`Cobre ${cenario.reserva_meses_alvo} meses`} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         <div className="lg:col-span-2 space-y-8">
           {/* Parâmetros Gerais */}
           <div className="chart-card bg-white/80 backdrop-blur-md border border-white/60 rounded-3xl p-8 shadow-sm">
@@ -196,7 +196,7 @@ export default function SimuladorPage() {
               <Plus className="text-[#2d8c6f] w-4 h-4" />
               Parâmetros Operacionais
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <label className="block">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Associados</span>
@@ -254,7 +254,7 @@ export default function SimuladorPage() {
                </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
                {cenario.pro_labores.map(dir => (
                  <div key={dir.id} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -338,12 +338,12 @@ export default function SimuladorPage() {
         </div>
 
         {/* Panel Lateral Visual */}
-        <div className="space-y-6">
+        <div className="lg:col-span-3 space-y-6">
           <ChartCard 
             title="Distribuição Projetada" 
             subtitle={`Referência: ${MESES[cenario.mes_referencia]} / ${cenario.ano_referencia}`}
           >
-            <div className="h-[280px] mt-6">
+            <div className="h-[400px] mt-6">
               <Bar 
                 data={chartData} 
                 options={{ 
