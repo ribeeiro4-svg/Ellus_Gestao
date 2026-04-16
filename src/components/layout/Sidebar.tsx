@@ -15,7 +15,8 @@ import {
   Calendar, 
   Download,
   LogOut,
-  Settings
+  Settings,
+  Calculator
 } from 'lucide-react'
 
 const MENU = [
@@ -29,6 +30,8 @@ const MENU = [
     section: 'Financeiro', 
     items: [
       { href: '/financeiro', icon: Wallet, label: 'Financeiro' },
+      { href: '/planejamento', icon: Target, label: 'Planejamento' },
+      { href: '/simulador', icon: Calculator, label: 'Simulador' },
       { href: '/receitas', icon: TrendingUp, label: 'Receitas' },
       { href: '/despesas', icon: TrendingDown, label: 'Despesas' },
     ]

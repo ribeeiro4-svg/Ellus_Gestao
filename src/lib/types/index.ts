@@ -135,9 +135,47 @@ export interface ImportacaoResult {
   erros: string[]
 }
 
+// ─── Orçamentos (Planejado vs Realizado) ──────────────────────────────────
+export interface Orcamento {
+  id: string
+  tenant_id: string
+  mes: number // 0-11
+  ano: number
+  categoria: string
+  tipo: TipoLancamento
+  valor_planejado: number
+  created_at: string
+}
+
+export interface OrcamentoInput extends Omit<Orcamento, 'id' | 'tenant_id' | 'created_at'> {}
+
+// ─── Simulador de Cenários ────────────────────────────────────────────────
+export interface ProLaboreItem {
+  id: string
+  nome: string
+  valor: number
+}
+
+export interface CenarioSimulacao {
+  id: string
+  tenant_id: string
+  nome: string
+  num_associados: number
+  valor_mensalidade: number
+  despesas_fixas: number
+  despesas_variaveis: number
+  folha_pagamento: number // Base (outros funcionários)
+  pro_labores: ProLaboreItem[] // Lista dinâmica de diretores
+  reserva_meses_alvo: number // Ex: 3 meses
+  created_at: string
+}
+
+export interface CenarioInput extends Omit<CenarioSimulacao, 'id' | 'tenant_id' | 'created_at'> {}
+
 // ─── API Response ──────────────────────────────────────────────────────────
 export interface ApiResponse<T> {
   data?: T
   error?: string
   message?: string
 }
+
