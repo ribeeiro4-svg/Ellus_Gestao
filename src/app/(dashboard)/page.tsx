@@ -41,6 +41,13 @@ export default function DashboardPage() {
   const handleClearAll = async () => {
     if (confirm('ATENÇÃO: Isso apagará TODOS os dados (financeiro, associados, metas e projetos). Continuar?')) {
       await Promise.all([limpFin(), limpAssoc(), limpMetas(), limpProjetos()])
+      
+      // Limpa chaves de demonstração local
+      localStorage.removeItem('acprobec_financeiro_demo')
+      localStorage.removeItem('acprobec_associados_demo')
+      localStorage.removeItem('acprobec_metas_demo')
+      localStorage.removeItem('acprobec_projetos_demo')
+
       alert('Dados removidos com sucesso.')
     }
   }

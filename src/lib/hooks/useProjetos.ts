@@ -12,11 +12,18 @@ export function useProjetos() {
 
   const fetch = useCallback(async () => {
     if (!tenantId) {
-      setProjetos(prev => prev.length > 0 ? prev : [
-        { id: '1', projeto: 'Reforma Sede ACPROBEC', responsavel: 'Infraestrutura', data_inicio: '2026-01-10', prazo: '2026-05-15', orcamento: 45000, gasto: 32000, status: 'em_andamento', created_at: '', updated_at: '' },
-        { id: '2', projeto: 'Sistema de Votação Online', responsavel: 'TI', data_inicio: '2026-02-01', prazo: '2026-04-30', orcamento: 12000, gasto: 12500, status: 'atrasado', created_at: '', updated_at: '' },
-        { id: '3', projeto: 'Campanha Novos Associados', responsavel: 'Marketing', data_inicio: '2026-03-20', prazo: '2026-12-31', orcamento: 8000, gasto: 1200, status: 'em_andamento', created_at: '', updated_at: '' },
-      ] as Projeto[])
+      const local = localStorage.getItem('acprobec_projetos_demo')
+      if (local) {
+        setProjetos(JSON.parse(local))
+      } else {
+        const mock = [
+          { id: '1', projeto: 'Reforma Sede ACPROBEC', responsavel: 'Infraestrutura', data_inicio: '2026-01-10', prazo: '2026-05-15', orcamento: 45000, gasto: 32000, status: 'em_andamento', created_at: '', updated_at: '' },
+          { id: '2', projeto: 'Sistema de Votação Online', responsavel: 'TI', data_inicio: '2026-02-01', prazo: '2026-04-30', orcamento: 12000, gasto: 12500, status: 'atrasado', created_at: '', updated_at: '' },
+          { id: '3', projeto: 'Campanha Novos Associados', responsavel: 'Marketing', data_inicio: '2026-03-20', prazo: '2026-12-31', orcamento: 8000, gasto: 1200, status: 'em_andamento', created_at: '', updated_at: '' },
+        ] as Projeto[]
+        setProjetos(mock)
+        localStorage.setItem('acprobec_projetos_demo', JSON.stringify(mock))
+      }
       setLoading(false)
       return
     }
@@ -25,6 +32,12 @@ export function useProjetos() {
     setProjetos(data || [])
     setLoading(false)
   }, [tenantId, sb])
+
+  useEffect(() => {
+    if (!tenantId && !loading && projetos.length > 0) {
+      localStorage.setItem('acprobec_projetos_demo', JSON.stringify(projetos))
+    }
+  }, [projetos, tenantId, loading])
 
   useEffect(() => { fetch() }, [fetch])
 

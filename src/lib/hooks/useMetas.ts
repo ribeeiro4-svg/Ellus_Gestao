@@ -12,12 +12,18 @@ export function useMetas() {
 
   const fetch = useCallback(async () => {
     if (!tenantId) {
-      // Se não há tenantId e ainda não temos dados, inicia com o mock
-      setMetas(prev => prev.length > 0 ? prev : [
-        { id: '1', meta: 'Aumentar Carteira em 10%', responsavel: 'Comercial', prazo: '2026-12-31', valor_meta: 100, valor_realizado: 65, unidade: '%', status: 'em_andamento', created_at: '', updated_at: '' },
-        { id: '2', meta: 'Reduzir Inadimplência < 5%', responsavel: 'Financeiro', prazo: '2026-06-30', valor_meta: 5, valor_realizado: 7.2, unidade: '%', status: 'em_andamento', created_at: '', updated_at: '' },
-        { id: '3', meta: 'Arrecadação Evento Anual', responsavel: 'Eventos', prazo: '2026-05-15', valor_meta: 50000, valor_realizado: 42000, unidade: 'R$', status: 'em_andamento', created_at: '', updated_at: '' },
-      ] as Meta[])
+      const local = localStorage.getItem('acprobec_metas_demo')
+      if (local) {
+        setMetas(JSON.parse(local))
+      } else {
+        const mock = [
+          { id: '1', meta: 'Aumentar Carteira em 10%', responsavel: 'Comercial', prazo: '2026-12-31', valor_meta: 100, valor_realizado: 65, unidade: '%', status: 'em_andamento', created_at: '', updated_at: '' },
+          { id: '2', meta: 'Reduzir Inadimplência < 5%', responsavel: 'Financeiro', prazo: '2026-06-30', valor_meta: 5, valor_realizado: 7.2, unidade: '%', status: 'em_andamento', created_at: '', updated_at: '' },
+          { id: '3', meta: 'Arrecadação Evento Anual', responsavel: 'Eventos', prazo: '2026-05-15', valor_meta: 50000, valor_realizado: 42000, unidade: 'R$', status: 'em_andamento', created_at: '', updated_at: '' },
+        ] as Meta[]
+        setMetas(mock)
+        localStorage.setItem('acprobec_metas_demo', JSON.stringify(mock))
+      }
       setLoading(false)
       return
     }
@@ -26,6 +32,12 @@ export function useMetas() {
     setMetas(data || [])
     setLoading(false)
   }, [tenantId, sb])
+
+  useEffect(() => {
+    if (!tenantId && !loading && metas.length > 0) {
+      localStorage.setItem('acprobec_metas_demo', JSON.stringify(metas))
+    }
+  }, [metas, tenantId, loading])
 
   useEffect(() => { fetch() }, [fetch])
 

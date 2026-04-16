@@ -12,12 +12,18 @@ export function useAssociados() {
 
   const fetch = useCallback(async () => {
     if (!tenantId) {
-      // Modo Demonstração
-      setAssociados(prev => prev.length > 0 ? prev : [
-        { id: '1', nome: 'João da Silva', codigo: '1001', categoria: 'Pleno', email: 'joao@email.com', telefone: '11999999999', data_ingresso: '2023-01-10', mensalidade: 150.00, status: 'ativo', meses_atraso: 0, created_at: '2023-01-10' },
-        { id: '2', nome: 'Maria Souza', codigo: '1002', categoria: 'Premium', email: 'maria@email.com', telefone: '11988888888', data_ingresso: '2023-05-20', mensalidade: 300.00, status: 'inadimplente', meses_atraso: 3, ultimo_pagamento: '2023-12-10', created_at: '2023-05-20' },
-        { id: '3', nome: 'Empresa XPTO Ltda', codigo: '1003', categoria: 'Corporativo', email: 'contato@xpto.com', telefone: '1133334444', data_ingresso: '2024-02-01', mensalidade: 1200.00, status: 'inadimplente', meses_atraso: 1, ultimo_pagamento: '2026-03-01', created_at: '2024-02-01' },
-      ] as Associado[])
+      const local = localStorage.getItem('acprobec_associados_demo')
+      if (local) {
+        setAssociados(JSON.parse(local))
+      } else {
+        const mock = [
+          { id: '1', nome: 'João da Silva', codigo: '1001', categoria: 'Pleno', email: 'joao@email.com', telefone: '11999999999', data_ingresso: '2023-01-10', mensalidade: 150.00, status: 'ativo', meses_atraso: 0, created_at: '2023-01-10' },
+          { id: '2', nome: 'Maria Souza', codigo: '1002', categoria: 'Premium', email: 'maria@email.com', telefone: '11988888888', data_ingresso: '2023-05-20', mensalidade: 300.00, status: 'inadimplente', meses_atraso: 3, ultimo_pagamento: '2023-12-10', created_at: '2023-05-20' },
+          { id: '3', nome: 'Empresa XPTO Ltda', codigo: '1003', categoria: 'Corporativo', email: 'contato@xpto.com', telefone: '1133334444', data_ingresso: '2024-02-01', mensalidade: 1200.00, status: 'inadimplente', meses_atraso: 1, ultimo_pagamento: '2026-03-01', created_at: '2024-02-01' },
+        ] as Associado[]
+        setAssociados(mock)
+        localStorage.setItem('acprobec_associados_demo', JSON.stringify(mock))
+      }
       setLoading(false)
       return
     }
@@ -28,6 +34,12 @@ export function useAssociados() {
     setAssociados(data || [])
     setLoading(false)
   }, [tenantId, sb])
+
+  useEffect(() => {
+    if (!tenantId && !loading && associados.length > 0) {
+      localStorage.setItem('acprobec_associados_demo', JSON.stringify(associados))
+    }
+  }, [associados, tenantId, loading])
 
   useEffect(() => { fetch() }, [fetch])
 
