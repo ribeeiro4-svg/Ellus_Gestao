@@ -9,27 +9,26 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.5.1",
-    "@supabase/supabase-js": "^2.45.6",
-    "chart.js": "^4.4.6",
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "chart.js": "^4.4.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.456.0",
+    "lucide-react": "latest",
     "next": "15.0.3",
     "papaparse": "^5.4.1",
-    "react": "19.0.0-rc-66a32d7820-20241010",
+    "react": "19.0.0",
     "react-chartjs-2": "^5.2.0",
-    "react-dom": "19.0.0-rc-66a32d7820-20241010",
+    "react-dom": "19.0.0",
     "tailwind-merge": "^2.5.4",
     "tailwind-variants": "^0.3.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/papaparse": "^5.5.6",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
     "postcss": "^8",
-    "tailwindcss": "^4.0.0-alpha.31",
+    "tailwindcss": "latest",
     "typescript": "^5"
   }
 }
