@@ -264,92 +264,86 @@ export default function ConciliacaoPage() {
             </div>
             
             <div className="divide-y divide-gray-50">
-              {matchedTransactions.map((item, idx) => (
-                <div key={item.bank.id} className="group p-5 hover:bg-indigo-50/30 transition-all flex flex-col md:flex-row items-center gap-6">
-                  
-                  {/* Extrato Entry */}
-                  <div className="flex-1 flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 
-                      ${item.bank.type === 'CREDIT' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                      <Banknote size={20} />
+              {matchedTransactions.length > 0 ? (
+                matchedTransactions.map((item, idx) => (
+                  <div key={item.bank.id} className="group p-5 hover:bg-indigo-50/30 transition-all flex flex-col md:flex-row items-center gap-6">
+                    
+                    {/* Extrato Entry */}
+                    <div className="flex-1 flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 
+                        ${item.bank.type === 'CREDIT' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                        <Banknote size={20} />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{fmtData(item.bank.date)}</div>
+                        <div className="text-sm font-bold text-gray-900 break-words leading-tight">{item.bank.memo}</div>
+                        <div className="text-xs font-extrabold text-gray-500 mt-1">{fmtR(item.bank.amount)}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{fmtData(item.bank.date)}</div>
-                      <div className="text-sm font-bold text-gray-900 break-words leading-tight">{item.bank.memo}</div>
-                      <div className="text-xs font-extrabold text-gray-500 mt-1">{fmtR(item.bank.amount)}</div>
-                    </div>
-                  </div>
 
-                  <ArrowRight className="text-gray-300 hidden md:block" />
+                    <ArrowRight className="text-gray-300 hidden md:block" />
 
-                  {/* System Match Card - Interativo */}
-                  <div className="flex-[1.5] flex items-center justify-center w-full">
-                    {item.match ? (
-                      <div className="flex items-center gap-3 w-full p-4 rounded-2xl border border-emerald-100 bg-emerald-50/30 animate-in fade-in zoom-in duration-300">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
-                          <CheckCircle2 size={16} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                            Lançamento Identificado <span className="text-gray-300 ml-1">•</span> <span className="text-gray-400 capitalize">{item.match.tipo}</span>
-                          </div>
-                          <div className="text-xs font-bold text-gray-800">{item.match.descricao}</div>
-                          <div className="text-[10px] text-gray-400">{fmtData(item.match.data)} — {fmtR(item.match.valor)}</div>
-                        </div>
+                    {/* System Match Card - Interativo */}
+                    <div className="flex-[1.5] flex items-center justify-center w-full">
+                      {item.assocMatch ? (
                         <button 
-                          onClick={() => handleConciliar(item.match!.id, item.bank.fitid)}
-                          className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black rounded-lg hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100 uppercase"
+                          onClick={() => handleQuickCreate(item.bank)}
+                          className="flex items-center gap-3 w-full p-4 rounded-2xl border border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-left group/card animate-in fade-in zoom-in duration-300 outline-none"
                         >
-                          Conciliar
+                          <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-lg transition-transform group-hover/card:scale-110
+                            ${item.isCpfMatch ? 'bg-emerald-500 shadow-emerald-200' : 'bg-indigo-500 shadow-indigo-200'}`}>
+                            {item.isCpfMatch ? <CheckCircle2 size={20} /> : <Users size={20} />}
+                          </div>
+                          <div className="flex-1">
+                            <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1
+                              ${item.isCpfMatch ? 'text-emerald-600' : 'text-indigo-600'}`}>
+                              {item.isCpfMatch ? 'CPF Identificado' : 'Sugestão por Nome'} 
+                              {item.isFirstPayment && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] border border-amber-200">🌟 ADESÃO</span>}
+                              <span className="text-gray-300 ml-1">•</span> 
+                              <span className="text-gray-400 capitalize">Associado</span>
+                            </div>
+                            <div className="text-xs font-bold text-gray-800 group-hover/card:text-indigo-700 transition-colors">{item.assocMatch.nome}</div>
+                            <div className="text-[10px] text-gray-400 font-medium">
+                              {item.isFirstPayment ? 'Primeira receita! Clique para conferir adesão.' : 'Mensalidade recorrente identificada.'}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                             <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-500">
+                               {contas.find(c => c.id === selectedContaId)?.nome || 'Selecione Conta'}
+                             </div>
+                             <ChevronRight size={18} className="text-gray-300 group-hover/card:text-indigo-500 group-hover/card:translate-x-1 transition-all" />
+                          </div>
                         </button>
-                      </div>
-                    ) : item.assocMatch ? (
-                      <button 
-                        onClick={() => handleQuickCreate(item.bank)}
-                        className="flex items-center gap-3 w-full p-4 rounded-2xl border border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-left group/card animate-in fade-in zoom-in duration-300 outline-none"
-                      >
-                        <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-lg transition-transform group-hover/card:scale-110
-                          ${item.isCpfMatch ? 'bg-emerald-500 shadow-emerald-200' : 'bg-indigo-500 shadow-indigo-200'}`}>
-                          {item.isCpfMatch ? <CheckCircle2 size={20} /> : <Users size={20} />}
-                        </div>
-                        <div className="flex-1">
-                          <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1
-                            ${item.isCpfMatch ? 'text-emerald-600' : 'text-indigo-600'}`}>
-                            {item.isCpfMatch ? 'CPF Identificado' : 'Sugestão por Nome'} 
-                            {item.isFirstPayment && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] border border-amber-200">🌟 ADESÃO</span>}
-                            <span className="text-gray-300 ml-1">•</span> 
-                            <span className="text-gray-400 capitalize">Associado</span>
-                          </div>
-                          <div className="text-xs font-bold text-gray-800 group-hover/card:text-indigo-700 transition-colors">{item.assocMatch.nome}</div>
-                          <div className="text-[10px] text-gray-400 font-medium">
-                            {item.isFirstPayment ? 'Primeira receita! Clique para conferir adesão.' : 'Mensalidade recorrente identificada.'}
+                      ) : (
+                        <div className="w-full flex items-center justify-center p-4 rounded-2xl border border-dashed border-gray-200">
+                          <div className="text-center">
+                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-2">
+                              <AlertCircle size={12} className="text-amber-500" /> Nenhum par encontrado
+                            </div>
+                            <button 
+                              onClick={() => handleQuickCreate(item.bank)}
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 text-[10px] font-black rounded-lg hover:bg-gray-100 transition-all uppercase"
+                            >
+                              <Plus size={12} /> Criar Manualmente
+                            </button>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
-                           <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-500">
-                             {contas.find(c => c.id === selectedContaId)?.nome || 'Selecione Conta'}
-                           </div>
-                           <ChevronRight size={18} className="text-gray-300 group-hover/card:text-indigo-500 group-hover/card:translate-x-1 transition-all" />
-                        </div>
-                      </button>
-                    ) : (
-                      <div className="w-full flex items-center justify-center p-4 rounded-2xl border border-dashed border-gray-200">
-                        <div className="text-center">
-                          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-2">
-                            <AlertCircle size={12} className="text-amber-500" /> Nenhum par encontrado
-                          </div>
-                          <button 
-                            onClick={() => handleQuickCreate(item.bank)}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 text-[10px] font-black rounded-lg hover:bg-gray-100 transition-all uppercase"
-                          >
-                            <Plus size={12} /> Criar Manulamente
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-20 text-center animate-in fade-in zoom-in">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-inner">
+                    <CheckCircle2 size={32} />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">Extrato 100% Conciliado</h3>
+                  <p className="text-sm text-gray-500 mt-1">Todas as transações deste arquivo já foram lançadas no seu fluxo de caixa.</p>
+                  <button onClick={() => setExtrato([])} className="mt-6 text-xs font-bold text-indigo-600 hover:underline">
+                    Importar outro arquivo
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
