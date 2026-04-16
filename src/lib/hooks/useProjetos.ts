@@ -56,11 +56,20 @@ export function useProjetos() {
     if (!error) fetch(); return { error }
   }
 
+  const limparTudo = async () => {
+    if (!tenantId) {
+      setProjetos([])
+      return { error: null }
+    }
+    const { error } = await sb.from('projetos').delete().eq('tenant_id', tenantId)
+    if (!error) fetch()
+    return { error }
+  }
+
   const inserirBulk = async (items: ProjetoInput[]) => {
     const rows = items.map(i => ({ ...i, tenant_id: tenantId }))
     const { error } = await sb.from('projetos').insert(rows)
     if (!error) fetch(); return { error }
   }
-
-  return { projetos, loading, inserir, atualizar, remover, inserirBulk, refresh: fetch }
+  return { projetos, loading, inserir, atualizar, remover, limparTudo, refresh: fetch }
 }

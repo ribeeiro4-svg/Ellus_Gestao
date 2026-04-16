@@ -80,5 +80,15 @@ export function useFinanceiro() {
     return { error, count }
   }
 
-  return { lancamentos, loading, inserir, atualizar, remover, inserirBulk, refresh: fetch }
+  const limparTudo = async () => {
+    if (!tenantId) {
+      setLancamentos([])
+      return { error: null }
+    }
+    const { error } = await sb.from('lancamentos').delete().eq('tenant_id', tenantId)
+    if (!error) fetch()
+    return { error }
+  }
+
+  return { lancamentos, loading, inserir, atualizar, remover, inserirBulk, limparTudo, refresh: fetch }
 }

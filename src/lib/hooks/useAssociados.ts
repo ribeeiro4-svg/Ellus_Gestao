@@ -69,5 +69,15 @@ export function useAssociados() {
     return { error }
   }
 
-  return { associados, loading, inserir, atualizar, remover, inserirBulk, refresh: fetch }
+  const limparTudo = async () => {
+    if (!tenantId) {
+      setAssociados([])
+      return { error: null }
+    }
+    const { error } = await sb.from('associados').delete().eq('tenant_id', tenantId)
+    if (!error) fetch()
+    return { error }
+  }
+
+  return { associados, loading, inserir, atualizar, remover, inserirBulk, limparTudo, refresh: fetch }
 }

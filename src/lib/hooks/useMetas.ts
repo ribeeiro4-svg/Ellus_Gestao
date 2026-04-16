@@ -57,11 +57,20 @@ export function useMetas() {
     if (!error) fetch(); return { error }
   }
 
+  const limparTudo = async () => {
+    if (!tenantId) {
+      setMetas([])
+      return { error: null }
+    }
+    const { error } = await sb.from('metas').delete().eq('tenant_id', tenantId)
+    if (!error) fetch(); return { error }
+  }
+
   const inserirBulk = async (items: MetaInput[]) => {
     const rows = items.map(i => ({ ...i, tenant_id: tenantId }))
     const { error } = await sb.from('metas').insert(rows)
     if (!error) fetch(); return { error }
   }
 
-  return { metas, loading, inserir, atualizar, remover, inserirBulk, refresh: fetch }
+  return { metas, loading, inserir, atualizar, remover, limparTudo, inserirBulk, refresh: fetch }
 }

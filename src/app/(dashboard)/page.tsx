@@ -5,7 +5,8 @@ import {
   Users, 
   Briefcase, 
   Activity,
-  Calendar
+  Calendar,
+  Trash2
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -14,6 +15,8 @@ import SplashScreen from '@/components/ui/SplashScreen'
 import { fmtR, MESES, fmtData, fmtPct } from '@/lib/utils/formatters'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
+import { useMetas } from '@/lib/hooks/useMetas'
+import { useProjetos } from '@/lib/hooks/useProjetos'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, LineElement,
@@ -29,9 +32,18 @@ ChartJS.register(
 )
 
 export default function DashboardPage() {
-  const { lancamentos, loading: loadingFin } = useFinanceiro()
-  const { associados, loading: loadingAssoc } = useAssociados()
+  const { lancamentos, loading: loadingFin, limparTudo: limpFin } = useFinanceiro()
+  const { associados, loading: loadingAssoc, limparTudo: limpAssoc } = useAssociados()
+  const { limparTudo: limpMetas } = useMetas()
+  const { limparTudo: limpProjetos } = useProjetos()
   const [activeChart, setActiveChart] = useState<any>(null)
+
+  const handleClearAll = async () => {
+    if (confirm('ATENÇÃO: Isso apagará TODOS os dados (financeiro, associados, metas e projetos). Continuar?')) {
+      await Promise.all([limpFin(), limpAssoc(), limpMetas(), limpProjetos()])
+      alert('Dados removidos com sucesso.')
+    }
+  }
 
   const loading = loadingFin || loadingAssoc
 
@@ -136,11 +148,19 @@ export default function DashboardPage() {
       {loading && <SplashScreen />}
       
       <div className={`animate-in fade-in duration-500 flex flex-col flex-1 h-full ${loading ? 'opacity-0' : 'opacity-100'}`}>
-      <div className="page-header">
+      <div className="page-header flex justify-between items-center mb-6">
         <div>
           <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Dashboard Executivo</h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Análise em tempo real do desempenho da ACPROBEC.</p>
         </div>
+        <button 
+          onClick={handleClearAll}
+          className="flex items-center gap-2 px-4 py-2 text-[11px] font-bold text-rose-600 border border-rose-200 bg-rose-50/50 hover:bg-rose-50 rounded-xl transition-all uppercase tracking-widest"
+          title="Apagar todos os dados registrados"
+        >
+          <Trash2 size={14} />
+          <span>Apagar Tudo</span>
+        </button>
       </div>
 
       <div className="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
