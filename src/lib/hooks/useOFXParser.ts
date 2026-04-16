@@ -49,9 +49,26 @@ export function useOFXParser() {
       
       const cleanMemo = memo.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
 
-      // Regex mais robusto para capturar apenas o número (incluindo sinal, ponto ou vírgula)
-      const trnAmtRaw = /<TRNAMT>\s*([-+]?[0-9]*[.,]?[0-9]+)/i.exec(content)?.[1] || '0'
-      const amount = Math.abs(parseFloat(trnAmtRaw.replace(',', '.')))
+      // Regex mais robusto para capturar a string numérica bruta
+      const trnAmtRaw = /<TRNAMT>\s*([^<\s]*)/i.exec(content)?.[1] || '0'
+      
+      // Limpeza agressiva: remove qualquer coisa que não seja número, ponto, vírgula ou sinal
+      const cleanVal = trnAmtRaw.replace(/[^-0-9,.]/g, '')
+      
+      // Converte para float (identificando se o separador decimal é vírgula ou ponto)
+      let amount = 0
+      if (cleanVal.includes(',') && cleanVal.includes('.')) {
+        // Formato com milhar (ex: 1.234,56) -> remove o milhar (.) e troca o decimal (,) por (.)
+        amount = Math.abs(parseFloat(cleanVal.replace(/\./g, '').replace(',', '.')))
+      } else if (cleanVal.includes(',')) {
+        // Formato europeu/brasileiro simples (ex: 1234,56)
+        amount = Math.abs(parseFloat(cleanVal.replace(',', '.')))
+      } else {
+        // Formato padrão (ex: 1234.56)
+        amount = Math.abs(parseFloat(cleanVal))
+      }
+
+      if (isNaN(amount)) amount = 0
 
       // Inferência automática da forma de pagamento
       let inferedMethod: 'PIX' | 'Boleto' | 'Transferência' | undefined = undefined

@@ -193,8 +193,8 @@ export default function ConciliacaoPage() {
   // Cálculos de Totais do Extrato
   const totals = useMemo(() => {
     return extrato.reduce((acc, curr) => {
-      if (curr.amount > 0) acc.entradas += curr.amount
-      else acc.saidas += Math.abs(curr.amount)
+      if (curr.type === 'CREDIT') acc.entradas += curr.amount
+      else acc.saidas += curr.amount
       return acc
     }, { entradas: 0, saidas: 0 })
   }, [extrato])
