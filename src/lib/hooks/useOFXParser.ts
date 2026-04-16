@@ -48,20 +48,19 @@ export function useOFXParser() {
       
       const cleanMemo = memo.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
 
-      const amount = Math.abs(parseFloat(trnAmt.replace(',', '.')))
+      // Regex mais robusto para capturar apenas o número (incluindo sinal, ponto ou vírgula)
+      const trnAmtRaw = /<TRNAMT>\s*([-+]?[0-9]*[.,]?[0-9]+)/i.exec(content)?.[1] || '0'
+      const amount = Math.abs(parseFloat(trnAmtRaw.replace(',', '.')))
 
-      // Só adiciona se houver valor real (ignora lançamentos informativos de valor 0)
-      if (amount > 0) {
-        transactions.push({
-          id: fitid || Math.random().toString(36).substring(7),
-          type: type.includes('DEP') || type.includes('CREDIT') ? 'CREDIT' : 'DEBIT',
-          date: formattedDate,
-          amount,
-          memo: cleanMemo,
-          fitid,
-          cpf_extraido: extractCPF(cleanMemo)
-        })
-      }
+      transactions.push({
+        id: fitid || Math.random().toString(36).substring(7),
+        type: type.includes('DEP') || type.includes('CREDIT') ? 'CREDIT' : 'DEBIT',
+        date: formattedDate,
+        amount,
+        memo: cleanMemo,
+        fitid,
+        cpf_extraido: extractCPF(cleanMemo)
+      })
     }
     
     return transactions
