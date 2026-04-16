@@ -26,9 +26,9 @@ export default function ImportPage() {
       filename = 'modelo_financeiro_acprobec.xlsx'
     } else if (type === 'associados') {
       data = [
-        ['ID', 'Nome', 'Categoria', 'Email', 'Data Ingresso', 'Mensalidade', 'Status'],
-        ['1001', 'João da Silva', 'Pleno', 'joao@email.com', '2023-01-10', 150.00, 'Ativo'],
-        ['1002', 'Maria Souza', 'Premium', 'maria@email.com', '2023-05-20', 300.00, 'Inadimplente']
+        ['ID', 'Nome', 'CPF / CNPJ', 'Categoria', 'Email', 'Data Ingresso', 'Mensalidade', 'Status'],
+        ['1001', 'João da Silva', '12345678901', 'Pleno', 'joao@email.com', '2023-01-10', 150.00, 'Ativo'],
+        ['1002', 'Maria Souza', '98765432100', 'Premium', 'maria@email.com', '2023-05-20', 300.00, 'Inadimplente']
       ]
       filename = 'modelo_associados_acprobec.xlsx'
     } else if (type as string === 'prolabore') {

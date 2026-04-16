@@ -16,7 +16,8 @@ import {
   Clock,
   RefreshCw,
   LayoutGrid,
-  CalendarDays
+  CalendarDays,
+  Copy
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -74,6 +75,19 @@ export default function SimuladorPage() {
       ...cenario,
       pro_labores: cenario.pro_labores.map(d => d.id === id ? { ...d, nome } : d)
     })
+  }
+
+  const duplicateDirector = (director: any) => {
+    const newDir = {
+      ...director,
+      id: Math.random().toString(),
+      nome: `${director.nome} (Cópia)`,
+      periodos: director.periodos.map((p: any) => ({
+        ...p,
+        id: Math.random().toString()
+      }))
+    }
+    setCenario({ ...cenario, pro_labores: [...cenario.pro_labores, newDir] })
   }
 
   // Ações de Períodos
@@ -304,8 +318,11 @@ export default function SimuladorPage() {
             <div className="grid grid-cols-1 gap-6">
                {cenario.pro_labores.map(dir => (
                  <div key={dir.id} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-sm group relative">
-                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => removeDirector(dir.id)} className="text-slate-300 hover:text-rose-500">
+                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+                      <button onClick={() => duplicateDirector(dir)} className="text-slate-300 hover:text-[#2d8c6f]" title="Duplicar">
+                        <Copy size={16} />
+                      </button>
+                      <button onClick={() => removeDirector(dir.id)} className="text-slate-300 hover:text-rose-500" title="Excluir">
                         <Trash2 size={16} />
                       </button>
                    </div>
