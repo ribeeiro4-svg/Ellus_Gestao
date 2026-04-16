@@ -31,8 +31,17 @@ export function useContas() {
   useEffect(() => { fetch() }, [fetch])
 
   const inserir = async (input: Omit<ContaBancaria, 'id' | 'tenant_id' | 'created_at'>) => {
+    if (!tenantId) {
+      alert('Erro: ID de sessão não identificado. Recarregue a página.')
+      return { error: 'No tenant' }
+    }
     const { error } = await sb.from('contas_bancarias').insert({ ...input, tenant_id: tenantId })
-    if (!error) fetch()
+    if (error) {
+      console.error('Erro ao inserir conta:', error)
+      alert('Erro ao salvar no banco: ' + error.message)
+    } else {
+      await fetch()
+    }
     return { error }
   }
 

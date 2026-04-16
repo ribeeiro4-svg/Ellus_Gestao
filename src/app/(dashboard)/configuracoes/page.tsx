@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Settings, 
   CreditCard, 
@@ -18,7 +18,27 @@ export default function ConfigPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
 
-  const handleSalvar = async (data: any) => {
+  // Perfil State
+  const [customName, setCustomName] = useState('Gestão Áurea')
+  const [customLogo, setCustomLogo] = useState('')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedName = localStorage.getItem('acprobec_user_name')
+      const savedLogo = localStorage.getItem('acprobec_custom_logo')
+      if (savedName) setCustomName(savedName)
+      if (savedLogo) setCustomLogo(savedLogo)
+    }
+  }, [])
+
+  const handleSavePerfil = () => {
+    localStorage.setItem('acprobec_user_name', customName)
+    localStorage.setItem('acprobec_custom_logo', customLogo)
+    alert('Configurações de perfil salvas com sucesso!')
+    window.location.reload() // Force sidebar sync
+  }
+
+  const handleSalvarConta = async (data: any) => {
     if (editingItem) {
       await atualizar(editingItem.id, data)
     } else {
@@ -27,7 +47,7 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500">
+    <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20">
       <div className="page-header flex justify-between items-center">
         <div>
           <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
@@ -35,16 +55,62 @@ export default function ConfigPage() {
             Configurações
           </h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
-            Gerencie suas contas bancárias e parâmetros do sistema.
+            Gerencie suas contas bancárias e personalize a identidade do seu portal.
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Perfil do Portal */}
+        <div className="table-card p-6 flex flex-col gap-6">
+          <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
+            <Building2 className="text-[#2d8c6f] w-4 h-4" />
+            Identidade do Portal
+          </h2>
+          
+          <div className="space-y-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] font-bold text-gray-600 uppercase">Nome da Instituição / App</label>
+              <input 
+                type="text" 
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="Ex: ACPROBEC Gestão"
+                className="w-full h-11 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-[#2d8c6f]/30 transition-all outline-none"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[11px] font-bold text-gray-600 uppercase">URL do Logotipo</label>
+              <div className="flex gap-3">
+                <input 
+                  type="text" 
+                  value={customLogo}
+                  onChange={(e) => setCustomLogo(e.target.value)}
+                  placeholder="https://exemplo.com/logo.png"
+                  className="flex-1 h-11 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-[#2d8c6f]/30 transition-all outline-none"
+                />
+                {customLogo && (
+                  <div className="w-11 h-11 rounded-xl bg-white border border-gray-100 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
+                    <img src={customLogo} alt="Preview" className="w-full h-full object-contain" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button 
+              onClick={handleSavePerfil}
+              className="mt-2 w-full h-11 bg-[#2d8c6f] text-white text-[11px] font-black uppercase rounded-xl hover:shadow-lg hover:shadow-emerald-900/10 transition-all active:scale-95"
+            >
+              Salvar Alterações de Perfil
+            </button>
+          </div>
+        </div>
+
         {/* Contas Bancárias */}
         <div className="table-card p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-sm font-bold text-gray-400 uppercase tracking-[2px] flex items-center gap-2">
+            <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
               <CreditCard className="text-[#2d8c6f] w-4 h-4" />
               Contas Bancárias
             </h2>
@@ -83,6 +149,9 @@ export default function ConfigPage() {
             {contas.length === 0 && !loading && (
               <div className="text-center py-8 text-gray-400 text-xs italic">Nenhuma conta cadastrada.</div>
             )}
+            {loading && (
+               <div className="text-center py-8 text-gray-300 animate-pulse text-[10px] uppercase font-bold italic">Carregando contas...</div>
+            )}
           </div>
         </div>
       </div>
@@ -92,7 +161,7 @@ export default function ConfigPage() {
         onClose={() => setIsModalOpen(false)}
         title={editingItem ? 'Editar Conta' : 'Cadastrar Conta Bancária'}
         initialData={editingItem}
-        onSubmit={handleSalvar}
+        onSubmit={handleSalvarConta}
         fields={[
           { name: 'nome', label: 'Nome da Conta', type: 'text', required: true, placeholder: 'Ex: Cora ACPROBEC, Bradesco...' },
           { name: 'tipo', label: 'Tipo de Conta', type: 'select', required: true, options: [
