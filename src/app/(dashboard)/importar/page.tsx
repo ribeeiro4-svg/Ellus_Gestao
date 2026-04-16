@@ -13,9 +13,11 @@ import * as XLSX from 'xlsx'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useProjecao } from '@/lib/hooks/useProjecao'
+import { useTenantId } from '@/lib/hooks/useTenantId'
 import type { LancamentoInput, AssociadoInput, ProLaboreItem } from '@/lib/types'
 
 export default function ImportPage() {
+  const tenantId = useTenantId()
   const { inserirBulk: bulkFinanceiro } = useFinanceiro()
   const { inserirBulk: bulkAssociados } = useAssociados()
   const { cenario, salvarCenario } = useProjecao()
@@ -307,13 +309,18 @@ export default function ImportPage() {
             </p>
             <button 
               onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
-              className={`px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={loading}
+              className={`px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all flex items-center gap-2 ${loading || !tenantId ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={loading || !tenantId}
             >
               {loading ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
                   PROCESSANDO...
+                </>
+              ) : !tenantId ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  IDENTIFICANDO CONTA...
                 </>
               ) : 'Selecionar Arquivo'}
             </button>

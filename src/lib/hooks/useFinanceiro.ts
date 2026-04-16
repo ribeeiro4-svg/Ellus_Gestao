@@ -49,6 +49,10 @@ export function useFinanceiro() {
   }
 
   const inserirBulk = async (items: LancamentoInput[]) => {
+    if (!tenantId) {
+      console.error('Tentativa de inserirBulk financeiro sem tenant_id')
+      return { error: 'Identificação da conta não encontrada.' }
+    }
     const rows = items.map(i => ({ ...i, tenant_id: tenantId }))
     const { error, count } = await sb.from('lancamentos').insert(rows)
     if (!error) fetch()

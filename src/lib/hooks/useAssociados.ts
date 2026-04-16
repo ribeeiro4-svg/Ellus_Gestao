@@ -41,6 +41,10 @@ export function useAssociados() {
   }
 
   const inserirBulk = async (items: AssociadoInput[]) => {
+    if (!tenantId) {
+      console.error('Tentativa de inserirBulk associados sem tenant_id')
+      return { error: 'Identificação da conta não encontrada. Tente atualizar a página.' }
+    }
     const rows = items.map(i => ({ ...i, tenant_id: tenantId }))
     const { error } = await sb.from('associados').upsert(rows, { onConflict: 'tenant_id,codigo' })
     if (!error) fetch()
