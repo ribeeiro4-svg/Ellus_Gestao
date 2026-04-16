@@ -1,30 +1,34 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getCookie, setCookie } from '@/lib/utils/formatters'
 
 export function useTenantId() {
   const [tenantId, setTenantId] = useState<string | null>(null)
   
   useEffect(() => {
     const sb = createClient()
+    
+    // Tenta obter o usuário logado
     sb.auth.getUser().then(({ data }) => {
       if (data.user) {
-        sb.from('usuarios').select('tenant_id').eq('id', data.user.id).single()
-          .then(({ data: u }) => { 
-            if (u) setTenantId(u.tenant_id)
+        // Se logado, busca o tenant_id vinculado na tabela de usuários
+        // Adicionamos um atraso opcional ou retry se necessário, mas o principal é buscar o dado real
+        sb.from('usuarios')
+          .select('tenant_id')
+          .eq('id', data.user.id)
+          .single()
+          .then(({ data: u, error }) => { 
+            if (u && u.tenant_id) {
+              setTenantId(u.tenant_id)
+            } else {
+              console.warn('Usuário logado mas sem tenant_id vinculado na tabela public.usuarios')
+              // Se não encontrar vínculo, não setamos nada para evitar IDs fantasmas
+              setTenantId(null)
+            }
           })
       } else {
-        // Modo Demonstração com Identidade via Cookie (Substituindo LocalStorage)
-        let gid = getCookie('acprobec_tenant_id')
-        
-        if (!gid) {
-          gid = typeof self !== 'undefined' && self.crypto?.randomUUID 
-            ? self.crypto.randomUUID() 
-            : Math.random().toString(36).substring(2, 15)
-          setCookie('acprobec_tenant_id', gid)
-        }
-        setTenantId(gid)
+        console.warn('Nenhum usuário logado. O sistema de demonstração por cookies foi desativado para evitar erros de banco.')
+        setTenantId(null)
       }
     })
   }, [])
