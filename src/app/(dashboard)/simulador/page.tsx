@@ -13,24 +13,26 @@ import {
   UserPlus,
   Calendar,
   ChevronRight,
-  Clock
+  Clock,
+  RefreshCw,
+  LineChart as LineChartIcon
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
 import { useProjecao } from '@/lib/hooks/useProjecao'
 import { fmtR, fmtPct, MESES } from '@/lib/utils/formatters'
-import { Bar } from 'react-chartjs-2'
+import { Bar, Line } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
-  CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController
+  CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, BarController
 } from 'chart.js'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController)
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, BarController)
 
 const ANOS = [2024, 2025, 2026, 2027, 2028]
 
 export default function SimuladorPage() {
-  const { cenario, setCenario, salvarCenario, calculos, loading } = useProjecao()
+  const { cenario, setCenario, salvarCenario, carregarDadosReais, loading, syncing, calculos, projecaoAnual } = useProjecao()
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
@@ -66,7 +68,7 @@ export default function SimuladorPage() {
     })
   }
 
-  // Ações de Períodos (Aninhados)
+  // Ações de Períodos
   const addPeriod = (directorId: string) => {
     setCenario({
       ...cenario,
@@ -106,7 +108,7 @@ export default function SimuladorPage() {
     })
   }
 
-  const chartData = {
+  const chartDataSnapshot = {
     labels: ['Receita Total', 'Custos Fixos', 'Folha/Pro-labore', 'Variáveis', 'Resultado'],
     datasets: [
       {
@@ -130,6 +132,22 @@ export default function SimuladorPage() {
     ]
   }
 
+  const chartDataEvolution = {
+    labels: MESES,
+    datasets: [
+      {
+        label: 'Resultado (R$)',
+        data: projecaoAnual.map(p => p.resultado),
+        borderColor: '#2d8c6f',
+        backgroundColor: 'rgba(45, 140, 111, 0.1)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: '#2d8c6f'
+      }
+    ]
+  }
+
   return (
     <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20">
       <div className="page-header flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -139,7 +157,7 @@ export default function SimuladorPage() {
             Simulador Estratégico
           </h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
-            Crie cenários hipotéticos comparando períodos e metas.
+            Crie cenários hipotéticos baseados na realidade ou em novas projeções.
           </p>
         </div>
         
@@ -192,10 +210,21 @@ export default function SimuladorPage() {
         <div className="lg:col-span-2 space-y-8">
           {/* Parâmetros Gerais */}
           <div className="chart-card bg-white/80 backdrop-blur-md border border-white/60 rounded-3xl p-8 shadow-sm">
-            <h2 className="text-sm font-bold text-gray-400 mb-6 uppercase tracking-[2px] flex items-center gap-2">
-              <Plus className="text-[#2d8c6f] w-4 h-4" />
-              Parâmetros Operacionais
-            </h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-sm font-bold text-gray-400 uppercase tracking-[2px] flex items-center gap-2">
+                <Plus className="text-[#2d8c6f] w-4 h-4" />
+                Parâmetros Operacionais
+              </h2>
+              <button 
+                onClick={carregarDadosReais}
+                disabled={syncing}
+                className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded-lg hover:bg-slate-200 transition-all uppercase tracking-widest disabled:opacity-50"
+                title="Carregar média real deste período dos lançamentos"
+              >
+                <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? 'Sincronizando...' : 'Carregar Realidade'}
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <label className="block">
@@ -221,24 +250,10 @@ export default function SimuladorPage() {
                     className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
                 </label>
               </div>
-              <div className="space-y-4">
-                <label className="block">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Média Variáveis</span>
-                  <input type="number" value={cenario.despesas_variaveis} onChange={(e) => setCenario({...cenario, despesas_variaveis: Number(e.target.value)})}
-                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
-                </label>
-                <label className="block">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Meses Reserva</span>
-                  <select value={cenario.reserva_meses_alvo} onChange={(e) => setCenario({...cenario, reserva_meses_alvo: Number(e.target.value)})}
-                    className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 outline-none font-bold text-gray-700 text-sm">
-                    {[1, 3, 6, 12].map(n => <option key={n} value={n}>{n} Meses</option>)}
-                  </select>
-                </label>
-              </div>
             </div>
           </div>
 
-          {/* Seção de Pró-labores (Cards de Diretores) */}
+          {/* Seção de Pró-labores */}
           <div className="space-y-6">
             <div className="flex justify-between items-center px-2">
                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-[2px] flex items-center gap-2">
@@ -299,7 +314,6 @@ export default function SimuladorPage() {
                              </div>
                              <div className="flex flex-wrap items-center gap-2">
                                <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-slate-100">
-                                 <span className="text-[8px] font-bold text-slate-300 uppercase">De:</span>
                                  <select value={period.mes_inicio} onChange={(e) => updatePeriod(dir.id, period.id, 'mes_inicio', Number(e.target.value))} className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase">
                                    {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
                                  </select>
@@ -309,7 +323,6 @@ export default function SimuladorPage() {
                                </div>
                                <ChevronRight size={10} className="text-slate-200" />
                                <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded-lg border border-slate-100">
-                                 <span className="text-[8px] font-bold text-slate-300 uppercase">A:</span>
                                  <select value={period.mes_fim ?? ''} onChange={(e) => updatePeriod(dir.id, period.id, 'mes_fim', e.target.value === '' ? undefined : Number(e.target.value))} className="bg-transparent border-none outline-none text-[9px] font-bold text-slate-500 uppercase">
                                    <option value="">∞</option>
                                    {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
@@ -338,14 +351,14 @@ export default function SimuladorPage() {
         </div>
 
         {/* Panel Lateral Visual */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-8">
           <ChartCard 
-            title="Distribuição Projetada" 
+            title="Distribuição Mensal" 
             subtitle={`Referência: ${MESES[cenario.mes_referencia]} / ${cenario.ano_referencia}`}
           >
-            <div className="h-[400px] mt-6">
+            <div className="h-[350px] mt-6">
               <Bar 
-                data={chartData} 
+                data={chartDataSnapshot} 
                 options={{ 
                   responsive: true, 
                   maintainAspectRatio: false,
@@ -357,13 +370,13 @@ export default function SimuladorPage() {
                 }} 
               />
             </div>
-            <div className="mt-8 space-y-4">
-               <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Pró-labore no Mês</span>
+            <div className="mt-8 grid grid-cols-2 gap-4">
+               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Pró-labore no Mês</span>
                   <span className="text-sm font-black text-[#2d8c6f]">{fmtR(calculos.totalProLabores)}</span>
                </div>
-               <div className="flex justify-between items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Margem Líquida Estimada</span>
+               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Margem Projetada</span>
                   <span className={`text-sm font-black ${calculos.resultado >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                     {fmtPct(calculos.margem)}
                   </span>
@@ -371,36 +384,28 @@ export default function SimuladorPage() {
             </div>
           </ChartCard>
 
-          <div className={`p-8 rounded-[40px] border transition-all duration-500 scale-100 hover:scale-[1.02] ${
-            calculos.resultado >= 0 
-              ? 'bg-gradient-to-br from-[#1a1c1e] to-[#2d3035] border-white/5 shadow-2xl' 
-              : 'bg-gradient-to-br from-rose-600 to-rose-800 border-rose-500 shadow-2xl'
-          }`}>
-            <h3 className="text-white font-bold text-lg mb-2">Resumo Panorâmico</h3>
-            <p className="text-white/40 text-[11px] leading-relaxed mb-8">
-              Simulação baseada no comportamento operacional e na folha de pagamentos ativa para o período de referência.
-            </p>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b border-white/5">
-                <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Folha vs Receita</span>
-                <span className="text-white font-bold text-sm">
-                  {fmtPct((calculos.totalFolha / calculos.totalReceita) * 100)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-white/5">
-                <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Ponto de Equilíbrio</span>
-                <span className="text-white font-bold text-sm">
-                   ~ {Math.ceil(calculos.totalDespesas / cenario.valor_mensalidade)} Associados
-                </span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Superávit Mensal</span>
-                <span className={`text-lg font-black ${calculos.resultado >= 0 ? 'text-[#34d399]' : 'text-rose-400'}`}>
-                   {fmtR(calculos.resultado)}
-                </span>
-              </div>
+          <ChartCard 
+            title="Evolução Anual Simulada" 
+            subtitle={`Com base em períodos e parâmetros anuais (${cenario.ano_referencia})`}
+          >
+            <div className="h-[300px] mt-6">
+              <Line 
+                data={chartDataEvolution} 
+                options={{ 
+                  responsive: true, 
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: { beginAtZero: true, grid: { display: false } },
+                    x: { grid: { display: false } }
+                  },
+                  plugins: { legend: { display: false } }
+                }} 
+              />
             </div>
-          </div>
+            <p className="text-[10px] text-gray-400 italic mt-4">
+              * O gráfico mostra o resultado financeiro mensal projetado considerando o início/fim de cada pró-labore.
+            </p>
+          </ChartCard>
         </div>
       </div>
     </div>
