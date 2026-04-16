@@ -2,7 +2,7 @@
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
-import { fmtR, fmtData } from '@/lib/utils/formatters'
+import { fmtR } from '@/lib/utils/formatters'
 import { Plus, Search, Filter, Mail, Phone } from 'lucide-react'
 
 export default function AssociadosPage() {
@@ -44,8 +44,8 @@ export default function AssociadosPage() {
       key: 'email', 
       render: (i: any) => (
         <div className="flex items-center gap-2 text-slate-400 group-hover:text-blue-500 transition-colors">
-          <Mail size={16} title={i.email} className="cursor-pointer" />
-          {i.telefone && <Phone size={16} title={i.telefone} className="cursor-pointer" />}
+          <span title={i.email}><Mail size={16} className="cursor-pointer" /></span>
+          {i.telefone && <span title={i.telefone}><Phone size={16} className="cursor-pointer" /></span>}
         </div>
       )
     },
