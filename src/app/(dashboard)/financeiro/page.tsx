@@ -1,84 +1,103 @@
 'use client'
-import React from 'react'
+import React, { useMemo, useState } from 'react'
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, BarElement, LineElement,
+  PointElement, ArcElement, Title, Tooltip, Legend, Filler,
+} from 'chart.js'
+import { Chart, Line } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
-import { fmtR, fmtData } from '@/lib/utils/formatters'
-import { Plus, Search, Filter } from 'lucide-react'
+import ChartCard from '@/components/ui/ChartCard'
+import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
+import { Plus, BarChart2 } from 'lucide-react'
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 export default function FinanceiroPage() {
   const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
 
-  const [isModalOpen, setIsModalOpen] = React.useState(false)
-  const [editingItem, setEditingItem] = React.useState<any>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
 
+  /* ── Dados para gráficos ── */
+  const { recMensal, despMensal } = useMemo(() => {
+    const rec = Array(12).fill(0)
+    const desp = Array(12).fill(0)
+    lancamentos.forEach(r => {
+      const m = new Date(r.data).getMonth()
+      if (isNaN(m)) return
+      const v = r.valor || 0
+      if (r.tipo === 'receita') rec[m] += v
+      else desp[m] += v
+    })
+    return { recMensal: rec, despMensal: desp }
+  }, [lancamentos])
+
+  const resultMensal = recMensal.map((v, i) => v - despMensal[i])
+  
+  const recAcum = useMemo(() => {
+    return recMensal.reduce<number[]>((arr, v) => { arr.push((arr[arr.length - 1] || 0) + v); return arr }, [])
+  }, [recMensal])
+
+  const margens = recMensal.map((v, i) => v > 0 ? Math.round((v - despMensal[i]) / v * 100) : 0)
+
+  const totalRec = recMensal.reduce((a, b) => a + b, 0)
+  const totalDesp = despMensal.reduce((a, b) => a + b, 0)
+  const resultado = totalRec - totalDesp
+
+  /* ── CRUD helpers ── */
   const handleSalvar = async (data: any) => {
-    if (editingItem) {
-      await atualizar(editingItem.id, data)
-    } else {
-      await inserir({ ...data, status: data.status || 'aberto' })
-    }
+    if (editingItem) { await atualizar(editingItem.id, data) }
+    else { await inserir({ ...data, status: data.status || 'aberto' }) }
   }
-
-  const handleEdit = (item: any) => {
-    setEditingItem(item)
-    setIsModalOpen(true)
-  }
-
+  const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
   const handleDelete = async (id: string) => {
-    if (confirm('Tem certeza que deseja excluir este lançamento?')) {
-      await remover(id)
-    }
+    if (confirm('Excluir este lançamento?')) await remover(id)
   }
 
+  const fontSm = { size: 10 }
+  const gridFaint = { color: 'rgba(0,0,0,.04)' }
+
+  /* ── Colunas ── */
   const columns = [
-    { 
-      header: 'Data', 
-      key: 'data', 
-      render: (i: any) => <span className="text-sm font-medium text-slate-700">{fmtData(i.data)}</span> 
-    },
-    { 
-      header: 'Descrição', 
-      key: 'descricao', 
-      render: (i: any) => (
-        <div className="flex flex-col">
-          <span className="text-sm font-bold text-slate-900">{i.descricao}</span>
-          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{i.categoria}</span>
+    { header: 'Data', key: 'data', render: (i: any) => <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{fmtData(i.data)}</span> },
+    {
+      header: 'Descrição', key: 'descricao', render: (i: any) => (
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>
+          <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span>
         </div>
       )
     },
-    { 
-      header: 'Valor', 
-      key: 'valor', 
-      render: (i: any) => (
-        <span className={`text-sm font-black ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>
-          {i.tipo === 'receita' ? '+' : '-'} {fmtR(i.valor)}
+    {
+      header: 'Tipo', key: 'tipo', render: (i: any) => (
+        <span className={`status-badge ${i.tipo === 'receita' ? 'status-ativo' : 'status-inadimplente'}`}>
+          {i.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
         </span>
       )
     },
-    { 
-      header: 'Status', 
-      key: 'status', 
-      render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> 
-    },
-    { 
-      header: 'Pagamento', 
-      key: 'forma_pagamento', 
-      render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> 
-    },
     {
-      header: '',
-      key: 'acoes',
-      className: 'w-20 text-right',
+      header: 'Valor', key: 'valor', render: (i: any) => (
+        <span style={{ fontSize: 13, fontWeight: 800, color: i.tipo === 'receita' ? 'var(--green)' : 'var(--red)' }}>
+          {i.tipo === 'receita' ? '+' : '-'}{fmtR(i.valor)}
+        </span>
+      )
+    },
+    { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
+    { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
+    {
+      header: '', key: 'acoes', className: 'w-20 text-right',
       render: (i: any) => (
         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
           </button>
           <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
           </button>
         </div>
       )
@@ -86,43 +105,87 @@ export default function FinanceiroPage() {
   ]
 
   return (
-    <div className="space-y-8 h-full">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Fluxo de Caixa</h2>
-          <p className="text-slate-500 text-sm mt-1">Gestão detalhada de todos os lançamentos financeiros.</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* ── Page Header ── */}
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(45,140,111,.12)', border: '1px solid rgba(45,140,111,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
+            <BarChart2 size={24} />
+          </div>
+          <div>
+            <div className="page-title">Fluxo de Caixa</div>
+            <div className="page-subtitle">Gestão de todos os lançamentos — ACPROBEC</div>
+          </div>
         </div>
-        <button 
-          onClick={() => { setEditingItem(null); setIsModalOpen(true) }}
-          className="flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-5 py-3 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95"
-        >
-          <Plus size={16} />
-          <span>Novo Lançamento</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Mini KPIs no header */}
+          {[
+            { label: 'Receitas', value: fmtR(totalRec), color: 'var(--green)' },
+            { label: 'Despesas', value: fmtR(totalDesp), color: 'var(--red)' },
+            { label: 'Resultado', value: fmtR(Math.abs(resultado)), color: resultado >= 0 ? 'var(--green)' : 'var(--red)' },
+          ].map(k => (
+            <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 16px', textAlign: 'center', minWidth: 90 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{k.label}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: k.color }}>{k.value}</div>
+            </div>
+          ))}
+          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}>
+            <Plus size={16} /> Novo Lançamento
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex-1 bg-white border border-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3 focus-within:ring-4 focus-within:ring-blue-600/5 focus-within:border-blue-600 transition-all shadow-sm">
-          <Search size={18} className="text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Buscar por descrição ou categoria..." 
-            className="bg-transparent border-none outline-none text-sm text-slate-700 placeholder:text-slate-400 w-full"
+      {/* ── Gráficos ── */}
+      <div className="charts-grid">
+        <ChartCard title="📊 Receita × Despesa Mensal" subtitle="Comparativo mês a mês com resultado">
+          <Chart
+            type="bar"
+            data={{
+              labels: MESES,
+              datasets: [
+                { type: 'bar' as const, label: 'Receita', data: recMensal, backgroundColor: 'rgba(45,140,111,.72)', borderRadius: 5 },
+                { type: 'bar' as const, label: 'Despesa', data: despMensal, backgroundColor: 'rgba(239,100,72,.65)', borderRadius: 5 },
+                { type: 'line' as const, label: 'Resultado', data: resultMensal, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.1)', tension: 0.4, fill: true, borderWidth: 2, pointRadius: 3 },
+              ]
+            }}
+            options={{
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: fontSm } } },
+              scales: {
+                y: { grid: gridFaint, ticks: { font: fontSm, callback: (v: any) => 'R$' + Math.round(Number(v) / 1000) + 'k' } },
+                x: { grid: { display: false }, ticks: { font: fontSm } },
+              },
+            }}
           />
-        </div>
-        <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
-          <Filter size={16} />
-          <span>Filtros</span>
-        </button>
+        </ChartCard>
+
+        <ChartCard title="📈 Receita Acumulada + Margem %" subtitle="Evolução do acumulado e margem mensal">
+          <Line
+            data={{
+              labels: MESES,
+              datasets: [
+                { label: 'Acumulado', data: recAcum, borderColor: '#2d8c6f', backgroundColor: 'rgba(45,140,111,.12)', tension: 0.4, fill: true, borderWidth: 2, pointRadius: 3, yAxisID: 'y' },
+                { label: 'Margem %', data: margens, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.08)', tension: 0.4, fill: false, borderWidth: 2, pointRadius: 3, borderDash: [4, 4], yAxisID: 'y2' },
+              ]
+            }}
+            options={{
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: fontSm } } },
+              scales: {
+                y: { position: 'left', grid: gridFaint, ticks: { font: fontSm, callback: (v: any) => 'R$' + Math.round(Number(v) / 1000) + 'k' } },
+                y2: { position: 'right', grid: { display: false }, ticks: { font: fontSm, callback: (v: any) => v + '%' }, max: 100, min: -20 },
+                x: { grid: { display: false }, ticks: { font: fontSm } },
+              },
+            }}
+          />
+        </ChartCard>
       </div>
 
-      <DataTable 
-        columns={columns} 
-        data={lancamentos} 
-        loading={loading}
-      />
+      {/* ── Tabela ── */}
+      <DataTable columns={columns} data={lancamentos} loading={loading} />
 
-      <CrudModal 
+      <CrudModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'}
@@ -131,24 +194,24 @@ export default function FinanceiroPage() {
         fields={[
           { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
             { value: 'receita', label: 'Receita (Entrada)' },
-            { value: 'despesa', label: 'Despesa (Saída)' }
+            { value: 'despesa', label: 'Despesa (Saída)' },
           ]},
           { name: 'descricao', label: 'Descrição', type: 'text', required: true },
           { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
           { name: 'data', label: 'Data', type: 'date', required: true },
           { name: 'categoria', label: 'Categoria', type: 'text', required: true },
           { name: 'status', label: 'Status', type: 'select', required: true, options: [
-            { value: 'pago', label: 'Pago/Recebido' },
-            { value: 'aberto', label: 'Aberto/Pendente' },
-            { value: 'atrasado', label: 'Atrasado' }
+            { value: 'pago', label: 'Pago / Recebido' },
+            { value: 'aberto', label: 'Aberto / Pendente' },
+            { value: 'atrasado', label: 'Atrasado' },
           ]},
-          { name: 'forma_pagamento', label: 'Forma de Pagamento', type: 'select', required: false, options: [
+          { name: 'forma_pagamento', label: 'Forma de Pagamento', type: 'select', options: [
             { value: 'Dinheiro', label: 'Dinheiro' },
             { value: 'PIX', label: 'PIX' },
             { value: 'Boleto', label: 'Boleto' },
             { value: 'Transferência', label: 'Transferência' },
-            { value: 'Cartão', label: 'Cartão' }
-          ]}
+            { value: 'Cartão', label: 'Cartão' },
+          ]},
         ]}
       />
     </div>
