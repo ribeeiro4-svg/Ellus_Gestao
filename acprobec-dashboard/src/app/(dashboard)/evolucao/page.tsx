@@ -4,22 +4,21 @@ import { useAssociados } from '@/lib/hooks/useAssociados'
 import ChartCard from '@/components/ui/ChartCard'
 import BarChart from '@/components/charts/BarChart'
 import LineChart from '@/components/charts/LineChart'
-import { calcMensalFinanceiro } from '@/lib/utils/calcMensal'
+import { calcEvolucao } from '@/lib/utils/calcMensal'
 import { fmtR } from '@/lib/utils/formatters'
 import { TrendingUp, Users, Activity } from 'lucide-react'
 
 export default function EvolucaoPage() {
-  const { lancamentos, loading: loadingFin } = useFinanceiro()
-  const { associados, loading: loadingAss } = useAssociados()
+  const { lancamentos } = useFinanceiro()
+  const { associados } = useAssociados()
 
-  // Financeiro Mensal
-  const { mensal: finMensal } = calcMensalFinanceiro(lancamentos)
+  // Dados de Evolução
+  const data = calcEvolucao(lancamentos, associados)
   
-  // Associados Mensal (Mocking months if data is scarce for now, or use real data)
-  const labels = finMensal.map(m => m.mes)
-  const receitasData = finMensal.map(m => m.receita)
-  const despesasData = finMensal.map(m => m.despesa)
-  const resultadosData = finMensal.map(m => m.resultado)
+  const labels = data.map(m => m.label)
+  const receitasData = data.map(m => m.receita)
+  const despesasData = data.map(m => m.despesa)
+  const resultadosData = data.map(m => m.resultado)
 
   return (
     <div className="space-y-8 h-full pb-12">
@@ -38,40 +37,40 @@ export default function EvolucaoPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <ChartCard 
           title="Receitas vs Despesas" 
-          description="Evolução mensal do fluxo de caixa operacional."
-          icon={<TrendingUp className="text-blue-600" size={18} />}
+          subtitle="Evolução mensal do fluxo de caixa operacional."
+          actions={<TrendingUp className="text-blue-600" size={18} />}
         >
           <BarChart 
             labels={labels} 
             datasets={[
-              { label: 'Receitas', data: receitasData, color: '#10b981' },
-              { label: 'Despesas', data: despesasData, color: '#ef4444' }
+              { label: 'Receitas', data: receitasData, backgroundColor: '#10b981' },
+              { label: 'Despesas', data: despesasData, backgroundColor: '#ef4444' }
             ]} 
           />
         </ChartCard>
 
         <ChartCard 
           title="Superávits / Déficits" 
-          description="Resultado líquido mensal consolidado."
-          icon={<Activity className="text-violet-600" size={18} />}
+          subtitle="Resultado líquido mensal consolidado."
+          actions={<Activity className="text-violet-600" size={18} />}
         >
           <LineChart 
             labels={labels} 
             datasets={[
-              { label: 'Resultado', data: resultadosData, color: '#8b5cf6', fill: true }
+              { label: 'Resultado', data: resultadosData, borderColor: '#8b5cf6', backgroundColor: '#8b5cf620', fill: true }
             ]} 
           />
         </ChartCard>
 
         <ChartCard 
           title="Crescimento de Associados" 
-          description="Evolução da base de associados ativos."
-          icon={<Users className="text-emerald-600" size={18} />}
+          subtitle="Evolução da base de associados ativos."
+          actions={<Users className="text-emerald-600" size={18} />}
         >
           <LineChart 
             labels={labels} 
             datasets={[
-              { label: 'Associados Ativos', data: labels.map((_, i) => associados.length - (labels.length - i) * 2), color: '#10b981', fill: true }
+              { label: 'Associados Ativos', data: labels.map((_, i) => associados.length - (labels.length - i) * 2), borderColor: '#10b981', backgroundColor: '#10b98120', fill: true }
             ]} 
           />
         </ChartCard>
