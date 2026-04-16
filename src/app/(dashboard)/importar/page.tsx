@@ -6,11 +6,22 @@ import {
   FileText, 
   CheckCircle2, 
   AlertCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  RefreshCw
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
+import { useAssociados } from '@/lib/hooks/useAssociados'
+import { useProjecao } from '@/lib/hooks/useProjecao'
+import type { LancamentoInput, AssociadoInput, ProLaboreItem } from '@/lib/types'
 
 export default function ImportPage() {
+  const { inserirBulk: bulkFinanceiro } = useFinanceiro()
+  const { inserirBulk: bulkAssociados } = useAssociados()
+  const { cenario, salvarCenario } = useProjecao()
+  
+  const [loading, setLoading] = React.useState(false)
+  const [feedback, setFeedback] = React.useState<{ type: 'success' | 'error', message: string } | null>(null)
   
   const downloadTemplate = (type: 'financeiro' | 'associados' | 'prolabore') => {
     let data: any[][] = []
@@ -50,6 +61,78 @@ export default function ImportPage() {
   const [isDragging, setIsDragging] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
+  const processData = async (data: any[]) => {
+    if (data.length === 0) return
+    setLoading(true)
+    setFeedback(null)
+
+    try {
+      const firstRow = data[0]
+      
+      // Detecção de tipo baseada nos cabeçalhos
+      if ('Recorrência Ativa' in firstRow || 'Valor Recebido' in firstRow) {
+        // Financeiro
+        const mapped: LancamentoInput[] = data.map(row => ({
+          data: new Date(row.Data).toISOString() || new Date().toISOString(),
+          descricao: row.Descrição || 'Importado',
+          categoria: row.Categoria || 'Geral',
+          tipo: String(row.Tipo || 'receita').toLowerCase() as any,
+          valor: Number(row.Valor || 0),
+          status: String(row.Status || 'aberto').toLowerCase() as any,
+          forma_pagamento: row['Forma Pagamento'] || 'PIX',
+          valor_recebido: Number(row['Valor Recebido'] || 0),
+          troco_via_pix: String(row['Troco via PIX']).toLowerCase() === 'sim',
+          recorrencia_ativa: String(row['Recorrência Ativa']).toLowerCase() === 'sim',
+          conciliado: false
+        }))
+        await bulkFinanceiro(mapped)
+        setFeedback({ type: 'success', message: `${mapped.length} lançamentos financeiros importados com sucesso!` })
+      } 
+      else if ('CPF / CNPJ' in firstRow || 'Data Ingresso' in firstRow) {
+        // Associados
+        const mapped: AssociadoInput[] = data.map(row => ({
+          codigo: String(row.ID || Math.floor(Math.random() * 10000)),
+          nome: row.Nome,
+          cpf: row['CPF / CNPJ'] || '',
+          categoria: row.Categoria || 'Pleno',
+          email: row.Email || '',
+          data_ingresso: new Date(row['Data Ingresso']).toISOString() || new Date().toISOString(),
+          mensalidade: Number(row.Mensalidade || 0),
+          status: String(row.Status || 'ativo').toLowerCase() as any
+        }))
+        await bulkAssociados(mapped)
+        setFeedback({ type: 'success', message: `${mapped.length} associados cadastrados/atualizados com sucesso!` })
+      }
+      else if ('Nome do Diretor' in firstRow && 'Mês Início' in firstRow) {
+        // Pró-labore
+        const grouped = data.reduce((acc: any, row) => {
+          const nome = row['Nome do Diretor']
+          if (!acc[nome]) acc[nome] = { id: Math.random().toString(), nome, periodos: [] }
+          acc[nome].periodos.push({
+            id: Math.random().toString(),
+            valor: Number(row['Valor Mensal'] || 0),
+            mes_inicio: Number(row['Mês Início'] || 1) - 1,
+            ano_inicio: Number(row['Ano Início'] || 2024),
+            mes_fim: row['Mês Fim'] ? Number(row['Mês Fim']) - 1 : undefined,
+            ano_fim: row['Ano Fim'] ? Number(row['Ano Fim']) : undefined
+          })
+          return acc
+        }, {})
+        
+        const newProLabores: ProLaboreItem[] = Object.values(grouped)
+        await salvarCenario({ ...cenario, pro_labores: newProLabores })
+        setFeedback({ type: 'success', message: `Quadro de Pró-labore atualizado com ${newProLabores.length} diretores!` })
+      } else {
+        throw new Error('Modelo de planilha não reconhecido. Use os modelos disponíveis para download.')
+      }
+    } catch (err: any) {
+      console.error(err)
+      setFeedback({ type: 'error', message: err.message || 'Erro ao processar arquivo.' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent) => {
     let file: File | null = null
     if ('files' in e.target && e.target.files) {
@@ -60,15 +143,17 @@ export default function ImportPage() {
 
     if (file) {
       const reader = new FileReader()
-      reader.onload = (evt) => {
-        const bstr = evt.target?.result
-        const wb = XLSX.read(bstr, { type: 'binary' })
-        const wsname = wb.SheetNames[0]
-        const ws = wb.Sheets[wsname]
-        const data: any[] = XLSX.utils.sheet_to_json(ws)
-        console.log('Dados importados:', data)
-        alert(`${data.length} registros identificados. Iniciando processamento...`)
-        // Future: call useFinanceiro().inserirBulk(data)
+      reader.onload = async (evt) => {
+        try {
+          const bstr = evt.target?.result
+          const wb = XLSX.read(bstr, { type: 'binary' })
+          const wsname = wb.SheetNames[0]
+          const ws = wb.Sheets[wsname]
+          const data: any[] = XLSX.utils.sheet_to_json(ws)
+          processData(data)
+        } catch (err) {
+          setFeedback({ type: 'error', message: 'Erro na leitura do arquivo Excel.' })
+        }
       }
       reader.readAsBinaryString(file)
     }
@@ -78,10 +163,19 @@ export default function ImportPage() {
     <div className="dashboard-content animate-in fade-in duration-500 flex flex-col flex-1">
       <div className="page-header mb-8">
         <div>
-          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Importação de Dados</h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Suba suas planilhas para atualizar o sistema em massa.</p>
         </div>
       </div>
+
+      {feedback && (
+        <div className={`mb-8 p-4 rounded-2xl border flex items-center gap-3 animate-in slide-in-from-top duration-300 ${
+          feedback.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'
+        }`}>
+          {feedback.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <p className="text-xs font-bold">{feedback.message}</p>
+          <button onClick={() => setFeedback(null)} className="ml-auto text-[10px] uppercase font-black opacity-50 hover:opacity-100">Fechar</button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
         {/* Templates Download Card */}
@@ -184,9 +278,15 @@ export default function ImportPage() {
             </p>
             <button 
               onClick={(e) => { e.preventDefault(); fileInputRef.current?.click(); }}
-              className="px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all pointer-events-none"
+              className={`px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all flex items-center gap-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={loading}
             >
-              Selecionar Arquivo
+              {loading ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  PROCESSANDO...
+                </>
+              ) : 'Selecionar Arquivo'}
             </button>
           </label>
 
@@ -220,6 +320,13 @@ export default function ImportPage() {
         }
         .animate-bounce-slow {
           animation: bounce-slow 3s ease-in-out infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
         }
       `}</style>
     </div>
