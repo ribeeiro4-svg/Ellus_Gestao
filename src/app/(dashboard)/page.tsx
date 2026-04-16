@@ -104,7 +104,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div className="animate-in fade-in duration-500 flex flex-col flex-1 h-full min-h-0">
       <div className="page-header">
         <div>
           <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Dashboard Executivo</h1>
@@ -166,8 +166,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="table-card bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+      <div className="table-card flex-grow min-h-[300px] flex flex-col">
+        <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
           <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Últimos Lançamentos</h2>
           <Calendar size={18} className="text-gray-400" />
         </div>

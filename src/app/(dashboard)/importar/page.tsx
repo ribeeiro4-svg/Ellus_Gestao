@@ -1,163 +1,159 @@
 'use client'
-import { useState } from 'react'
-import DropZone from '@/components/importar/DropZone'
-import DataTable from '@/components/ui/DataTable'
-import { parseCSV, parseExcel } from '@/lib/utils/csvParser'
-import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
-import { useAssociados } from '@/lib/hooks/useAssociados'
-import { useMetas } from '@/lib/hooks/useMetas'
-import { useProjetos } from '@/lib/hooks/useProjetos'
-import { Database, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Play } from 'lucide-react'
-import { fmtR } from '@/lib/utils/formatters'
+import React from 'react'
+import { 
+  Download, 
+  Upload, 
+  FileText, 
+  CheckCircle2, 
+  AlertCircle,
+  FileSpreadsheet
+} from 'lucide-react'
+import * as XLSX from 'xlsx'
 
-type ImportType = 'financeiro' | 'associados' | 'metas' | 'projetos'
-
-export default function ImportarPage() {
-  const [type, setType] = useState<ImportType>('financeiro')
-  const [data, setData] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
-  const [sending, setSending] = useState(false)
-
-  // Hooks
-  const fin = useFinanceiro()
-  const ass = useAssociados()
-  const met = useMetas()
-  const pro = useProjetos()
-
-  const handleFileSelect = async (file: File) => {
-    setLoading(true)
-    setError(null)
-    setSuccess(null)
-    setData([])
-
-    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
-    const result = isExcel ? await parseExcel<any>(file) : await parseCSV<any>(file)
-
-    if (result.errors.length > 0) {
-      setError(result.errors[0])
+export default function ImportPage() {
+  
+  const downloadTemplate = (type: 'financeiro' | 'associados') => {
+    let data = []
+    let filename = ''
+    
+    if (type === 'financeiro') {
+      data = [
+        ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status'],
+        ['2024-04-01', 'Mensalidade Abril', 'Mensalidade', 'Receita', 150.00, 'Recebido'],
+        ['2024-04-05', 'Aluguel Escritório', 'Infraestrutura', 'Despesa', 2500.00, 'Pago']
+      ]
+      filename = 'modelo_financeiro_acprobec.xlsx'
     } else {
-      setData(result.data)
+      data = [
+        ['ID', 'Nome', 'Categoria', 'Email', 'Data Ingresso', 'Mensalidade', 'Status'],
+        ['1001', 'João da Silva', 'Pleno', 'joao@email.com', '2023-01-10', 150.00, 'Ativo'],
+        ['1002', 'Maria Souza', 'Premium', 'maria@email.com', '2023-05-20', 300.00, 'Inadimplente']
+      ]
+      filename = 'modelo_associados_acprobec.xlsx'
     }
-    setLoading(false)
+
+    const ws = XLSX.utils.aoa_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Modelo')
+    XLSX.writeFile(wb, filename)
   }
-
-  const handleImport = async () => {
-    if (data.length === 0) return
-    setSending(true)
-    setError(null)
-
-    try {
-      let result;
-      switch (type) {
-        case 'financeiro': result = await fin.inserirBulk(data); break;
-        case 'associados': result = await ass.inserirBulk(data); break;
-        case 'metas':      result = await met.inserirBulk(data); break;
-        case 'projetos':   result = await pro.inserirBulk(data); break;
-      }
-
-      if (result?.error) {
-        setError(result.error.message || 'Erro ao salvar no banco.')
-      } else {
-        setSuccess('Dados importados com sucesso!')
-        setData([])
-      }
-    } catch (err: any) {
-      setError(err.message || 'Erro inesperado.')
-    } finally {
-      setSending(false)
-    }
-  }
-
-  const TYPES = [
-    { id: 'financeiro', label: 'Financeiro', icon: Database },
-    { id: 'associados', label: 'Associados', icon: FileSpreadsheet },
-    { id: 'metas',      label: 'Metas',       icon: Database },
-    { id: 'projetos',   label: 'Projetos',    icon: Database },
-  ]
 
   return (
-    <div className="max-w-5xl mx-auto space-y-12">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Importação de Dados</h2>
-        <p className="text-slate-500 max-w-lg mx-auto">
-          Alimente o sistema ACPROBEC enviando seus arquivos CSV ou Excel. Escolha o tipo de dado abaixo para começar.
-        </p>
+    <div className="dashboard-content animate-in fade-in duration-500 flex flex-col flex-1">
+      <div className="page-header mb-8">
+        <div>
+          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Importação de Dados</h1>
+          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Suba suas planilhas para atualizar o sistema em massa.</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {TYPES.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => { setType(t.id as ImportType); setData([]) }}
-            className={`p-6 rounded-[24px] border-2 transition-all flex flex-col items-center gap-4 ${
-              type === t.id 
-                ? 'border-blue-600 bg-blue-50/50 text-blue-600 scale-105 shadow-xl shadow-blue-600/10' 
-                : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
-            }`}
-          >
-            <t.icon size={24} />
-            <span className="text-xs font-bold uppercase tracking-widest">{t.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-6">
-        <DropZone onFileSelect={handleFileSelect} />
-        
-        {loading && (
-          <div className="flex items-center justify-center gap-3 text-slate-400 py-8">
-            <Loader2 className="animate-spin" size={20} />
-            <span className="text-sm font-medium">Processando arquivo...</span>
-          </div>
-        )}
-
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-700 text-sm animate-in fade-in slide-in-from-top-2">
-            <AlertCircle size={20} className="shrink-0" />
-            <p>{error}</p>
-          </div>
-        )}
-
-        {success && (
-          <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-700 text-sm animate-in fade-in slide-in-from-top-2">
-            <CheckCircle2 size={20} className="shrink-0" />
-            <p>{success}</p>
-          </div>
-        )}
-
-        {data.length > 0 && !loading && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-slate-900">{data.length}</span>
-                <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">registros encontrados</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
+        {/* Templates Download Card */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="table-card p-6 flex flex-col h-full">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Download size={18} />
               </div>
+              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Modelos Disponíveis</h2>
+            </div>
+            
+            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+              Use nossos modelos padrão para garantir que os dados sejam importados corretamente sem erros de formatação.
+            </p>
+
+            <div className="space-y-3 flex-1">
               <button 
-                onClick={handleImport}
-                disabled={sending}
-                className="flex items-center gap-2 bg-blue-600 text-white text-xs font-black px-8 py-3.5 rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 disabled:bg-slate-300 active:scale-95"
+                onClick={() => downloadTemplate('financeiro')}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
               >
-                {sending ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} fill="currentColor" />}
-                <span>Processar e Salvar no Banco</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm border border-gray-100">
+                    <FileSpreadsheet size={20} />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-gray-900">Financeiro</div>
+                    <div className="text-[10px] text-gray-400">Receitas e Despesas</div>
+                  </div>
+                </div>
+                <Download size={16} className="text-gray-300 group-hover:text-emerald-600 transition-colors" />
+              </button>
+
+              <button 
+                onClick={() => downloadTemplate('associados')}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
+                    <FileSpreadsheet size={20} />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-gray-900">Associados</div>
+                    <div className="text-[10px] text-gray-400">Cadastro de Membros</div>
+                  </div>
+                </div>
+                <Download size={16} className="text-gray-300 group-hover:text-blue-600 transition-colors" />
               </button>
             </div>
 
-            <div className="max-h-[400px] overflow-auto rounded-[24px] border border-slate-200 shadow-inner">
-              <DataTable 
-                columns={Object.keys(data[0] || {}).map(k => ({ header: k, key: k }))} 
-                data={data.slice(0, 10)} 
-              />
-              {data.length > 10 && (
-                <div className="p-4 text-center bg-slate-50 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  Exibindo apenas os primeiros 10 registros do arquivo...
-                </div>
-              )}
+            <div className="mt-8 p-4 bg-amber-50 rounded-xl border border-amber-100">
+              <div className="flex gap-3">
+                <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                <p className="text-[10px] text-amber-800 leading-normal">
+                  <strong>Importante:</strong> Não altere os nomes das colunas (cabeçalho) dos modelos para evitar erros de leitura pelo sistema.
+                </p>
+              </div>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Upload Section */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          <div className="table-card p-8 flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-200 hover:border-emerald-300 transition-all bg-gray-50/50 flex-1">
+            <div className="w-16 h-16 rounded-2xl bg-white shadow-xl flex items-center justify-center text-emerald-600 mb-6 border border-gray-100 animate-bounce-slow">
+              <Upload size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Arraste seus arquivos aqui</h3>
+            <p className="text-sm text-gray-500 mb-8 max-w-sm">
+              Suporta arquivos .xlsx, .csv e .json. O sistema processará os dados e atualizará o dashboard instantaneamente.
+            </p>
+            <button className="px-8 py-3 bg-[#0e2d22] text-white rounded-xl font-bold text-sm shadow-xl shadow-emerald-900/10 hover:-translate-y-0.5 transition-all">
+              Selecionar Arquivo
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={16} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-gray-900">Validação Automática</div>
+                <p className="text-[10px] text-gray-500 mt-1">Dados são conferidos antes da gravação para evitar duplicidade.</p>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <FileText size={16} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-gray-900">Logs de Importação</div>
+                <p className="text-[10px] text-gray-500 mt-1">Histórico completo de tudo que foi importado por usuário.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+      
+      <style jsx>{`
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 3s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   )
 }

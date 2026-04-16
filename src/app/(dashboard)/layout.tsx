@@ -4,11 +4,11 @@ import Topbar from '@/components/layout/Topbar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-[#f8fafc]">
+    <div className="dashboard-layout h-full">
       <Sidebar />
-      <div className="ml-[var(--sidebar-w)] flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         <Topbar />
-        <main className="p-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <main className="main-content flex-1">
           {children}
         </main>
       </div>
