@@ -11,13 +11,25 @@ export function useFinanceiro() {
   const sb = createClient()
 
   const fetch = useCallback(async () => {
-    if (!tenantId) return
+    if (!tenantId) {
+      // If we don't have a tenant yet, we shouldn't be stuck forever if the hook is still initializing
+      // But usually, we wait for useTenantId to resolve.
+      return
+    }
     setLoading(true)
-    const { data } = await sb.from('lancamentos')
-      .select('*').eq('tenant_id', tenantId)
-      .order('data', { ascending: false })
-    setLancamentos(data || [])
-    setLoading(false)
+    try {
+      const { data, error } = await sb.from('lancamentos')
+        .select('*').eq('tenant_id', tenantId)
+        .order('data', { ascending: false })
+      
+      if (error) throw error
+      setLancamentos(data || [])
+    } catch (err) {
+      console.error('Error fetching financeiro:', err)
+      setLancamentos([])
+    } finally {
+      setLoading(false)
+    }
   }, [tenantId])
 
   useEffect(() => { fetch() }, [fetch])
