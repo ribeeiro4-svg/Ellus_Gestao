@@ -8,10 +8,22 @@ export interface OFXTransaction {
   amount: number
   memo: string
   fitid: string
+  cpf_extraido?: string
 }
 
 export function useOFXParser() {
   
+  const extractCPF = (text: string): string | undefined => {
+    // Regex para encontrar sequências de 11 ou 14 números (CPF/CNPJ)
+    // Pode estar formatado ou apenas números
+    const clean = text.replace(/[^\d]/g, '')
+    const cpfMatch = clean.match(/\d{11}/)
+    const cnpjMatch = clean.match(/\d{14}/)
+    
+    // Retornamos o primeiro que encontrar (CNPJ tem prioridade por ser mais longo)
+    return cnpjMatch?.[0] || cpfMatch?.[0]
+  }
+
   const parseOFX = useCallback((ofxContent: string): OFXTransaction[] => {
     const transactions: OFXTransaction[] = []
     
@@ -34,13 +46,16 @@ export function useOFXParser() {
       const day = dtPosted.substring(6, 8)
       const formattedDate = `${year}-${month}-${day}`
       
+      const cleanMemo = memo.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+
       transactions.push({
         id: fitid || Math.random().toString(36).substring(7),
         type: type.includes('DEP') || type.includes('CREDIT') ? 'CREDIT' : 'DEBIT',
         date: formattedDate,
-        amount: Math.abs(parseFloat(trnAmt.replace(',', '.'))), // Normalizamos para positivo no display
-        memo: memo.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
-        fitid
+        amount: Math.abs(parseFloat(trnAmt.replace(',', '.'))),
+        memo: cleanMemo,
+        fitid,
+        cpf_extraido: extractCPF(cleanMemo)
       })
     }
     

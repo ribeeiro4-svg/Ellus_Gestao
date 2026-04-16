@@ -63,7 +63,10 @@ export default function AssociadosPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.nome}</span>
-            <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>#{i.codigo}</span>
+            <div className="flex items-center gap-2">
+              <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>#{i.codigo}</span>
+              {i.cpf && <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 500 }}>• {i.cpf}</span>}
+            </div>
           </div>
         </div>
       )
@@ -191,6 +194,7 @@ export default function AssociadosPage() {
         onSubmit={handleSalvar}
         fields={[
           { name: 'nome', label: 'Nome / Razão Social', type: 'text', required: true },
+          { name: 'cpf', label: 'CPF / CNPJ', type: 'text', placeholder: 'Apenas números ou formatado' },
           { name: 'codigo', label: 'Código (Matrícula)', type: 'text', required: true },
           { name: 'email', label: 'Email', type: 'text', required: true },
           { name: 'telefone', label: 'Telefone / WhatsApp', type: 'text' },

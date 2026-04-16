@@ -64,6 +64,7 @@ export interface Associado {
   tenant_id: string
   codigo: string
   nome: string
+  cpf?: string // CPF ou CNPJ (opcional)
   categoria: string
   email: string
   telefone?: string

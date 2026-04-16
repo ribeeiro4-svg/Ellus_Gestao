@@ -9,7 +9,8 @@ import {
   Plus, 
   Banknote,
   RefreshCw,
-  FileCheck
+  FileCheck,
+  Users
 } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
@@ -32,7 +33,14 @@ export default function ConciliacaoPage() {
   // Lógica de matching inteligente
   const matchedTransactions = useMemo(() => {
     return extrato.map(ext => {
-      // Busca lançamentos com valor exato (ou muito próximo) e data próxima (+/- 3 dias)
+      // 1. Busca associado pelo CPF extraído do memo
+      const cpfMatch = ext.cpf_extraido ? associados.find(a => {
+        const cleanA = (a.cpf || '').replace(/[^\d]/g, '')
+        const cleanB = (ext.cpf_extraido || '').replace(/[^\d]/g, '')
+        return cleanA === cleanB && cleanA.length >= 11
+      }) : null
+
+      // 2. Busca lançamentos com valor exato e data próxima
       const matches = lancamentos.filter(l => {
         const diffDate = Math.abs(new Date(l.data).getTime() - new Date(ext.date).getTime())
         const daysDiff = diffDate / (1000 * 60 * 60 * 24)
@@ -43,10 +51,11 @@ export default function ConciliacaoPage() {
       return {
         bank: ext,
         match: matches[0] || null,
+        assocMatch: cpfMatch || null,
         similarCount: matches.length
       }
     })
-  }, [extrato, lancamentos])
+  }, [extrato, lancamentos, associados])
 
   const handleFileUpload = async (e: any) => {
     const file = e.target.files?.[0] || e.dataTransfer?.files?.[0]
@@ -174,6 +183,25 @@ export default function ConciliacaoPage() {
                           Confirmar
                         </button>
                       </div>
+                    ) : item.assocMatch ? (
+                      <div className="flex items-center gap-3 w-full animate-in fade-in zoom-in duration-300">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-200">
+                          <Users size={16} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-[10px] font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1">
+                            CPF Identificado <span className="text-gray-300 ml-1">•</span> <span className="text-gray-400 capitalize">Associado</span>
+                          </div>
+                          <div className="text-xs font-bold text-gray-800">{item.assocMatch.nome}</div>
+                          <div className="text-[10px] text-gray-400">Clique em Criar Lançamento para vincular</div>
+                        </div>
+                        <button 
+                          onClick={() => handleQuickCreate(item.bank)}
+                          className="px-4 py-2 bg-blue-600 text-white text-[10px] font-black rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100 uppercase"
+                        >
+                          Criar e Vincular
+                        </button>
+                      </div>
                     ) : (
                       <div className="text-center">
                         <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-2">
@@ -200,6 +228,12 @@ export default function ConciliacaoPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title="Criação Rápida de Lançamento"
+        initialData={selectedExtrato ? {
+          descricao: selectedExtrato.memo,
+          associado_id: matchedTransactions.find(m => m.bank.id === selectedExtrato.id)?.assocMatch?.id || '',
+          categoria: 'Mensalidades',
+          status: 'pago'
+        } : null}
         onSubmit={handleSalvarNovo}
         fields={[
           { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
