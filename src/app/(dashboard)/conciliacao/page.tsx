@@ -213,34 +213,43 @@ export default function ConciliacaoPage() {
         </div>
 
         {extrato.length > 0 && (
-          <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-[20px] border border-gray-100 shadow-xl shadow-indigo-900/5 animate-in slide-in-from-right">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Conta de Destino (Lote)</span>
-              <select 
-                value={selectedContaId}
-                onChange={(e) => setSelectedContaId(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 p-0 cursor-pointer min-w-[150px]"
-              >
-                {contas.map(c => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="w-px h-8 bg-gray-100 mx-1" />
-
+          <div className="flex items-center gap-3 animate-in slide-in-from-right">
             <button 
-              onClick={handleProcessarLote}
-              disabled={isProcessingBatch || !batchTargets.length}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30"
+              onClick={() => setExtrato([])}
+              className="flex items-center gap-2 px-4 py-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest mr-2"
             >
-              {isProcessingBatch ? (
-                <RefreshCw size={14} className="animate-spin" />
-              ) : (
-                <CheckCircle2 size={14} />
-              )}
-              Lançar {batchTargets.length} Sugestões
+              <RefreshCw size={14} /> Limpar Extrato
             </button>
+
+            <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-[20px] border border-gray-100 shadow-xl shadow-indigo-900/5">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Conta de Destino (Lote)</span>
+                <select 
+                  value={selectedContaId}
+                  onChange={(e) => setSelectedContaId(e.target.value)}
+                  className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 p-0 cursor-pointer min-w-[150px]"
+                >
+                  {contas.map(c => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="w-px h-8 bg-gray-100 mx-1" />
+
+              <button 
+                onClick={handleProcessarLote}
+                disabled={isProcessingBatch || !batchTargets.length}
+                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30"
+              >
+                {isProcessingBatch ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <CheckCircle2 size={14} />
+                )}
+                Lançar {batchTargets.length} Sugestões
+              </button>
+            </div>
           </div>
         )}
       </div>
