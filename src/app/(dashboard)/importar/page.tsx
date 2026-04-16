@@ -61,6 +61,35 @@ export default function ImportPage() {
   const [isDragging, setIsDragging] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
+  const parseExcelDate = (val: any) => {
+    if (!val) return new Date().toISOString()
+    
+    // Se já for uma data do JS
+    if (val instanceof Date) return val.toISOString()
+
+    // Se for número (Serial do Excel)
+    if (typeof val === 'number') {
+      // O Excel conta dias desde 1899-12-30. Diferença para época Unix é 25569 dias.
+      return new Date((val - 25569) * 86400 * 1000).toISOString()
+    }
+
+    // Se for string DD/MM/YYYY
+    if (typeof val === 'string' && val.includes('/')) {
+      const parts = val.split('/')
+      if (parts.length === 3) {
+        const [d, m, y] = parts
+        const date = new Date(Number(y), Number(m) - 1, Number(d))
+        if (!isNaN(date.getTime())) return date.toISOString()
+      }
+    }
+
+    // Tenta o parse padrão
+    const parsed = new Date(val)
+    if (!isNaN(parsed.getTime())) return parsed.toISOString()
+
+    return new Date().toISOString()
+  }
+
   const processData = async (data: any[]) => {
     if (data.length === 0) return
     setLoading(true)
@@ -73,7 +102,7 @@ export default function ImportPage() {
       if ('Recorrência Ativa' in firstRow || 'Valor Recebido' in firstRow) {
         // Financeiro
         const mapped: LancamentoInput[] = data.map(row => ({
-          data: new Date(row.Data).toISOString() || new Date().toISOString(),
+          data: parseExcelDate(row.Data),
           descricao: row.Descrição || 'Importado',
           categoria: row.Categoria || 'Geral',
           tipo: String(row.Tipo || 'receita').toLowerCase() as any,
@@ -96,7 +125,7 @@ export default function ImportPage() {
           cpf: row['CPF / CNPJ'] || '',
           categoria: row.Categoria || 'Pleno',
           email: row.Email || '',
-          data_ingresso: new Date(row['Data Ingresso']).toISOString() || new Date().toISOString(),
+          data_ingresso: parseExcelDate(row['Data Ingresso']),
           mensalidade: Number(row.Mensalidade || 0),
           status: String(row.Status || 'ativo').toLowerCase() as any
         }))
