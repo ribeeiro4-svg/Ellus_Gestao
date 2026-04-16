@@ -12,8 +12,8 @@ import * as XLSX from 'xlsx'
 
 export default function ImportPage() {
   
-  const downloadTemplate = (type: 'financeiro' | 'associados') => {
-    let data = []
+  const downloadTemplate = (type: 'financeiro' | 'associados' | 'prolabore') => {
+    let data: any[][] = []
     let filename = ''
     
     if (type === 'financeiro') {
@@ -65,7 +65,7 @@ export default function ImportPage() {
         const wb = XLSX.read(bstr, { type: 'binary' })
         const wsname = wb.SheetNames[0]
         const ws = wb.Sheets[wsname]
-        const data = XLSX.utils.sheet_to_json(ws)
+        const data: any[] = XLSX.utils.sheet_to_json(ws)
         console.log('Dados importados:', data)
         alert(`${data.length} registros identificados. Iniciando processamento...`)
         // Future: call useFinanceiro().inserirBulk(data)
@@ -132,7 +132,7 @@ export default function ImportPage() {
               </button>
 
               <button 
-                onClick={() => downloadTemplate('prolabore' as any)}
+                onClick={() => downloadTemplate('prolabore')}
                 className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
               >
                 <div className="flex items-center gap-3">
