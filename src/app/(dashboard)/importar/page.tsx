@@ -235,11 +235,22 @@ export default function ImportPage() {
             <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Importação de Dados</h1>
             <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Suba suas planilhas para atualizar o sistema em massa.</p>
           </div>
-          <div className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Conta Ativa</div>
-            <div className="text-[11px] font-black text-gray-600 truncate max-w-[150px]">
-              {tenantId === 'LOADING' ? 'Carregando...' : (tenantId || 'Não Identificada')}
+          <div className="flex items-center gap-2">
+            <div className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
+              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Conta Ativa</div>
+              <div className="text-[11px] font-black text-gray-600 truncate max-w-[150px]">
+                {tenantId === 'LOADING' ? 'Carregando...' : (tenantId || 'Não Identificada')}
+              </div>
             </div>
+            {(tenantId === null || tenantId === 'LOADING') && (
+              <button 
+                onClick={() => window.location.reload()} 
+                className="p-2 bg-white border border-gray-200 rounded-lg text-gray-400 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm"
+                title="Recarregar Identificação"
+              >
+                <RefreshCw size={16} className={tenantId === 'LOADING' ? 'animate-spin' : ''} />
+              </button>
+            )}
           </div>
         </div>
       </div>
