@@ -7,13 +7,14 @@ import {
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
+import { useContas } from '@/lib/hooks/useContas'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingUp, Plus } from 'lucide-react'
+import { TrendingUp, Plus, RefreshCw } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -29,6 +30,7 @@ const axisDefaults = {
 
 export default function ReceitasPage() {
   const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
+  const { contas } = useContas()
   const receitas = useMemo(() => lancamentos.filter(l => l.tipo === 'receita'), [lancamentos])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -68,10 +70,30 @@ export default function ReceitasPage() {
     {
       header: 'Descrição', key: 'descricao', render: (i: any) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>
+            {i.recorrencia_ativa && (
+              <span className="flex items-center gap-1 text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
+                <RefreshCw size={8} /> ↺ Recorrente
+              </span>
+            )}
+          </div>
           <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span>
         </div>
       )
+    },
+    { 
+      header: 'Conta', 
+      key: 'conta_id', 
+      render: (i: any) => {
+        const conta = contas.find(c => c.id === i.conta_id)
+        return (
+          <div className="flex flex-col">
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{conta?.nome || '—'}</span>
+            <span style={{ fontSize: 8, color: 'var(--text3)', textTransform: 'uppercase' }}>{conta?.tipo.replace('_', ' ') || ''}</span>
+          </div>
+        )
+      }
     },
     { header: 'Valor', key: 'valor', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)' }}>{fmtR(i.valor)}</span> },
     { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
@@ -174,6 +196,10 @@ export default function ReceitasPage() {
           { name: 'descricao', label: 'Descrição', type: 'text', required: true },
           { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
           { name: 'data', label: 'Data', type: 'date', required: true },
+          { name: 'conta_id', label: 'Conta de Destino', type: 'select', required: true, options: [
+            ...contas.map(c => ({ value: c.id, label: c.nome })),
+            { value: '', label: 'Selecione uma conta' }
+          ]},
           { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
             { value: 'Mensalidades', label: 'Mensalidades' },
             { value: 'Patrocínios', label: 'Patrocínios' },
@@ -181,6 +207,7 @@ export default function ReceitasPage() {
             { value: 'Serviços', label: 'Serviços' },
             { value: 'Outros', label: 'Outros' },
           ]},
+          { name: 'recorrencia_ativa', label: 'Lançamento Recorrente', type: 'checkbox', placeholder: 'Esta receita se repete mensalmente?' },
           { name: 'status', label: 'Status', type: 'select', required: true, options: [
             { value: 'pago', label: 'Recebido' },
             { value: 'pendente', label: 'Pendente' },
