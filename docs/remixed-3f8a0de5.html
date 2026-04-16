@@ -1775,6 +1775,26 @@ tr:hover td{background:var(--surface2)}
     <div id="evol-insights" style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px"></div>
   </div>
 
+<!-- CRUD MODAL -->
+<div id="crud-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(6px)">
+  <div style="background:var(--surface);border-radius:var(--radius-xl);padding:28px;max-width:520px;width:92%;max-height:88vh;overflow-y:auto;position:relative;animation:modalIn .28s ease both;box-shadow:var(--shadow-xl)">
+    <button onclick="fecharModalCrud()" style="position:absolute;top:16px;right:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:16px;cursor:pointer;color:var(--text2);width:32px;height:32px;display:flex;align-items:center;justify-content:center">✕</button>
+    <div id="crud-modal-title" style="font-size:18px;font-weight:700;margin-bottom:18px;color:var(--text1)"></div>
+    <div id="crud-modal-body" style="display:grid;gap:12px"></div>
+    <div style="display:flex;gap:10px;margin-top:20px;align-items:center">
+      <button onclick="salvarCrud()" class="btn btn-primary" style="flex:1;justify-content:center;padding:10px">💾 Salvar</button>
+      <button onclick="fecharModalCrud()" class="btn btn-outline" style="padding:10px 16px">Cancelar</button>
+      <button id="crud-delete-btn" onclick="excluirCrud()" class="btn" style="padding:10px 14px;background:var(--red-light);color:var(--red-dark);border:1px solid rgba(239,68,68,.3);display:none">🗑 Excluir</button>
+    </div>
+  </div>
+</div>
+<style>
+.crud-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;color:var(--text1);background:var(--surface);transition:var(--trans-fast)}
+.crud-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.crud-label{font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:5px;display:block}
+.crud-field{display:flex;flex-direction:column}
+</style>
+
 <!-- CHART POPUP MODAL -->
 <div class="chart-modal-overlay" id="chart-modal-overlay" onclick="fecharChartModal(event)">
   <div class="chart-modal" id="chart-modal">
@@ -3679,7 +3699,7 @@ function closeSplash() {
 }
 
 // ═══════════════════════════════════════════════
-//  CRUD UNIVERSAL
+//  CRUD UNIVERSAL — CORRIGIDO
 // ═══════════════════════════════════════════════
 
 const CRUD_SCHEMAS = {
@@ -3766,35 +3786,44 @@ let _crudIdx  = null; // null = novo, number = editar
 
 function abrirModalCrud(type, idx) {
   _crudType = type;
-  _crudIdx  = (idx !== undefined && idx !== null) ? idx : null;
+  _crudIdx  = (idx !== undefined && idx !== null) ? Number(idx) : null;
   const schema = CRUD_SCHEMAS[type];
-  if (!schema) return;
+  if (!schema) { alert('Tipo inválido: ' + type); return; }
 
   const isEdit = _crudIdx !== null;
-  const record = isEdit ? dados[schema.dataset][_crudIdx] : {};
+  const record = isEdit ? (dados[schema.dataset][_crudIdx] || {}) : {};
 
   document.getElementById('crud-modal-title').textContent =
     (isEdit ? '✏️ Editar ' : '＋ Novo ') + schema.label;
 
   const body = document.getElementById('crud-modal-body');
   body.innerHTML = schema.fields.map(f => {
-    const val = record[f.key] !== undefined ? record[f.key] : '';
+    const val = (record[f.key] !== undefined && record[f.key] !== null) ? record[f.key] : '';
     let input = '';
     if (f.type === 'select') {
-      const opts = f.options.map(o => `<option value="${o}"${o===val?' selected':''}>${o}</option>`).join('');
+      const opts = f.options.map(o =>
+        `<option value="${o}"${String(o)===String(val)?' selected':''}>${o}</option>`
+      ).join('');
       input = `<select id="crud-f-${f.key}" class="crud-input"${f.required?' required':''}><option value="">Selecione...</option>${opts}</select>`;
     } else {
-      input = `<input id="crud-f-${f.key}" class="crud-input" type="${f.type}" value="${val}"${f.required?' required':''}${f.type==='number'?' step="0.01" min="0"':''}>`;
+      const esc = String(val).replace(/"/g,'&quot;');
+      input = `<input id="crud-f-${f.key}" class="crud-input" type="${f.type}" value="${esc}"${f.required?' required':''}${f.type==='number'?' step="0.01" min="0"':''}>`;
     }
     return `<div class="crud-field"><label class="crud-label">${f.label}${f.required?' <span style="color:var(--red)">*</span>':''}</label>${input}</div>`;
   }).join('');
 
-  document.getElementById('crud-delete-btn').style.display = isEdit ? 'inline-flex' : 'none';
-  document.getElementById('crud-modal').style.display = 'flex';
+  const delBtn = document.getElementById('crud-delete-btn');
+  if (delBtn) delBtn.style.display = isEdit ? 'inline-flex' : 'none';
+
+  const modal = document.getElementById('crud-modal');
+  modal.style.display = 'flex';
+  // reset border colors
+  body.querySelectorAll('.crud-input').forEach(el => el.style.borderColor = '');
 }
 
 function fecharModalCrud() {
-  document.getElementById('crud-modal').style.display = 'none';
+  const modal = document.getElementById('crud-modal');
+  if (modal) modal.style.display = 'none';
   _crudType = null;
   _crudIdx  = null;
 }
@@ -3803,20 +3832,21 @@ function salvarCrud() {
   const schema = CRUD_SCHEMAS[_crudType];
   if (!schema) return;
 
-  // Validar campos obrigatórios
+  let valido = true;
   for (const f of schema.fields) {
     if (f.required) {
       const el = document.getElementById('crud-f-' + f.key);
       if (el && !el.value.trim()) {
         el.style.borderColor = 'var(--red)';
         el.focus();
-        return;
+        valido = false;
+        break;
       }
     }
   }
+  if (!valido) return;
 
-  // Montar objeto
-  const obj = { ...(schema.fixedFields || {}) };
+  const obj = Object.assign({}, schema.fixedFields || {});
   schema.fields.forEach(f => {
     const el = document.getElementById('crud-f-' + f.key);
     if (el) obj[f.key] = el.value.trim();
@@ -3830,6 +3860,7 @@ function salvarCrud() {
 
   fecharModalCrud();
   renderCurrentPage();
+  setTimeout(attachChartClicks, 200);
 }
 
 function excluirCrud() {
@@ -3840,6 +3871,7 @@ function excluirCrud() {
   dados[schema.dataset].splice(_crudIdx, 1);
   fecharModalCrud();
   renderCurrentPage();
+  setTimeout(attachChartClicks, 200);
 }
 
 // ── helpers for inline edit / delete buttons in rows ──

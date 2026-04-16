@@ -4,6 +4,7 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
+import PaymentBadge from '@/components/ui/PaymentBadge'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import { Plus, Search, Filter } from 'lucide-react'
 
@@ -65,7 +66,7 @@ export default function FinanceiroPage() {
     { 
       header: 'Pagamento', 
       key: 'forma_pagamento', 
-      render: (i: any) => <span className="text-xs font-bold text-slate-500">{i.forma_pagamento || '-'}</span> 
+      render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> 
     },
     {
       header: '',

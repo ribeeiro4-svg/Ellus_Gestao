@@ -1,13 +1,14 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { X, Check } from 'lucide-react'
+import { X, Check, Loader2 } from 'lucide-react'
 
 interface Field {
   name: string
   label: string
-  type: 'text' | 'number' | 'date' | 'select'
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea'
   options?: { value: string; label: string }[]
   required?: boolean
+  placeholder?: string
 }
 
 interface CrudModalProps {
@@ -19,6 +20,14 @@ interface CrudModalProps {
   onSubmit: (data: any) => Promise<void>
 }
 
+const PAGAMENTO_ICONS: Record<string, string> = {
+  'Dinheiro': '💵',
+  'PIX': '⚡',
+  'Boleto': '🔖',
+  'Transferência': '🏦',
+  'Cartão': '💳',
+}
+
 export default function CrudModal({ isOpen, onClose, title, fields, initialData, onSubmit }: CrudModalProps) {
   const [formData, setFormData] = useState<any>({})
   const [loading, setLoading] = useState(false)
@@ -26,7 +35,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
   useEffect(() => {
     if (initialData && isOpen) {
       setFormData(initialData)
-    } else {
+    } else if (isOpen) {
       setFormData({})
     }
   }, [initialData, isOpen])
@@ -36,9 +45,12 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    await onSubmit(formData)
-    setLoading(false)
-    onClose()
+    try {
+      await onSubmit(formData)
+      onClose()
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleChange = (name: string, value: any) => {
@@ -46,61 +58,182 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95">
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <h2 className="text-xl font-bold text-slate-800">{title}</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition">
-            <X size={20} />
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(8px)', animation: 'overlayIn .2s ease both' }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="w-full max-w-[520px] max-h-[88vh] overflow-y-auto relative"
+        style={{
+          background: 'var(--surface)',
+          borderRadius: 'var(--radius-xl)',
+          boxShadow: 'var(--shadow-xl)',
+          animation: 'modalIn .28s ease both',
+        }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-start justify-between sticky top-0 z-10"
+          style={{
+            padding: '22px 24px 18px',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--surface)',
+          }}
+        >
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text1)', marginBottom: 2 }}>{title}</h2>
+            <p style={{ fontSize: 12, color: 'var(--text3)' }}>Preencha os campos abaixo</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="transition"
+            style={{
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              width: 32, height: 32,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: 'var(--text2)',
+            }}
+          >
+            <X size={16} />
           </button>
         </div>
-        
+
+        {/* Body */}
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+          <div style={{ padding: '20px 24px', display: 'grid', gap: 14 }}>
             {fields.map(field => (
-              <div key={field.name} className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-widest ml-1">{field.label}</label>
+              <div key={field.name} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text2)', display: 'block' }}>
+                  {field.label}{field.required && <span style={{ color: 'var(--red)' }}> *</span>}
+                </label>
+
                 {field.type === 'select' ? (
-                  <select
+                  <div>
+                    {field.name === 'forma_pagamento' ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {[{ value: '', label: '— Nenhuma' }, ...(field.options || [])].map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => handleChange(field.name, opt.value)}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: 20,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              border: `1.5px solid ${formData[field.name] === opt.value ? 'var(--accent)' : 'var(--border)'}`,
+                              background: formData[field.name] === opt.value ? 'rgba(45,140,111,.12)' : 'var(--surface2)',
+                              color: formData[field.name] === opt.value ? 'var(--accent)' : 'var(--text2)',
+                              transition: 'var(--trans-fast)',
+                            }}
+                          >
+                            {opt.value && PAGAMENTO_ICONS[opt.value] ? `${PAGAMENTO_ICONS[opt.value]} ` : ''}{opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <select
+                        required={field.required}
+                        value={formData[field.name] || ''}
+                        onChange={e => handleChange(field.name, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '9px 12px',
+                          border: '1.5px solid var(--border)',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: 13,
+                          fontFamily: 'inherit',
+                          color: 'var(--text1)',
+                          background: 'var(--surface)',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          transition: 'var(--trans-fast)',
+                        }}
+                      >
+                        <option value="" disabled>Selecione...</option>
+                        {field.options?.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ) : field.type === 'textarea' ? (
+                  <textarea
                     required={field.required}
                     value={formData[field.name] || ''}
+                    placeholder={field.placeholder}
                     onChange={e => handleChange(field.name, e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 transition-all font-medium text-slate-700"
-                  >
-                    <option value="" disabled>Selecione...</option>
-                    {field.options?.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      border: '1.5px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: 13,
+                      fontFamily: 'inherit',
+                      color: 'var(--text1)',
+                      background: 'var(--surface)',
+                      outline: 'none',
+                      resize: 'vertical',
+                      transition: 'var(--trans-fast)',
+                    }}
+                  />
                 ) : (
                   <input
                     type={field.type}
                     required={field.required}
+                    placeholder={field.placeholder}
                     value={formData[field.name] || ''}
                     onChange={e => handleChange(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 transition-all font-medium text-slate-700"
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      border: '1.5px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: 13,
+                      fontFamily: 'inherit',
+                      color: 'var(--text1)',
+                      background: 'var(--surface)',
+                      outline: 'none',
+                      transition: 'var(--trans-fast)',
+                    }}
                   />
                 )}
               </div>
             ))}
           </div>
-          
-          <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3">
+
+          {/* Footer */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              alignItems: 'center',
+              padding: '16px 24px 20px',
+              borderTop: '1px solid var(--border)',
+            }}
+          >
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn btn-primary"
+              style={{ flex: 1, justifyContent: 'center', padding: '10px 16px' }}
+            >
+              {loading ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+              {loading ? 'Salvando...' : 'Salvar'}
+            </button>
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 rounded-xl transition"
+              className="btn btn-outline"
+              style={{ padding: '10px 16px' }}
             >
               Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-600/20 transition flex items-center gap-2"
-            >
-              {loading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={16} />}
-              Salvar
             </button>
           </div>
         </form>
