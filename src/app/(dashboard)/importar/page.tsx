@@ -18,18 +18,27 @@ export default function ImportPage() {
     
     if (type === 'financeiro') {
       data = [
-        ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status'],
-        ['2024-04-01', 'Mensalidade Abril', 'Mensalidade', 'Receita', 150.00, 'Recebido'],
-        ['2024-04-05', 'Aluguel Escritório', 'Infraestrutura', 'Despesa', 2500.00, 'Pago']
+        ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status', 'Forma Pagamento', 'Valor Recebido', 'Troco via PIX'],
+        ['2024-04-01', 'Mensalidade Abril', 'Mensalidade', 'Receita', 150.00, 'Recebido', 'PIX', 150.00, 'Não'],
+        ['2024-04-05', 'Aluguel Escritório', 'Infraestrutura', 'Despesa', 2500.00, 'Pago', 'Transferência', 2500.00, 'Não'],
+        ['2024-04-10', 'Adesão Novo Membro', 'ADESÃO', 'Receita', 200.00, 'Recebido', 'Dinheiro', 250.00, 'Sim']
       ]
       filename = 'modelo_financeiro_acprobec.xlsx'
-    } else {
+    } else if (type === 'associados') {
       data = [
         ['ID', 'Nome', 'Categoria', 'Email', 'Data Ingresso', 'Mensalidade', 'Status'],
         ['1001', 'João da Silva', 'Pleno', 'joao@email.com', '2023-01-10', 150.00, 'Ativo'],
         ['1002', 'Maria Souza', 'Premium', 'maria@email.com', '2023-05-20', 300.00, 'Inadimplente']
       ]
       filename = 'modelo_associados_acprobec.xlsx'
+    } else if (type as string === 'prolabore') {
+      data = [
+        ['Nome do Diretor', 'Valor Mensal', 'Mês Início', 'Ano Início', 'Mês Fim', 'Ano Fim'],
+        ['Diretor Presidente', 3000.00, 1, 2024, 6, 2024],
+        ['Diretor Presidente', 3500.00, 7, 2024, '', ''],
+        ['Diretor Administrativo', 2500.00, 1, 2024, '', '']
+      ]
+      filename = 'modelo_prolabore_acprobec.xlsx'
     }
 
     const ws = XLSX.utils.aoa_to_sheet(data)
@@ -120,6 +129,22 @@ export default function ImportPage() {
                   </div>
                 </div>
                 <Download size={16} className="text-gray-300 group-hover:text-blue-600 transition-colors" />
+              </button>
+
+              <button 
+                onClick={() => downloadTemplate('prolabore' as any)}
+                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-rose-600 shadow-sm border border-gray-100">
+                    <FileSpreadsheet size={20} />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-gray-900">Pró-labore</div>
+                    <div className="text-[10px] text-gray-400">Períodos da Diretoria</div>
+                  </div>
+                </div>
+                <Download size={16} className="text-gray-300 group-hover:text-rose-600 transition-colors" />
               </button>
             </div>
 
