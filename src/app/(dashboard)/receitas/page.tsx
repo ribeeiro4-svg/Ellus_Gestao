@@ -8,6 +8,7 @@ import {
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
+import { useAssociados } from '@/lib/hooks/useAssociados'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
@@ -31,6 +32,7 @@ const axisDefaults = {
 export default function ReceitasPage() {
   const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
   const { contas } = useContas()
+  const { associados } = useAssociados()
   const receitas = useMemo(() => lancamentos.filter(l => l.tipo === 'receita'), [lancamentos])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -93,6 +95,14 @@ export default function ReceitasPage() {
             <span style={{ fontSize: 8, color: 'var(--text3)', textTransform: 'uppercase' }}>{conta?.tipo.replace('_', ' ') || ''}</span>
           </div>
         )
+      }
+    },
+    { 
+      header: 'Associado', 
+      key: 'associado_id', 
+      render: (i: any) => {
+        const assoc = associados.find(a => a.id === i.associado_id)
+        return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{assoc?.nome || '—'}</span>
       }
     },
     { header: 'Valor', key: 'valor', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)' }}>{fmtR(i.valor)}</span> },
@@ -202,10 +212,15 @@ export default function ReceitasPage() {
           ]},
           { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
             { value: 'Mensalidades', label: 'Mensalidades' },
+            { value: 'ADESÃO', label: 'Adesão' },
             { value: 'Patrocínios', label: 'Patrocínios' },
             { value: 'Eventos', label: 'Eventos' },
             { value: 'Serviços', label: 'Serviços' },
             { value: 'Outros', label: 'Outros' },
+          ]},
+          { name: 'associado_id', label: 'Associado Vinculado', type: 'select', options: [
+            { value: '', label: 'Nenhum' },
+            ...associados.map(a => ({ value: a.id, label: a.nome }))
           ]},
           { name: 'recorrencia_ativa', label: 'Lançamento Recorrente', type: 'checkbox', placeholder: 'Esta receita se repete mensalmente?' },
           { name: 'status', label: 'Status', type: 'select', required: true, options: [

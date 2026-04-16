@@ -8,6 +8,7 @@ import {
 import { Chart, Line } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
+import { useAssociados } from '@/lib/hooks/useAssociados'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
@@ -21,6 +22,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointEleme
 export default function FinanceiroPage() {
   const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
   const { contas } = useContas()
+  const { associados } = useAssociados()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -101,6 +103,12 @@ export default function FinanceiroPage() {
       header: 'Conta', key: 'conta_id', render: (i: any) => {
         const c = contas.find(ca => ca.id === i.conta_id)
         return <span className="text-[11px] font-bold text-gray-500 uppercase">{c?.nome || '--'}</span>
+      }
+    },
+    {
+      header: 'Associado', key: 'associado_id', render: (i: any) => {
+        const a = associados.find(as => as.id === i.associado_id)
+        return <span className="text-[11px] font-bold text-gray-700">{a?.nome || '--'}</span>
       }
     },
     {
@@ -274,6 +282,15 @@ export default function FinanceiroPage() {
             name: 'recorrencia_ativa', 
             label: 'Recorrência Ativa?', 
             type: 'checkbox',
+          },
+          { 
+            name: 'associado_id', 
+            label: 'Associado Vinculado', 
+            type: 'select',
+            options: [
+              { value: '', label: 'Nenhum' },
+              ...associados.map(a => ({ value: a.id, label: a.nome }))
+            ]
           },
         ]}
       />

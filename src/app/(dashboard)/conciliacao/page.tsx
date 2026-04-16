@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
+import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useOFXParser, OFXTransaction } from '@/lib/hooks/useOFXParser'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import CrudModal from '@/components/ui/CrudModal'
@@ -20,6 +21,7 @@ import CrudModal from '@/components/ui/CrudModal'
 export default function ConciliacaoPage() {
   const { lancamentos, conciliar, inserir, loading: finLoading } = useFinanceiro()
   const { contas } = useContas()
+  const { associados } = useAssociados()
   const { parseOFX } = useOFXParser()
 
   const [extrato, setExtrato] = useState<OFXTransaction[]>([])
@@ -218,7 +220,11 @@ export default function ConciliacaoPage() {
           { name: 'status', label: 'Status', type: 'select', required: true, options: [
             { value: 'pago', label: 'Confirmado/Pago' },
             { value: 'pendente', label: 'Aguardando' }
-          ]}
+          ]},
+          { name: 'associado_id', label: 'Associado (Opcional)', type: 'select', options: [
+            { value: '', label: 'Nenhum' },
+            ...associados.map(a => ({ value: a.id, label: a.nome }))
+          ]},
         ]}
       />
 

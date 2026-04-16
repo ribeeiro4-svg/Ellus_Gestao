@@ -40,6 +40,7 @@ export interface Lancamento {
   conta_id?: string
   conciliado?: boolean
   banco_transacao_id?: string
+  associado_id?: string // ID do associado vinculado (opcional)
   created_at: string
   updated_at: string
 }
