@@ -13,6 +13,7 @@ const TITLES: Record<string, string> = {
   '/projetos':      'Projetos',
   '/evolucao':      'Evolução',
   '/importar':      'Importar',
+  '/simulador':     'Simulador Estratégico',
 }
 
 export default function Topbar() {
