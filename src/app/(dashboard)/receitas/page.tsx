@@ -1,13 +1,37 @@
 'use client'
+import React from 'react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
+import CrudModal from '@/components/ui/CrudModal'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import { TrendingUp, Search, Filter } from 'lucide-react'
 
 export default function ReceitasPage() {
-  const { lancamentos, loading } = useFinanceiro()
+  const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
   const receitas = lancamentos.filter(l => l.tipo === 'receita')
+  
+  const [isModalOpen, setIsModalOpen] = React.useState(false)
+  const [editingItem, setEditingItem] = React.useState<any>(null)
+
+  const handleSalvar = async (data: any) => {
+    if (editingItem) {
+      await atualizar(editingItem.id, data)
+    } else {
+      await inserir({ ...data, tipo: 'receita', status: data.status || 'pago' })
+    }
+  }
+
+  const handleEdit = (item: any) => {
+    setEditingItem(item)
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esta receita?')) {
+      await remover(id)
+    }
+  }
 
   const columns = [
     { 
@@ -35,6 +59,21 @@ export default function ReceitasPage() {
       key: 'status', 
       render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> 
     },
+    {
+      header: '',
+      key: 'acoes',
+      className: 'w-20 text-right',
+      render: (i: any) => (
+        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          </button>
+          <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        </div>
+      )
+    }
   ]
 
   return (
@@ -49,13 +88,47 @@ export default function ReceitasPage() {
             <p className="text-slate-500 text-sm mt-1">Acompanhamento detalhado das entradas financeiras.</p>
           </div>
         </div>
-        <div className="bg-white px-6 py-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Total Recebido</span>
-          <span className="text-lg font-black text-emerald-600">{fmtR(receitas.reduce((acc, l) => acc + l.valor, 0))}</span>
+        <div className="flex items-center gap-4">
+          <div className="bg-white px-6 py-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Total Recebido</span>
+            <span className="text-lg font-black text-emerald-600">{fmtR(receitas.reduce((acc, l) => acc + l.valor, 0))}</span>
+          </div>
+          <button 
+            onClick={() => { setEditingItem(null); setIsModalOpen(true) }}
+            className="h-14 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Nova Receita
+          </button>
         </div>
       </div>
 
       <DataTable columns={columns} data={receitas} loading={loading} />
+
+      <CrudModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingItem ? 'Editar Receita' : 'Nova Receita'}
+        initialData={editingItem}
+        onSubmit={handleSalvar}
+        fields={[
+          { name: 'descricao', label: 'Descrição da Receita', type: 'text', required: true },
+          { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
+          { name: 'data', label: 'Data de Recebimento', type: 'date', required: true },
+          { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
+            { value: 'Mensalidades', label: 'Mensalidades' },
+            { value: 'Patrocínios', label: 'Patrocínios' },
+            { value: 'Eventos', label: 'Eventos' },
+            { value: 'Serviços', label: 'Serviços' },
+            { value: 'Outros', label: 'Outros' }
+          ]},
+          { name: 'status', label: 'Status', type: 'select', required: true, options: [
+            { value: 'pago', label: 'Recebido' },
+            { value: 'pendente', label: 'Pendente' }
+          ]}
+        ]}
+      />
     </div>
   )
 }
+
