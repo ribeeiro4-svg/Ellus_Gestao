@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}>
-      <body className="font-sans min-h-full">
+      <body className="min-h-full">
         {children}
       </body>
     </html>
