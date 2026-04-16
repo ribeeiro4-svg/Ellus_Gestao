@@ -13,7 +13,7 @@ export function useFinanceiro() {
   const fetch = useCallback(async () => {
     if (!tenantId) {
       // Modo Demonstração (Bypass de Login) ou Sandbox
-      setLancamentos([
+      setLancamentos(prev => prev.length > 0 ? prev : [
         { id: '1', data: '2026-04-10', descricao: 'Mensalidade Associação Abril', categoria: 'Mensalidades', tipo: 'receita', valor: 15300.00, status: 'pago', forma_pagamento: 'Boleto', created_at: '2026-04-10', updated_at: '2026-04-10' },
         { id: '2', data: '2026-04-12', descricao: 'Patrocínio Evento Anual', categoria: 'Patrocínios', tipo: 'receita', valor: 8500.00, status: 'pendente', forma_pagamento: 'PIX', created_at: '2026-04-12', updated_at: '2026-04-12' },
         { id: '3', data: '2026-04-15', descricao: 'Consultoria Financeira', categoria: 'Serviços', tipo: 'receita', valor: 3200.00, status: 'pago', forma_pagamento: 'Dinheiro', created_at: '2026-04-15', updated_at: '2026-04-15' },
@@ -43,18 +43,31 @@ export function useFinanceiro() {
   useEffect(() => { fetch() }, [fetch])
 
   const inserir = async (input: LancamentoInput) => {
+    if (!tenantId) {
+      const newItem = { ...input, id: Math.random().toString(), created_at: new Date().toISOString() } as Lancamento
+      setLancamentos(prev => [newItem, ...prev])
+      return { error: null }
+    }
     const { error } = await sb.from('lancamentos').insert({ ...input, tenant_id: tenantId })
     if (!error) fetch()
     return { error }
   }
 
   const atualizar = async (id: string, input: Partial<LancamentoInput>) => {
+    if (!tenantId) {
+      setLancamentos(prev => prev.map(i => i.id === id ? { ...i, ...input } as Lancamento : i))
+      return { error: null }
+    }
     const { error } = await sb.from('lancamentos').update(input).eq('id', id)
     if (!error) fetch()
     return { error }
   }
 
   const remover = async (id: string) => {
+    if (!tenantId) {
+      setLancamentos(prev => prev.filter(i => i.id !== id))
+      return { error: null }
+    }
     const { error } = await sb.from('lancamentos').delete().eq('id', id)
     if (!error) fetch()
     return { error }

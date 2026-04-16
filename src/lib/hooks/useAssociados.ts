@@ -13,7 +13,7 @@ export function useAssociados() {
   const fetch = useCallback(async () => {
     if (!tenantId) {
       // Modo Demonstração
-      setAssociados([
+      setAssociados(prev => prev.length > 0 ? prev : [
         { id: '1', nome: 'João da Silva', codigo: '1001', categoria: 'Pleno', email: 'joao@email.com', telefone: '11999999999', data_ingresso: '2023-01-10', mensalidade: 150.00, status: 'ativo', meses_atraso: 0, created_at: '2023-01-10' },
         { id: '2', nome: 'Maria Souza', codigo: '1002', categoria: 'Premium', email: 'maria@email.com', telefone: '11988888888', data_ingresso: '2023-05-20', mensalidade: 300.00, status: 'inadimplente', meses_atraso: 3, ultimo_pagamento: '2023-12-10', created_at: '2023-05-20' },
         { id: '3', nome: 'Empresa XPTO Ltda', codigo: '1003', categoria: 'Corporativo', email: 'contato@xpto.com', telefone: '1133334444', data_ingresso: '2024-02-01', mensalidade: 1200.00, status: 'inadimplente', meses_atraso: 1, ultimo_pagamento: '2026-03-01', created_at: '2024-02-01' },
@@ -32,18 +32,31 @@ export function useAssociados() {
   useEffect(() => { fetch() }, [fetch])
 
   const inserir = async (input: AssociadoInput) => {
+    if (!tenantId) {
+      const newItem = { ...input, id: Math.random().toString(), created_at: new Date().toISOString() } as Associado
+      setAssociados(prev => [...prev, newItem])
+      return { error: null }
+    }
     const { error } = await sb.from('associados').insert({ ...input, tenant_id: tenantId })
     if (!error) fetch()
     return { error }
   }
 
   const atualizar = async (id: string, input: Partial<AssociadoInput>) => {
+    if (!tenantId) {
+      setAssociados(prev => prev.map(a => a.id === id ? { ...a, ...input } as Associado : a))
+      return { error: null }
+    }
     const { error } = await sb.from('associados').update(input).eq('id', id)
     if (!error) fetch()
     return { error }
   }
 
   const remover = async (id: string) => {
+    if (!tenantId) {
+      setAssociados(prev => prev.filter(a => a.id !== id))
+      return { error: null }
+    }
     const { error } = await sb.from('associados').delete().eq('id', id)
     if (!error) fetch()
     return { error }
