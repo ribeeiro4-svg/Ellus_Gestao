@@ -34,6 +34,7 @@ const DEFAULT_CENARIO: CenarioSimulacao = {
 export function useProjecao() {
   const tenantId = useTenantId()
   const [cenario, setCenario] = useState<CenarioSimulacao>(DEFAULT_CENARIO)
+  const [visao, setVisao] = useState<'mensal' | 'anual'>('mensal')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const sb = createClient()
@@ -69,12 +70,9 @@ export function useProjecao() {
     return { error }
   }
 
-  // Função para carregar dados reais como baseline
   const carregarDadosReais = async () => {
     if (!tenantId) return
     setSyncing(true)
-    
-    // 1. Buscar lançamentos do mês/ano alvo
     const start = new Date(cenario.ano_referencia, cenario.mes_referencia, 1).toISOString()
     const end = new Date(cenario.ano_referencia, cenario.mes_referencia + 1, 0).toISOString()
     
@@ -84,7 +82,6 @@ export function useProjecao() {
       .gte('data', start)
       .lte('data', end)
 
-    // 2. Buscar contagem de associados ativos
     const { count: assocCount } = await sb.from('associados')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId)
@@ -94,27 +91,23 @@ export function useProjecao() {
       const receitaReal = financeiro.filter(l => l.tipo === 'receita').reduce((s, l) => s + l.valor, 0)
       const despesaReal = financeiro.filter(l => l.tipo === 'despesa')
       const totalDespesa = despesaReal.reduce((s, l) => s + l.valor, 0)
-      
-      // Heurística simples: Categorias com "Folha" ou "Salário" vão para folha_base_real
       const folhaReal = despesaReal
         .filter(l => l.categoria.toLowerCase().includes('folha') || l.categoria.toLowerCase().includes('salário'))
         .reduce((s, l) => s + l.valor, 0)
-      
-      const fixaReal = totalDespesa - folhaReal // Simplificação: o que não é folha é fixo/variável
+      const fixaReal = totalDespesa - folhaReal
 
       setCenario(prev => ({
         ...prev,
         num_associados: assocCount || prev.num_associados,
         valor_mensalidade: assocCount ? Math.round(receitaReal / assocCount) : prev.valor_mensalidade,
-        despesas_fixas: Math.round(fixaReal * 0.7), // Chute 70% fixo
-        despesas_variaveis: Math.round(fixaReal * 0.3), // Chute 30% variável
+        despesas_fixas: Math.round(fixaReal * 0.7),
+        despesas_variaveis: Math.round(fixaReal * 0.3),
         folha_pagamento: folhaReal
       }))
     }
     setSyncing(false)
   }
 
-  // Cálculos de Pro-labore para um mês específico
   const getProLaboreNoMes = useCallback((mes: number, ano: number) => {
     const targetSerial = ano * 12 + mes
     return cenario.pro_labores.reduce((totalDirector, director) => {
@@ -129,46 +122,77 @@ export function useProjecao() {
     }, 0)
   }, [cenario.pro_labores])
 
-  // Cálculos dinâmicos (Snapshot do Mês Atual)
-  const totalReceita = cenario.num_associados * cenario.valor_mensalidade
-  const totalProLabores = getProLaboreNoMes(cenario.mes_referencia, cenario.ano_referencia)
-  const totalFolha = cenario.folha_pagamento + totalProLabores
-  const totalDespesas = cenario.despesas_fixas + cenario.despesas_variaveis + totalFolha
-  const resultado = totalReceita - totalDespesas
-  const margem = totalReceita > 0 ? (resultado / totalReceita) * 100 : 0
-  const reservaAlvo = (cenario.despesas_fixas + totalFolha) * cenario.reserva_meses_alvo
+  // Cálculos Mensais (Baseline do mês selecionado)
+  const mReceita = cenario.num_associados * cenario.valor_mensalidade
+  const mProLabores = getProLaboreNoMes(cenario.mes_referencia, cenario.ano_referencia)
+  const mFolha = cenario.folha_pagamento + mProLabores
+  const mFixas = cenario.despesas_fixas
+  const mVariaveis = cenario.despesas_variaveis
+  const mResultado = mReceita - (mFixas + mVariaveis + mFolha)
 
   // Projeção do Ano (12 Meses)
-  const projecaoAnual = useMemo(() => {
+  const projecaoMeses = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => {
       const pl = getProLaboreNoMes(i, cenario.ano_referencia)
       const folha = cenario.folha_pagamento + pl
-      const desps = cenario.despesas_fixas + cenario.despesas_variaveis + folha
-      const res = totalReceita - desps
+      const fixas = cenario.despesas_fixas
+      const vars = cenario.despesas_variaveis
+      const receita = cenario.num_associados * cenario.valor_mensalidade
+      const despesas = fixas + vars + folha
       return {
         mes: i,
-        resultado: res,
-        folha: folha
+        receita,
+        fixas,
+        variaveis: vars,
+        folha,
+        proLabore: pl,
+        despesas,
+        resultado: receita - despesas
       }
     })
-  }, [cenario.ano_referencia, cenario.folha_pagamento, cenario.despesas_fixas, cenario.despesas_variaveis, totalReceita, getProLaboreNoMes])
+  }, [cenario.ano_referencia, cenario.folha_pagamento, cenario.despesas_fixas, cenario.despesas_variaveis, cenario.num_associados, cenario.valor_mensalidade, getProLaboreNoMes])
+
+  // Agregação Anual
+  const aReceita = projecaoMeses.reduce((s, m) => s + m.receita, 0)
+  const aFixas = projecaoMeses.reduce((s, m) => s + m.fixas, 0)
+  const aVariaveis = projecaoMeses.reduce((s, m) => s + m.variaveis, 0)
+  const aFolha = projecaoMeses.reduce((s, m) => s + m.folha, 0)
+  const aProLabores = projecaoMeses.reduce((s, m) => s + m.proLabore, 0)
+  const aResultado = aReceita - (aFixas + aVariaveis + aFolha)
+
+  // Seleção final baseada na Visão
+  const calculos = visao === 'mensal' ? {
+    totalReceita: mReceita,
+    totalProLabores: mProLabores,
+    totalFolha: mFolha,
+    totalFixas: mFixas,
+    totalVariaveis: mVariaveis,
+    totalDespesas: mFixas + mVariaveis + mFolha,
+    resultado: mResultado,
+    margem: mReceita > 0 ? (mResultado / mReceita) * 100 : 0
+  } : {
+    totalReceita: aReceita,
+    totalProLabores: aProLabores,
+    totalFolha: aFolha,
+    totalFixas: aFixas,
+    totalVariaveis: aVariaveis,
+    totalDespesas: aFixas + aVariaveis + aFolha,
+    resultado: aResultado,
+    margem: aReceita > 0 ? (aResultado / aReceita) * 100 : 0
+  }
+
+  const reservaAlvo = (calculos.totalFixas + (calculos.totalFolha)) * (visao === 'mensal' ? cenario.reserva_meses_alvo : 1)
 
   return {
     cenario,
     setCenario,
+    visao,
+    setVisao,
     salvarCenario,
     carregarDadosReais,
     loading,
     syncing,
-    calculos: {
-      totalReceita,
-      totalProLabores,
-      totalFolha,
-      totalDespesas,
-      resultado,
-      margem,
-      reservaAlvo
-    },
-    projecaoAnual
+    calculos,
+    projecaoAnual: projecaoMeses
   }
 }

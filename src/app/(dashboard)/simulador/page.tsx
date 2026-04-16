@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Clock,
   RefreshCw,
-  LineChart as LineChartIcon
+  LayoutGrid,
+  CalendarDays
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -32,7 +33,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineEleme
 const ANOS = [2024, 2025, 2026, 2027, 2028]
 
 export default function SimuladorPage() {
-  const { cenario, setCenario, salvarCenario, carregarDadosReais, loading, syncing, calculos, projecaoAnual } = useProjecao()
+  const { cenario, setCenario, visao, setVisao, salvarCenario, carregarDadosReais, loading, syncing, calculos, projecaoAnual } = useProjecao()
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
@@ -109,15 +110,15 @@ export default function SimuladorPage() {
   }
 
   const chartDataSnapshot = {
-    labels: ['Receita Total', 'Custos Fixos', 'Folha/Pro-labore', 'Variáveis', 'Resultado'],
+    labels: ['Receita', 'Fixas', 'Variáveis', 'Folha', 'Resultado'],
     datasets: [
       {
-        label: 'Projeção (R$)',
+        label: visao === 'mensal' ? 'Valor Mensal' : 'Acumulado Anual',
         data: [
           calculos.totalReceita,
-          cenario.despesas_fixas,
+          calculos.totalFixas,
+          calculos.totalVariaveis,
           calculos.totalFolha,
-          cenario.despesas_variaveis,
           calculos.resultado
         ],
         backgroundColor: [
@@ -157,21 +158,41 @@ export default function SimuladorPage() {
             Simulador Estratégico
           </h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
-            Crie cenários hipotéticos baseados na realidade ou em novas projeções.
+            Alterne entre visão mensal ou anual para analisar o impacto do tempo.
           </p>
         </div>
         
         <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md border border-white/60 p-2 rounded-2xl shadow-sm">
-           <div className="flex items-center gap-2 px-3 border-r border-slate-100">
+           {/* Seletor Visão */}
+           <div className="flex items-center bg-slate-100 p-1 rounded-xl mr-2">
+              <button 
+                onClick={() => setVisao('mensal')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${visao === 'mensal' ? 'bg-white text-[#2d8c6f] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <LayoutGrid size={12} />
+                MENSAL
+              </button>
+              <button 
+                onClick={() => setVisao('anual')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${visao === 'anual' ? 'bg-white text-[#2d8c6f] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <CalendarDays size={12} />
+                ANUAL
+              </button>
+           </div>
+
+           <div className={`flex items-center gap-2 px-3 border-r border-slate-100 ${visao === 'anual' ? 'opacity-30 cursor-not-allowed grayscale' : ''}`}>
              <Calendar size={14} className="text-[#2d8c6f]" />
              <select 
+               disabled={visao === 'anual'}
                value={cenario.mes_referencia} 
                onChange={(e) => setCenario({...cenario, mes_referencia: Number(e.target.value)})}
-               className="bg-transparent border-none outline-none text-[11px] font-bold text-gray-700 uppercase tracking-widest cursor-pointer"
+               className="bg-transparent border-none outline-none text-[11px] font-bold text-gray-700 uppercase tracking-widest cursor-pointer disabled:cursor-not-allowed"
              >
                {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
              </select>
            </div>
+           
            <div className="flex items-center gap-2 px-3 border-r border-slate-100">
              <Clock size={14} className="text-[#2d8c6f]" />
              <select 
@@ -182,6 +203,7 @@ export default function SimuladorPage() {
                {ANOS.map(a => <option key={a} value={a}>{a}</option>)}
              </select>
            </div>
+           
            <button 
              onClick={handleSave} 
              disabled={isSaving}
@@ -194,16 +216,16 @@ export default function SimuladorPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Receita Projetada" value={fmtR(calculos.totalReceita)} icon={<TrendingUp size={20} />} category="success" trendLabel={`Base: ${cenario.num_associados} Assoc.`} />
-        <KpiCard title="Total em Folha" value={fmtR(calculos.totalFolha)} icon={<Users size={20} />} category="error" trendLabel={`Em ${MESES[cenario.mes_referencia]}/${cenario.ano_referencia}`} />
+        <KpiCard title={`Receita ${visao === 'mensal' ? 'Mensal' : 'Anual'}`} value={fmtR(calculos.totalReceita)} icon={<TrendingUp size={20} />} category="success" trendLabel={`Base: ${cenario.num_associados} Assoc.`} />
+        <KpiCard title={`Total Folha (${visao === 'mensal' ? 'Mês' : 'Ano'})`} value={fmtR(calculos.totalFolha)} icon={<Users size={20} />} category="error" trendLabel={visao === 'mensal' ? `Ref: ${MESES[cenario.mes_referencia]}` : 'Acumulado 12 meses'} />
         <KpiCard 
-          title="Resultado Simulado" 
+          title={`Resultado ${visao === 'mensal' ? 'Líquido' : 'Anual'}`} 
           value={fmtR(calculos.resultado)} 
           icon={<DollarSign size={20} />} 
           category={calculos.resultado >= 0 ? 'success' : 'error'} 
           trendLabel={`Margem de ${fmtPct(calculos.margem)}`}
         />
-        <KpiCard title="Reserva Necessária" value={fmtR(calculos.reservaAlvo)} icon={<PiggyBank size={20} />} category="info" trendLabel={`Cobre ${cenario.reserva_meses_alvo} meses`} />
+        <KpiCard title="Meta de Reserva" value={fmtR(calculos.reservaAlvo)} icon={<PiggyBank size={20} />} category="info" trendLabel={visao === 'mensal' ? `Cobre ${cenario.reserva_meses_alvo} meses` : 'Base anual'} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -213,13 +235,12 @@ export default function SimuladorPage() {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-sm font-bold text-gray-400 uppercase tracking-[2px] flex items-center gap-2">
                 <Plus className="text-[#2d8c6f] w-4 h-4" />
-                Parâmetros Operacionais
+                Base da Operação
               </h2>
               <button 
                 onClick={carregarDadosReais}
                 disabled={syncing}
                 className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-600 text-[9px] font-bold rounded-lg hover:bg-slate-200 transition-all uppercase tracking-widest disabled:opacity-50"
-                title="Carregar média real deste período dos lançamentos"
               >
                 <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
                 {syncing ? 'Sincronizando...' : 'Carregar Realidade'}
@@ -240,12 +261,12 @@ export default function SimuladorPage() {
               </div>
               <div className="space-y-4">
                 <label className="block">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Custos Fixos</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Custos Fixos /mês</span>
                   <input type="number" value={cenario.despesas_fixas} onChange={(e) => setCenario({...cenario, despesas_fixas: Number(e.target.value)})}
                     className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
                 </label>
                 <label className="block">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Folha Base</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Folha Base /mês</span>
                   <input type="number" value={cenario.folha_pagamento} onChange={(e) => setCenario({...cenario, folha_pagamento: Number(e.target.value)})}
                     className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
                 </label>
@@ -253,27 +274,23 @@ export default function SimuladorPage() {
             </div>
           </div>
 
-          {/* Seção de Pró-labores */}
+          {/* Pró-labores */}
           <div className="space-y-6">
             <div className="flex justify-between items-center px-2">
                <h2 className="text-sm font-bold text-gray-400 uppercase tracking-[2px] flex items-center gap-2">
                  <Users className="text-[#2d8c6f] w-4 h-4" />
                  Pró-labores da Diretoria
                </h2>
-               <button 
-                 onClick={addDirector}
-                 className="flex items-center gap-2 px-4 py-2 bg-[#2d8c6f]/10 text-[#2d8c6f] text-[10px] font-bold rounded-xl hover:bg-[#2d8c6f]/20 transition-all uppercase tracking-widest"
-               >
-                 <UserPlus size={14} />
-                 Novo Diretor
+               <button onClick={addDirector} className="px-4 py-2 bg-[#2d8c6f]/10 text-[#2d8c6f] text-[10px] font-bold rounded-xl hover:bg-[#2d8c6f]/20 uppercase tracking-widest">
+                 + Diretor
                </button>
             </div>
 
             <div className="grid grid-cols-1 gap-6">
                {cenario.pro_labores.map(dir => (
-                 <div key={dir.id} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-                   <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => removeDirector(dir.id)} className="text-slate-200 hover:text-rose-500 transition-colors">
+                 <div key={dir.id} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[32px] p-6 shadow-sm group relative">
+                   <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => removeDirector(dir.id)} className="text-slate-300 hover:text-rose-500">
                         <Trash2 size={16} />
                       </button>
                    </div>
@@ -286,7 +303,7 @@ export default function SimuladorPage() {
                         type="text" 
                         value={dir.nome} 
                         onChange={(e) => updateDirectorName(dir.id, e.target.value)}
-                        className="bg-transparent border-none outline-none font-bold text-gray-800 text-base placeholder:text-slate-300 w-full"
+                        className="bg-transparent border-none outline-none font-bold text-gray-800 text-base w-full"
                         placeholder="Cargo/Diretor"
                       />
                    </div>
@@ -296,10 +313,10 @@ export default function SimuladorPage() {
                         const targetSerial = cenario.ano_referencia * 12 + cenario.mes_referencia
                         const periodStart = period.ano_inicio * 12 + period.mes_inicio
                         const periodEnd = period.ano_fim !== undefined ? (period.ano_fim * 12 + (period.mes_fim ?? 11)) : 999999
-                        const isActive = targetSerial >= periodStart && targetSerial <= periodEnd
+                        const isActive = visao === 'mensal' && targetSerial >= periodStart && targetSerial <= periodEnd
 
                         return (
-                          <div key={period.id} className={`flex flex-col gap-2 p-3 rounded-2xl border transition-all ${isActive ? 'bg-emerald-50/50 border-emerald-100 ring-1 ring-emerald-500/20' : 'bg-slate-50 border-slate-100'}`}>
+                          <div key={period.id} className={`flex flex-col gap-2 p-3 rounded-2xl border transition-all ${isActive ? 'bg-emerald-50/50 border-emerald-100 ring-1 ring-emerald-500/20 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
                              <div className="flex items-center gap-2 border-b border-slate-100/50 pb-2 mb-1">
                                <span className="text-[10px] font-bold text-slate-300">R$</span>
                                <input 
@@ -308,7 +325,7 @@ export default function SimuladorPage() {
                                  onChange={(e) => updatePeriod(dir.id, period.id, 'valor', Number(e.target.value))}
                                  className="w-full bg-transparent border-none outline-none font-extrabold text-sm text-gray-700"
                                />
-                               <button onClick={() => removePeriod(dir.id, period.id)} className="text-slate-200 hover:text-rose-500 transition-colors p-1">
+                               <button onClick={() => removePeriod(dir.id, period.id)} className="text-slate-200 hover:text-rose-500 p-1">
                                  <Trash2 size={12} />
                                </button>
                              </div>
@@ -340,9 +357,9 @@ export default function SimuladorPage() {
 
                    <button 
                      onClick={() => addPeriod(dir.id)}
-                     className="w-full py-2 bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-widest rounded-xl hover:bg-slate-100 hover:text-[#2d8c6f] transition-all border border-dashed border-slate-200"
+                     className="w-full py-2 bg-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-widest rounded-xl hover:bg-slate-100 border border-dashed border-slate-200"
                    >
-                     + Adicionar Período
+                     + Período
                    </button>
                  </div>
                ))}
@@ -350,11 +367,11 @@ export default function SimuladorPage() {
           </div>
         </div>
 
-        {/* Panel Lateral Visual */}
+        {/* Dashboards */}
         <div className="lg:col-span-3 space-y-8">
           <ChartCard 
-            title="Distribuição Mensal" 
-            subtitle={`Referência: ${MESES[cenario.mes_referencia]} / ${cenario.ano_referencia}`}
+            title={`Composição ${visao === 'mensal' ? 'do Mês' : 'do Ano'}`} 
+            subtitle={visao === 'mensal' ? `${MESES[cenario.mes_referencia]} / ${cenario.ano_referencia}` : `Consolidado ${cenario.ano_referencia}`}
           >
             <div className="h-[350px] mt-6">
               <Bar 
@@ -371,11 +388,11 @@ export default function SimuladorPage() {
               />
             </div>
             <div className="mt-8 grid grid-cols-2 gap-4">
-               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Pró-labore no Mês</span>
+               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-center">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Total Pró-labore</span>
                   <span className="text-sm font-black text-[#2d8c6f]">{fmtR(calculos.totalProLabores)}</span>
                </div>
-               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+               <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-center">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Margem Projetada</span>
                   <span className={`text-sm font-black ${calculos.resultado >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                     {fmtPct(calculos.margem)}
@@ -385,8 +402,8 @@ export default function SimuladorPage() {
           </ChartCard>
 
           <ChartCard 
-            title="Evolução Anual Simulada" 
-            subtitle={`Com base em períodos e parâmetros anuais (${cenario.ano_referencia})`}
+            title="Evolução Mensal (Projeção)" 
+            subtitle="Resultados de Janeiro a Dezembro"
           >
             <div className="h-[300px] mt-6">
               <Line 
@@ -398,13 +415,17 @@ export default function SimuladorPage() {
                     y: { beginAtZero: true, grid: { display: false } },
                     x: { grid: { display: false } }
                   },
-                  plugins: { legend: { display: false } }
+                  plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: (ctx) => `Resultado: ${fmtR(ctx.parsed.y)}`
+                      }
+                    }
+                  }
                 }} 
               />
             </div>
-            <p className="text-[10px] text-gray-400 italic mt-4">
-              * O gráfico mostra o resultado financeiro mensal projetado considerando o início/fim de cada pró-labore.
-            </p>
           </ChartCard>
         </div>
       </div>
