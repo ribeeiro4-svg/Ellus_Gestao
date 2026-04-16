@@ -7,7 +7,8 @@ import {
   CheckCircle2, 
   AlertCircle,
   FileSpreadsheet,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
@@ -366,9 +367,10 @@ export default function ImportPage() {
                   <div className="flex gap-2">
                     <button 
                       onClick={() => setPreview(null)}
-                      className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors"
+                      className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-rose-600 transition-colors flex items-center gap-2"
                     >
-                      Descartar
+                      <Trash2 size={14} />
+                      Limpar Preview
                     </button>
                     <button 
                       onClick={confirmImport}
