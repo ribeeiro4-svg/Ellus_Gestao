@@ -1,3 +1,4 @@
+'use client'
 import React from 'react'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import DataTable from '@/components/ui/DataTable'

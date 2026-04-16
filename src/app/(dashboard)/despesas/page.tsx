@@ -1,3 +1,4 @@
+'use client'
 import React from 'react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
