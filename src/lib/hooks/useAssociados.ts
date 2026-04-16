@@ -45,7 +45,11 @@ export function useAssociados() {
       console.error('Tentativa de inserirBulk associados sem tenant_id')
       return { error: 'Identificação da conta não encontrada. Tente atualizar a página.' }
     }
-    const rows = items.map(i => ({ ...i, tenant_id: tenantId }))
+    const rows = items.map(i => {
+      // Remove campos que ainda não existem no banco de dados físico
+      const { cpf, ...rest } = i as any
+      return { ...rest, tenant_id: tenantId }
+    })
     const { error } = await sb.from('associados').upsert(rows, { onConflict: 'tenant_id,codigo' })
     if (!error) fetch()
     return { error }

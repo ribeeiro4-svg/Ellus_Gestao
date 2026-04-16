@@ -53,7 +53,16 @@ export function useFinanceiro() {
       console.error('Tentativa de inserirBulk financeiro sem tenant_id')
       return { error: 'Identificação da conta não encontrada.' }
     }
-    const rows = items.map(i => ({ ...i, tenant_id: tenantId }))
+    const rows = items.map(i => {
+      // Filtra campos que podem não existir no banco de dados físico conforme migrations.sql
+      const { 
+        forma_pagamento, valor_recebido, troco_via_pix, 
+        recorrencia_ativa, conta_id, conciliado, 
+        banco_transacao_id, associado_id, 
+        ...rest 
+      } = i as any
+      return { ...rest, tenant_id: tenantId }
+    })
     const { error, count } = await sb.from('lancamentos').insert(rows)
     if (!error) fetch()
     return { error, count }
