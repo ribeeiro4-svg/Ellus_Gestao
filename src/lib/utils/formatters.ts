@@ -61,3 +61,23 @@ export function calcProjecaoAnual(receita: number[]): number {
   if (!comDados.length) return 0
   return (comDados.reduce((a, b) => a + b, 0) / comDados.length) * 12
 }
+
+// Cookies Helpers for Tenant Identity
+export function setCookie(name: string, value: string, days = 365) {
+  if (typeof document === 'undefined') return
+  const expires = new Date(Date.now() + days * 864e5).toUTCString()
+  document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`
+}
+
+export function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  return document.cookie.split('; ').reduce((r, v) => {
+    const parts = v.split('=')
+    return parts[0] === name ? parts[1] : r
+  }, '' as string) || null
+}
+
+export function deleteCookie(name: string) {
+  setCookie(name, '', -1)
+}
+

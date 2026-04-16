@@ -12,22 +12,13 @@ const DEFAULT_CENARIO: CenarioSimulacao = {
   nome: 'Simulação Inicial',
   mes_referencia: new Date().getMonth(),
   ano_referencia: CUR_YEAR,
-  num_associados: 100,
-  valor_mensalidade: 150,
-  despesas_fixas: 5000,
-  despesas_variaveis: 2000,
-  folha_pagamento: 3000,
-  pro_labores: [
-    { 
-      id: '1', 
-      nome: 'Diretor Presidente', 
-      periodos: [
-        { id: 'p1', valor: 2500, mes_inicio: 0, ano_inicio: CUR_YEAR, mes_fim: 5, ano_fim: CUR_YEAR },
-        { id: 'p2', valor: 3000, mes_inicio: 6, ano_inicio: CUR_YEAR }
-      ]
-    }
-  ],
-  reserva_meses_alvo: 3,
+  num_associados: 0,
+  valor_mensalidade: 0,
+  despesas_fixas: 0,
+  despesas_variaveis: 0,
+  folha_pagamento: 0,
+  pro_labores: [],
+  reserva_meses_alvo: 0,
   created_at: new Date().toISOString()
 }
 

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { getCookie, setCookie } from '@/lib/utils/formatters'
 
 export function useTenantId() {
   const [tenantId, setTenantId] = useState<string | null>(null)
@@ -14,11 +15,14 @@ export function useTenantId() {
             if (u) setTenantId(u.tenant_id)
           })
       } else {
-        // Modo Demonstração com Persistência em Banco (Sandbox)
-        let gid = typeof window !== 'undefined' ? localStorage.getItem('acprobec_guest_id') : null
+        // Modo Demonstração com Identidade via Cookie (Substituindo LocalStorage)
+        let gid = getCookie('acprobec_tenant_id')
+        
         if (!gid) {
-          gid = typeof self !== 'undefined' && self.crypto?.randomUUID ? self.crypto.randomUUID() : Math.random().toString(36).substring(2, 15)
-          if (typeof window !== 'undefined') localStorage.setItem('acprobec_guest_id', gid)
+          gid = typeof self !== 'undefined' && self.crypto?.randomUUID 
+            ? self.crypto.randomUUID() 
+            : Math.random().toString(36).substring(2, 15)
+          setCookie('acprobec_tenant_id', gid)
         }
         setTenantId(gid)
       }
@@ -27,4 +31,3 @@ export function useTenantId() {
 
   return tenantId
 }
-

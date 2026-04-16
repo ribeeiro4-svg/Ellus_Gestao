@@ -18,6 +18,7 @@ import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useMetas } from '@/lib/hooks/useMetas'
 import { useProjetos } from '@/lib/hooks/useProjetos'
 import { useProjecao } from '@/lib/hooks/useProjecao'
+import { deleteCookie } from '@/lib/utils/formatters'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, LineElement,
@@ -42,13 +43,14 @@ export default function DashboardPage() {
 
   const handleClearAll = async () => {
     if (confirm('ATENÇÃO: Isso apagará TODOS os seus dados do banco de dados Cloud. Continuar?')) {
-      await Promise.all([limpFin(), limpAssoc(), limpMetas(), limpProjetos(), limpSim()])
+      await Promise.allSettled([limpFin(), limpAssoc(), limpMetas(), limpProjetos(), limpSim()])
       
-      // Remove o ID de visitante para resetar a identidade caso queira começar totalmente do zero
-      localStorage.removeItem('acprobec_guest_id')
+      // Limpa a identidade para resetar totalmente a sandbox
+      deleteCookie('acprobec_tenant_id')
+      localStorage.removeItem('acprobec_guest_id') // Backup cleanup
 
-      alert('Dados removidos com sucesso. A página será reiniciada.')
-      window.location.reload()
+      alert('Dados removidos com sucesso. A página será reiniciada para um novo rascunho.')
+      window.location.href = '/' // Volta para a home limpa
     }
   }
 
