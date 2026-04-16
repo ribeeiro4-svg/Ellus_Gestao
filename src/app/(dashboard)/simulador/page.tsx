@@ -15,7 +15,7 @@ import {
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
 import { useProjecao } from '@/lib/hooks/useProjecao'
-import { fmtR, fmtPct } from '@/lib/utils/formatters'
+import { fmtR, fmtPct, MESES } from '@/lib/utils/formatters'
 import { Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -29,7 +29,13 @@ export default function SimuladorPage() {
   const [isSaving, setIsSaving] = useState(false)
 
   const handleAddProLabore = () => {
-    const newItem = { id: Math.random().toString(), nome: 'Novo Diretor', valor: 0 }
+    const newItem = { 
+      id: Math.random().toString(), 
+      nome: 'Novo Diretor', 
+      valor: 0, 
+      mes_inicio: undefined, 
+      mes_fim: undefined 
+    }
     setCenario({ ...cenario, pro_labores: [...cenario.pro_labores, newItem] })
   }
 
@@ -37,7 +43,7 @@ export default function SimuladorPage() {
     setCenario({ ...cenario, pro_labores: cenario.pro_labores.filter(p => p.id !== id) })
   }
 
-  const handleProLaboreChange = (id: string, field: 'nome' | 'valor', value: string | number) => {
+  const handleProLaboreChange = (id: string, field: 'nome' | 'valor' | 'mes_inicio' | 'mes_fim', value: string | number | undefined) => {
     setCenario({
       ...cenario,
       pro_labores: cenario.pro_labores.map(p => 
@@ -207,29 +213,56 @@ export default function SimuladorPage() {
                 </div>
               ) : (
                 cenario.pro_labores.map((p) => (
-                  <div key={p.id} className="flex gap-4 items-center bg-slate-50/50 p-3 rounded-2xl border border-slate-100 group">
-                    <input 
-                      type="text" 
-                      value={p.nome}
-                      placeholder="Nome do Diretor"
-                      onChange={(e) => handleProLaboreChange(p.id, 'nome', e.target.value)}
-                      className="flex-1 bg-transparent border-none outline-none font-bold text-gray-700 text-sm"
-                    />
-                    <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
-                      <span className="text-[10px] font-bold text-slate-400">R$</span>
+                  <div key={p.id} className="flex flex-col md:flex-row gap-4 items-center bg-slate-50/50 p-4 rounded-3xl border border-slate-100 group">
+                    <div className="flex-1 flex gap-3 items-center min-w-[200px] w-full">
                       <input 
-                        type="number" 
-                        value={p.valor}
-                        onChange={(e) => handleProLaboreChange(p.id, 'valor', Number(e.target.value))}
-                        className="w-24 bg-transparent border-none outline-none font-bold text-gray-700 text-sm text-right"
+                        type="text" 
+                        value={p.nome}
+                        placeholder="Cargo / Nome"
+                        onChange={(e) => handleProLaboreChange(p.id, 'nome', e.target.value)}
+                        className="flex-1 bg-transparent border-none outline-none font-bold text-gray-700 text-sm"
                       />
+                      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
+                        <span className="text-[10px] font-bold text-slate-400">R$</span>
+                        <input 
+                          type="number" 
+                          value={p.valor}
+                          onChange={(e) => handleProLaboreChange(p.id, 'valor', Number(e.target.value))}
+                          className="w-24 bg-transparent border-none outline-none font-bold text-gray-700 text-sm text-right"
+                        />
+                      </div>
                     </div>
-                    <button 
-                      onClick={() => handleRemoveProLabore(p.id)}
-                      className="text-slate-300 hover:text-rose-500 p-2 transition-colors opacity-0 group-hover:opacity-100"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+
+                    <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">De</span>
+                        <select 
+                          value={p.mes_inicio ?? ''}
+                          onChange={(e) => handleProLaboreChange(p.id, 'mes_inicio', e.target.value === '' ? undefined : Number(e.target.value))}
+                          className="bg-white border border-slate-100 rounded-lg px-2 py-1 text-[11px] font-bold text-gray-600 outline-none"
+                        >
+                          <option value="">-</option>
+                          {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">A</span>
+                        <select 
+                          value={p.mes_fim ?? ''}
+                          onChange={(e) => handleProLaboreChange(p.id, 'mes_fim', e.target.value === '' ? undefined : Number(e.target.value))}
+                          className="bg-white border border-slate-100 rounded-lg px-2 py-1 text-[11px] font-bold text-gray-600 outline-none"
+                        >
+                          <option value="">A partir</option>
+                          {MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                        </select>
+                      </div>
+                      <button 
+                        onClick={() => handleRemoveProLabore(p.id)}
+                        className="text-slate-300 hover:text-rose-500 p-2 transition-colors md:opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

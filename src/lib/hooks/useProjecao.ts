@@ -14,8 +14,8 @@ const DEFAULT_CENARIO: CenarioSimulacao = {
   despesas_variaveis: 2000,
   folha_pagamento: 3000,
   pro_labores: [
-    { id: '1', nome: 'Diretor Presidente', valor: 2500 },
-    { id: '2', nome: 'Diretor Financeiro', valor: 2000 }
+    { id: '1', nome: 'Diretor Presidente', valor: 2500, mes_inicio: 0, mes_fim: 5 },
+    { id: '2', nome: 'Diretor Financeiro', valor: 2000, mes_inicio: 6 }
   ],
   reserva_meses_alvo: 3,
   created_at: new Date().toISOString()

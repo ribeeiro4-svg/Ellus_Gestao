@@ -154,6 +154,8 @@ export interface ProLaboreItem {
   id: string
   nome: string
   valor: number
+  mes_inicio?: number // 0-11
+  mes_fim?: number // 0-11
 }
 
 export interface CenarioSimulacao {
