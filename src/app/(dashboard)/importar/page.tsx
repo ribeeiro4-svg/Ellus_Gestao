@@ -239,83 +239,85 @@ export default function ImportPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
-        {/* Templates Download Card */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="table-card p-6 flex flex-col h-full">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Download size={18} />
+        {/* Templates Download Card - Oculto durante o Preview */}
+        {!preview && (
+          <div className="lg:col-span-1 space-y-6">
+            <div className="table-card p-6 flex flex-col h-full">
+              <div className="flex items-center gap-2 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Download size={18} />
+                </div>
+                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Modelos Disponíveis</h2>
               </div>
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Modelos Disponíveis</h2>
-            </div>
-            
-            <p className="text-xs text-gray-500 mb-6 leading-relaxed">
-              Use nossos modelos padrão para garantir que os dados sejam importados corretamente sem erros de formatação.
-            </p>
+              
+              <p className="text-xs text-gray-500 mb-6 leading-relaxed">
+                Use nossos modelos padrão para garantir que os dados sejam importados corretamente sem erros de formatação.
+              </p>
 
-            <div className="space-y-3 flex-1">
-              <button 
-                onClick={() => downloadTemplate('financeiro')}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm border border-gray-100">
-                    <FileSpreadsheet size={20} />
+              <div className="space-y-3 flex-1">
+                <button 
+                  onClick={() => downloadTemplate('financeiro')}
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm border border-gray-100">
+                      <FileSpreadsheet size={20} />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs font-bold text-gray-900">Financeiro</div>
+                      <div className="text-[10px] text-gray-400">Receitas e Despesas</div>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <div className="text-xs font-bold text-gray-900">Financeiro</div>
-                    <div className="text-[10px] text-gray-400">Receitas e Despesas</div>
+                  <Download size={16} className="text-gray-300 group-hover:text-emerald-600 transition-colors" />
+                </button>
+
+                <button 
+                  onClick={() => downloadTemplate('associados')}
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
+                      <FileSpreadsheet size={20} />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs font-bold text-gray-900">Associados</div>
+                      <div className="text-[10px] text-gray-400">Cadastro de Membros</div>
+                    </div>
                   </div>
+                  <Download size={16} className="text-gray-300 group-hover:text-blue-600 transition-colors" />
+                </button>
+
+                <button 
+                  onClick={() => downloadTemplate('prolabore')}
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-rose-600 shadow-sm border border-gray-100">
+                      <FileSpreadsheet size={20} />
+                    </div>
+                    <div className="text-left">
+                      <div className="text-xs font-bold text-gray-900">Pró-labore</div>
+                      <div className="text-[10px] text-gray-400">Períodos da Diretoria</div>
+                    </div>
+                  </div>
+                  <Download size={16} className="text-gray-300 group-hover:text-rose-600 transition-colors" />
+                </button>
+              </div>
+
+              <div className="mt-8 p-4 bg-amber-50 rounded-xl border border-amber-100">
+                <div className="flex gap-3">
+                  <AlertCircle size={16} className="text-amber-600 shrink-0" />
+                  <p className="text-[10px] text-amber-800 leading-normal">
+                    <strong>Importante:</strong> Não altere os nomes das colunas (cabeçalhos) dos modelos para evitar erros de leitura.
+                  </p>
                 </div>
-                <Download size={16} className="text-gray-300 group-hover:text-emerald-600 transition-colors" />
-              </button>
-
-              <button 
-                onClick={() => downloadTemplate('associados')}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-sm border border-gray-100">
-                    <FileSpreadsheet size={20} />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-xs font-bold text-gray-900">Associados</div>
-                    <div className="text-[10px] text-gray-400">Cadastro de Membros</div>
-                  </div>
-                </div>
-                <Download size={16} className="text-gray-300 group-hover:text-blue-600 transition-colors" />
-              </button>
-
-              <button 
-                onClick={() => downloadTemplate('prolabore')}
-                className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all group border border-transparent hover:border-gray-200"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-rose-600 shadow-sm border border-gray-100">
-                    <FileSpreadsheet size={20} />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-xs font-bold text-gray-900">Pró-labore</div>
-                    <div className="text-[10px] text-gray-400">Períodos da Diretoria</div>
-                  </div>
-                </div>
-                <Download size={16} className="text-gray-300 group-hover:text-rose-600 transition-colors" />
-              </button>
-            </div>
-
-            <div className="mt-8 p-4 bg-amber-50 rounded-xl border border-amber-100">
-              <div className="flex gap-3">
-                <AlertCircle size={16} className="text-amber-600 shrink-0" />
-                <p className="text-[10px] text-amber-800 leading-normal">
-                  <strong>Importante:</strong> Não altere os nomes das colunas (cabeçalhos) dos modelos para evitar erros de leitura.
-                </p>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Upload & Preview Section */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+        <div className={`${preview ? 'lg:col-span-3' : 'lg:col-span-2'} flex flex-col gap-6`}>
           {!preview ? (
             <label 
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
@@ -383,9 +385,9 @@ export default function ImportPage() {
                   </div>
                 </div>
                 
-                <div className="overflow-auto max-h-[400px]">
+                <div className="overflow-auto max-h-[600px]">
                   <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-gray-50 border-b border-gray-100">
+                    <thead className="sticky top-0 bg-gray-50 border-b border-gray-100 z-10">
                       <tr>
                         {preview.type === 'associados' && (
                           <>
