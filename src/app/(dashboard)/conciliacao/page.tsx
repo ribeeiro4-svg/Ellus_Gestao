@@ -575,20 +575,16 @@ export default function ConciliacaoPage() {
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.bank.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><Banknote size={20} /></div>
                         <div className="flex-1">
                           <div className="text-[10px] font-black text-gray-400 uppercase">{fmtData(item.bank.date)}</div>
-                          {item.bank.type === 'DEBIT' ? (
-                            <div className="flex flex-col gap-1">
-                              <input 
-                                type="text" 
-                                value={editedMemos[item.bank.fitid] !== undefined ? editedMemos[item.bank.fitid] : item.bank.memo}
-                                onChange={(e) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: e.target.value }))}
-                                className="text-sm font-bold text-indigo-700 bg-white border border-gray-100 rounded-lg p-1.5 px-3 focus:ring-2 focus:ring-indigo-100 w-full outline-none shadow-sm"
-                                placeholder="Descrição da Saída..."
-                              />
-                              <span className="text-[9px] text-gray-300 italic truncate max-w-[250px]">Banco: {item.bank.memo}</span>
-                            </div>
-                          ) : (
-                            <div className="text-sm font-bold text-gray-900">{item.bank.memo}</div>
-                          )}
+                          <div className="flex flex-col gap-1">
+                            <input 
+                              type="text" 
+                              value={editedMemos[item.bank.fitid] !== undefined ? editedMemos[item.bank.fitid] : item.bank.memo}
+                              onChange={(e) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: e.target.value }))}
+                              className={`text-sm font-bold bg-white border border-gray-100 rounded-lg p-1.5 px-3 focus:ring-2 w-full outline-none shadow-sm ${item.bank.type === 'DEBIT' ? 'text-indigo-700 focus:ring-indigo-100' : 'text-emerald-700 focus:ring-emerald-100'}`}
+                              placeholder={`Descrição da ${item.bank.type === 'DEBIT' ? 'Saída' : 'Entrada'}...`}
+                            />
+                            <span className="text-[9px] text-gray-300 italic truncate max-w-[250px]">Banco: {item.bank.memo}</span>
+                          </div>
                           <div className="text-xs font-black text-gray-700 mt-1">{fmtR(item.bank.amount)}</div>
                         </div>
                       </div>
