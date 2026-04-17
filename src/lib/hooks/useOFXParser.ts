@@ -1,4 +1,5 @@
 'use client'
+// Versão 2.1 - Otimização de limpeza de tags e match inteligente
 import { useCallback } from 'react'
 
 export interface OFXTransaction {
