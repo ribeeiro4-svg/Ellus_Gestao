@@ -34,14 +34,8 @@ export class CoraService {
 
     // Função auxiliar para normalizar certificados vindos do Vercel
     const normalizePEM = (pem: string, type: 'cert' | 'key') => {
-      const defaultValue = { 
-        pem: '', 
-        debug: { len: 0, start: 'NONE', end: 'NONE' } 
-      };
-
-      if (!pem) return defaultValue;
+      if (!pem) return { pem: Buffer.from(''), debug: 'VAZIO' };
       
-      // 1. Decodifica entidades HTML comuns que podem ter vindo no copy-paste
       let cleaned = pem
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
@@ -56,26 +50,21 @@ export class CoraService {
 
       cleaned = cleaned.replace(/\\n/g, '\n').replace(/\r/g, '');
       
-      const base64Part = cleaned
+      const base64Content = cleaned
         .replace(/-----BEGIN[\s\S]+?-----/i, '')
-        .replace(/-----END[\s\S]+?-----/i, '');
-
-      // 4. LIMPEZA TOTAL: Remove TUDO que não for caractere base64 válido
-      const base64Content = base64Part.replace(/[^a-zA-Z0-9+/=]/g, '');
+        .replace(/-----END[\s\S]+?-----/i, '')
+        .replace(/\s/g, '');
 
       let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
-      if (type === 'key') {
-        const upper = cleaned.toUpperCase();
-        if (upper.includes('BEGIN PRIVATE KEY') && !upper.includes('RSA')) {
-          label = 'PRIVATE KEY';
-        }
+      if (type === 'key' && cleaned.toUpperCase().includes('BEGIN PRIVATE KEY') && !cleaned.toUpperCase().includes('RSA')) {
+        label = 'PRIVATE KEY';
       }
 
-      const lines = base64Content.match(/.{1,64}/g) || [];
-      const finalPem = `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
+      // Reconstrução direta sem wrapping manual
+      const finalPem = `-----BEGIN ${label}-----\n${base64Content}\n-----END ${label}-----`;
 
       return { 
-        pem: finalPem, 
+        pem: Buffer.from(finalPem, 'utf-8'), 
         debug: `[${type.toUpperCase()}: ${base64Content.length}b, inicia com ${base64Content.substring(0, 6)}...]`
       };
     };
@@ -84,15 +73,13 @@ export class CoraService {
       const normCert = normalizePEM(cert, 'cert');
       const normKey = normalizePEM(key, 'key');
 
-      const config = {
+      this._lastDiag = `${normCert.debug} ${normKey.debug}`;
+
+      return {
         cert: normCert.pem,
         key: normKey.pem,
         rejectUnauthorized: true
       };
-      
-      this._lastDiag = `${normCert.debug} ${normKey.debug}`;
-
-      return config;
     } catch (err: any) {
       throw new Error(`Config mTLS: ${err.message}`);
     }
