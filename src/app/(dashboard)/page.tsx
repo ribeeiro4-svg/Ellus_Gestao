@@ -6,7 +6,8 @@ import {
   Briefcase, 
   Activity,
   Calendar,
-  Trash2
+  Trash2,
+  ChevronRight
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -40,6 +41,8 @@ export default function DashboardPage() {
   const { limparTudo: limpProjetos } = useProjetos()
   const { limparTudo: limpSim } = useProjecao()
   const [activeChart, setActiveChart] = useState<any>(null)
+  const [activeChartMonth, setActiveChartMonth] = useState(new Date().getMonth()) // Mês atual
+
 
   const handleClearAll = async () => {
     if (confirm('ATENÇÃO: Isso apagará TODOS os seus dados do banco de dados Cloud. Continuar?')) {
@@ -108,6 +111,70 @@ export default function DashboardPage() {
   const ultimosLancamentos = useMemo(() => {
     return [...lancamentos].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 5)
   }, [lancamentos])
+
+  // ── Dados detalhados para os novos widgets ──
+  const entradasMensaisData: any = useMemo(() => {
+    const period = lancamentos.filter(l => {
+      const d = new Date(l.data)
+      return d.getMonth() === activeChartMonth && l.tipo === 'receita'
+    })
+
+    const group: Record<string, number> = {}
+    period.forEach(l => {
+      let key = 'Outros'
+      const fp = l.forma_pagamento
+      if (fp === 'PIX' || fp === 'Transferência') key = 'Recebimentos por Pix ou TED'
+      else if (fp === 'Boleto') key = 'Recebimento por boleto'
+      else if (fp === 'Dinheiro') key = 'Dinheiro'
+      
+      group[key] = (group[key] || 0) + (l.valor || 0)
+    })
+
+    const labels = Object.keys(group)
+    const data = Object.values(group)
+    const total = data.reduce((a, b) => a + b, 0)
+
+    return {
+      labels,
+      total,
+      datasets: [{
+        data,
+        backgroundColor: ['#ffb74d', '#4fc3f7', '#81c784', '#9575cd'],
+        hoverOffset: 12,
+        borderWidth: 0
+      }]
+    }
+  }, [lancamentos, activeChartMonth])
+
+  const saidasMensaisData: any = useMemo(() => {
+    const period = lancamentos.filter(l => {
+      const d = new Date(l.data)
+      return d.getMonth() === activeChartMonth && l.tipo === 'despesa'
+    })
+
+    const group: Record<string, number> = {}
+    period.forEach(l => {
+      const key = l.categoria || 'Outros'
+      group[key] = (group[key] || 0) + (l.valor || 0)
+    })
+
+    const sorted = Object.entries(group).sort((a, b) => b[1] - a[1]).slice(0, 4)
+    const labels = sorted.map(s => s[0])
+    const data = sorted.map(s => s[1])
+    const total = data.reduce((a, b) => a + b, 0)
+
+    return {
+      labels,
+      total,
+      datasets: [{
+        data,
+        backgroundColor: ['#ffb74d', '#f06292', '#4db6ac', '#4fc3f7'],
+        hoverOffset: 12,
+        borderWidth: 0
+      }]
+    }
+  }, [lancamentos, activeChartMonth])
+
 
   const chartConfigs: any = {
     receita: {
@@ -190,50 +257,120 @@ export default function DashboardPage() {
         <KpiCard title="Taxas Bancárias" value={fmtR(taxasTotal)} trendLabel="total acumulado" icon={<DollarSign size={20} className="text-amber-500" />} category="info" />
       </div>
 
-      <div className="charts-grid grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2">
-          <ChartCard 
-            title="Evolução Financeira" 
-            subtitle="Receita vs Despesa"
-            onClick={() => setActiveChart(chartConfigs.receita)}
-          >
-            <div className="h-[300px] mt-4">
-              <Bar 
-                data={chartConfigs.receita.chartData}
+      {/* ── SEÇÃO DE ANÁLISE MENSAL (ESTILO PREMIUM) ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+        {/* Entradas por Categoria/Forma */}
+        <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm shadow-indigo-50/50 flex flex-col h-full">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+              <h2 className="text-xl font-black text-gray-800 tracking-tight">Entradas por categoria no mês</h2>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Análise de Recebíveis</p>
+            </div>
+            {/* Seletor de Meses (Toggles) */}
+            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-2xl border border-gray-100/50">
+              {['Nov', 'Dez', 'Jan', 'Fev', 'Mar', 'Abr'].map((m, i) => {
+                const mesIdx = [10, 11, 0, 1, 2, 3][i]
+                const isSelected = activeChartMonth === mesIdx
+                return (
+                  <button 
+                    key={m} 
+                    onClick={() => setActiveChartMonth(mesIdx)}
+                    className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition-all ${isSelected ? 'bg-gray-800 text-white shadow-lg' : 'text-gray-400 hover:bg-white hover:text-gray-600'}`}
+                  >
+                    {m}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] relative">
+            <div className="w-[280px] h-[280px]">
+              <Doughnut 
+                data={entradasMensaisData}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
-                  plugins: { legend: { display: false } },
-                  scales: {
-                    y: { grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 10 }, callback: (v: any) => 'R$ ' + Math.round(Number(v) / 1000) + 'k' } },
-                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
-                  }
+                  cutout: '80%',
+                  plugins: { legend: { display: false } }
                 }}
               />
             </div>
-          </ChartCard>
+            {/* Valor centralizado */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+              <span className="block text-2xl font-black text-gray-800">{fmtR(entradasMensaisData.total)}</span>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{MESES[activeChartMonth]}</span>
+            </div>
+          </div>
+
+          {/* Legenda Customizada */}
+          <div className="grid grid-cols-2 gap-4 mt-8 pt-8 border-t border-gray-50">
+            {entradasMensaisData.labels.map((label: string, idx: number) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: entradasMensaisData.datasets[0].backgroundColor[idx] }} />
+                <span className="text-[11px] font-bold text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => window.location.href='/receitas'} className="mt-8 text-[11px] font-black text-indigo-500 uppercase tracking-widest hover:text-indigo-700 transition-colors flex items-center gap-2 group">
+            Conferir entradas detalhadas <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
 
-        <div>
-          <ChartCard 
-            title="Status Carteira" 
-            subtitle="Associados"
-            onClick={() => setActiveChart(chartConfigs.associados)}
-          >
-            <div className="h-[300px] mt-4">
+        {/* Saídas por Categoria */}
+        <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm shadow-rose-50/50 flex flex-col h-full">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+              <h2 className="text-xl font-black text-gray-800 tracking-tight">Saídas por categoria no mês</h2>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Gestão de Despesas</p>
+            </div>
+            {/* Meses (Sincronizados) */}
+            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-2xl border border-gray-100/50">
+              {['Nov', 'Dez', 'Jan', 'Fev', 'Mar', 'Abr'].map((m, i) => {
+                const mesIdx = [10, 11, 0, 1, 2, 3][i]
+                const isSelected = activeChartMonth === mesIdx
+                return (
+                  <button 
+                    key={m} 
+                    onClick={() => setActiveChartMonth(mesIdx)}
+                    className={`px-4 py-1.5 rounded-xl text-[10px] font-black transition-all ${isSelected ? 'bg-gray-800 text-white shadow-lg' : 'text-gray-400 hover:bg-white hover:text-gray-600'}`}
+                  >
+                    {m}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] relative">
+            <div className="w-[280px] h-[280px]">
               <Doughnut 
-                data={chartConfigs.associados.chartData}
+                data={saidasMensaisData}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
-                  plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, padding: 20 } }
-                  },
-                  cutout: '70%'
+                  cutout: '80%',
+                  plugins: { legend: { display: false } }
                 }}
               />
             </div>
-          </ChartCard>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+              <span className="block text-2xl font-black text-gray-800">{fmtR(saidasMensaisData.total)}</span>
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{MESES[activeChartMonth]}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-y-3 gap-x-4 mt-8 pt-8 border-t border-gray-50">
+            {saidasMensaisData.labels.map((label: string, idx: number) => (
+              <div key={label} className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-[4px]" style={{ backgroundColor: saidasMensaisData.datasets[0].backgroundColor[idx] }} />
+                <span className="text-[11px] font-bold text-gray-500">{label}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => window.location.href='/despesas'} className="mt-8 text-[11px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-700 transition-colors flex items-center gap-2 group">
+            Conferir saídas detalhadas <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
       </div>
 
