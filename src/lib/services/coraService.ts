@@ -32,31 +32,39 @@ export class CoraService {
     }
 
     // Função auxiliar para normalizar certificados vindos do Vercel
-    const normalizePEM = (pem: string) => {
-      // 1. Limpa \n literais (escapados) e remove \r
-      const cleaned = pem.replace(/\\n/g, '\n').replace(/\r/g, '');
+    const normalizePEM = (pem: string, type: 'cert' | 'key') => {
+      if (!pem) return '';
       
-      // 2. Localiza o conteúdo entre os delimitadores (BEGIN e END)
-      const match = cleaned.match(/-----\s*BEGIN\s+(.+)\s*-----([\s\S]+?)-----\s*END\s+\1\s*-----/i);
+      // 1. Limpa \n literais (escapados), \r e espaços no início/fim
+      const cleaned = pem.replace(/\\n/g, '\n').replace(/\r/g, '').trim();
       
-      if (!match) {
-        // Fallback: se não encontrar delimitadores, tenta apenas limpar espaços e torcer pelo melhor
-        return cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0).join('\n');
+      // 2. Extrai o conteúdo base64 ignorando qualquer header/footer ou whitespace
+      // Removemos as tags -----BEGIN...----- e -----END...----- caso existam
+      const base64Content = cleaned
+        .replace(/-----BEGIN[\s\S]+?-----/, '')
+        .replace(/-----END[\s\S]+?-----/, '')
+        .replace(/\s/g, ''); // Remove todos os espaços, quebras de linha e tabs
+
+      // 3. Define o Label adequado
+      // O Cora geralmente usa 'RSA PRIVATE KEY' mas pode ser apenas 'PRIVATE KEY'
+      let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
+      if (type === 'key' && cleaned.toUpperCase().includes('BEGIN PRIVATE KEY') && !cleaned.toUpperCase().includes('RSA')) {
+        label = 'PRIVATE KEY';
       }
 
-      const label = match[1].toUpperCase();
-      // Remove TODO espaço, tabs e quebras de linha do corpo base64 para garantir integridade
-      const content = match[2].replace(/\s/g, ''); 
+      // 4. Reconstrói formalmente (64 chars por linha)
+      const lines = base64Content.match(/.{1,64}/g) || [];
+      const finalPem = `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
+
+      // Log de segurança para acompanhamento no Vercel Logs
+      console.log(`[PEM-Fix] Normalizado ${type}: length=${base64Content.length}, lines=${lines.length}, label=${label}`);
       
-      // 3. Reconstrói o PEM com quebras de linha a cada 64 caracteres (padrão RFC)
-      // O OpenSSL é muito rigoroso com o formato do blob base64 em alguns ambientes
-      const lines = content.match(/.{1,64}/g) || [];
-      return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
+      return finalPem;
     };
 
     return {
-      cert: normalizePEM(cert),
-      key: normalizePEM(key),
+      cert: normalizePEM(cert, 'cert'),
+      key: normalizePEM(key, 'key'),
       rejectUnauthorized: true
     };
   }
