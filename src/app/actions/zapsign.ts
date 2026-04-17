@@ -62,24 +62,30 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
         const sysStatus = docDetail.status === 'signed' ? 'ativo' : 'pendente'
 
         docDetail.signers.forEach(signer => {
-          // Lógica de descoberta do CPF/CNPJ:
-          // Procuramos em 'cpf', 'cnpj', 'external_id' e no objeto 'attributes' (campos customizados)
-          let foundCpf = (signer as any).cpf || (signer as any).cnpj || signer.external_id || (signer as any).gov_id || ''
-          
-          // Se ainda estiver vazio, procura nos custom attributes
-          if (!foundCpf && (signer as any).attributes) {
-            const attrs = (signer as any).attributes
-            // Tenta encontrar por chaves comuns
-            foundCpf = attrs.cpf || attrs.CPF || attrs.cnpj || attrs.CNPJ || attrs.documento || attrs.document || ''
-            
-            // Se ainda não achou, procura por um valor que tenha formato de CPF (11 ou 14 dígitos)
-            if (!foundCpf) {
-              for (const val of Object.values(attrs)) {
-                if (typeof val === 'string' && /^\d{11}$|^\d{14}$/.test(val.replace(/\D/g, ''))) {
-                  foundCpf = val; break
-                }
+          // 1. Ignoramos o próprio e-mail da associação para não importar o administrador como associado
+          if (signer.email === 'acprobec@gmail.com') return
+
+          // 2. Busca exaustiva e profunda de CPF/CNPJ em todo o objeto do signatário
+          const findAnyCpf = (obj: any): string => {
+            if (!obj) return ''
+            if (typeof obj === 'string') {
+              const cleaned = obj.replace(/\D/g, '')
+              if (cleaned.length === 11 || cleaned.length === 14) return cleaned
+            }
+            if (typeof obj === 'object') {
+              for (const key in obj) {
+                const res = findAnyCpf(obj[key])
+                if (res) return res
               }
             }
+            return ''
+          }
+
+          let foundCpf = findAnyCpf(signer)
+          
+          // Fallback para campos conhecidos se o deep search falhar
+          if (!foundCpf) {
+            foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || signer.external_id || ''
           }
 
           newAssociates.push({
