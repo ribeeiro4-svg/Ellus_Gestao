@@ -39,9 +39,13 @@ export default function SimuladorPage() {
 
   const handleSave = async () => {
     setIsSaving(true)
-    await salvarCenario(cenario)
+    const res = await salvarCenario(cenario)
     setIsSaving(false)
-    alert('Simulação salva com sucesso!')
+    if (res.error) {
+      alert(`Erro ao salvar simulação: ${res.error}`)
+    } else {
+      alert('Simulação salva com sucesso! Agora você pode atualizar a página sem perder nada.')
+    }
   }
 
   const handleReset = async () => {
