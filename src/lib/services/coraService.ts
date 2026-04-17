@@ -36,6 +36,7 @@ export class CoraService {
     const normalizePEM = (pem: string, type: 'cert' | 'key') => {
       if (!pem) return { pem: Buffer.from(''), debug: 'VAZIO' };
       
+      // 1. Decodifica entidades HTML e limpa aspas
       let cleaned = pem
         .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
@@ -50,18 +51,21 @@ export class CoraService {
 
       cleaned = cleaned.replace(/\\n/g, '\n').replace(/\r/g, '');
       
-      const base64Content = cleaned
+      const base64Part = cleaned
         .replace(/-----BEGIN[\s\S]+?-----/i, '')
-        .replace(/-----END[\s\S]+?-----/i, '')
-        .replace(/\s/g, '');
+        .replace(/-----END[\s\S]+?-----/i, '');
+
+      // 4. FILTRO ATÔMICO: Mantém APENAS caracteres válidos de Base64
+      const base64Content = base64Part.replace(/[^a-zA-Z0-9+/=]/g, '');
 
       let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
       if (type === 'key' && cleaned.toUpperCase().includes('BEGIN PRIVATE KEY') && !cleaned.toUpperCase().includes('RSA')) {
         label = 'PRIVATE KEY';
       }
 
-      // Reconstrução direta sem wrapping manual
-      const finalPem = `-----BEGIN ${label}-----\n${base64Content}\n-----END ${label}-----`;
+      // Reconstrução direta (64 chars por linha para segurança máxima com OpenSSL)
+      const lines = base64Content.match(/.{1,64}/g) || [];
+      const finalPem = `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
 
       return { 
         pem: Buffer.from(finalPem, 'utf-8'), 
