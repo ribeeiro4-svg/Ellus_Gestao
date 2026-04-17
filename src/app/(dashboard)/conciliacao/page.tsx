@@ -43,17 +43,19 @@ export default function ConciliacaoPage() {
     }
   }, [contas, selectedContaId])
   
-  // Helper para normalização robusta
+  // Helper para normalização robusta (remove acentos, preposições, números e símbolos)
   const normalizeStr = (str: string) => {
     return (str || '')
-      .normalize('NFD') // Decompõe acentos
-      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/\s+/g, ' ') // Remove espaços extras
+      .replace(/[0-9]/g, '') // Remove números para não atrapalhar match de nome
+      .replace(/-|\.|\/|<|>|\|/g, ' ') // Remove símbolos
       .replace(/\b(de|da|do|das|dos|e)\b/g, '') // Remove preposições
+      .replace(/\s+/g, ' ') // Normaliza espaços
       .trim()
   }
-
+  
   const handleUnmatch = (fitid: string) => {
     setIgnoredMatches(prev => new Set(prev).add(fitid))
   }
@@ -74,7 +76,7 @@ export default function ConciliacaoPage() {
         }
       }
 
-      // 1. Prioridade 1: Busca associado pelo CPF/CNPJ exato extraído do memo
+      // 1. Prioridade 1: Match por CPF (Se existir na descrição)
       const cpfNoMemo = (ext.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/) || 
                          ext.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
 
@@ -84,11 +86,9 @@ export default function ConciliacaoPage() {
         return cleanA === cleanB && cleanA.length >= 11
       }) : null
 
-      // 2. Prioridade 2: Busca por NOME NORMALIZADO (Se CPF falhar)
+      // 2. Prioridade 2: Match por NOME (Fuzzy)
       const memoLimpo = normalizeStr(
-        ext.memo
-          .replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, '')
-          .replace(/-|\/|<|>|\|/g, ' ') // Remove separadores
+        ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, '')
       )
       
       const nameMatch = !cpfMatch ? associados.find(a => {
