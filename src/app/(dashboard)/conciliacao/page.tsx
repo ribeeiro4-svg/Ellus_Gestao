@@ -210,7 +210,12 @@ export default function ConciliacaoPage() {
     if (!selectedExtrato) return
     const { cpf, ...lancamentoData } = data
     const res = await inserir({ ...lancamentoData, valor: selectedExtrato.amount, taxa: selectedExtrato.taxa, data: selectedExtrato.date, conciliado: true, banco_transacao_id: selectedExtrato.fitid })
-    if (!res.error) { setIsModalOpen(false); setSelectedExtrato(null) } else { alert(`Erro: ${res.error}`) }
+    if (!res.error) { 
+      setIsModalOpen(false); 
+      setSelectedExtrato(null) 
+    } else { 
+      alert(`Erro: ${(res.error as any).message || res.error}`) 
+    }
   }
 
   const handleSalvarFornecedor = async (data: any) => {
