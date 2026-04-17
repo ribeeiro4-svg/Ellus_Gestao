@@ -64,7 +64,7 @@ export default function FinanceiroPage() {
           categoria: 'Mensalidades',
           valor: 50,
           data: d.toISOString().split('T')[0],
-          status: 'pendente',
+          status: 'aberto',
           associado_id: assoc.id,
           conta_id: params.conta_id,
           forma_pagamento: params.forma_pagamento
@@ -74,11 +74,11 @@ export default function FinanceiroPage() {
 
     const res = await inserirBulk(batch)
     if (!res.error) {
-      alert(`${batch.length} lançamentos gerados para ${associadosSemPagamento.length} novos associados!`)
+      alert(`${batch.length} lançamentos gerados com sucesso!`)
       setIsSyncModalOpen(false)
     } else {
       console.error('Erro detalhado no lote:', res.error)
-      alert(`Erro ao gerar lançamentos em lote: ${typeof res.error === 'object' ? JSON.stringify(res.error) : res.error}`)
+      alert('Erro ao gerar lançamentos. Verifique as informações ou contate o suporte.')
     }
   }
 
