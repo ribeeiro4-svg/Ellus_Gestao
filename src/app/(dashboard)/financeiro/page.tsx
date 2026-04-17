@@ -503,7 +503,6 @@ export default function FinanceiroPage() {
             name: 'diretor_id', 
             label: 'Membro Diretoria (Seletor)', 
             type: 'select',
-            showIf: (f) => f.tipo === 'despesa',
             options: [
               { value: '', label: 'Nenhum / Sem vínculo' },
               ...diretoria.map(d => ({ value: d.id, label: `${d.nome} (${d.cargo})` }))

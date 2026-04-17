@@ -264,7 +264,23 @@ export default function ConciliacaoPage() {
   const handleSalvarNovo = async (data: any) => {
     if (!selectedExtrato) return
     const { cpf, ...lancamentoData } = data
-    const res = await inserir({ ...lancamentoData, valor: selectedExtrato.amount, taxa: selectedExtrato.taxa, data: selectedExtrato.date, conciliado: true, banco_transacao_id: selectedExtrato.fitid })
+    
+    // Tratamento crucial para IDs vazios (evitar erro UUID do Postgres)
+    const safeData = {
+      ...lancamentoData,
+      associado_id: lancamentoData.associado_id || null,
+      fornecedor_id: lancamentoData.fornecedor_id || null,
+      diretor_id: lancamentoData.diretor_id || null
+    }
+
+    const res = await inserir({ 
+      ...safeData, 
+      valor: selectedExtrato.amount, 
+      taxa: selectedExtrato.taxa, 
+      data: selectedExtrato.date, 
+      conciliado: true, 
+      banco_transacao_id: selectedExtrato.fitid 
+    })
     if (!res.error) { 
       setIsModalOpen(false); 
       setSelectedExtrato(null) 
@@ -611,7 +627,7 @@ export default function ConciliacaoPage() {
           { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
           { name: 'associado_id', label: 'Associado', type: 'select', showIf: (d) => d.tipo === 'receita', options: [{ value: '', label: 'Selecione...' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
           { name: 'fornecedor_id', label: 'Fornecedor', type: 'select', showIf: (d) => d.tipo === 'despesa', options: [{ value: '', label: 'Selecione...' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))] },
-          { name: 'diretor_id', label: 'Membro Diretoria', type: 'select', showIf: (d) => d.tipo === 'despesa', options: [{ value: '', label: 'Sem vínculo...' }, ...diretoria.map(d => ({ value: d.id, label: `${d.nome} (${d.cargo})` }))] },
+          { name: 'diretor_id', label: 'Membro Diretoria', type: 'select', options: [{ value: '', label: 'Sem vínculo...' }, ...diretoria.map(d => ({ value: d.id, label: `${d.nome} (${d.cargo})` }))] },
           { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'pago', label: 'Liquidado' }, { value: 'pendente', label: 'Pendente' }] },
         ]}
       />
