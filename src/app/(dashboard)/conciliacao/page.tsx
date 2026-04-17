@@ -15,7 +15,9 @@ import {
   ShieldCheck,
   X,
   CreditCard,
-  CloudLightning
+  CloudLightning,
+  Trash2,
+  Zap
 } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useCoraStaged } from '@/lib/hooks/useCoraStaged'
@@ -311,32 +313,71 @@ export default function ConciliacaoPage() {
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header */}
-      <div className="page-header flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shadow-sm"><FileCheck size={26} /></div>
-          <div>
-            <h1 className="page-title text-2xl font-bold tracking-tight">Conciliador Bancário</h1>
-            <p className="page-subtitle text-xs text-gray-500 font-medium tracking-tight">Cruze seu extrato OFX com o sistema automaticamente.</p>
+      {/* Header & Sticky Action Bar */}
+      <div className="flex flex-col gap-6">
+        <div className="page-header flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shadow-sm"><FileCheck size={26} /></div>
+            <div>
+              <h1 className="page-title text-2xl font-bold tracking-tight">Conciliador Bancário</h1>
+              <p className="page-subtitle text-xs text-gray-500 font-medium tracking-tight">Cruze seu extrato OFX com o sistema automaticamente.</p>
+            </div>
           </div>
+
+          {(extrato.length > 0 || (activeTab === 'cora' && coraItems.length > 0)) && (
+            <div className="hidden md:block">
+              <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-[20px] border border-gray-100 shadow-xl shadow-indigo-900/5">
+                <select value={selectedContaId} onChange={(e) => setSelectedContaId(e.target.value)} className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 p-0 cursor-pointer min-w-[150px]">
+                  {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+                {activeTab === 'ofx' ? (
+                  <button onClick={handleProcessarLote} disabled={isProcessingBatch || !matchedTransactions.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
+                    {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Lançar Lote OFX
+                  </button>
+                ) : (
+                  <button onClick={handleCoraBatch} disabled={isProcessingBatch || !coraItems.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
+                    {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />} Sincronizar Tudo (Cora)
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Sticky Mobile/Global Toolbar for Batch Actions */}
         {(extrato.length > 0 || (activeTab === 'cora' && coraItems.length > 0)) && (
-          <div className="flex items-center gap-3 animate-in slide-in-from-right">
-            <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-[20px] border border-gray-100 shadow-xl shadow-indigo-900/5">
-              <select value={selectedContaId} onChange={(e) => setSelectedContaId(e.target.value)} className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 p-0 cursor-pointer min-w-[150px]">
-                {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-              </select>
-              {activeTab === 'ofx' ? (
-                <button onClick={handleProcessarLote} disabled={isProcessingBatch || !matchedTransactions.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
-                  {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Lançar Lote OFX
-                </button>
-              ) : (
-                <button onClick={handleCoraBatch} disabled={isProcessingBatch || !coraItems.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
-                  {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />} Sincronizar Tudo (Cora)
-                </button>
-              )}
+          <div className="sticky top-[80px] z-[40] flex items-center justify-between gap-3 bg-indigo-900/90 backdrop-blur-md p-3 px-6 rounded-[24px] border border-indigo-500/30 shadow-2xl shadow-indigo-900/20 animate-in slide-in-from-top-4">
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Conta de Destino</span>
+                <select 
+                  value={selectedContaId} 
+                  onChange={(e) => setSelectedContaId(e.target.value)} 
+                  className="bg-transparent border-none text-sm font-black text-white focus:ring-0 p-0 cursor-pointer"
+                >
+                  {contas.map(c => <option key={c.id} value={c.id} className="text-gray-900">{c.nome}</option>)}
+                </select>
+              </div>
+              <div className="h-8 w-px bg-indigo-500/30 mx-2" />
+              <div className="flex flex-col">
+                <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Prontos p/ Lançar</span>
+                <span className="text-sm font-black text-white">
+                  {activeTab === 'ofx' 
+                    ? matchedTransactions.filter(t => (t.assocMatch || t.forMatch) && !ignoredMatches.has(t.bank.fitid) && !lancamentos.some(l => l.banco_transacao_id === t.bank.fitid)).length 
+                    : coraMatchedItems.filter(t => (t.assocMatch || t.forMatch) && !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id)).length
+                  } itens
+                </span>
+              </div>
             </div>
+
+            <button 
+              onClick={activeTab === 'ofx' ? handleProcessarLote : handleCoraBatch} 
+              disabled={isProcessingBatch} 
+              className="flex items-center gap-3 px-8 py-3 bg-white text-indigo-900 rounded-2xl font-black text-xs shadow-xl hover:bg-indigo-50 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isProcessingBatch ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} className="fill-indigo-900" />} 
+              {activeTab === 'ofx' ? 'EXECUTAR LANÇAMENTO EM LOTE' : 'SINCRONIZAR API CORA'}
+            </button>
           </div>
         )}
       </div>
