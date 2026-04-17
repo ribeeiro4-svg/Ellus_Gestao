@@ -1,85 +1,93 @@
-'use client'
-import { useState, useCallback, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useTenantId } from './useTenantId'
+import { useState, useEffect, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export interface CoraStagedItem {
-  id: string
-  cora_id: string
-  data: string
-  descricao: string
-  valor: number
-  tipo: 'CREDIT' | 'DEBIT'
-  documento?: string
-  status: 'pendente' | 'sincronizado' | 'ignorado'
+  id: string;
+  cora_id: string;
+  tipo: 'CREDIT' | 'DEBIT';
+  valor: number;
+  descricao: string;
+  data: string;
+  documento?: string;
+  status: 'pendente' | 'sincronizado' | 'ignorado';
+  tenant_id: string;
 }
 
+/**
+ * Hook para gerenciar as transações da Cora que aguardam conciliação
+ */
 export function useCoraStaged() {
-  const tenantId = useTenantId()
-  const sb = createClient()
-  const [items, setItems] = useState<CoraStagedItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [items, setItems] = useState<CoraStagedItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const supabase = createClient();
 
   const fetchItems = useCallback(async () => {
-    if (!tenantId) return
-    setLoading(true)
-    const { data } = await sb.from('cora_staged')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'pendente')
-      .order('data', { ascending: false })
-    
-    setItems(data || [])
-    setLoading(false)
-  }, [tenantId, sb])
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('cora_staged')
+        .select('*')
+        .eq('status', 'pendente')
+        .order('data', { ascending: false });
 
-  useEffect(() => { fetchItems() }, [fetchItems])
+      if (error) throw error;
+      setItems(data || []);
+    } catch (err) {
+      console.error('Erro ao buscar transações Cora:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   const syncWithBank = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const res = await fetch('/api/cora/sync')
-      const data = await res.json()
-      if (data.success) {
-        await fetchItems()
-      }
-      return data
+      const response = await fetch('/api/cora/sync');
+      const data = await response.json();
+      await fetchItems();
+      return { success: true, new_items: data.items_count || 0 };
     } catch (err) {
-      console.error('Erro ao sincronizar com Cora:', err)
-      return { error: 'Falha na conexão com o banco.' }
+      console.error('Erro na sincronização Cora:', err);
+      return { success: false, error: err };
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const updateStatus = async (id: string, status: 'sincronizado' | 'ignorado') => {
-    const { error } = await sb.from('cora_staged')
+    const { error } = await supabase
+      .from('cora_staged')
       .update({ status })
-      .eq('id', id)
+      .eq('id', id);
     
     if (!error) {
-      setItems(prev => prev.filter(item => item.id !== id))
+      setItems(prev => prev.filter(i => i.id !== id));
     }
-    return { error }
-  }
+    return { error };
+  };
 
   const updateStatusBulk = async (ids: string[], status: 'sincronizado' | 'ignorado') => {
-    const { error } = await sb.from('cora_staged')
+    const { error } = await supabase
+      .from('cora_staged')
       .update({ status })
-      .in('id', ids)
+      .in('id', ids);
     
     if (!error) {
-      setItems(prev => prev.filter(item => !ids.includes(item.id)))
+      setItems(prev => prev.filter(i => !ids.includes(i.id)));
     }
-    return { error }
-  }
+    return { error };
+  };
 
-  return { 
-    items, 
-    loading, 
-    syncWithBank, 
-    updateStatus, 
+  return {
+    items,
+    loading,
+    syncWithBank,
+    updateStatus,
     updateStatusBulk,
-    refresh: fetchItems 
-  }
+    refresh: fetchItems
+  };
 }
