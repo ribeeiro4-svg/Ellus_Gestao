@@ -57,7 +57,7 @@ export default function FinanceiroPage() {
     
     associadosSemPagamento.forEach(assoc => {
       for (let i = 0; i < params.meses; i++) {
-        const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, params.dia)
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, Number(params.dia))
         batch.push({
           tipo: 'receita',
           descricao: `MENSALIDADE DE ASSOCIADO - ${assoc.nome}`,
@@ -77,7 +77,8 @@ export default function FinanceiroPage() {
       alert(`${batch.length} lançamentos gerados para ${associadosSemPagamento.length} novos associados!`)
       setIsSyncModalOpen(false)
     } else {
-      alert('Erro ao gerar lançamentos em lote.')
+      console.error('Erro detalhado no lote:', res.error)
+      alert(`Erro ao gerar lançamentos em lote: ${typeof res.error === 'object' ? JSON.stringify(res.error) : res.error}`)
     }
   }
 
