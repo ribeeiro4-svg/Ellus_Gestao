@@ -23,6 +23,9 @@ export default function AssociadosPage() {
   const [searchQ, setSearchQ] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isDeleting, setIsDeleting] = useState(false)
+  const [filterStatus, setFilterStatus] = useState<string>('todos')
+  const [filterCategoria, setFilterCategoria] = useState<string>('todas')
+  const [filterCpfInvalido, setFilterCpfInvalido] = useState(false)
 
   /* ── Dados para gráficos ── */
   const ativos = useMemo(() => associados.filter(a => (a.status || '').toLowerCase().includes('ativ')).length, [associados])
@@ -35,12 +38,23 @@ export default function AssociadosPage() {
     return Object.keys(m).length ? m : { 'Sem dados': 1 }
   }, [associados])
 
-  const filtrados = useMemo(() =>
-    searchQ
-      ? associados.filter(a => JSON.stringify(a).toLowerCase().includes(searchQ.toLowerCase()))
-      : associados,
-    [associados, searchQ]
-  )
+  const categorias = useMemo(() => [...new Set(associados.map(a => a.categoria || 'Sem categoria'))].sort(), [associados])
+
+  const filtrados = useMemo(() => {
+    let res = associados
+    // Filtro de busca textual
+    if (searchQ) res = res.filter(a => JSON.stringify(a).toLowerCase().includes(searchQ.toLowerCase()))
+    // Filtro de status
+    if (filterStatus !== 'todos') res = res.filter(a => (a.status || '').toLowerCase() === filterStatus)
+    // Filtro de categoria
+    if (filterCategoria !== 'todas') res = res.filter(a => (a.categoria || '') === filterCategoria)
+    // Filtro CPF inválido
+    if (filterCpfInvalido) res = res.filter(a => (a.cpf || '').replace(/\D/g, '').length < 11)
+    return res
+  }, [associados, searchQ, filterStatus, filterCategoria, filterCpfInvalido])
+
+  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterCpfInvalido || searchQ !== ''
+  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterCpfInvalido(false); setSearchQ('') }
 
   /* ── CRUD helpers ── */
   const handleSalvar = async (data: any) => {
@@ -295,17 +309,80 @@ export default function AssociadosPage() {
         </ChartCard>
       </div>
 
-      {/* Busca */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text3)', flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-        <input
-          type="text"
-          placeholder="Buscar por nome, código ou email..."
-          value={searchQ}
-          onChange={e => setSearchQ(e.target.value)}
-          style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: 'var(--text1)', width: '100%', fontFamily: 'inherit' }}
-        />
-        {searchQ && <button onClick={() => setSearchQ('')} style={{ color: 'var(--text3)', cursor: 'pointer', fontSize: 12, border: 'none', background: 'none' }}>✕</button>}
+      {/* ── Barra de Filtros ── */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Linha 1: Busca */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text3)', flexShrink: 0 }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+          <input
+            type="text"
+            placeholder="Buscar por nome, código, CPF ou email..."
+            value={searchQ}
+            onChange={e => setSearchQ(e.target.value)}
+            style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: 'var(--text1)', width: '100%', fontFamily: 'inherit' }}
+          />
+          {hasActiveFilters && (
+            <button onClick={clearFilters} style={{ whiteSpace: 'nowrap', color: 'var(--text3)', cursor: 'pointer', fontSize: 11, border: '1px solid var(--border)', background: 'var(--bg)', borderRadius: 8, padding: '4px 10px', fontWeight: 700 }}>✕ Limpar filtros</button>
+          )}
+        </div>
+
+        {/* Linha 2: Chips de filtro */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {/* Status */}
+          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.5px', marginRight: 4 }}>Status:</span>
+          {[
+            { key: 'todos', label: 'Todos', color: 'var(--text2)', bg: 'var(--bg)' },
+            { key: 'ativo', label: `Ativos (${ativos})`, color: '#16a34a', bg: '#dcfce7' },
+            { key: 'inadimplente', label: `Inadimp. (${inadimplentes})`, color: '#dc2626', bg: '#fee2e2' },
+            { key: 'inativo', label: `Inativos (${inativos})`, color: '#64748b', bg: '#f1f5f9' },
+          ].map(s => (
+            <button
+              key={s.key}
+              onClick={() => setFilterStatus(s.key)}
+              style={{
+                fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20,
+                border: filterStatus === s.key ? `2px solid ${s.color}` : '1px solid var(--border)',
+                background: filterStatus === s.key ? s.bg : 'transparent',
+                color: filterStatus === s.key ? s.color : 'var(--text3)',
+                cursor: 'pointer', transition: 'all .15s'
+              }}
+            >{s.label}</button>
+          ))}
+
+          <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
+          {/* Categoria */}
+          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.5px', marginRight: 4 }}>Categoria:</span>
+          <select
+            value={filterCategoria}
+            onChange={e => setFilterCategoria(e.target.value)}
+            style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, border: filterCategoria !== 'todas' ? '2px solid var(--accent)' : '1px solid var(--border)', background: filterCategoria !== 'todas' ? 'rgba(45,140,111,.08)' : 'transparent', color: filterCategoria !== 'todas' ? 'var(--accent)' : 'var(--text3)', cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="todas">Todas as categorias</option>
+            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+
+          <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+
+          {/* CPF Inválido */}
+          <button
+            onClick={() => setFilterCpfInvalido(v => !v)}
+            style={{
+              fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 5,
+              border: filterCpfInvalido ? '2px solid #ef4444' : '1px solid var(--border)',
+              background: filterCpfInvalido ? '#fee2e2' : 'transparent',
+              color: filterCpfInvalido ? '#dc2626' : 'var(--text3)',
+              cursor: 'pointer', transition: 'all .15s'
+            }}
+          >
+            <AlertCircle size={11} /> CPF Incompleto
+          </button>
+
+          {/* Contador */}
+          <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: 'var(--text3)' }}>
+            {filtrados.length} de {associados.length} registros
+          </span>
+        </div>
       </div>
 
       {/* ── Tabela ── */}
