@@ -110,8 +110,8 @@ export function useProjecao() {
         periodos: [{
           id: Math.random().toString(),
           valor: d.pro_labore_base || 0,
-          mes_inicio: cenario.mes_referencia,
-          ano_inicio: cenario.ano_referencia
+          mes_inicio: 0, // Começa em Janeiro
+          ano_inicio: 2000 // Garante que vale para qualquer ano da simulação
         }]
       }))
 

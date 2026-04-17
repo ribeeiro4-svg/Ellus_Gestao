@@ -319,6 +319,11 @@ export default function SimuladorPage() {
                   <input type="number" value={cenario.folha_pagamento} onChange={(e) => setCenario({...cenario, folha_pagamento: Number(e.target.value)})}
                     className="w-full h-11 px-4 rounded-xl bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none font-bold text-gray-700 transition-all text-sm"/>
                 </label>
+                <label className="block">
+                  <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block mb-2">Reserva de Emergência (meses)</span>
+                  <input type="number" value={cenario.reserva_meses_alvo} onChange={(e) => setCenario({...cenario, reserva_meses_alvo: Number(e.target.value)})}
+                    className="w-full h-11 px-4 rounded-xl bg-indigo-50/50 border border-indigo-100 focus:ring-2 focus:ring-indigo-500/20 outline-none font-bold text-indigo-600 transition-all text-sm"/>
+                </label>
               </div>
             </div>
           </div>
