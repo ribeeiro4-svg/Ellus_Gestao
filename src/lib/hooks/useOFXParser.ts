@@ -92,11 +92,8 @@ export function useOFXParser() {
         inferedMethod = 'Transferência'
       }
 
-      // Cálculo automático de taxa (O que passar de 50.00 em créditos)
+      // Taxas devem ser inferidas apenas se vierem formalmente na via de cobrança
       let taxa = 0
-      if (isCredit && amount > 50) {
-        taxa = amount - 50
-      }
 
       transactions.push({
         id: fitid || Math.random().toString(36).substring(7),

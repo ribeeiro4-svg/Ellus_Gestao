@@ -193,19 +193,9 @@ export default function ConciliacaoPage() {
         }
       }
 
-      // Procura possíveis matches no sistema que ainda não foram usados nesta rodada
-      const matches = lancamentos.filter(l => {
-        if (usedSystemIds.has(l.id)) return false // Se já casou com outro item do banco, ignora
-        if (l.banco_transacao_id === ext.fitid) return true
-        
-        const sameValue = Math.abs(l.valor - ext.amount) < 0.01
-        const sameType = (l.tipo === 'receita' && ext.amount > 0) || (l.tipo === 'despesa' && ext.amount < 0)
-        
-        return sameValue && sameType && !l.conciliado
-      })
-      
+      // Verifica se a transação do banco já foi importada definitivamente para o sistema
+      const matches = lancamentos.filter(l => l.banco_transacao_id === ext.fitid)
       const bestMatch = matches[0] || null
-      if (bestMatch) usedSystemIds.add(bestMatch.id) // Consome o match
 
       return { 
         bank: ext, 
