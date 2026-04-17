@@ -20,12 +20,13 @@ import type { LancamentoInput, AssociadoInput, ProLaboreItem } from '@/lib/types
 export default function ImportPage() {
   const tenantId = useTenantId()
   const { inserirBulk: bulkFinanceiro } = useFinanceiro()
-  const { inserirBulk: bulkAssociados } = useAssociados()
+  const { associados: associadosAtuais, inserirBulk: bulkAssociados } = useAssociados()
   const { cenario, salvarCenario } = useProjecao()
   
   const [loading, setLoading] = React.useState(false)
   const [feedback, setFeedback] = React.useState<{ type: 'success' | 'error', message: string } | null>(null)
   const [preview, setPreview] = React.useState<{ type: 'financeiro' | 'associados' | 'prolabore', data: any[] } | null>(null)
+  const [ignoredCount, setIgnoredCount] = React.useState(0)
   
   const downloadTemplate = (type: 'financeiro' | 'associados' | 'prolabore') => {
     let data: any[][] = []
@@ -121,17 +122,37 @@ export default function ImportPage() {
         setPreview({ type: 'financeiro', data: mapped })
       } 
       else if ('CPF / CNPJ' in firstRow || 'Data Ingresso' in firstRow) {
-        // Associados
-        const mapped: AssociadoInput[] = data.map(row => ({
-          codigo: String(row.ID || Math.floor(Math.random() * 10000)),
-          nome: row.Nome,
-          cpf: row['CPF / CNPJ'] || '',
-          categoria: row.Categoria || 'Pleno',
-          email: row.Email || '',
-          data_ingresso: parseExcelDate(row['Data Ingresso']),
-          mensalidade: Number(row.Mensalidade || 0),
-          status: String(row.Status || 'ativo').toLowerCase() as any
-        }))
+        // Associados - Filtro Anti-Duplicidade
+        let totalIgnored = 0
+        const mapped: AssociadoInput[] = []
+
+        data.forEach(row => {
+          const nomeClean = String(row.Nome || '').trim().toLowerCase()
+          const cpfClean = String(row['CPF / CNPJ'] || '').replace(/\D/g, '')
+
+          const jaExiste = associadosAtuais.find(a => {
+            const aNome = String(a.nome || '').trim().toLowerCase()
+            const aCpf = String(a.cpf || '').replace(/\D/g, '')
+            return aNome === nomeClean && aCpf === cpfClean
+          })
+
+          if (jaExiste) {
+            totalIgnored++
+          } else {
+            mapped.push({
+              codigo: String(row.ID || Math.floor(Math.random() * 10000)),
+              nome: row.Nome,
+              cpf: row['CPF / CNPJ'] || '',
+              categoria: row.Categoria || 'Pleno',
+              email: row.Email || '',
+              data_ingresso: parseExcelDate(row['Data Ingresso']),
+              mensalidade: Number(row.Mensalidade || 0),
+              status: String(row.Status || 'ativo').toLowerCase() as any
+            })
+          }
+        })
+        
+        setIgnoredCount(totalIgnored)
         setPreview({ type: 'associados', data: mapped })
       }
       else if ('Nome do Diretor' in firstRow && 'Mês Início' in firstRow) {
@@ -193,6 +214,7 @@ export default function ImportPage() {
         setFeedback({ type: 'success', message: `Quadro de Pró-labore atualizado!` })
       }
       setPreview(null)
+      setIgnoredCount(0)
     } catch (err: any) {
       console.error('[Import] Erro no salvamento:', err)
       setFeedback({ type: 'error', message: err.message || 'Erro ao salvar dados.' })
@@ -395,7 +417,7 @@ export default function ImportPage() {
                   </div>
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => setPreview(null)}
+                      onClick={() => { setPreview(null); setIgnoredCount(0); }}
                       className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-rose-600 transition-colors flex items-center gap-2"
                     >
                       <Trash2 size={14} />
@@ -411,6 +433,15 @@ export default function ImportPage() {
                     </button>
                   </div>
                 </div>
+
+                {ignoredCount > 0 && (
+                  <div className="bg-amber-100/50 p-2.5 px-4 border-b border-amber-200/50 flex items-center gap-2">
+                    <AlertCircle size={14} className="text-amber-600" />
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-tight">
+                      Inteligência Anti-Duplicidade: {ignoredCount} registros já existem no sistema e foram removidos do preview.
+                    </span>
+                  </div>
+                )}
                 
                 <div className="overflow-auto max-h-[600px]">
                   <table className="w-full text-left border-collapse">
