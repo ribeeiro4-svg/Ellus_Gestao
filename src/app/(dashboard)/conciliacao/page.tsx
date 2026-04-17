@@ -195,18 +195,17 @@ export default function ConciliacaoPage() {
   }, [matchedTransactions, filterMatch, filterType])
 
   const handleProcessarLote = async () => {
-    // Filtra apenas o que tem match E não foi ignorado E não existe no banco
+    // Agora permite lançar QUALQUER item que não foi ignorado nem é duplicado
     const itemsToProcess = matchedTransactions.filter(t => {
-      const hasMatch = (t.assocMatch || t.forMatch);
       const isNotIgnored = !ignoredMatches.has(t.bank.fitid);
       const isNotDuplicate = !lancamentos.some(l => l.banco_transacao_id === t.bank.fitid);
-      return hasMatch && isNotIgnored && isNotDuplicate;
+      return isNotIgnored && isNotDuplicate;
     })
 
     if (itemsToProcess.length === 0) {
       const alreadyInDB = matchedTransactions.filter(t => lancamentos.some(l => l.banco_transacao_id === t.bank.fitid)).length;
-      if (alreadyInDB > 0) return alert(`${alreadyInDB} transações já tinham sido lançadas anteriormente.`);
-      return alert('Nenhum item com correspondência identificado para lançamento.');
+      if (alreadyInDB > 0) return alert(`${alreadyInDB} transações deste arquivo já existem no sistema.`);
+      return alert('Nenhuma transação nova encontrada para lançamento.');
     }
     
     setIsProcessingBatch(true)
@@ -229,15 +228,15 @@ export default function ConciliacaoPage() {
       if (res.error) alert(`Erro no Banco: ${JSON.stringify(res.error)}`)
       else { 
         alert(`${items.length} lançamentos processados com sucesso!`)
-        // Remove os processados da visualização local
         setExtrato(prev => prev.filter(tx => !itemsToProcess.find(it => it.bank.fitid === tx.fitid)))
       }
     } finally { setIsProcessingBatch(false) }
   }
 
   const handleCoraBatch = async () => {
-    const rowsToProcess = coraMatchedItems.filter(t => (t.assocMatch || t.forMatch) && !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id))
-    if (rowsToProcess.length === 0) return alert('Nenhuma nova transação Cora com correspondência encontrada.')
+    // Permite sincronizar tudo da Cora que não é duplicado
+    const rowsToProcess = coraMatchedItems.filter(t => !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id))
+    if (rowsToProcess.length === 0) return alert('Nenhuma nova transação Cora encontrada para sincronizar.')
 
     setIsProcessingBatch(true)
     try {
@@ -258,7 +257,7 @@ export default function ConciliacaoPage() {
       const res = await inserirBulk(rows as any)
       if (!res.error) {
         await updateCoraBulk(rowsToProcess.map(i => (i.bank as any).id), 'sincronizado')
-        alert(`${rows.length} transações Cora sincronizadas!`)
+        alert(`${rows.length} transações Cora sincronizadas com sucesso!`)
       } else {
         alert(`Erro Cora: ${JSON.stringify(res.error)}`)
       }
@@ -363,8 +362,8 @@ export default function ConciliacaoPage() {
                 <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Prontos p/ Lançar</span>
                 <span className="text-sm font-black text-white">
                   {activeTab === 'ofx' 
-                    ? matchedTransactions.filter(t => (t.assocMatch || t.forMatch) && !ignoredMatches.has(t.bank.fitid) && !lancamentos.some(l => l.banco_transacao_id === t.bank.fitid)).length 
-                    : coraMatchedItems.filter(t => (t.assocMatch || t.forMatch) && !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id)).length
+                    ? matchedTransactions.filter(t => !ignoredMatches.has(t.bank.fitid) && !lancamentos.some(l => l.banco_transacao_id === t.bank.fitid)).length 
+                    : coraMatchedItems.filter(t => !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id)).length
                   } itens
                 </span>
               </div>
