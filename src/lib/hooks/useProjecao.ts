@@ -54,10 +54,16 @@ export function useProjecao() {
       setCenario({ ...DEFAULT_CENARIO, ...input })
       return { error: null }
     }
+    
+    const { id, ...dataToSave } = input
+    const finalData = id === 'temp' ? dataToSave : { ...dataToSave, id }
+
     const { error } = await sb.from('cenarios_simulacao').upsert({
-      ...input,
+      ...finalData,
       tenant_id: tenantId
     }, { onConflict: 'tenant_id,nome' })
+    
+    if (!error) await fetchCenario()
     return { error }
   }
 

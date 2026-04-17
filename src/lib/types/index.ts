@@ -199,7 +199,9 @@ export interface CenarioSimulacao {
   created_at: string
 }
 
-export interface CenarioInput extends Omit<CenarioSimulacao, 'id' | 'tenant_id' | 'created_at'> {}
+export interface CenarioInput extends Omit<CenarioSimulacao, 'id' | 'tenant_id' | 'created_at'> {
+  id?: string
+}
 
 
 // ─── API Response ──────────────────────────────────────────────────────────
