@@ -86,13 +86,21 @@ export default function ConciliacaoPage() {
       const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1) // Ignora letras soltas
       
       const nameMatch = !cpfMatch ? associados.find(a => {
+        // BLINDAGEM: Se o banco trouxe um CPF e o associado JÁ TEM um CPF diferente, bloqueia o match por nome.
+        const bancoCpf = (ext.cpf_extraido || cpfNoMemo || '').replace(/[^\d]/g, '')
+        const assocCpf = (a.cpf || '').replace(/[^\d]/g, '')
+        if (bancoCpf.length >= 11 && assocCpf.length >= 11 && bancoCpf !== assocCpf) {
+          return false
+        }
+
         const nomeA = normalizeStr(a.nome)
-        const palavrasAssoc = nomeA.split(' ').filter(p => p.length > 1)
+        const palavrasAssoc = nomeA.split(' ').filter(p => p.length > 2) // Palavras significativas (>2 letras)
         
-        // Conta quantas palavras do associado aparecem no Banco
         const matchesCount = palavrasAssoc.filter(p => palavrasBanco.includes(p)).length
         
-        // Regra de Match: Se baterem 3 palavras OU se baterem todas as palavras (para nomes curtos)
+        // Regra de Match Rigorosa: 
+        // 1. Se o nome é curto (ex: Ana Silva), tem que bater 100%.
+        // 2. Se o nome é longo, tem que bater pelo menos 3 palavras ou 75%.
         const threshold = Math.min(palavrasAssoc.length, 3)
         return matchesCount >= threshold
       }) : null
