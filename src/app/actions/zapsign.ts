@@ -65,27 +65,39 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           // 1. Ignoramos o próprio e-mail da associação para não importar o administrador como associado
           if (signer.email === 'acprobec@gmail.com') return
 
-          // 2. Busca exaustiva e profunda de CPF/CNPJ em todo o objeto do signatário
-          const findAnyCpf = (obj: any): string => {
+          // 2. Busca exaustiva e profunda de CPF/CNPJ (ignorando campos de contato)
+          const findAnyCpf = (obj: any, currentKey?: string): string => {
             if (!obj) return ''
+            
+            // Pula campos que sabidamente não são CPF
+            const skipKeys = ['phone', 'telefone', 'email', 'name', 'nome', 'link', 'token']
+            if (currentKey && skipKeys.some(k => currentKey.toLowerCase().includes(k))) return ''
+
             if (typeof obj === 'string') {
               const cleaned = obj.replace(/\D/g, '')
-              if (cleaned.length === 11 || cleaned.length === 14) return cleaned
+              // CPFs de 11 dígitos que começam com 55 geralmente são telefones (+55...)
+              if (cleaned.length === 11) {
+                if (cleaned.startsWith('55')) return '' // Provável telefone brasileiro
+                return cleaned
+              }
+              if (cleaned.length === 14) return cleaned // CNPJ
             }
+            
             if (typeof obj === 'object') {
               for (const key in obj) {
-                const res = findAnyCpf(obj[key])
+                const res = findAnyCpf(obj[key], key)
                 if (res) return res
               }
             }
             return ''
           }
 
-          let foundCpf = findAnyCpf(signer)
+          // PRIORIDADE 1: Campos explícitos da API
+          let foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || signer.external_id || ''
           
-          // Fallback para campos conhecidos se o deep search falhar
+          // PRIORIDADE 2: Busca profunda se os campos acima falharem
           if (!foundCpf) {
-            foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || signer.external_id || ''
+            foundCpf = findAnyCpf(signer)
           }
 
           // 3. Garantir Identificador Único Estável (Deduplicação por Pessoa)
