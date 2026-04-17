@@ -62,21 +62,36 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
         const sysStatus = docDetail.status === 'signed' ? 'ativo' : 'pendente'
 
         docDetail.signers.forEach(signer => {
-          // Importamos o signatário se ele for do tipo "Signer" (e não o remetente, se houver diferenciação)
-          // Na ZapSign, geralmente todos na lista signers são pessoas que precisam assinar
-          // Filtramos apenas quem realmente é um "cliente/associado" se houver lógica pra isso, 
-          // mas aqui pegaremos todos os signatários.
+          // Lógica de descoberta do CPF/CNPJ:
+          // Procuramos em 'cpf', 'cnpj', 'external_id' e no objeto 'attributes' (campos customizados)
+          let foundCpf = (signer as any).cpf || (signer as any).cnpj || signer.external_id || (signer as any).gov_id || ''
           
+          // Se ainda estiver vazio, procura nos custom attributes
+          if (!foundCpf && (signer as any).attributes) {
+            const attrs = (signer as any).attributes
+            // Tenta encontrar por chaves comuns
+            foundCpf = attrs.cpf || attrs.CPF || attrs.cnpj || attrs.CNPJ || attrs.documento || attrs.document || ''
+            
+            // Se ainda não achou, procura por um valor que tenha formato de CPF (11 ou 14 dígitos)
+            if (!foundCpf) {
+              for (const val of Object.values(attrs)) {
+                if (typeof val === 'string' && /^\d{11}$|^\d{14}$/.test(val.replace(/\D/g, ''))) {
+                  foundCpf = val; break
+                }
+              }
+            }
+          }
+
           newAssociates.push({
             nome: signer.name,
             email: signer.email || '',
-            cpf: (signer as any).cpf || signer.external_id || '', // Busca no campo 'cpf' conforme docs
+            cpf: foundCpf,
             telefone: signer.phone_number || '',
             categoria: 'ZapSign',
             mensalidade: 50,
             status: sysStatus,
             data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
-            codigo: (signer as any).cpf || signer.external_id || `ZS-${Math.random().toString(36).substr(2, 5)}`
+            codigo: foundCpf || (signer as any).token || `ZS-${Math.random().toString(36).substr(2, 5)}`
           })
         })
       }
