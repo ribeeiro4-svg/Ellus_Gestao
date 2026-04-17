@@ -111,6 +111,13 @@ export default function ReceitasPage() {
       }
     },
     { header: 'Valor', key: 'valor', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)' }}>{fmtR(i.valor)}</span> },
+    {
+      header: 'Taxa Bancária', key: 'taxa_extraida', render: (i: any) => {
+        const match = i.descricao.match(/\(Taxa: R\$\s*([^)]+)\)/)
+        const taxaStr = match ? `R$ ${match[1]}` : 'R$ 0,00'
+        return <span className={`text-[11px] font-black ${match ? 'text-amber-600' : 'text-gray-300'}`}>{taxaStr}</span>
+      }
+    },
     { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
     { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
     {

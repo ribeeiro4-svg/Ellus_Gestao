@@ -59,7 +59,7 @@ export default function DashboardPage() {
   // ── CÁLCULOS DINÂMICOS ──
   
   // 1. Financeiro por mês
-  const { receitaData, despesaData, resultadoData, receitaMesAtual } = useMemo(() => {
+  const { receitaData, despesaData, resultadoData, receitaMesAtual, taxasTotal } = useMemo(() => {
     const rec = Array(12).fill(0)
     const desp = Array(12).fill(0)
     const agora = new Date()
@@ -82,7 +82,17 @@ export default function DashboardPage() {
     })
 
     const res = rec.map((v, i) => v - desp[i])
-    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaMesAtual: rAtual }
+
+    // Cálculo acumulado de taxas
+    let taxasTotal = 0
+    lancamentos.forEach(l => {
+      const match = l.descricao.match(/\(Taxa: R\$\s*([^)]+)\)/)
+      if (match) {
+        taxasTotal += parseFloat(match[1].replace(/\./g, '').replace(',', '.'))
+      }
+    })
+
+    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaMesAtual: rAtual, taxasTotal }
   }, [lancamentos])
 
   // 2. Associados
@@ -172,11 +182,12 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      <div className="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <KpiCard title="Receita (Mês Atual)" value={fmtR(receitaMesAtual)} trend={8.3} trendLabel="projeção positiva" icon={<DollarSign size={20} />} category="success" />
         <KpiCard title="Associados Ativos" value={ativos.toString()} trendLabel="na carteira" icon={<Users size={20} />} category="info" />
         <KpiCard title="Inadimplência" value={fmtPct(pctInadimp)} trend={-1.5} trendLabel="estável" icon={<Activity size={20} />} category={pctInadimp > 10 ? 'error' : 'info'} />
         <KpiCard title="Lançamentos" value={lancamentos.length.toString()} trendLabel="total registros" icon={<Briefcase size={20} />} category="purple" />
+        <KpiCard title="Taxas Bancárias" value={fmtR(taxasTotal)} trendLabel="total acumulado" icon={<DollarSign size={20} className="text-amber-500" />} category="info" />
       </div>
 
       <div className="charts-grid grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -238,16 +249,24 @@ export default function DashboardPage() {
                 <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Data</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrição</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Valor</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Taxa</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {ultimosLancamentos.map(l => (
+              {ultimosLancamentos.map(l => {
+                const match = l.descricao.match(/\(Taxa: R\$\s*([^)]+)\)/)
+                const taxaStr = match ? `R$ ${match[1]}` : 'R$ 0,00'
+                
+                return (
                 <tr key={l.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4 text-xs font-medium text-gray-500">{fmtData(l.data)}</td>
                   <td className="px-6 py-4 text-xs font-bold text-gray-900">{l.descricao}</td>
                   <td className={`px-6 py-4 text-xs font-bold ${l.tipo === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>
                     {l.tipo === 'receita' ? '+' : '-'}{fmtR(l.valor)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`text-[11px] font-black ${match ? 'text-amber-600' : 'text-gray-300'}`}>{taxaStr}</span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -260,7 +279,8 @@ export default function DashboardPage() {
                     </span>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
               {ultimosLancamentos.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-8 text-center text-gray-400 text-xs italic">Nenhum lançamento registrado recentemente.</td>
