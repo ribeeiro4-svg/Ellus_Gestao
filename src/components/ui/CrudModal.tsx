@@ -5,12 +5,13 @@ import { X, Check, Loader2 } from 'lucide-react'
 interface Field {
   name: string
   label: string
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox'
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox' | 'info'
   options?: { value: string; label: string }[]
   required?: boolean
   placeholder?: string
   defaultValue?: any
   showIf?: (formData: any) => boolean
+  render?: (formData: any) => React.ReactNode
 }
 
 interface CrudModalProps {
@@ -117,11 +118,15 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
 
               return (
                 <div key={field.name} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text2)', display: 'block' }}>
-                    {field.label}{field.required && <span style={{ color: 'var(--red)' }}> *</span>}
-                  </label>
-
-                  {field.type === 'select' ? (
+                  {field.type !== 'info' && (
+                    <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text2)', display: 'block' }}>
+                      {field.label}{field.required && <span style={{ color: 'var(--red)' }}> *</span>}
+                    </label>
+                  )}
+ 
+                  {field.type === 'info' ? (
+                    field.render ? field.render(formData) : null
+                  ) : field.type === 'select' ? (
                     <div>
                       {field.name === 'forma_pagamento' ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

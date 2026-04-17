@@ -663,7 +663,7 @@ export default function FinanceiroPage() {
           { 
             name: '_info', 
             label: 'Atenção', 
-            type: 'text', 
+            type: 'info', 
             render: () => (
               <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-6">
                 <div className="flex items-center gap-2 text-indigo-700 font-bold text-sm mb-2">
