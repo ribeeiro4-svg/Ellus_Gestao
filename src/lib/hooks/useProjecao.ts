@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
-import type { CenarioSimulacao, ProLaboreItem, CenarioInput, ProLaborePeriodo } from '@/lib/types'
+import type { CenarioSimulacao, ProLaboreItem, CenarioInput, ProLaborePeriodo, Lancamento } from '@/lib/types'
 
 const CUR_YEAR = new Date().getFullYear()
 
@@ -28,6 +28,7 @@ export function useProjecao() {
   const [visao, setVisao] = useState<'mensal' | 'anual'>('mensal')
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
+  const [realYearData, setRealYearData] = useState<any[]>([])
   const sb = createClient()
 
   const fetchCenario = useCallback(async () => {
@@ -44,8 +45,22 @@ export function useProjecao() {
       .single()
 
     if (data) setCenario(data)
+    
+    // Busca a realidade do ano selecionado para o projetado
+    const targetYear = data?.ano_referencia || cenario.ano_referencia
+    const startOfYear = new Date(targetYear, 0, 1).toISOString()
+    const endOfYear = new Date(targetYear, 11, 31).toISOString()
+    
+    const { data: yearData } = await sb.from('lancamentos')
+      .select('valor, tipo, data, categoria')
+      .eq('tenant_id', tenantId)
+      .gte('data', startOfYear)
+      .lte('data', endOfYear)
+
+    if (yearData) setRealYearData(yearData)
+
     setLoading(false)
-  }, [tenantId, sb])
+  }, [tenantId, sb, cenario.ano_referencia])
 
   useEffect(() => { fetchCenario() }, [fetchCenario])
 
@@ -76,14 +91,12 @@ export function useProjecao() {
   const carregarDadosReais = async () => {
     if (!tenantId) return
     setSyncing(true)
-    const start = new Date(cenario.ano_referencia, cenario.mes_referencia, 1).toISOString()
-    const end = new Date(cenario.ano_referencia, cenario.mes_referencia + 1, 0).toISOString()
     
-    const { data: financeiro } = await sb.from('lancamentos')
-      .select('valor, tipo, categoria')
-      .eq('tenant_id', tenantId)
-      .gte('data', start)
-      .lte('data', end)
+    // Filtra os dados que já temos em memória (ano todo) para o mês de referência
+    const financeiroRef = realYearData.filter(l => {
+      const d = new Date(l.data)
+      return d.getMonth() === cenario.mes_referencia && d.getFullYear() === cenario.ano_referencia
+    })
 
     const { count: assocCount } = await sb.from('associados')
       .select('*', { count: 'exact', head: true })
@@ -95,9 +108,9 @@ export function useProjecao() {
       .eq('tenant_id', tenantId)
       .eq('status', 'ativo')
 
-    if (financeiro) {
-      const receitaReal = financeiro.filter(l => l.tipo === 'receita').reduce((s, l) => s + l.valor, 0)
-      const despesaReal = financeiro.filter(l => l.tipo === 'despesa')
+    if (financeiroRef.length > 0 || assocCount !== null) {
+      const receitaReal = financeiroRef.filter(l => l.tipo === 'receita').reduce((s, l) => s + l.valor, 0)
+      const despesaReal = financeiroRef.filter(l => l.tipo === 'despesa')
       const totalDespesa = despesaReal.reduce((s, l) => s + l.valor, 0)
       const folhaReal = despesaReal
         .filter(l => l.categoria.toLowerCase().includes('folha') || l.categoria.toLowerCase().includes('salário'))
@@ -157,20 +170,31 @@ export function useProjecao() {
       const folha = cenario.folha_pagamento + pl
       const fixas = cenario.despesas_fixas
       const vars = cenario.despesas_variaveis
-      const receita = cenario.num_associados * cenario.valor_mensalidade
-      const despesas = fixas + vars + folha
+      
+      const simReceita = cenario.num_associados * cenario.valor_mensalidade
+      const simDespesa = fixas + vars + folha
+
+      // Realidade já cadastrada para este mês
+      const realMes = realYearData.filter(l => new Date(l.data).getMonth() === i)
+      const realReceita = realMes.filter(l => l.tipo === 'receita').reduce((s, l) => s + l.valor, 0)
+      const realDespesa = realMes.filter(l => l.tipo === 'despesa').reduce((s, l) => s + l.valor, 0)
+
+      // O projetado é o maior entre a simulação e a realidade já lançada
+      const receita = Math.max(simReceita, realReceita)
+      const despesas = Math.max(simDespesa, realDespesa)
+
       return {
         mes: i,
         receita,
-        fixas,
+        fixas: Math.max(fixas, realMes.filter(l => l.tipo === 'despesa' && !l.categoria.toLowerCase().includes('folha')).reduce((s,l)=>s+l.valor,0)),
         variaveis: vars,
-        folha,
+        folha: Math.max(folha, realMes.filter(l => l.tipo === 'despesa' && l.categoria.toLowerCase().includes('folha')).reduce((s,l)=>s+l.valor,0)),
         proLabore: pl,
         despesas,
         resultado: receita - despesas
       }
     })
-  }, [cenario.ano_referencia, cenario.folha_pagamento, cenario.despesas_fixas, cenario.despesas_variaveis, cenario.num_associados, cenario.valor_mensalidade, getProLaboreNoMes])
+  }, [cenario.ano_referencia, cenario.folha_pagamento, cenario.despesas_fixas, cenario.despesas_variaveis, cenario.num_associados, cenario.valor_mensalidade, getProLaboreNoMes, realYearData])
 
   // Agregação Anual
   const aReceita = projecaoMeses.reduce((s, m) => s + m.receita, 0)
