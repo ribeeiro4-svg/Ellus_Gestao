@@ -15,7 +15,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { Plus, BarChart2, RefreshCw } from 'lucide-react'
+import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -28,11 +28,37 @@ export default function FinanceiroPage() {
   const [editingItem, setEditingItem] = useState<any>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
-  /* ── Dados para gráficos ── */
+  /* ── Filtros ── */
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState('todos')
+  const [filterPagamento, setFilterPagamento] = useState('todos')
+  const [filterTipo, setFilterTipo] = useState('todos')
+
+  const filteredLancamentos = useMemo(() => {
+    return lancamentos.filter(l => {
+      const searchLower = searchTerm.toLowerCase()
+      const assoc = associados.find(a => a.id === l.associado_id)
+      const conta = contas.find(c => c.id === l.conta_id)
+      
+      const matchSearch = !searchTerm || 
+        l.descricao.toLowerCase().includes(searchLower) ||
+        assoc?.nome.toLowerCase().includes(searchLower) ||
+        conta?.nome.toLowerCase().includes(searchLower) ||
+        l.categoria.toLowerCase().includes(searchLower)
+      
+      const matchStatus = filterStatus === 'todos' || l.status === filterStatus
+      const matchPagamento = filterPagamento === 'todos' || l.forma_pagamento === filterPagamento
+      const matchTipo = filterTipo === 'todos' || l.tipo === filterTipo
+
+      return matchSearch && matchStatus && matchPagamento && matchTipo
+    })
+  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterTipo, associados, contas])
+
+  /* ── Dados para gráficos (baseados no filtro) ── */
   const { recMensal, despMensal } = useMemo(() => {
     const rec = Array(12).fill(0)
     const desp = Array(12).fill(0)
-    lancamentos.forEach(r => {
+    filteredLancamentos.forEach(r => {
       const m = new Date(r.data).getMonth()
       if (isNaN(m)) return
       const v = r.valor || 0
@@ -40,7 +66,7 @@ export default function FinanceiroPage() {
       else desp[m] += v
     })
     return { recMensal: rec, despMensal: desp }
-  }, [lancamentos])
+  }, [filteredLancamentos])
 
   const resultMensal = recMensal.map((v, i) => v - despMensal[i])
   
@@ -52,7 +78,7 @@ export default function FinanceiroPage() {
 
   const { totalRec, totalDesp, saldoCaixa, saldoBanco } = useMemo(() => {
     let tr = 0, td = 0, sc = 0, sb = 0
-    lancamentos.forEach(l => {
+    filteredLancamentos.forEach(l => {
       const v = l.valor || 0
       if (l.tipo === 'receita') {
         tr += v
@@ -65,7 +91,7 @@ export default function FinanceiroPage() {
       }
     })
     return { totalRec: tr, totalDesp: td, saldoCaixa: sc, saldoBanco: sb }
-  }, [lancamentos])
+  }, [filteredLancamentos])
 
   const resultado = totalRec - totalDesp
 
@@ -87,8 +113,8 @@ export default function FinanceiroPage() {
   }
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === lancamentos.length) setSelectedIds([])
-    else setSelectedIds(lancamentos.map(l => l.id))
+    if (selectedIds.length === filteredLancamentos.length) setSelectedIds([])
+    else setSelectedIds(filteredLancamentos.map(l => l.id))
   }
 
   const toggleSelectOne = (id: string) => {
@@ -101,7 +127,7 @@ export default function FinanceiroPage() {
   /* ── Colunas ── */
   const columns = [
     { 
-      header: <input type="checkbox" checked={selectedIds.length === lancamentos.length && lancamentos.length > 0} onChange={toggleSelectAll} className="rounded border-gray-300" />,
+      header: <input type="checkbox" checked={selectedIds.length === filteredLancamentos.length && filteredLancamentos.length > 0} onChange={toggleSelectAll} className="rounded border-gray-300" />,
       key: 'select',
       className: 'w-10',
       render: (i: any) => <input type="checkbox" checked={selectedIds.includes(i.id)} onChange={() => toggleSelectOne(i.id)} className="rounded border-gray-300" />
@@ -171,6 +197,8 @@ export default function FinanceiroPage() {
       )
     }
   ]
+
+  const hasFilters = searchTerm || filterStatus !== 'todos' || filterPagamento !== 'todos' || filterTipo !== 'todos'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -250,6 +278,74 @@ export default function FinanceiroPage() {
         </ChartCard>
       </div>
 
+      {/* ── BARRA DE PESQUISA E FILTROS ── */}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+        {/* Busca */}
+        <div className="relative flex-1 min-w-[280px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input 
+            type="text" 
+            placeholder="Buscar por descrição, associado, conta ou categoria..." 
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-indigo-300 transition-all"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Filtro Tipo */}
+        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+          <Filter size={14} className="text-gray-400" />
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterTipo}
+            onChange={(e) => setFilterTipo(e.target.value)}
+          >
+            <option value="todos">Todos os Tipos</option>
+            <option value="receita">Apenas Receitas</option>
+            <option value="despesa">Apenas Despesas</option>
+          </select>
+        </div>
+
+        {/* Filtro Status */}
+        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+          <div className={`w-2 h-2 rounded-full ${filterStatus === 'todos' ? 'bg-gray-300' : 'bg-indigo-500'}`} />
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="todos">Todos os Status</option>
+            <option value="pago">Pago / Recebido</option>
+            <option value="aberto">Pendente</option>
+            <option value="atrasado">Atrasado</option>
+          </select>
+        </div>
+
+        {/* Filtro Pagamento */}
+        <select 
+          className="bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 text-xs font-bold text-gray-600 outline-none cursor-pointer"
+          value={filterPagamento}
+          onChange={(e) => setFilterPagamento(e.target.value)}
+        >
+          <option value="todos">Todas as Formas</option>
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="PIX">PIX</option>
+          <option value="Boleto">Boleto</option>
+          <option value="Transferência">Transferência</option>
+          <option value="Cartão">Cartão</option>
+        </select>
+
+        {/* Limpar */}
+        {hasFilters && (
+          <button 
+            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos'); setFilterTipo('todos') }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
+          >
+            <XCircle size={14} /> Limpar Filtros
+          </button>
+        )}
+      </div>
+
       {/* ── Tabela ── */}
       <div className="flex flex-col gap-4">
         {selectedIds.length > 0 && (
@@ -271,7 +367,7 @@ export default function FinanceiroPage() {
             </div>
           </div>
         )}
-        <DataTable columns={columns as any} data={lancamentos} loading={loading} />
+        <DataTable columns={columns as any} data={filteredLancamentos} loading={loading} />
       </div>
 
       <CrudModal

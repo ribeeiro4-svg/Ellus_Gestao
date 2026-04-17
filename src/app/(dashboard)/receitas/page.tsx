@@ -15,7 +15,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingUp, Plus, RefreshCw, Copy, ChevronDown, ChevronRight } from 'lucide-react'
+import { TrendingUp, Plus, RefreshCw, Copy, ChevronDown, ChevronRight, Search, Filter, XCircle } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -39,6 +39,30 @@ export default function ReceitasPage() {
   const [editingItem, setEditingItem] = useState<any>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['__all__']))
 
+  /* ── Filtros ── */
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState('todos')
+  const [filterPagamento, setFilterPagamento] = useState('todos')
+
+  const filteredReceitas = useMemo(() => {
+    return receitas.filter(r => {
+      const searchLower = searchTerm.toLowerCase()
+      const assoc = associados.find(a => a.id === r.associado_id)
+      const conta = contas.find(c => c.id === r.conta_id)
+      
+      const matchSearch = !searchTerm || 
+        r.descricao.toLowerCase().includes(searchLower) ||
+        assoc?.nome.toLowerCase().includes(searchLower) ||
+        conta?.nome.toLowerCase().includes(searchLower) ||
+        r.categoria.toLowerCase().includes(searchLower)
+      
+      const matchStatus = filterStatus === 'todos' || r.status === filterStatus
+      const matchPagamento = filterPagamento === 'todos' || r.forma_pagamento === filterPagamento
+
+      return matchSearch && matchStatus && matchPagamento
+    })
+  }, [receitas, searchTerm, filterStatus, filterPagamento, associados, contas])
+
   const toggleGroup = (key: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev)
@@ -53,23 +77,23 @@ export default function ReceitasPage() {
   }
   const collapseAll = () => setExpandedGroups(new Set())
 
-  /* ── Dados para gráficos ── */
+  /* ── Dados para gráficos (baseados no filtro) ── */
   const receitaMensal = useMemo(() => {
     const arr = Array(12).fill(0)
-    receitas.forEach(r => {
+    filteredReceitas.forEach(r => {
       const m = new Date(r.data).getMonth()
       if (!isNaN(m)) arr[m] += r.valor || 0
     })
     return arr
-  }, [receitas])
+  }, [filteredReceitas])
 
   const receitaCats = useMemo(() => {
     const m: Record<string, number> = {}
-    receitas.forEach(r => { const c = r.categoria || 'Outros'; m[c] = (m[c] || 0) + (r.valor || 0) })
+    filteredReceitas.forEach(r => { const c = r.categoria || 'Outros'; m[c] = (m[c] || 0) + (r.valor || 0) })
     return Object.keys(m).length ? m : { 'Sem dados': 1 }
-  }, [receitas])
+  }, [filteredReceitas])
 
-  const totalReceitas = receitas.reduce((s, r) => s + (r.valor || 0), 0)
+  const totalReceitas = filteredReceitas.reduce((s, r) => s + (r.valor || 0), 0)
 
   /* ── CRUD helpers ── */
   const handleSalvar = async (data: any) => {
@@ -86,16 +110,15 @@ export default function ReceitasPage() {
     if (confirm('Excluir esta receita?')) await remover(id)
   }
 
-  /* ── Agrupamento por associado ── */
+  /* ── Agrupamento por associado (baseado no filtro) ── */
   const receitasPorAssociado = useMemo(() => {
     const groups = new Map<string, { assoc: any; items: any[] }>()
-    receitas.forEach(r => {
+    filteredReceitas.forEach(r => {
       const assoc = associados.find(a => a.id === r.associado_id)
       const key = r.associado_id || '__sem_assoc__'
       if (!groups.has(key)) groups.set(key, { assoc: assoc || null, items: [] })
       groups.get(key)!.items.push(r)
     })
-    // Ordena por total desc, sem associado no final
     return new Map([...groups.entries()].sort(([ka, a], [kb, b]) => {
       if (ka === '__sem_assoc__') return 1
       if (kb === '__sem_assoc__') return -1
@@ -103,7 +126,7 @@ export default function ReceitasPage() {
       const totalB = b.items.reduce((s: number, i: any) => s + (i.valor || 0), 0)
       return totalB - totalA
     }))
-  }, [receitas, associados])
+  }, [filteredReceitas, associados])
 
   /* ── Colunas da tabela ── */
   const columns = [
@@ -264,24 +287,84 @@ export default function ReceitasPage() {
         </ChartCard>
       </div>
 
+      {/* ── BARRA DE PESQUISA E FILTROS ── */}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative z-20">
+        {/* Busca */}
+        <div className="relative flex-1 min-w-[280px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input 
+            type="text" 
+            placeholder="Buscar por descrição, associado, conta ou categoria..." 
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-indigo-300 transition-all font-medium"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Filtro Status */}
+        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+          <div className={`w-2 h-2 rounded-full ${filterStatus === 'todos' ? 'bg-gray-300' : 'bg-green-500'}`} />
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="todos">Todos os Status</option>
+            <option value="pago">Pago / Recebido</option>
+            <option value="pendente">Pendente</option>
+          </select>
+        </div>
+
+        {/* Filtro Pagamento */}
+        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+          <Filter size={14} className="text-gray-400" />
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterPagamento}
+            onChange={(e) => setFilterPagamento(e.target.value)}
+          >
+            <option value="todos">Todas as Formas</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="PIX">PIX</option>
+            <option value="Boleto">Boleto</option>
+            <option value="Transferência">Transferência</option>
+            <option value="Cartão">Cartão</option>
+          </select>
+        </div>
+
+        {/* Limpar */}
+        {(searchTerm || filterStatus !== 'todos' || filterPagamento !== 'todos') && (
+          <button 
+            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos') }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
+          >
+            <XCircle size={14} /> Limpar
+          </button>
+        )}
+      </div>
+
       {/* ── Agrupado por Associado ── */}
       <div className="table-card overflow-hidden">
         {/* Cabeçalho da tabela */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/40">
           <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            {receitasPorAssociado.size} grupos &bull; {receitas.length} lançamentos
+            {receitasPorAssociado.size} por associado &bull; {filteredReceitas.length} lançamentos
           </span>
           <div className="flex items-center gap-3">
-            <button onClick={expandAll} className="text-[10px] font-bold text-indigo-500 hover:underline">Expandir todos</button>
+            <button onClick={expandAll} className="text-[10px] font-bold text-indigo-500 hover:underline transition-all">Expandir todos</button>
             <span className="text-gray-200">|</span>
-            <button onClick={collapseAll} className="text-[10px] font-bold text-gray-400 hover:underline">Recolher todos</button>
+            <button onClick={collapseAll} className="text-[10px] font-bold text-gray-400 hover:underline transition-all">Recolher todos</button>
           </div>
         </div>
 
         {loading ? (
           <div className="p-16 text-center text-sm text-gray-400">Carregando...</div>
-        ) : receitas.length === 0 ? (
-          <div className="p-16 text-center text-sm text-gray-400">Nenhuma receita encontrada.</div>
+        ) : filteredReceitas.length === 0 ? (
+          <div className="p-16 text-center text-sm text-gray-400">
+            {searchTerm || filterStatus !== 'todos' || filterPagamento !== 'todos' 
+              ? 'Nenhum resultado para os filtros aplicados.' 
+              : 'Nenhuma receita encontrada.'}
+          </div>
         ) : (
           <div className="divide-y divide-gray-50">
             {[...receitasPorAssociado.entries()].map(([key, { assoc, items }]) => {
