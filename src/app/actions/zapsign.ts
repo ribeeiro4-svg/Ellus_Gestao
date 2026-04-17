@@ -24,52 +24,79 @@ export interface ZapSignDoc {
  */
 export async function fetchZapSignAssociatesAction(apiToken: string) {
   try {
-    // 1. Lista documentos assinados (signed)
-    const docsRes = await fetch(`${ZAPSIGN_API_BASE}/docs/?status=signed`, {
-      headers: { 
-        'Authorization': `Bearer ${apiToken}`,
-        'Content-Type': 'application/json'
-      },
-      next: { revalidate: 0 } // Desabilita cache para dados sempre frescos
-    })
-    
-    if (!docsRes.ok) {
-      const errorData = await docsRes.text()
-      console.error('[ZapSignAction] API Error:', errorData)
-      throw new Error('Erro ao consultar ZapSign docs')
-    }
-
-    const { results: docs } = (await docsRes.json()) as { results: ZapSignDoc[] }
     const newAssociates: AssociadoInput[] = []
+    let page = 1
+    let hasMore = true
 
-    for (const doc of docs) {
-      const docDetailRes = await fetch(`${ZAPSIGN_API_BASE}/docs/${doc.token}/`, {
-        headers: { 'Authorization': `Bearer ${apiToken}` }
+    while (hasMore) {
+      // 1. Busca documentos (todos os status) com paginação
+      const docsRes = await fetch(`${ZAPSIGN_API_BASE}/docs/?page=${page}`, {
+        headers: { 
+          'Authorization': `Bearer ${apiToken}`,
+          'Content-Type': 'application/json'
+        },
+        next: { revalidate: 0 }
       })
       
-      if (!docDetailRes.ok) continue
-      const docDetail = (await docDetailRes.json()) as ZapSignDoc
+      if (!docsRes.ok) throw new Error(`Erro na página ${page} da ZapSign`)
 
-      docDetail.signers.forEach(signer => {
-        if (signer.status === 'signed') {
+      const results = (await docsRes.json()) as ZapSignDoc[]
+      
+      // Se a página vier vazia, paramos
+      if (!results || results.length === 0) {
+        hasMore = false
+        break
+      }
+
+      for (const doc of results) {
+        // Buscamos o detalhe do doc para ter acesso aos campos dos signatários
+        const docDetailRes = await fetch(`${ZAPSIGN_API_BASE}/docs/${doc.token}/`, {
+          headers: { 'Authorization': `Bearer ${apiToken}` }
+        })
+        
+        if (!docDetailRes.ok) continue
+        const docDetail = (await docDetailRes.json()) as ZapSignDoc
+
+        // Status do associado baseado no documento
+        const sysStatus = docDetail.status === 'signed' ? 'ativo' : 'pendente'
+
+        docDetail.signers.forEach(signer => {
+          // Importamos o signatário se ele for do tipo "Signer" (e não o remetente, se houver diferenciação)
+          // Na ZapSign, geralmente todos na lista signers são pessoas que precisam assinar
+          // Filtramos apenas quem realmente é um "cliente/associado" se houver lógica pra isso, 
+          // mas aqui pegaremos todos os signatários.
+          
           newAssociates.push({
             nome: signer.name,
             email: signer.email || '',
-            cpf: signer.external_id || '',
+            cpf: (signer as any).cpf || signer.external_id || '', // Busca no campo 'cpf' conforme docs
             telefone: signer.phone_number || '',
             categoria: 'ZapSign',
             mensalidade: 50,
-            status: 'ativo',
+            status: sysStatus,
             data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
-            codigo: signer.external_id || `ZS-${Math.random().toString(36).substr(2, 5)}`
+            codigo: (signer as any).cpf || signer.external_id || `ZS-${Math.random().toString(36).substr(2, 5)}`
           })
-        }
-      })
+        })
+      }
+
+      // Se retornou menos que 25, provavelmente é a última página
+      if (results.length < 25) {
+        hasMore = false
+      } else {
+        page++
+      }
+
+      // Segurança: Limite de 20 páginas (500 docs) para evitar loop infinito em erros
+      if (page > 20) hasMore = false
     }
 
-    // Deduplica pelo CPF/Nome
+    // Deduplica pelo CPF (prioridade) ou Nome para evitar redundância no import
     const uniqueMap = new Map()
-    newAssociates.forEach(a => uniqueMap.set(a.cpf || a.nome, a))
+    newAssociates.forEach(a => {
+      const key = (a.cpf || a.nome).toLowerCase().replace(/\D/g, '') || a.nome.toLowerCase()
+      uniqueMap.set(key, a)
+    })
     
     return { data: Array.from(uniqueMap.values()) }
   } catch (error: any) {

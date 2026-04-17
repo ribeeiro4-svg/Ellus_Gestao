@@ -58,7 +58,7 @@ export interface ContaBancaria {
 export interface LancamentoInput extends Omit<Lancamento, 'id' | 'tenant_id' | 'created_at' | 'updated_at'> {}
 
 // ─── Associados ────────────────────────────────────────────────────────────
-export type StatusAssociado = 'ativo' | 'inativo' | 'inadimplente'
+export type StatusAssociado = 'ativo' | 'inativo' | 'inadimplente' | 'pendente'
 
 export interface Associado {
   id: string

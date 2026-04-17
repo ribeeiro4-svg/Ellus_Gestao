@@ -34,6 +34,7 @@ export function statusAssocClass(status: string): string {
   const s = status.toLowerCase()
   if (s.includes('inadimp')) return 'status-inadimplente'
   if (s.includes('inat'))    return 'status-inativo'
+  if (s.includes('pend'))    return 'status-pendente'
   return 'status-ativo'
 }
 
