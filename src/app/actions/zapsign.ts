@@ -112,13 +112,15 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
         const foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || ''
         const cleanedCpf = foundCpf.replace(/\D/g, '')
 
+        const emailKey = signer.email ? signer.email.toLowerCase().trim() : ''
         const nameSlug = signer.name.toLowerCase()
           .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
           .replace(/[^\w\s-]/g, '')
           .replace(/[\s_-]+/g, '-')
           .trim()
 
-        const stableKey = cleanedCpf ? `CPF-${cleanedCpf}` : `NAME-${nameSlug}`
+        // Prioridade de Identificação Invariável: CPF > Email > Nome
+        const stableKey = cleanedCpf ? `CPF-${cleanedCpf}` : (emailKey ? `EMAIL-${emailKey}` : `NAME-${nameSlug}`)
 
         newAssociates.push({
           nome: signer.name,
