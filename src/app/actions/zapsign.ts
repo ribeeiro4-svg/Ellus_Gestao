@@ -50,6 +50,13 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
       }
 
       for (const doc of results) {
+        // REGRA DE SEGURANÇA: Só importa o que for Termo de Adesão e da ACPROBEC
+        const nameUpper = (doc.name || '').toUpperCase()
+        if (!nameUpper.includes('ADESÃO') && !nameUpper.includes('ACPROBEC') && !nameUpper.includes('TERMO')) {
+          console.log(`[ZapSign] Pulando documento irrelevante: ${doc.name}`)
+          continue
+        }
+
         const docDetailRes = await fetch(`${ZAPSIGN_API_BASE}/docs/${doc.token}/`, {
           headers: { 'Authorization': `Bearer ${apiToken}` }
         })
