@@ -40,7 +40,7 @@ export default function DashboardPage() {
   const { limparTudo: limpProjetos } = useProjetos()
   const { limparTudo: limpSim } = useProjecao()
   const [activeChart, setActiveChart] = useState<any>(null)
-  const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
+  const [filterMonth, setFilterMonth] = useState<number>(-1)
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
 
   const handleClearAll = async () => {
