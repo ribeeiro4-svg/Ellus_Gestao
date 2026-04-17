@@ -109,8 +109,15 @@ export default function FinanceiroPage() {
 
   /* ── CRUD helpers ── */
   const handleSalvar = async (data: any) => {
-    if (editingItem) { await atualizar(editingItem.id, data) }
-    else { await inserir({ ...data, status: data.status || 'aberto' }) }
+    const safeData = {
+      ...data,
+      associado_id: data.associado_id || null,
+      fornecedor_id: data.fornecedor_id || null,
+      diretor_id: data.diretor_id || null,
+      conta_id: data.conta_id || null
+    }
+    if (editingItem) { await atualizar(editingItem.id, safeData) }
+    else { await inserir({ ...safeData, status: safeData.status || 'aberto' }) }
   }
   const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
   const handleDelete = async (id: string) => {

@@ -109,25 +109,46 @@ export default function ConciliacaoPage() {
       let isCpfMatch = false
 
       if (isCredit) {
-        const match = extractedDoc ? associados.find(a => (a.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
-        if (match) { finalAssoc = match; isCpfMatch = true }
-        else {
-          const memoLimpo = normalizeStr(ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
-          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
-          
-          finalAssoc = associados.find(a => {
-            const nomeA = normalizeStr(a.nome); 
-            const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
+        // 1. Tenta achar na Diretoria (reembolsos)
+        const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
+        if (matchDir) {
+          finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Outros', isDirector: true } as any
+          isCpfMatch = true
+        } else {
+          // 2. Tenta achar no Associado
+          const match = extractedDoc ? associados.find(a => (a.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
+          if (match) { finalAssoc = match; isCpfMatch = true }
+          else {
+            // 3. Busca por Nome
+            const memoLimpo = normalizeStr(ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED|DE|PARA/gi, ''))
+            const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
             
-            // Regra de Ouro: O PRIMEIRO NOME deve estar presente no memo do banco
-            const primeiroNomeA = palavrasA[0]
-            if (!palavrasBanco.includes(primeiroNomeA)) return false
+            // 3.1. Tenta Diretoria por nome
+            const dMatch = diretoria.find(d => {
+              const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
+              if (!palavrasBanco.includes(palavrasD[0])) return false
+              const count = palavrasD.filter(p => palavrasBanco.includes(p)).length
+              return count >= Math.min(palavrasD.length, 2)
+            })
 
-            const count = palavrasA.filter(p => palavrasBanco.includes(p)).length
-            // Aumenta exigência: deve bater o primeiro nome + pelo menos mais 1 palavra (total 2)
-            // ou ser um nome curto e bater tudo
-            return count >= Math.min(palavrasA.length, 3) || (palavrasA.length <= 2 && count === palavrasA.length)
-          })
+            if (dMatch) {
+              finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Outros', isDirector: true } as any
+            } else {
+              // 3.2. Tenta Associado por nome
+              finalAssoc = associados.find(a => {
+                const nomeA = normalizeStr(a.nome); 
+                const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
+                
+                // Regra de Ouro: O PRIMEIRO NOME deve estar presente no memo do banco
+                const primeiroNomeA = palavrasA[0]
+                if (!palavrasBanco.includes(primeiroNomeA)) return false
+
+                const count = palavrasA.filter(p => palavrasBanco.includes(p)).length
+                // Aumenta exigência para não confundir homônimos parecidos
+                return count >= Math.min(palavrasA.length, 3) || (palavrasA.length <= 2 && count === palavrasA.length)
+              })
+            }
+          }
         }
       } else {
         const match = extractedDoc ? fornecedores.find(f => (f.cpf_cnpj || '').replace(/[^\d]/g, '') === extractedDoc) : null
