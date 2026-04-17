@@ -9,6 +9,7 @@ interface Field {
   options?: { value: string; label: string }[]
   required?: boolean
   placeholder?: string
+  defaultValue?: any
   showIf?: (formData: any) => boolean
 }
 
@@ -38,9 +39,13 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
     if (initialData && isOpen) {
       setFormData(initialData)
     } else if (isOpen) {
-      setFormData({})
+      const defaults: any = {}
+      fields.forEach(f => {
+        if (f.defaultValue !== undefined) defaults[f.name] = f.defaultValue
+      })
+      setFormData(defaults)
     }
-  }, [initialData, isOpen])
+  }, [initialData, isOpen, fields])
 
   if (!isOpen) return null
 

@@ -123,11 +123,12 @@ export default function FinanceiroPage() {
     } 
     else { 
       if (safeData.recorrencia_ativa) {
-        // Gera o atual + 12 meses à frente (Total 13)
+        // Gera o atual + N meses à frente
+        const mesesAFrente = Number(safeData.recorrencia_meses || 12)
         const batch: any[] = []
         const baseDate = new Date(safeData.data)
         
-        for (let i = 0; i <= 12; i++) {
+        for (let i = 0; i <= mesesAFrente; i++) {
           const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate())
           // Trata caso de dia 31 em meses que tem 30 (Date faz roll over, o que é razoável)
           
@@ -510,9 +511,17 @@ export default function FinanceiroPage() {
           },
           { 
             name: 'recorrencia_ativa', 
-            label: '⚠️ Recorrência (Gerar 12 meses à frente)?', 
+            label: '⚠️ Ativar Recorrência?', 
             type: 'checkbox',
-            placeholder: 'Isso criará automaticamente 12 meses de lançamentos futuros'
+            placeholder: 'Isso criará automaticamente lançamentos futuros'
+          },
+          { 
+            name: 'recorrencia_meses', 
+            label: 'Gerar por quantos meses?', 
+            type: 'number',
+            defaultValue: 12,
+            showIf: (f) => f.recorrencia_ativa === true,
+            placeholder: 'Ex: 12'
           },
           { 
             name: 'associado_id', 
