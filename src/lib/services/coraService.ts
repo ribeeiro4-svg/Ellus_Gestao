@@ -51,12 +51,15 @@ export class CoraService {
 
       cleaned = cleaned.replace(/\\n/g, '\n').replace(/\r/g, '');
       
-      const base64Part = cleaned
-        .replace(/-----BEGIN[\s\S]+?-----/i, '')
-        .replace(/-----END[\s\S]+?-----/i, '');
+      // 4. EXTRATOR CIRÚRGICO: Localiza o maior bloco contínuo de caracteres Base64
+      // Isso ignora restos de cabeçalhos, aspas ou caracteres perdidos no final
+      const matches = cleaned.match(/[A-Za-z0-9+/=]{100,}/g);
+      let base64Content = (matches || []).sort((a, b) => b.length - a.length)[0] || '';
 
-      // 4. FILTRO ATÔMICO: Mantém APENAS caracteres válidos de Base64
-      const base64Content = base64Part.replace(/[^a-zA-Z0-9+/=]/g, '');
+      // Se houver padding (== ou =), removemos qualquer caractere que tenha "grudado" depois dele
+      if (base64Content.includes('=')) {
+        base64Content = base64Content.substring(0, base64Content.lastIndexOf('=') + 1);
+      }
 
       let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
       if (type === 'key' && cleaned.toUpperCase().includes('BEGIN PRIVATE KEY') && !cleaned.toUpperCase().includes('RSA')) {
