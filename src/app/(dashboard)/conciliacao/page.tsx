@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { 
   Upload, 
   CheckCircle2, 
@@ -17,6 +17,7 @@ import {
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
+import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import { useOFXParser, OFXTransaction } from '@/lib/hooks/useOFXParser'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import CrudModal from '@/components/ui/CrudModal'
@@ -25,16 +26,19 @@ export default function ConciliacaoPage() {
   const { lancamentos, conciliar, inserir, inserirBulk, loading: finLoading } = useFinanceiro()
   const { contas } = useContas()
   const { associados, atualizar: atualizarAssociado } = useAssociados()
+  const { fornecedores, inserir: inserirFornecedor } = useFornecedores()
   const { parseOFX } = useOFXParser()
 
   const [extrato, setExtrato] = useState<OFXTransaction[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false)
   const [isProcessingBatch, setIsProcessingBatch] = useState(false)
   const [selectedExtrato, setSelectedExtrato] = useState<OFXTransaction | null>(null)
   const [selectedContaId, setSelectedContaId] = useState<string>('')
   const [filterMatch, setFilterMatch] = useState<'todos' | 'com_match' | 'sem_match'>('todos')
   const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
+  const [editedMemos, setEditedMemos] = useState<Record<string, string>>({})
 
   // Inicializa conta padrão
   useEffect(() => {
@@ -43,16 +47,16 @@ export default function ConciliacaoPage() {
     }
   }, [contas, selectedContaId])
   
-  // Helper para normalização robusta (remove acentos, preposições, números e símbolos)
+  // Helper para normalização robusta
   const normalizeStr = (str: string) => {
     return (str || '')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[0-9]/g, '') // Remove números para não atrapalhar match de nome
-      .replace(/-|\.|\/|<|>|\|/g, ' ') // Remove símbolos
-      .replace(/\b(de|da|do|das|dos|e)\b/g, '') // Remove preposições
-      .replace(/\s+/g, ' ') // Normaliza espaços
+      .replace(/[0-9]/g, '')
+      .replace(/-|\.|\/|<|>|\|/g, ' ')
+      .replace(/\b(de|da|do|das|dos|e)\b/g, '')
+      .replace(/\s+/g, ' ')
       .trim()
   }
   
@@ -60,131 +64,86 @@ export default function ConciliacaoPage() {
     setIgnoredMatches(prev => new Set(prev).add(fitid))
   }
 
-  // Lógica de matching inteligente e FILTRAGEM
+  // Lógica de matching inteligente
   const matchedTransactions = useMemo(() => {
-    // Memória local do loop: garante apenas UMA adesão por pessoa neste lote
     const adesaoJaSugerida = new Set<string>()
 
     const allMatches = extrato.map((ext: OFXTransaction) => {
-      // Se o usuário desvinculou manualmente, ignoramos
       if (ignoredMatches.has(ext.fitid)) {
-        return { bank: ext, match: null, assocMatch: null, isCpfMatch: false, suggestedCategory: 'Mensalidades', isFirstPayment: false, similarCount: 0 }
+        return { bank: ext, match: null, assocMatch: null, forMatch: null, isCpfMatch: false, suggestedCategory: ext.type === 'CREDIT' ? 'Mensalidades' : 'Outros', isFirstPayment: false, similarCount: 0 }
       }
 
-      // 1. Prioridade 1: Match por CPF (Se existir na descrição)
-      const cpfNoMemo = (ext.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/) || 
-                         ext.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
+      const isCredit = ext.type === 'CREDIT'
+      const cnpjNoMemo = (ext.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
+      const cpfNoMemo = (ext.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
+      const docNoMemo = cnpjNoMemo || cpfNoMemo
 
-      const cpfMatch = (ext.cpf_extraido || cpfNoMemo) ? associados.find(a => {
-        const cleanA = (a.cpf || '').replace(/[^\d]/g, '')
-        const cleanB = (ext.cpf_extraido || cpfNoMemo || '').replace(/[^\d]/g, '')
-        return cleanA === cleanB && cleanA.length >= 11
-      }) : null
+      let finalAssoc = null
+      let finalFor = null
+      let isCpfMatch = false
 
-      // 2. Prioridade 2: Match por NOME (Fuzzy por Interseção de Palavras)
-      const memoLimpo = normalizeStr(ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
-      const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1) // Ignora letras soltas
-      
-      const nameMatch = !cpfMatch ? associados.find(a => {
-        // BLINDAGEM: Se o banco trouxe um CPF e o associado JÁ TEM um CPF diferente, bloqueia o match por nome.
-        const bancoCpf = (ext.cpf_extraido || cpfNoMemo || '').replace(/[^\d]/g, '')
-        const assocCpf = (a.cpf || '').replace(/[^\d]/g, '')
-        if (bancoCpf.length >= 11 && assocCpf.length >= 11 && bancoCpf !== assocCpf) {
-          return false
+      if (isCredit) {
+        const match = docNoMemo ? associados.find(a => (a.cpf || '').replace(/[^\d]/g, '') === docNoMemo) : null
+        if (match) { finalAssoc = match; isCpfMatch = true }
+        else {
+          const memoLimpo = normalizeStr(ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
+          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1)
+          finalAssoc = associados.find(a => {
+            const nomeA = normalizeStr(a.nome); const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
+            const count = palavrasA.filter(p => palavrasBanco.includes(p)).length
+            return count >= Math.min(palavrasA.length, 3)
+          })
         }
-
-        const nomeA = normalizeStr(a.nome)
-        const palavrasAssoc = nomeA.split(' ').filter(p => p.length > 2) // Palavras significativas (>2 letras)
-        
-        const matchesCount = palavrasAssoc.filter(p => palavrasBanco.includes(p)).length
-        
-        // Regra de Match Rigorosa: 
-        // 1. Se o nome é curto (ex: Ana Silva), tem que bater 100%.
-        // 2. Se o nome é longo, tem que bater pelo menos 3 palavras ou 75%.
-        const threshold = Math.min(palavrasAssoc.length, 3)
-        return matchesCount >= threshold
-      }) : null
-
-      const finalAssoc = (cpfMatch || nameMatch) as any
-
-      // 3. Regra de Categoria (Adesão vs Mensalidade) - RÍGIDA
-      let suggestedCategory = 'Mensalidades'
-      if (finalAssoc) {
-        const temNoBanco = lancamentos.some(l => 
-          l.associado_id === finalAssoc.id && l.status === 'pago' && l.tipo === 'receita'
-        )
-        // Só é adesão se: Não tem no Banco E não foi sugerido adesão pra ele ANTES neste mesmo lote
-        if (!temNoBanco && !adesaoJaSugerida.has(finalAssoc.id)) {
-          suggestedCategory = 'ADESÃO'
-          adesaoJaSugerida.add(finalAssoc.id)
-        } else {
-          suggestedCategory = 'Mensalidades'
+      } else {
+        const match = docNoMemo ? fornecedores.find(f => (f.cpf_cnpj || '').replace(/[^\d]/g, '') === docNoMemo) : null
+        if (match) { finalFor = match; isCpfMatch = true }
+        else {
+          const memoLimpo = normalizeStr(ext.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
+          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1)
+          finalFor = fornecedores.find(f => {
+            const nomeF = normalizeStr(f.nome); const palavrasF = nomeF.split(' ').filter(p => p.length > 2)
+            const count = palavrasF.filter(p => palavrasBanco.includes(p)).length
+            return count >= Math.min(palavrasF.length, 2)
+          })
         }
       }
 
-      // 4. Busca lançamentos no sistema
+      let suggestedCategory = isCredit ? 'Mensalidades' : (finalFor?.categoria_padrao || 'Serviços')
+      if (isCredit && finalAssoc) {
+        const temNoBanco = lancamentos.some(l => l.associado_id === (finalAssoc as any).id && l.status === 'pago')
+        if (!temNoBanco && !adesaoJaSugerida.has((finalAssoc as any).id)) {
+          suggestedCategory = 'ADESÃO'; adesaoJaSugerida.add((finalAssoc as any).id)
+        }
+      }
+
       const matches = lancamentos.filter(l => {
-        if (l.banco_transacao_id && l.banco_transacao_id === ext.fitid) return true
-        const diffDate = Math.abs(new Date(l.data).getTime() - new Date(ext.date).getTime())
-        const daysDiff = diffDate / (1000 * 60 * 60 * 24)
-        const valMatch = Math.abs(l.valor - ext.amount) < 0.01
-        return valMatch && daysDiff <= 7 && !l.conciliado
+        if (l.banco_transacao_id === ext.fitid) return true
+        return Math.abs(l.valor - ext.amount) < 0.01 && !l.conciliado
       })
       
-      return {
-        bank: ext,
-        match: matches[0] || null,
-        assocMatch: finalAssoc || null,
-        isCpfMatch: !!cpfMatch,
-        suggestedCategory,
-        isFirstPayment: suggestedCategory === 'ADESÃO',
-        similarCount: matches.length
-      }
+      return { bank: ext, match: matches[0] || null, assocMatch: finalAssoc || null, forMatch: finalFor || null, isCpfMatch, suggestedCategory, isFirstPayment: suggestedCategory === 'ADESÃO', similarCount: matches.length }
     })
 
-    // REGRA: Exibir apenas o que NÃO tem match perfeito no sistema (Pendentes de conciliação/lançamento)
     return allMatches.filter(m => !m.match)
-  }, [extrato, lancamentos, associados, ignoredMatches])
+  }, [extrato, lancamentos, associados, fornecedores, ignoredMatches])
 
-  // Transações que podem ser lançadas em lote
-  const batchTargets = useMemo(() => {
-    return matchedTransactions.filter(t => t.assocMatch && !t.match)
-  }, [matchedTransactions])
+  const batchTargets = useMemo(() => matchedTransactions.filter(t => (t.assocMatch || t.forMatch) && !t.match), [matchedTransactions])
+  const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch || t.forMatch).length, [matchedTransactions])
+  const countSemMatch = useMemo(() => matchedTransactions.filter(t => !t.assocMatch && !t.forMatch).length, [matchedTransactions])
 
-  // Contadores para os filtros de match
-  const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch).length, [matchedTransactions])
-  const countSemMatch = useMemo(() => matchedTransactions.filter(t => !t.assocMatch).length, [matchedTransactions])
-
-  // Lista filtrada por match
   const transacoesFiltradas = useMemo(() => {
-    if (filterMatch === 'com_match') return matchedTransactions.filter(t => t.assocMatch)
-    if (filterMatch === 'sem_match') return matchedTransactions.filter(t => !t.assocMatch)
+    if (filterMatch === 'com_match') return matchedTransactions.filter(t => t.assocMatch || t.forMatch)
+    if (filterMatch === 'sem_match') return matchedTransactions.filter(t => !t.assocMatch && !t.forMatch)
     return matchedTransactions
   }, [matchedTransactions, filterMatch])
 
   const handleProcessarLote = async () => {
-    if (!batchTargets.length || !selectedContaId) {
-      alert(!selectedContaId ? 'Selecione uma conta bancária de destino no topo!' : 'Nenhuma sugestão encontrada para processar.')
-      return
-    }
-    
-    const contaNome = contas.find(c => c.id === selectedContaId)?.nome
-    if (!confirm(`Deseja lançar ${batchTargets.length} recebimentos de uma vez na conta ${contaNome}?`)) return
-    
+    if (!batchTargets.length || !selectedContaId) return alert('Verifique os alvos do lote.')
     setIsProcessingBatch(true)
-    
     try {
-      // Inteligência: Antes de lançar o lote, atualizamos CPFs faltantes nos associados
-      for (const t of batchTargets as any[]) {
-        if (t.assocMatch && !t.assocMatch.cpf && t.bank.cpf_extraido) {
-          console.log(`Atualizando CPF do associado ${t.assocMatch.nome} via conciliação...`)
-          await atualizarAssociado(t.assocMatch.id, { cpf: t.bank.cpf_extraido })
-        }
-      }
-
-      const itemsToInsert = (batchTargets as any[]).map(t => ({
-        tipo: 'receita',
-        descricao: t.bank.memo,
+      const items = (batchTargets as any[]).map(t => ({
+        tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+        descricao: editedMemos[t.bank.fitid] || t.bank.memo,
         categoria: t.suggestedCategory,
         conta_id: selectedContaId,
         valor: t.bank.amount,
@@ -192,15 +151,12 @@ export default function ConciliacaoPage() {
         data: t.bank.date,
         status: 'pago',
         associado_id: t.assocMatch?.id,
+        fornecedor_id: t.forMatch?.id,
         conciliado: true,
         banco_transacao_id: t.bank.fitid
       }))
-
-      await inserirBulk(itemsToInsert as any)
-      alert(`${itemsToInsert.length} lançamentos processados com sucesso!`)
-    } catch (err) {
-      console.error('Erro no processamento em lote:', err)
-      alert('Erro ao processar lote.')
+      await inserirBulk(items as any)
+      alert(`${items.length} itens processados!`)
     } finally {
       setIsProcessingBatch(false)
     }
@@ -209,87 +165,54 @@ export default function ConciliacaoPage() {
   const handleFileUpload = async (e: any) => {
     const file = e.target.files?.[0] || e.dataTransfer?.files?.[0]
     if (!file) return
-    
-    const reader = new FileReader()
-    reader.onload = (evt) => {
-      const content = evt.target?.result as string
-      const txs = parseOFX(content)
-      setExtrato(txs)
-    }
-    reader.readAsText(file)
+    const reader = new FileReader(); reader.onload = (evt) => setExtrato(parseOFX(evt.target?.result as string)); reader.readAsText(file)
   }
 
-  const handleConciliar = async (id: string, bankId: string) => {
-    await conciliar(id, bankId)
-  }
-
-  const handleQuickCreate = (tx: OFXTransaction) => {
-    setSelectedExtrato(tx)
-    setIsModalOpen(true)
-  }
+  const handleQuickCreate = (tx: OFXTransaction) => { setSelectedExtrato(tx); setIsModalOpen(true) }
 
   const handleSalvarNovo = async (data: any) => {
     if (!selectedExtrato) return
-
-    // Inteligência: Se o usuário confirmou um CPF no modal, atualizamos o associado
-    if (data.associado_id && data.cpf) {
-      console.log(`Salvando CPF ${data.cpf} para associado ${data.associado_id}...`)
-      await atualizarAssociado(data.associado_id, { cpf: data.cpf })
-    }
-
-    const { cpf, ...lancamentoData } = data // Removemos CPF dos dados do lançamento (vai no associado)
-
-    const res = await inserir({
-      ...lancamentoData,
-      valor: selectedExtrato.amount,
-      taxa: selectedExtrato.taxa,
-      data: selectedExtrato.date,
-      conciliado: true,
-      banco_transacao_id: selectedExtrato.fitid
-    })
-    if (!res.error) {
-      setIsModalOpen(false)
-      setSelectedExtrato(null)
-    }
+    const { cpf, ...lancamentoData } = data
+    const res = await inserir({ ...lancamentoData, valor: selectedExtrato.amount, taxa: selectedExtrato.taxa, data: selectedExtrato.date, conciliado: true, banco_transacao_id: selectedExtrato.fitid })
+    if (!res.error) { setIsModalOpen(false); setSelectedExtrato(null) } else { alert(`Erro: ${res.error}`) }
   }
 
-  // Define os dados iniciais do modal baseado na transação e match atual
+  const handleSalvarFornecedor = async (data: any) => {
+    const res = await inserirFornecedor(data)
+    if (!res.error) { setIsSupplierModalOpen(false); alert('Fornecedor cadastrado!') } else { alert(`Erro: ${res.error}`) }
+  }
+
   const modalInitialData = useMemo(() => {
     if (!selectedExtrato) return null
     const m = matchedTransactions.find(mt => (mt as any).bank.fitid === selectedExtrato.fitid) as any
+    const isDebit = selectedExtrato.type === 'DEBIT'
     return {
-      descricao: selectedExtrato.memo,
+      descricao: editedMemos[selectedExtrato.fitid] || selectedExtrato.memo,
       associado_id: m?.assocMatch?.id || '',
-      cpf: selectedExtrato.cpf_extraido || m?.assocMatch?.cpf || '',
-      categoria: m?.suggestedCategory || 'Mensalidades',
+      fornecedor_id: m?.forMatch?.id || '',
+      cpf: selectedExtrato.cpf_extraido || m?.assocMatch?.cpf || m?.forMatch?.cpf_cnpj || '',
+      categoria: m?.suggestedCategory || (isDebit ? 'Serviços' : 'Mensalidades'),
       conta_id: selectedContaId,
       forma_pagamento: selectedExtrato.metodo_inferido,
-      tipo: 'receita',
+      tipo: isDebit ? 'despesa' : 'receita',
       status: 'pago'
     }
-  }, [selectedExtrato, matchedTransactions, selectedContaId])
+  }, [selectedExtrato, matchedTransactions, selectedContaId, editedMemos])
 
-  // Cálculos de Totais do Extrato
   const totals = useMemo(() => {
-    const bankEntradas = extrato.filter(i => i.type === 'CREDIT').reduce((s, i) => s + i.amount, 0)
-    const bankSaidas = extrato.filter(i => i.type === 'DEBIT').reduce((s, i) => s + Math.abs(i.amount), 0)
-    
-    // Considera match como transações que possuem associado identificado (sugestões)
-    const matchEntradas = matchedTransactions.filter(i => i.bank.type === 'CREDIT' && i.assocMatch).reduce((s, i) => s + i.bank.amount, 0)
-    const matchSaidas = matchedTransactions.filter(i => i.bank.type === 'DEBIT' && i.match).reduce((s, i) => s + Math.abs(i.bank.amount), 0)
-
-    return { entradas: bankEntradas, saidas: bankSaidas, matchEntradas, matchSaidas }
+    const entries = extrato.filter(i => i.type === 'CREDIT').reduce((s, i) => s + i.amount, 0)
+    const exits = extrato.filter(i => i.type === 'DEBIT').reduce((s, i) => s + Math.abs(i.amount), 0)
+    const matchEntries = matchedTransactions.filter(i => i.bank.type === 'CREDIT' && i.assocMatch).reduce((s, i) => s + i.bank.amount, 0)
+    const matchExits = matchedTransactions.filter(i => i.bank.type === 'DEBIT' && (i.match || i.forMatch)).reduce((s, i) => s + Math.abs(i.bank.amount), 0)
+    return { entradas: entries, saidas: exits, matchEntradas: matchEntries, matchSaidas: matchExits }
   }, [extrato, matchedTransactions])
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      
       {/* Header */}
       <div className="page-header flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shadow-sm">
-            <FileCheck size={26} />
-          </div>
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shadow-sm"><FileCheck size={26} /></div>
           <div>
             <h1 className="page-title text-2xl font-bold tracking-tight">Conciliador Bancário</h1>
             <p className="page-subtitle text-xs text-gray-500 font-medium tracking-tight">Cruze seu extrato OFX com o sistema automaticamente.</p>
@@ -298,40 +221,13 @@ export default function ConciliacaoPage() {
 
         {extrato.length > 0 && (
           <div className="flex items-center gap-3 animate-in slide-in-from-right">
-            <button 
-              onClick={() => setExtrato([])}
-              className="flex items-center gap-2 px-4 py-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest mr-2"
-            >
-              <RefreshCw size={14} /> Limpar Extrato
-            </button>
-
+            <button onClick={() => setExtrato([])} className="flex items-center gap-2 px-4 py-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest mr-2"><RefreshCw size={14} /> Limpar</button>
             <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-[20px] border border-gray-100 shadow-xl shadow-indigo-900/5">
-              <div className="flex flex-col">
-                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest leading-none mb-1">Conta de Destino (Lote)</span>
-                <select 
-                  value={selectedContaId}
-                  onChange={(e) => setSelectedContaId(e.target.value)}
-                  className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 p-0 cursor-pointer min-w-[150px]"
-                >
-                  {contas.map(c => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div className="w-px h-8 bg-gray-100 mx-1" />
-
-              <button 
-                onClick={handleProcessarLote}
-                disabled={isProcessingBatch || !batchTargets.length}
-                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30"
-              >
-                {isProcessingBatch ? (
-                  <RefreshCw size={14} className="animate-spin" />
-                ) : (
-                  <CheckCircle2 size={14} />
-                )}
-                Lançar {batchTargets.length} Sugestões
+              <select value={selectedContaId} onChange={(e) => setSelectedContaId(e.target.value)} className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 p-0 cursor-pointer min-w-[150px]">
+                {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+              <button onClick={handleProcessarLote} disabled={isProcessingBatch || !batchTargets.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
+                {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Lançar {batchTargets.length} Sugestões
               </button>
             </div>
           </div>
@@ -339,241 +235,128 @@ export default function ConciliacaoPage() {
       </div>
 
       {!extrato.length ? (
-        <div 
-          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-          onDragLeave={() => setIsDragOver(false)}
-          onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFileUpload(e); }}
-          className={`relative border-2 border-dashed rounded-[32px] p-20 flex flex-col items-center justify-center transition-all bg-white shadow-xl shadow-indigo-900/5 
-            ${isDragOver ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01]' : 'border-gray-200 hover:border-indigo-300'}`}
-        >
+        <div onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFileUpload(e); }} className={`relative border-2 border-dashed rounded-[32px] p-20 flex flex-col items-center justify-center transition-all bg-white shadow-xl shadow-indigo-900/5 ${isDragOver ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01]' : 'border-gray-200 hover:border-indigo-300'}`}>
           <input type="file" accept=".ofx" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-          <div className="w-20 h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-200 mb-8 animate-bounce-slow">
-            <Upload size={36} />
-          </div>
+          <div className="w-20 h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-200 mb-8 animate-bounce-slow"><Upload size={36} /></div>
           <h3 className="text-xl font-bold text-gray-900">Importe seu extrato OFX</h3>
-          <p className="text-sm text-gray-500 mt-2 max-w-sm text-center">Arraste aqui ou clique para selecionar o arquivo .ofx exportado do seu banco.</p>
+          <p className="text-sm text-gray-500 mt-2 max-w-sm text-center">Arraste aqui ou clique para selecionar o arquivo .ofx.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           <div className="table-card overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between bg-gray-50/30 gap-4">
+            <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between bg-gray-50/30 gap-4 flex-wrap">
               <div className="flex items-center gap-6">
-                <h2 className="text-sm font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2">
-                  <Search size={16} className="text-indigo-600" /> Transações ({extrato.length})
-                </h2>
-                
-                <div className="flex flex-wrap gap-4 mt-1 pl-12">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-0.5">Total Banco</span>
-              <div className="flex items-center gap-4 bg-gray-50/50 p-1.5 rounded-xl border border-gray-100/50">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">ENTRADAS {fmtR(totals.entradas)}</span>
-                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">SAÍDAS {fmtR(totals.saidas)}</span>
+                <h2 className="text-sm font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2"><Search size={16} className="text-indigo-600" /> Transações ({extrato.length})</h2>
+                <div className="flex gap-4">
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">IN {fmtR(totals.entradas)}</span>
+                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">OUT {fmtR(totals.saidas)}</span>
                 </div>
               </div>
-            </div>
-
-            <div className="flex flex-col border-l border-gray-100 pl-4">
-              <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest pl-0.5">Identificado (Match)</span>
-              <div className="flex items-center gap-4 bg-amber-50/30 p-1.5 rounded-xl border border-amber-100/30 shadow-sm shadow-amber-50/50">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-emerald-700 bg-white px-2 py-1 rounded-lg border border-emerald-200 shadow-sm flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    MATCH REC. {fmtR(totals.matchEntradas)}
-                  </span>
-                  <span className="text-[10px] font-black text-rose-700 bg-white px-2 py-1 rounded-lg border border-rose-200 shadow-sm flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                    MATCH PAG. {fmtR(totals.matchSaidas)}
-                  </span>
-                </div>
+              <div className="flex gap-2">
+                {['todos', 'com_match', 'sem_match'].map(f => (
+                  <button key={f} onClick={() => setFilterMatch(f as any)} className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-all ${filterMatch === f ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-100'}`}>
+                    {f === 'todos' ? 'Todas' : f === 'com_match' ? 'Com Match' : 'Sem Match'}
+                  </button>
+                ))}
               </div>
-            </div>
-          </div>
-              </div>
-
-              <button onClick={() => setExtrato([])} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-white border border-gray-100 px-4 py-1.5 rounded-full shadow-sm">
-                Trocar Arquivo
-              </button>
-            </div>
-
-            {/* ── Filtros de Match ── */}
-            <div className="px-6 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap bg-white">
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Filtrar:</span>
-              {[
-                { key: 'todos', label: `Todas (${matchedTransactions.length})`, color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
-                { key: 'com_match', label: `✓ Com Match (${countComMatch})`, color: '#16a34a', bg: '#dcfce7', border: '#86efac' },
-                { key: 'sem_match', label: `⚠ Sem Match (${countSemMatch})`, color: '#dc2626', bg: '#fee2e2', border: '#fca5a5' },
-              ].map(f => (
-                <button
-                  key={f.key}
-                  onClick={() => setFilterMatch(f.key as any)}
-                  style={{
-                    fontSize: 11, fontWeight: 800, padding: '5px 14px', borderRadius: 20,
-                    border: filterMatch === f.key ? `2px solid ${f.border}` : '1px solid #e5e7eb',
-                    background: filterMatch === f.key ? f.bg : 'transparent',
-                    color: filterMatch === f.key ? f.color : '#9ca3af',
-                    cursor: 'pointer', transition: 'all .15s'
-                  }}
-                >{f.label}</button>
-              ))}
-              <span className="ml-auto text-[10px] font-bold text-gray-400">
-                {transacoesFiltradas.length} exibindo
-              </span>
             </div>
 
             <div className="divide-y divide-gray-50">
-              {transacoesFiltradas.length > 0 ? (
-                transacoesFiltradas.map((item, idx) => (
-                  <div key={item.bank.id} className="group p-5 hover:bg-indigo-50/30 transition-all flex flex-col md:flex-row items-center gap-6">
-                    
-                    {/* Extrato Entry */}
-                    <div className="flex-1 flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 
-                        ${item.bank.type === 'CREDIT' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-                        <Banknote size={20} />
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{fmtData(item.bank.date)}</div>
-                        <div className="text-sm font-bold text-gray-900 break-words leading-tight">{item.bank.memo}</div>
-                        <div className="flex items-center gap-6 mt-2">
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Valor Bruto</span>
-                            <span className="text-xs font-black text-gray-700">{fmtR(item.bank.amount)}</span>
-                          </div>
-                          
-                          <div className="w-px h-6 bg-gray-100" />
-                          
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Taxa Bancária</span>
-                            <span className={`text-xs font-black ${item.bank.taxa && item.bank.taxa > 0 ? 'text-amber-600' : 'text-gray-300'}`}>
-                              {fmtR(item.bank.taxa || 0)}
-                            </span>
-                          </div>
+              {transacoesFiltradas.map((item) => (
+                <div key={item.bank.fitid} className="p-5 hover:bg-slate-50 transition-all flex flex-col md:flex-row items-center gap-6">
+                  <div className="flex-1 flex items-center gap-4 w-full">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.bank.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><Banknote size={20} /></div>
+                    <div className="flex-1">
+                      <div className="text-[10px] font-black text-gray-400 uppercase">{fmtData(item.bank.date)}</div>
+                      {item.bank.type === 'DEBIT' ? (
+                        <div className="flex flex-col gap-1">
+                          <input 
+                            type="text" 
+                            value={editedMemos[item.bank.fitid] !== undefined ? editedMemos[item.bank.fitid] : item.bank.memo}
+                            onChange={(e) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: e.target.value }))}
+                            className="text-sm font-bold text-indigo-700 bg-white border border-gray-100 rounded-lg p-1.5 px-3 focus:ring-2 focus:ring-indigo-100 w-full outline-none shadow-sm"
+                            placeholder="Descrição da Saída..."
+                          />
+                          <span className="text-[9px] text-gray-300 italic truncate max-w-[250px]">Banco: {item.bank.memo}</span>
                         </div>
-                      </div>
-                    </div>
-
-                    <ArrowRight className="text-gray-300 hidden md:block" />
-
-                    {/* System Match Card - Interativo */}
-                    <div className="flex-[1.5] flex items-center justify-center w-full">
-                      {item.assocMatch ? (
-                        <button 
-                          onClick={() => handleQuickCreate(item.bank)}
-                          className="flex items-center gap-3 w-full p-4 rounded-2xl border border-dashed border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-left group/card animate-in fade-in zoom-in duration-300 outline-none"
-                        >
-                          <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center shadow-lg transition-transform group-hover/card:scale-110
-                            ${item.isCpfMatch ? 'bg-emerald-500 shadow-emerald-200' : 'bg-indigo-500 shadow-indigo-200'}`}>
-                            {item.isCpfMatch ? <CheckCircle2 size={20} /> : <Users size={20} />}
-                          </div>
-                          <div className="flex-1">
-                            <div className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1
-                              ${item.isCpfMatch ? 'text-emerald-600' : 'text-indigo-600'}`}>
-                              {item.isCpfMatch ? 'CPF Identificado' : 'Sugestão por Nome'} 
-                              {item.isFirstPayment && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[8px] border border-amber-200">🌟 ADESÃO</span>}
-                              <span className="text-gray-300 ml-1">•</span> 
-                              <span className="text-gray-400 capitalize">Associado</span>
-                            </div>
-                            <div className="text-xs font-bold text-gray-800 group-hover/card:text-indigo-700 transition-colors">{(item as any).assocMatch.nome}</div>
-                            <div className="text-[10px] text-gray-400 font-medium">
-                              {item.isFirstPayment ? 'Primeira receita! Clique para conferir adesão.' : 'Mensalidade recorrente identificada.'}
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-2">
-                             <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-500">
-                               {contas.find(c => c.id === selectedContaId)?.nome || 'Selecione Conta'}
-                             </div>
-                             <button 
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleUnmatch(item.bank.fitid)
-                                }}
-                                title="Desfazer Match"
-                                className="p-2 rounded-lg bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors border border-gray-100 group/btn"
-                             >
-                                <X size={14} className="group-hover/btn:scale-110 transition-transform" />
-                             </button>
-                             <ChevronRight size={18} className="text-gray-300 group-hover/card:text-indigo-500 group-hover/card:translate-x-1 transition-all" />
-                          </div>
-                        </button>
                       ) : (
-                        <div className="w-full flex items-center justify-center p-4 rounded-2xl border border-dashed border-gray-200">
-                          <div className="text-center">
-                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center gap-1 mb-2">
-                              <AlertCircle size={12} className="text-amber-500" /> Nenhum par encontrado
-                            </div>
-                            <button 
-                              onClick={() => handleQuickCreate(item.bank)}
-                              className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 text-[10px] font-black rounded-lg hover:bg-gray-100 transition-all uppercase"
-                            >
-                              <Plus size={12} /> Criar Manualmente
-                            </button>
-                          </div>
-                        </div>
+                        <div className="text-sm font-bold text-gray-900">{item.bank.memo}</div>
                       )}
+                      <div className="text-xs font-black text-gray-700 mt-1">{fmtR(item.bank.amount)}</div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="p-20 text-center animate-in fade-in zoom-in">
-                  <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100 shadow-inner">
-                    <CheckCircle2 size={32} />
+
+                  <ArrowRight className="text-gray-200 hidden md:block" />
+
+                  <div className="flex-[1.2] w-full">
+                    {item.assocMatch || item.forMatch ? (
+                      <button onClick={() => handleQuickCreate(item.bank)} className={`flex items-center gap-4 w-full p-4 rounded-2xl border border-dashed transition-all hover:shadow-lg ${item.forMatch ? 'border-orange-200 bg-orange-50/20' : 'border-emerald-200 bg-emerald-50/20'}`}>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${item.forMatch ? 'bg-orange-500' : 'bg-emerald-500'}`}>
+                          {item.forMatch ? <Banknote size={20} /> : <Users size={20} />}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className={`text-[10px] font-black uppercase tracking-widest ${item.forMatch ? 'text-orange-600' : 'text-emerald-600'}`}>
+                            {item.forMatch ? 'FORNECEDOR' : (item.isFirstPayment ? '🌟 ADESÃO' : 'ASSOCIADO')}
+                          </div>
+                          <div className="text-xs font-bold text-gray-800">{(item.forMatch ? (item.forMatch as any).nome : (item.assocMatch as any).nome)}</div>
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); handleUnmatch(item.bank.fitid) }} className="p-2 text-gray-300 hover:text-red-500"><X size={16} /></button>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {item.bank.type === 'DEBIT' && (
+                          <button onClick={() => { setSelectedExtrato(item.bank); setIsSupplierModalOpen(true) }} className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-orange-200 bg-orange-50/10 text-orange-600 text-[10px] font-black rounded-xl hover:bg-orange-50">
+                            <Plus size={14} /> FORNECEDOR
+                          </button>
+                        )}
+                        <button onClick={() => handleQuickCreate(item.bank)} className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-gray-200 bg-gray-50/50 text-gray-600 text-[10px] font-black rounded-xl hover:bg-gray-100">
+                          <Plus size={14} /> MANUAL
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">Extrato 100% Conciliado</h3>
-                  <p className="text-sm text-gray-500 mt-1">Todas as transações deste arquivo já foram lançadas no seu fluxo de caixa.</p>
-                  <button onClick={() => setExtrato([])} className="mt-6 text-xs font-bold text-indigo-600 hover:underline">
-                    Importar outro arquivo
-                  </button>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* Quick Create Modal com Destaque para dados faltantes */}
+      {/* Modal de Lançamento */}
       <CrudModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Conferência de Lançamento"
+        title="Confirmar Lançamento"
         initialData={modalInitialData}
         onSubmit={handleSalvarNovo}
         fields={[
-          { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
-            { value: 'receita', label: 'Receita' },
-            { value: 'despesa', label: 'Despesa' }
-          ]},
-          { name: 'descricao', label: 'Descrição Bancária', type: 'text', required: true },
-          { name: 'categoria', label: 'Categoria (Verifique se está correto)', type: 'select', required: true, options: [
-            { value: 'Mensalidades', label: 'Mensalidades' },
-            { value: 'ADESÃO', label: 'Adesão' },
-            { value: 'Serviços', label: 'Serviços' },
-            { value: 'Outros', label: 'Outros' },
-          ]},
-          { name: 'conta_id', label: 'Conta de Destino', type: 'select', required: true, options: 
-            contas.map(c => ({ value: c.id, label: c.nome }))
-          },
-          { name: 'associado_id', label: 'Associado Vinculado', type: 'select', required: true, options: [
-            { value: '', label: '⚠️ SELECIONE UM ASSOCIADO (OBRIGATÓRIO)' },
-            ...associados.map(a => ({ value: a.id, label: a.nome }))
-          ]},
-          { name: 'cpf', label: 'CPF/CNPJ Identificado (Será salvo no cadastro)', type: 'text' },
-          { name: 'status', label: 'Status do Fluxo', type: 'select', required: true, options: [
-            { value: 'pago', label: 'Confirmado (Pago)' },
-            { value: 'pendente', label: 'Aguardando Aprovação' }
-          ]},
+          { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },
+          { name: 'descricao', label: 'Descrição Final', type: 'text', required: true },
+          { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
+            { value: 'Mensalidades', label: 'Mensalidades' }, { value: 'ADESÃO', label: 'Adesão' }, { value: 'Serviços', label: 'Serviços' }, { value: 'Outros', label: 'Outros' }
+          ] },
+          { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
+          { name: 'associado_id', label: 'Associado', type: 'select', showIf: (d) => d.tipo === 'receita', options: [{ value: '', label: 'Selecione...' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+          { name: 'fornecedor_id', label: 'Fornecedor', type: 'select', showIf: (d) => d.tipo === 'despesa', options: [{ value: '', label: 'Selecione...' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))] },
+          { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'pago', label: 'Liquidado' }, { value: 'pendente', label: 'Pendente' }] },
         ]}
       />
 
-      <style jsx>{`
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-bounce-slow {
-          animation: bounce-slow 3s ease-in-out infinite;
-        }
-      `}</style>
+      {/* Modal de Novo Fornecedor */}
+      <CrudModal 
+        isOpen={isSupplierModalOpen}
+        onClose={() => setIsSupplierModalOpen(false)}
+        title="Novo Fornecedor / Prestador"
+        initialData={{ nome: selectedExtrato?.memo || '', cpf_cnpj: (selectedExtrato?.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '') || '' }}
+        onSubmit={handleSalvarFornecedor}
+        fields={[
+          { name: 'nome', label: 'Nome / Razão Social', type: 'text', required: true },
+          { name: 'cpf_cnpj', label: 'CPF ou CNPJ', type: 'text' },
+          { name: 'categoria_padrao', label: 'Categoria Padrão', type: 'text' },
+          { name: 'email', label: 'E-mail', type: 'text' },
+          { name: 'telefone', label: 'Telefone', type: 'text' },
+        ]}
+      />
     </div>
   )
 }
