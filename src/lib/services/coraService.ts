@@ -142,10 +142,20 @@ export class CoraService {
         'Idempotency-Key': `inv_${Date.now()}`
       }
     }, body);
+  }
+
   /**
    * Lista recorrências (assinaturas) ativas na conta
    */
   static async listRecurrences() {
-    return this.request('/v2/recurrences', 'GET');
+    const token = await this.getToken();
+    return this.request({
+      hostname: this.API_HOST,
+      path: '/v2/recurrences',
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
   }
 }
