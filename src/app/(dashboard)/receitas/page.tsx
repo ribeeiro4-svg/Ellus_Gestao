@@ -172,6 +172,20 @@ export default function ReceitasPage() {
     }
   ]
 
+  const handleFieldChange = (name: string, value: any, setFormData: any) => {
+    // Regra 1: Se for Dinheiro, tenta auto-selecionar a conta "Caixa"
+    if (name === 'forma_pagamento' && value === 'Dinheiro') {
+      const contaCaixa = contas.find(c => c.nome.toUpperCase().includes('CAIXA'))
+      if (contaCaixa) {
+        setFormData((prev: any) => ({ ...prev, conta_id: contaCaixa.id }))
+      }
+    }
+    // Regra 2: Se a descrição tiver "Adesão", auto-seleciona a categoria "ADESÃO"
+    if (name === 'descricao' && value?.toString().toUpperCase().includes('ADESÃO')) {
+      setFormData((prev: any) => ({ ...prev, categoria: 'ADESÃO' }))
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
@@ -366,6 +380,7 @@ export default function ReceitasPage() {
         title={editingItem ? 'Editar Receita' : 'Nova Receita'}
         initialData={editingItem}
         onSubmit={handleSalvar}
+        onChange={handleFieldChange}
         fields={[
           { name: 'descricao', label: 'Descrição', type: 'text', required: true },
           { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },

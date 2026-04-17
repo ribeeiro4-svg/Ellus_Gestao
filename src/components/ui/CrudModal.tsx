@@ -19,6 +19,7 @@ interface CrudModalProps {
   fields: Field[]
   initialData?: any
   onSubmit: (data: any) => Promise<void>
+  onChange?: (name: string, value: any, setFormData: React.Dispatch<React.SetStateAction<any>>) => void
 }
 
 const PAGAMENTO_ICONS: Record<string, string> = {
@@ -29,7 +30,7 @@ const PAGAMENTO_ICONS: Record<string, string> = {
   'Cartão': '💳',
 }
 
-export default function CrudModal({ isOpen, onClose, title, fields, initialData, onSubmit }: CrudModalProps) {
+export default function CrudModal({ isOpen, onClose, title, fields, initialData, onSubmit, onChange }: CrudModalProps) {
   const [formData, setFormData] = useState<any>({})
   const [loading, setLoading] = useState(false)
 
@@ -56,6 +57,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
 
   const handleChange = (name: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [name]: value }))
+    if (onChange) onChange(name, value, setFormData)
   }
 
   return (
