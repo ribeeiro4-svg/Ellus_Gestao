@@ -48,16 +48,19 @@ export class CoraService {
         cleaned = cleaned.substring(1, cleaned.length - 1);
       }
 
-      // 2. Extração do conteúdo base64 puro
-      // Remove headers se existirem para reformatar do zero de forma limpa
+      // 2. Extração e Limpeza Química do conteúdo base64
+      // Remove headers se existirem e limpa TUDO que não for Base64 válido
       let base64 = cleaned
         .replace(/-----BEGIN [^-]+-----/g, '')
         .replace(/-----END [^-]+-----/g, '')
-        .replace(/\s/g, ''); // Remove todos os espaços e quebras
+        .replace(/\s/g, '+') // Transforma espaços em '+' antes da limpeza (correção de colagem)
+        .replace(/[^A-Za-z0-9+/=]/g, ''); // Remove qualquer caractere ilegal
 
       if (!base64) return { pem: Buffer.from(''), debug: 'BASE64_VAZIO' };
 
-      // 3. Garantia de Padding (ESSENCIAL: em vez de cortar, nós completamos)
+      // 3. Garantia de Padding (ESSENCIAL)
+      // Primeiro remove padding existente para recalcular corretamente
+      base64 = base64.replace(/=/g, '');
       while (base64.length % 4 !== 0) {
         base64 += '=';
       }
@@ -65,8 +68,8 @@ export class CoraService {
       // 4. Determinação do Header correto
       let header = type === 'cert' ? 'CERTIFICATE' : 'PRIVATE KEY';
       
-      // Se for chave e tiver indícios de ser RSA, usamos o header específico
-      if (type === 'key' && (cleaned.includes('RSA') || base64.length > 2000)) {
+      // Se for chave e tiver indícios EXPLICITOS de ser RSA, usamos o header específico
+      if (type === 'key' && cleaned.toUpperCase().includes('RSA')) {
         header = 'RSA PRIVATE KEY';
       }
 

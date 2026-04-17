@@ -104,113 +104,98 @@ export default function ConciliacaoPage() {
       const rawDigits = ext.memo.replace(/[^\d]/g, '')
       const extractedDoc = cpfNoMemo || cnpjNoMemo || (rawDigits.length >= 11 ? rawDigits.slice(-11) : null)
 
-      let finalAssoc = null
-      let finalFor = null
-      let isCpfMatch = false
+  // Lógica de matching unificada para OFX e Cora
+  const processMatch = (item: { memo: string, type: 'CREDIT' | 'DEBIT', fitid: string, amount: number, date: string, doc?: string }) => {
+    const isCredit = item.type === 'CREDIT'
+    const cnpjNoMemo = (item.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
+    const cpfNoMemo = (item.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
+    const rawDigits = item.memo.replace(/[^\d]/g, '')
+    const extractedDoc = item.doc?.replace(/[^\d]/g, '') || cpfNoMemo || cnpjNoMemo || (rawDigits.length >= 11 ? rawDigits.slice(-11) : null)
 
-      if (isCredit) {
-        // 1. Tenta achar na Diretoria (reembolsos)
-        const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
-        if (matchDir) {
-          finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Outros', isDirector: true } as any
-          isCpfMatch = true
-        } else {
-          // 2. Tenta achar no Associado
-          const match = extractedDoc ? associados.find(a => (a.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
-          if (match) { finalAssoc = match; isCpfMatch = true }
-          else {
-            // 3. Busca por Nome
-            const memoLimpo = normalizeStr(ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED|DE|PARA/gi, ''))
-            const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
-            
-            // 3.1. Tenta Diretoria por nome
-            const dMatch = diretoria.find(d => {
-              const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
-              if (!palavrasBanco.includes(palavrasD[0])) return false
-              const count = palavrasD.filter(p => palavrasBanco.includes(p)).length
-              return count >= Math.min(palavrasD.length, 2)
-            })
+    let finalAssoc = null
+    let finalFor = null
+    let isCpfMatch = false
 
-            if (dMatch) {
-              finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Outros', isDirector: true } as any
-            } else {
-              // 3.2. Tenta Associado por nome
-              finalAssoc = associados.find(a => {
-                const nomeA = normalizeStr(a.nome); 
-                const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
-                
-                // Regra de Ouro: O PRIMEIRO NOME deve estar presente no memo do banco
-                const primeiroNomeA = palavrasA[0]
-                if (!palavrasBanco.includes(primeiroNomeA)) return false
-
-                const count = palavrasA.filter(p => palavrasBanco.includes(p)).length
-                // Aumenta exigência para não confundir homônimos parecidos
-                return count >= Math.min(palavrasA.length, 3) || (palavrasA.length <= 2 && count === palavrasA.length)
-              })
-            }
-          }
-        }
+    if (isCredit) {
+      const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
+      if (matchDir) {
+        finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Outros', isDirector: true } as any
+        isCpfMatch = true
       } else {
-        const match = extractedDoc ? fornecedores.find(f => (f.cpf_cnpj || '').replace(/[^\d]/g, '') === extractedDoc) : null
-        if (match) { finalFor = match; isCpfMatch = true }
+        const match = extractedDoc ? associados.find(a => (a.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
+        if (match) { finalAssoc = match; isCpfMatch = true }
         else {
-          const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
-          if (matchDir) {
-            finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
-            isCpfMatch = true
-          } else {
-            const memoLimpo = normalizeStr(ext.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
-            const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
-            
-            // Regra para Diretoria por nome
-            const dMatch = diretoria.find(d => {
-              const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
-              if (!palavrasBanco.includes(palavrasD[0])) return false
-              const count = palavrasD.filter(p => palavrasBanco.includes(p)).length
-              return count >= Math.min(palavrasD.length, 2)
+          const memoLimpo = normalizeStr(item.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED|DE|PARA/gi, ''))
+          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
+          const dMatch = diretoria.find(d => {
+            const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
+            if (!palavrasBanco.includes(palavrasD[0])) return false
+            return palavrasD.filter(p => palavrasBanco.includes(p)).length >= Math.min(palavrasD.length, 2)
+          })
+          if (dMatch) finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Outros', isDirector: true } as any
+          else {
+            finalAssoc = associados.find(a => {
+              const nomeA = normalizeStr(a.nome); const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
+              if (!palavrasBanco.includes(palavrasA[0])) return false
+              const count = palavrasA.filter(p => palavrasBanco.includes(p)).length
+              return count >= Math.min(palavrasA.length, 3) || (palavrasA.length <= 2 && count === palavrasA.length)
             })
-            
-            if (dMatch) {
-              finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
-            } else {
-              // Regra para Fornecedores por nome
-              finalFor = fornecedores.find(f => {
-                const nomeF = normalizeStr(f.nome); const palavrasF = nomeF.split(' ').filter(p => p.length > 2)
-                if (!palavrasBanco.includes(palavrasF[0])) return false
-                const count = palavrasF.filter(p => palavrasBanco.includes(p)).length
-                return count >= Math.min(palavrasF.length, 2)
-              })
-            }
           }
         }
       }
-
-      let suggestedCategory = isCredit ? 'Mensalidades' : (finalFor?.categoria_padrao || 'Serviços')
-      if (isCredit && finalAssoc) {
-        const temNoBanco = lancamentos.some(l => l.associado_id === (finalAssoc as any).id && l.status === 'pago')
-        if (!temNoBanco && !adesaoJaSugerida.has((finalAssoc as any).id)) {
-          suggestedCategory = 'ADESÃO'; adesaoJaSugerida.add((finalAssoc as any).id)
+    } else {
+      const match = extractedDoc ? fornecedores.find(f => (f.cpf_cnpj || '').replace(/[^\d]/g, '') === extractedDoc) : null
+      if (match) { finalFor = match; isCpfMatch = true }
+      else {
+        const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
+        if (matchDir) { finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any; isCpfMatch = true }
+        else {
+          const memoLimpo = normalizeStr(item.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
+          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
+          const dMatch = diretoria.find(d => {
+            const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
+            if (!palavrasBanco.includes(palavrasD[0])) return false
+            return palavrasD.filter(p => palavrasBanco.includes(p)).length >= Math.min(palavrasD.length, 2)
+          })
+          if (dMatch) finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
+          else {
+            finalFor = fornecedores.find(f => {
+              const nomeF = normalizeStr(f.nome); const palavrasF = nomeF.split(' ').filter(p => p.length > 2)
+              if (!palavrasBanco.includes(palavrasF[0])) return false
+              return palavrasF.filter(p => palavrasBanco.includes(p)).length >= Math.min(palavrasF.length, 2)
+            })
+          }
         }
       }
+    }
 
-      // Verifica se a transação do banco já foi importada definitivamente para o sistema
-      const matches = lancamentos.filter(l => l.banco_transacao_id === ext.fitid)
-      const bestMatch = matches[0] || null
+    const suggestedCategory = isCredit ? 'Mensalidades' : (finalFor?.categoria_padrao || 'Serviços')
+    const isFirstPayment = isCredit && suggestedCategory === 'ADESÃO'
 
-      return { 
-        bank: ext, 
-        match: bestMatch, 
-        assocMatch: finalAssoc || null, 
-        forMatch: finalFor || null, 
-        isCpfMatch, 
-        suggestedCategory, 
-        isFirstPayment: suggestedCategory === 'ADESÃO', 
-        similarCount: matches.length 
-      }
-    })
+    return { 
+      bank: item as any, 
+      match: null, 
+      assocMatch: finalAssoc, 
+      forMatch: finalFor, 
+      isCpfMatch, 
+      suggestedCategory,
+      isFirstPayment
+    }
+  }
 
-    return allMatches.filter(m => !m.match)
-  }, [extrato, lancamentos, associados, fornecedores, ignoredMatches, diretoria])
+  // Lógica de matching unificada
+  const matchedTransactions = useMemo(() => {
+    return extrato.filter(ext => !ignoredMatches.has(ext.fitid)).map(ext => processMatch({
+      memo: ext.memo, type: ext.type, fitid: ext.fitid, amount: ext.amount, date: ext.date
+    }))
+  }, [extrato, associados, fornecedores, ignoredMatches, diretoria])
+
+  // Lógica específica para Cora Items com Match
+  const coraMatchedItems = useMemo(() => {
+    return coraItems.map(item => processMatch({
+      memo: item.descricao, type: item.tipo, fitid: item.cora_id, amount: item.valor, date: item.data, doc: item.documento
+    }))
+  }, [coraItems, associados, fornecedores, diretoria])
 
   const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch || t.forMatch).length, [matchedTransactions])
   const countSemMatch = useMemo(() => matchedTransactions.filter(t => !t.assocMatch && !t.forMatch).length, [matchedTransactions])
@@ -219,26 +204,21 @@ export default function ConciliacaoPage() {
     let list = matchedTransactions
     if (filterMatch === 'com_match') list = list.filter(t => t.assocMatch || t.forMatch)
     if (filterMatch === 'sem_match') list = list.filter(t => !t.assocMatch && !t.forMatch)
-    
     if (filterType === 'receita') list = list.filter(t => t.bank.type === 'CREDIT')
     if (filterType === 'despesa') list = list.filter(t => t.bank.type !== 'CREDIT')
-    
     return list
   }, [matchedTransactions, filterMatch, filterType])
 
-  const batchTargets = useMemo(() => transacoesFiltradas.filter(t => !t.match), [transacoesFiltradas])
-
   const handleProcessarLote = async () => {
-    if (!batchTargets.length || !selectedContaId) return alert('Verifique os alvos do lote.')
+    if (!matchedTransactions.length || !selectedContaId) return alert('Verifique os alvos do lote.')
     setIsProcessingBatch(true)
     try {
-      const items = (batchTargets as any[]).map(t => ({
+      const items = matchedTransactions.map(t => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: editedMemos[t.bank.fitid] || t.bank.memo,
         categoria: t.suggestedCategory,
         conta_id: selectedContaId,
         valor: t.bank.amount,
-        taxa: t.bank.taxa || 0,
         data: t.bank.date,
         status: 'pago',
         associado_id: t.assocMatch?.id || null,
@@ -247,21 +227,38 @@ export default function ConciliacaoPage() {
         conciliado: true,
         banco_transacao_id: t.bank.fitid
       }))
-      
       const res = await inserirBulk(items as any)
-      
-      if (res.error) {
-        alert(`Erro ao processar lote: ${typeof res.error === 'object' ? (res.error as any).message : String(res.error)}`)
+      if (res.error) alert(`Erro: ${JSON.stringify(res.error)}`)
+      else { alert('Lote OFX processado!'); setExtrato([]) }
+    } finally { setIsProcessingBatch(false) }
+  }
+
+  const handleCoraBatch = async () => {
+    if (!coraMatchedItems.length || !selectedContaId) return
+    setIsProcessingBatch(true)
+    try {
+      const rows = coraMatchedItems.map(t => ({
+        tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+        descricao: t.bank.memo,
+        categoria: t.suggestedCategory,
+        conta_id: selectedContaId,
+        valor: t.bank.amount,
+        data: t.bank.date,
+        status: 'pago',
+        conciliado: true,
+        associado_id: t.assocMatch?.id || null,
+        fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
+        diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
+        banco_transacao_id: t.bank.fitid
+      }))
+      const res = await inserirBulk(rows as any)
+      if (!res.error) {
+        await updateCoraBulk(coraItems.map(i => i.id), 'sincronizado')
+        alert(`${rows.length} transações Cora conciliadas estrategicamente!`)
       } else {
-        alert(`${items.length} itens lançados com sucesso no financeiro!`)
-        setExtrato([]) // Limpa para mostrar que terminou
-        setEditedMemos({})
+        alert(`Erro Cora: ${JSON.stringify(res.error)}`)
       }
-    } catch (err: any) {
-      alert(`Erro inesperado: ${err.message}`)
-    } finally {
-      setIsProcessingBatch(false)
-    }
+    } finally { setIsProcessingBatch(false) }
   }
 
   const handleFileUpload = async (e: any) => {
@@ -275,29 +272,14 @@ export default function ConciliacaoPage() {
   const handleSalvarNovo = async (data: any) => {
     if (!selectedExtrato) return
     const { cpf, ...lancamentoData } = data
-    
-    // Tratamento crucial para IDs vazios (evitar erro UUID do Postgres)
-    const safeData = {
-      ...lancamentoData,
-      associado_id: lancamentoData.associado_id || null,
-      fornecedor_id: lancamentoData.fornecedor_id || null,
-      diretor_id: lancamentoData.diretor_id || null
-    }
-
     const res = await inserir({ 
-      ...safeData, 
+      ...lancamentoData, 
       valor: selectedExtrato.amount, 
-      taxa: selectedExtrato.taxa, 
       data: selectedExtrato.date, 
       conciliado: true, 
       banco_transacao_id: selectedExtrato.fitid 
-    })
-    if (!res.error) { 
-      setIsModalOpen(false); 
-      setSelectedExtrato(null) 
-    } else { 
-      alert(`Erro: ${(res.error as any).message || res.error}`) 
-    }
+    } as any)
+    if (!res.error) { setIsModalOpen(false); setSelectedExtrato(null) } else { alert(`Erro: ${JSON.stringify(res.error)}`) }
   }
 
   const handleSalvarFornecedor = async (data: any) => {
@@ -307,17 +289,14 @@ export default function ConciliacaoPage() {
 
   const modalInitialData = useMemo(() => {
     if (!selectedExtrato) return null
-    const m = matchedTransactions.find(mt => (mt as any).bank.fitid === selectedExtrato.fitid) as any
-    const isDebit = selectedExtrato.type === 'DEBIT'
+    const m = matchedTransactions.find(mt => mt.bank.fitid === selectedExtrato.fitid)
     return {
       descricao: editedMemos[selectedExtrato.fitid] || selectedExtrato.memo,
       associado_id: m?.assocMatch?.id || '',
       fornecedor_id: m?.forMatch?.id || '',
-      cpf: selectedExtrato.cpf_extraido || m?.assocMatch?.cpf || m?.forMatch?.cpf_cnpj || '',
-      categoria: m?.suggestedCategory || (isDebit ? 'Serviços' : 'Mensalidades'),
+      categoria: m?.suggestedCategory || (selectedExtrato.type === 'DEBIT' ? 'Serviços' : 'Mensalidades'),
       conta_id: selectedContaId,
-      forma_pagamento: selectedExtrato.metodo_inferido,
-      tipo: isDebit ? 'despesa' : 'receita',
+      tipo: selectedExtrato.type === 'DEBIT' ? 'despesa' : 'receita',
       status: 'pago'
     }
   }, [selectedExtrato, matchedTransactions, selectedContaId, editedMemos])
@@ -325,10 +304,8 @@ export default function ConciliacaoPage() {
   const totals = useMemo(() => {
     const entries = extrato.filter(i => i.type === 'CREDIT').reduce((s, i) => s + i.amount, 0)
     const exits = extrato.filter(i => i.type === 'DEBIT').reduce((s, i) => s + Math.abs(i.amount), 0)
-    const matchEntries = matchedTransactions.filter(i => i.bank.type === 'CREDIT' && i.assocMatch).reduce((s, i) => s + i.bank.amount, 0)
-    const matchExits = matchedTransactions.filter(i => i.bank.type === 'DEBIT' && (i.match || i.forMatch)).reduce((s, i) => s + Math.abs(i.bank.amount), 0)
-    return { entradas: entries, saidas: exits, matchEntradas: matchEntries, matchSaidas: matchExits }
-  }, [extrato, matchedTransactions])
+    return { entradas: entries, saidas: exits }
+  }, [extrato])
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -342,16 +319,21 @@ export default function ConciliacaoPage() {
           </div>
         </div>
 
-        {extrato.length > 0 && (
+        {(extrato.length > 0 || (activeTab === 'cora' && coraItems.length > 0)) && (
           <div className="flex items-center gap-3 animate-in slide-in-from-right">
-            <button onClick={() => setExtrato([])} className="flex items-center gap-2 px-4 py-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 text-[10px] font-black rounded-xl transition-all uppercase tracking-widest mr-2"><RefreshCw size={14} /> Limpar</button>
             <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-[20px] border border-gray-100 shadow-xl shadow-indigo-900/5">
               <select value={selectedContaId} onChange={(e) => setSelectedContaId(e.target.value)} className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 p-0 cursor-pointer min-w-[150px]">
                 {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
               </select>
-              <button onClick={handleProcessarLote} disabled={isProcessingBatch || !batchTargets.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
-                {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Lançar {batchTargets.length} Sugestões
-              </button>
+              {activeTab === 'ofx' ? (
+                <button onClick={handleProcessarLote} disabled={isProcessingBatch || !matchedTransactions.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
+                  {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Lançar Lote OFX
+                </button>
+              ) : (
+                <button onClick={handleCoraBatch} disabled={isProcessingBatch || !coraItems.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
+                  {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />} Sincronizar Tudo (Cora)
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -389,41 +371,12 @@ export default function ConciliacaoPage() {
                   onClick={async () => {
                     const res = await syncWithBank()
                     if (res?.success) alert(`${res.new_items} novas transações encontradas!`)
+                    else alert(`Erro: ${res?.error || 'Verifique as configurações Cora'}`)
                   }} 
                   disabled={coraLoading}
                   className="px-6 py-3 bg-white text-indigo-600 border border-indigo-100 rounded-2xl text-xs font-black hover:bg-indigo-50 transition-all flex items-center gap-2"
                 >
                   <RefreshCw size={14} className={coraLoading ? 'animate-spin' : ''} /> ATUALIZAR BANCO
-                </button>
-                <button 
-                  onClick={async () => {
-                    if (!coraItems.length) return
-                    setIsProcessingBatch(true)
-                    try {
-                      const rows = coraItems.map(item => ({
-                        tipo: item.tipo === 'CREDIT' ? 'receita' : 'despesa',
-                        descricao: item.descricao,
-                        categoria: item.tipo === 'CREDIT' ? 'Mensalidades' : 'Serviços',
-                        conta_id: selectedContaId,
-                        valor: item.valor,
-                        data: item.data,
-                        status: 'pago',
-                        conciliado: true,
-                        banco_transacao_id: item.cora_id
-                      }))
-                      const res = await inserirBulk(rows as any)
-                      if (!res?.error) {
-                        await updateCoraBulk(coraItems.map(i => i.id), 'sincronizado')
-                        alert('Lote sincronizado com sucesso!')
-                      }
-                    } finally {
-                      setIsProcessingBatch(false)
-                    }
-                  }}
-                  disabled={isProcessingBatch || !coraItems.length || !selectedContaId}
-                  className="px-8 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-2"
-                >
-                  {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />} LANÇAR {coraItems.length} EM LOTE
                 </button>
               </div>
            </div>
@@ -441,46 +394,33 @@ export default function ConciliacaoPage() {
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-gray-50">
-                      {coraItems.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50 transition-all">
+                      {coraMatchedItems.map((m) => (
+                        <tr key={m.bank.fitid} className="hover:bg-slate-50 transition-all">
                           <td className="p-5">
-                            <div className="text-xs font-black text-gray-900">{fmtData(item.data)}</div>
-                            <div className="text-[9px] font-bold text-gray-400 uppercase">CORA API</div>
+                            <div className="text-xs font-black text-gray-900">{fmtData(m.bank.date)}</div>
                           </td>
                           <td className="p-5">
-                            <div className="text-sm font-bold text-gray-700">{item.descricao}</div>
-                            {item.documento && <div className="text-[10px] text-indigo-500 font-bold">{item.documento}</div>}
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm font-bold text-gray-700">{m.bank.memo}</span>
+                              {m.assocMatch || m.forMatch ? (
+                                <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${m.assocMatch ? 'text-emerald-500' : 'text-orange-500'}`}>
+                                  {m.assocMatch ? <Users size={10}/> : <Banknote size={10}/>}
+                                  Sugerido: {m.assocMatch?.nome || m.forMatch?.nome}
+                                </span>
+                              ) : <span className="text-[9px] text-gray-300 italic">Nenhum match encontrado</span>}
+                            </div>
                           </td>
-                          <td className={`p-5 text-right font-black ${item.tipo === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {fmtR(item.valor)}
+                          <td className={`p-5 text-right font-black ${m.bank.type === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {fmtR(m.bank.amount)}
                           </td>
                           <td className="p-5 whitespace-nowrap">
                             <div className="flex items-center justify-center gap-2">
-                              <button 
-                                onClick={async () => {
-                                  const res = await inserir({
-                                    tipo: item.tipo === 'CREDIT' ? 'receita' : 'despesa',
-                                    descricao: item.descricao,
-                                    categoria: item.tipo === 'CREDIT' ? 'Mensalidades' : 'Serviços',
-                                    conta_id: selectedContaId,
-                                    valor: item.valor,
-                                    data: item.data,
-                                    status: 'pago',
-                                    conciliado: true,
-                                    banco_transacao_id: item.cora_id
-                                  } as any)
-                                  if (!res?.error) await updateCoraStatus(item.id, 'sincronizado')
-                                }}
-                                className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black hover:bg-emerald-100 transition-all border border-emerald-100"
-                              >
-                                SINCRONIZAR
-                              </button>
-                              <button 
-                                onClick={() => updateCoraStatus(item.id, 'ignorado')}
-                                className="p-2 text-gray-300 hover:text-red-500 transition-all"
-                              >
-                                <X size={16} />
-                              </button>
+                               <button 
+                                 onClick={() => { setSelectedExtrato(m.bank); setIsModalOpen(true) }}
+                                 className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all"
+                               >
+                                 CONCILIAR
+                               </button>
                             </div>
                           </td>
                         </tr>
