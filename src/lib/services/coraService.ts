@@ -33,14 +33,25 @@ export class CoraService {
 
     // Função auxiliar para normalizar certificados vindos do Vercel
     const normalizePEM = (pem: string) => {
-      // Se vier com \n escapado (literal \n), transforma em quebra de linha real
-      let normalized = pem.replace(/\\n/g, '\n');
+      // 1. Limpa \n literais (escapados) e remove \r
+      const cleaned = pem.replace(/\\n/g, '\n').replace(/\r/g, '');
       
-      // Remove espaços extras no início/fim de cada linha e garante quebras de linha limpas
-      normalized = normalized.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n');
+      // 2. Localiza o conteúdo entre os delimitadores (BEGIN e END)
+      const match = cleaned.match(/-----\s*BEGIN\s+(.+)\s*-----([\s\S]+?)-----\s*END\s+\1\s*-----/i);
       
-      // Garante que o cabeçalho e rodapé estejam sozinhos em suas linhas
-      return normalized;
+      if (!match) {
+        // Fallback: se não encontrar delimitadores, tenta apenas limpar espaços e torcer pelo melhor
+        return cleaned.split('\n').map(l => l.trim()).filter(l => l.length > 0).join('\n');
+      }
+
+      const label = match[1].toUpperCase();
+      // Remove TODO espaço, tabs e quebras de linha do corpo base64 para garantir integridade
+      const content = match[2].replace(/\s/g, ''); 
+      
+      // 3. Reconstrói o PEM com quebras de linha a cada 64 caracteres (padrão RFC)
+      // O OpenSSL é muito rigoroso com o formato do blob base64 em alguns ambientes
+      const lines = content.match(/.{1,64}/g) || [];
+      return `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
     };
 
     return {
