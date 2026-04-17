@@ -13,7 +13,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingDown, Plus, Copy, ChevronDown, ChevronRight } from 'lucide-react'
+import { TrendingDown, Plus, Copy } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -33,17 +33,6 @@ export default function DespesasPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['__all__']))
-
-  const toggleGroup = (key: string) => {
-    setExpandedGroups(prev => {
-      const next = new Set(prev)
-      next.has(key) ? next.delete(key) : next.add(key)
-      return next
-    })
-  }
-  const expandAll = () => setExpandedGroups(new Set([...despesasPorCategoria.keys()]))
-  const collapseAll = () => setExpandedGroups(new Set())
 
   /* ── Dados para gráficos ── */
   const despesaMensal = useMemo(() => {
@@ -77,21 +66,6 @@ export default function DespesasPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Excluir esta despesa?')) await remover(id)
   }
-
-  /* ── Agrupamento por categoria ── */
-  const despesasPorCategoria = useMemo(() => {
-    const groups = new Map<string, { items: any[] }>()
-    despesas.forEach(d => {
-      const key = d.categoria || 'Sem Categoria'
-      if (!groups.has(key)) groups.set(key, { items: [] })
-      groups.get(key)!.items.push(d)
-    })
-    return new Map([...groups.entries()].sort(([, a], [, b]) => {
-      const tA = a.items.reduce((s, i) => s + (i.valor || 0), 0)
-      const tB = b.items.reduce((s, i) => s + (i.valor || 0), 0)
-      return tB - tA
-    }))
-  }, [despesas])
 
   /* ── Colunas da tabela ── */
   const columns = [
@@ -195,92 +169,8 @@ export default function DespesasPage() {
         </ChartCard>
       </div>
 
-      {/* ── Agrupado por Categoria ── */}
-      <div className="table-card overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/40">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            {despesasPorCategoria.size} categorias &bull; {despesas.length} lançamentos
-          </span>
-          <div className="flex items-center gap-3">
-            <button onClick={expandAll} className="text-[10px] font-bold text-rose-500 hover:underline">Expandir todos</button>
-            <span className="text-gray-200">|</span>
-            <button onClick={collapseAll} className="text-[10px] font-bold text-gray-400 hover:underline">Recolher todos</button>
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="p-16 text-center text-sm text-gray-400">Carregando...</div>
-        ) : despesas.length === 0 ? (
-          <div className="p-16 text-center text-sm text-gray-400">Nenhuma despesa encontrada.</div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {[...despesasPorCategoria.entries()].map(([categoria, { items }]) => {
-              const isOpen = expandedGroups.has(categoria)
-              const total = items.reduce((s, i) => s + (i.valor || 0), 0)
-              const initials = categoria.substring(0, 2).toUpperCase()
-              return (
-                <div key={categoria}>
-                  <div
-                    onClick={() => toggleGroup(categoria)}
-                    className="flex items-center gap-4 px-5 py-3.5 cursor-pointer select-none hover:bg-rose-50/30 transition-all group"
-                    style={{ background: isOpen ? 'rgba(239,68,68,.03)' : 'transparent' }}
-                  >
-                    <div className="text-gray-400 group-hover:text-rose-500 transition-colors">
-                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                    </div>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                      background: 'rgba(239,68,68,.08)', border: '2px solid rgba(239,68,68,.18)',
-                      color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 11, fontWeight: 900
-                    }}>{initials}</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-gray-800">{categoria}</div>
-                      <div className="text-[10px] text-gray-400 font-medium">{items.length} lançamento(s)</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-black text-rose-600">-{fmtR(total)}</div>
-                      <div className="text-[9px] text-gray-400 uppercase tracking-widest">acumulado</div>
-                    </div>
-                  </div>
-
-                  {isOpen && (
-                    <div className="border-t border-dashed border-gray-100">
-                      {items.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((i: any) => (
-                        <div key={i.id} className="group flex items-center gap-4 py-3 hover:bg-gray-50/60 transition-all border-b border-gray-50 last:border-0" style={{ paddingLeft: 60, paddingRight: 20 }}>
-                          <div className="w-20 shrink-0">
-                            <span className="text-[11px] font-semibold text-gray-500">{fmtData(i.data)}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-[12px] font-semibold text-gray-700 truncate">{i.descricao}</div>
-                          </div>
-                          <div className="shrink-0">
-                            {i.forma_pagamento && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-100">{i.forma_pagamento}</span>
-                            )}
-                          </div>
-                          <div className="w-24 text-right shrink-0">
-                            <span className="text-[13px] font-black text-rose-600">-{fmtR(i.valor)}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                            <button onClick={() => handleDuplicate(i)} className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors" title="Duplicar"><Copy size={13} /></button>
-                            <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
-                            </button>
-                            <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Excluir">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+      {/* ── Tabela ── */}
+      <DataTable columns={columns} data={despesas} loading={loading} />
 
       <CrudModal
         isOpen={isModalOpen}
