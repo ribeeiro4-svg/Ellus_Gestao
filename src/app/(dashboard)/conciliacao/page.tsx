@@ -56,10 +56,18 @@ export default function ConciliacaoPage() {
   const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
   const [editedMemos, setEditedMemos] = useState<Record<string, string>>({})
 
-  // Inicializa conta padrão
+  // Inicializa conta padrão inteligentemente (evitando CAIXA ESPÉCIE)
   useEffect(() => {
     if (contas.length > 0 && !selectedContaId) {
-      setSelectedContaId(contas[0].id)
+      // Prioriza achar a conta Cora, ou qualquer Banco. Nunca o Caixa.
+      const contaCora = contas.find(c => c.nome.toLowerCase().includes('cora'))
+      const bancoQualquer = contas.find(c => !c.nome.toLowerCase().includes('caixa'))
+      
+      if (contaCora) {
+        setSelectedContaId(contaCora.id)
+      } else if (bancoQualquer) {
+        setSelectedContaId(bancoQualquer.id)
+      }
     }
   }, [contas, selectedContaId])
   
