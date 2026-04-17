@@ -105,10 +105,19 @@ export default function ConciliacaoPage() {
         else {
           const memoLimpo = normalizeStr(ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
           const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
+          
           finalAssoc = associados.find(a => {
-            const nomeA = normalizeStr(a.nome); const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
+            const nomeA = normalizeStr(a.nome); 
+            const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
+            
+            // Regra de Ouro: O PRIMEIRO NOME deve estar presente no memo do banco
+            const primeiroNomeA = palavrasA[0]
+            if (!palavrasBanco.includes(primeiroNomeA)) return false
+
             const count = palavrasA.filter(p => palavrasBanco.includes(p)).length
-            return count >= Math.min(palavrasA.length, 2)
+            // Aumenta exigência: deve bater o primeiro nome + pelo menos mais 1 palavra (total 2)
+            // ou ser um nome curto e bater tudo
+            return count >= Math.min(palavrasA.length, 3) || (palavrasA.length <= 2 && count === palavrasA.length)
           })
         }
       } else {
@@ -122,8 +131,11 @@ export default function ConciliacaoPage() {
           } else {
             const memoLimpo = normalizeStr(ext.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
             const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
+            
+            // Regra para Diretoria por nome
             const dMatch = diretoria.find(d => {
               const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
+              if (!palavrasBanco.includes(palavrasD[0])) return false
               const count = palavrasD.filter(p => palavrasBanco.includes(p)).length
               return count >= Math.min(palavrasD.length, 2)
             })
@@ -131,8 +143,10 @@ export default function ConciliacaoPage() {
             if (dMatch) {
               finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
             } else {
+              // Regra para Fornecedores por nome
               finalFor = fornecedores.find(f => {
                 const nomeF = normalizeStr(f.nome); const palavrasF = nomeF.split(' ').filter(p => p.length > 2)
+                if (!palavrasBanco.includes(palavrasF[0])) return false
                 const count = palavrasF.filter(p => palavrasBanco.includes(p)).length
                 return count >= Math.min(palavrasF.length, 2)
               })
