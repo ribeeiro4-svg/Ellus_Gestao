@@ -12,7 +12,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, MESES } from '@/lib/utils/formatters'
-import { Plus, Users, Mail, Phone, Copy } from 'lucide-react'
+import { Plus, Users, Mail, Phone, Copy, AlertCircle } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
@@ -75,6 +75,23 @@ export default function AssociadosPage() {
           </div>
         </div>
       )
+    },
+    { 
+      header: 'CPF/CNPJ', key: 'cpf', 
+      render: (i: any) => {
+        const digits = (i.cpf || '').replace(/\D/g, '')
+        const isValid = digits.length >= 11
+        return (
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 11, fontWeight: 600, color: isValid ? 'var(--text2)' : '#ef4444' }}>{i.cpf || 'Não inf.'}</span>
+            {!isValid && (
+              <div title="CPF/CNPJ incompleto ou inválido">
+                <AlertCircle size={14} className="text-red-500 animate-pulse" />
+              </div>
+            )}
+          </div>
+        )
+      }
     },
     { header: 'Categoria', key: 'categoria', render: (i: any) => <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span> },
     { header: 'Mensalidade', key: 'mensalidade', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text1)' }}>{fmtR(i.mensalidade)}</span> },
@@ -192,7 +209,15 @@ export default function AssociadosPage() {
       </div>
 
       {/* ── Tabela ── */}
-      <DataTable columns={columns} data={filtrados} loading={loading} />
+      <DataTable 
+        columns={columns} 
+        data={filtrados} 
+        loading={loading} 
+        getRowClassName={(item: any) => {
+          const digits = (item.cpf || '').replace(/\D/g, '')
+          return digits.length < 11 ? '!bg-red-50/60 border-l-4 border-red-500/50 transition-all' : ''
+        }}
+      />
 
       <CrudModal
         isOpen={isModalOpen}

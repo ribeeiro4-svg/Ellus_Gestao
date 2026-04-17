@@ -9,9 +9,10 @@ interface DataTableProps<T> {
   }[]
   data: T[]
   loading?: boolean
+  getRowClassName?: (item: T) => string
 }
 
-export default function DataTable<T>({ columns, data, loading }: DataTableProps<T>) {
+export default function DataTable<T>({ columns, data, loading, getRowClassName }: DataTableProps<T>) {
   if (loading) {
     return (
       <div className="w-full h-64 flex items-center justify-center bg-white rounded-2xl border border-slate-200">
@@ -45,7 +46,10 @@ export default function DataTable<T>({ columns, data, loading }: DataTableProps<
               </tr>
             ) : (
               data.map((item, rowIndex) => (
-                <tr key={rowIndex} className="hover:bg-slate-50/50 transition-colors group">
+                <tr 
+                  key={rowIndex} 
+                  className={`hover:bg-slate-50/50 transition-colors group ${getRowClassName ? getRowClassName(item) : ''}`}
+                >
                   {columns.map((col, colIndex) => (
                     <td key={colIndex} className={`px-6 py-4 ${col.className || ''}`}>
                       {col.render ? col.render(item) : (item[col.key as keyof T] as ReactNode)}

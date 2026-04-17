@@ -40,25 +40,39 @@ export default function ConciliacaoPage() {
     }
   }, [contas, selectedContaId])
   
+  // Helper para normalização robusta
+  const normalizeStr = (str: string) => {
+    return (str || '')
+      .normalize('NFD') // Decompõe acentos
+      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .toLowerCase()
+      .replace(/\s+/g, ' ') // Remove espaços extras
+      .replace(/\b(de|da|do|das|dos|e)\b/g, '') // Remove preposições
+      .trim()
+  }
+
   // Lógica de matching inteligente e FILTRAGEM
   const matchedTransactions = useMemo(() => {
     const allMatches = extrato.map(ext => {
       // 1. Prioridade 1: Busca associado pelo CPF/CNPJ exato extraído do memo
-      const cpfMatch = ext.cpf_extraido ? associados.find(a => {
+      const cpfNoMemo = (ext.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/) || 
+                         ext.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
+
+      const cpfMatch = (ext.cpf_extraido || cpfNoMemo) ? associados.find(a => {
         const cleanA = (a.cpf || '').replace(/[^\d]/g, '')
-        const cleanB = (ext.cpf_extraido || '').replace(/[^\d]/g, '')
+        const cleanB = (ext.cpf_extraido || cpfNoMemo || '').replace(/[^\d]/g, '')
         return cleanA === cleanB && cleanA.length >= 11
       }) : null
 
-      // 2. Prioridade 2: Busca por NOME (Se CPF falhar)
-      const memoLimpo = ext.memo.toUpperCase()
-        .replace('PIX RECEBIDO', '')
-        .replace('TRANSFERENCIA', '')
-        .replace('RECEBIDA', '')
-        .trim()
+      // 2. Prioridade 2: Busca por NOME NORMALIZADO (Se CPF falhar)
+      const memoLimpo = normalizeStr(
+        ext.memo
+          .replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, '')
+          .replace(/-|\/|<|>|\|/g, ' ') // Remove separadores
+      )
       
       const nameMatch = !cpfMatch ? associados.find(a => {
-        const nomeA = a.nome.toUpperCase().trim()
+        const nomeA = normalizeStr(a.nome)
         return memoLimpo.includes(nomeA) || nomeA.includes(memoLimpo)
       }) : null
 
