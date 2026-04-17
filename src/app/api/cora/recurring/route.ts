@@ -27,11 +27,8 @@ export async function GET(request: Request) {
     
     // 2. Identificar o Tenant (conta principal)
     const { data: tenants } = await sb.from('tenant_id_mapping').select('id').limit(1);
-    const tenantId = tenants?.[0]?.id;
+    const tenantId = tenants?.[0]?.id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7';
 
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant não identificado.' }, { status: 400 });
-    }
 
     console.log(`[CoraBilling] Iniciando faturamento para o dia ${billingDay}`);
 

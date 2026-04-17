@@ -14,8 +14,7 @@ export async function GET() {
     
     // 1. Identificar o Tenant
     const { data: tenants } = await sb.from('tenant_id_mapping').select('id').limit(1);
-    const tenantId = tenants?.[0]?.id;
-    if (!tenantId) return NextResponse.json({ error: 'Tenant não encontrado' }, { status: 400 });
+    const tenantId = tenants?.[0]?.id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7';
 
     // 2. Buscar recorrências na Cora
     const response = await CoraService.listRecurrences();

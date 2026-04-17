@@ -11,11 +11,7 @@ export async function GET(request: Request) {
     // 1. Identificar o Tenant (pode vir via header ou ser o padrão da conta)
     // Para simplificar no MVP, buscaremos o primeiro tenant ativo se for uma cron job
     const { data: tenants } = await sb.from('tenant_id_mapping').select('id').limit(1);
-    const tenantId = tenants?.[0]?.id;
-
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Tenant não identificado.' }, { status: 400 });
-    }
+    const tenantId = tenants?.[0]?.id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7';
 
     // 2. Definir janela de tempo: Hoje e Ontem para evitar lacunas
     const start = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
