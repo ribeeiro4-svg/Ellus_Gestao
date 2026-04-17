@@ -111,26 +111,30 @@ export class CoraService {
     const finalOptions = { ...options, ...certConfig };
 
     return new Promise((resolve, reject) => {
-      const req = https.request(finalOptions, (res) => {
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          try {
-            const parsed = JSON.parse(data);
-            if (res.statusCode && res.statusCode >= 400) {
-              reject(new Error(parsed.message || `Erro API Cora: ${res.statusCode}`));
-            } else {
-              resolve(parsed);
+      try {
+        const req = https.request(finalOptions, (res) => {
+          let data = '';
+          res.on('data', (chunk) => data += chunk);
+          res.on('end', () => {
+            try {
+              const parsed = JSON.parse(data);
+              if (res.statusCode && res.statusCode >= 400) {
+                reject(new Error(parsed.message || `Erro API Cora: ${res.statusCode}`));
+              } else {
+                resolve(parsed);
+              }
+            } catch (e) {
+              reject(new Error('Falha ao processar resposta da Cora.'));
             }
-          } catch (e) {
-            reject(new Error('Falha ao processar resposta da Cora.'));
-          }
+          });
         });
-      });
 
-      req.on('error', (e) => reject(new Error(`Conexão mTLS Falhou: ${e.message}`)));
-      if (body) req.write(body);
-      req.end();
+        req.on('error', (e) => reject(new Error(`Conexão mTLS Falhou (Async): ${e.message}`)));
+        if (body) req.write(body);
+        req.end();
+      } catch (syncErr: any) {
+        reject(new Error(`Conexão mTLS Falhou (Sync): ${syncErr.message}`));
+      }
     });
   }
 
