@@ -252,9 +252,17 @@ export default function ConciliacaoPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                {['todos', 'com_match', 'sem_match'].map(f => (
-                  <button key={f} onClick={() => setFilterMatch(f as any)} className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-all ${filterMatch === f ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-400 border-gray-100'}`}>
-                    {f === 'todos' ? 'Todas' : f === 'com_match' ? 'Com Match' : 'Sem Match'}
+                {[
+                  { key: 'todos', label: `Todas (${matchedTransactions.length})` },
+                  { key: 'com_match', label: `✓ Com Match (${countComMatch})` },
+                  { key: 'sem_match', label: `⚠ Sem Match (${countSemMatch})` },
+                ].map(f => (
+                  <button 
+                    key={f.key} 
+                    onClick={() => setFilterMatch(f.key as any)} 
+                    className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-all ${filterMatch === f.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}
+                  >
+                    {f.label}
                   </button>
                 ))}
               </div>
