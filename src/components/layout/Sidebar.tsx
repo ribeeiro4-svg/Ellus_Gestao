@@ -38,6 +38,7 @@ const MENU = [
       { href: '/receitas', icon: TrendingUp, label: 'Receitas' },
       { href: '/despesas', icon: TrendingDown, label: 'Despesas' },
       { href: '/conciliacao', icon: FileCheck, label: 'Conciliação OFX' },
+      { href: '/fechamento', icon: Lock, label: 'Fechamento Mensal' },
     ]
   },
   { 
@@ -123,6 +124,7 @@ export default function Sidebar() {
             <div className="space-y-0.5">
               {items.map(({ href, icon: Icon, label }) => {
                 const active = isActive(href)
+                const IconComponent = Icon as any
                 return (
                   <div
                     key={href}
@@ -131,7 +133,7 @@ export default function Sidebar() {
                       ${active ? 'active' : 'text-white/45 hover:text-white/90 hover:bg-white/5'}`}
                   >
                     <div className="nav-icon w-7 h-7 rounded-lg flex items-center justify-center text-[13px] bg-white/5 transition-all">
-                      <Icon size={14} />
+                      <IconComponent size={14} />
                     </div>
                     <span className="font-medium">{label}</span>
                     {active && <div className="absolute inset-[0_8px] rounded-lg -z-10 bg-white/10" />}
