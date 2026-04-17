@@ -45,7 +45,13 @@ export function useAssociados() {
       console.error('Tentativa de inserirBulk associados sem tenant_id')
       return { error: 'Identificação da conta não encontrada. Tente atualizar a página.' }
     }
-    const rows = items.map(i => ({
+    // Deduplica pelo campo 'codigo' para evitar o erro
+    // "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const deduped = [...new Map(
+      items.map(i => [String(i.codigo ?? i.nome), i])
+    ).values()]
+
+    const rows = deduped.map(i => ({
       ...i,
       tenant_id: tenantId
     }))
