@@ -58,29 +58,36 @@ export class CoraService {
 
       if (!base64) return { pem: Buffer.from(''), debug: 'BASE64_VAZIO' };
 
-      // 3. Garantia de Padding (ESSENCIAL)
-      // Primeiro remove padding existente para recalcular corretamente
-      base64 = base64.replace(/=/g, '');
-      while (base64.length % 4 !== 0) {
-        base64 += '=';
+      // 3. Garantia de Padding e Decodificação Binária (O Pulo do Gato)
+      // Primeiro, removemos qualquer padding existente para garantir reconstrução limpa
+      let base64Pure = base64.replace(/=/g, '');
+      while (base64Pure.length % 4 !== 0) {
+        base64Pure += '=';
       }
 
       // 4. Determinação do Header correto
       let header = type === 'cert' ? 'CERTIFICATE' : 'PRIVATE KEY';
-      
-      // Se for chave e tiver indícios EXPLICITOS de ser RSA, usamos o header específico
       if (type === 'key' && cleaned.toUpperCase().includes('RSA')) {
         header = 'RSA PRIVATE KEY';
       }
 
-      // 5. remontagem no formato PEM padrão (64 colunas)
-      const lines = base64.match(/.{1,64}/g) || [];
-      const finalPem = `-----BEGIN ${header}-----\n${lines.join('\n')}\n-----END ${header}-----`;
+      try {
+        // Tentamos decodificar para binário e recriar o base64
+        // Isso remove qualquer erro de caractere invisível ou codificação maluca
+        const raw = Buffer.from(base64Pure, 'base64');
+        const cleanBase64 = raw.toString('base64');
+        
+        // Formata em linhas de 64 caracteres (padrão PEM)
+        const lines = cleanBase64.match(/.{1,64}/g) || [];
+        const finalPem = `-----BEGIN ${header}-----\n${lines.join('\n')}\n-----END ${header}-----`;
 
-      return { 
-        pem: Buffer.from(finalPem, 'utf-8'), 
-        debug: `[${type.toUpperCase()}: ${base64.length}b]`
-      };
+        return {
+          pem: Buffer.from(finalPem, 'utf-8'),
+          debug: `[${type.toUpperCase()}: ${cleanBase64.length}b]`
+        };
+      } catch (err) {
+        return { pem: Buffer.from(''), debug: `ERR_BIN_${type.toUpperCase()}` };
+      }
     };
 
     try {
