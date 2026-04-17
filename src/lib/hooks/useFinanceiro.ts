@@ -31,7 +31,15 @@ export function useFinanceiro() {
   useEffect(() => { fetch() }, [fetch])
 
   const inserir = async (input: LancamentoInput) => {
-    const { error } = await sb.from('lancamentos').insert({ ...input, tenant_id: tenantId })
+    let finalInput = { ...input }
+    if (finalInput.taxa && finalInput.taxa > 0) {
+      const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(finalInput.taxa)
+      finalInput.descricao = `${finalInput.descricao} (Taxa: ${taxaFmt})`
+    }
+    // Removemos campos que podem não estar na tabela física
+    delete finalInput.taxa 
+
+    const { error } = await sb.from('lancamentos').insert({ ...finalInput, tenant_id: tenantId })
     if (!error) fetch()
     return { error }
   }
@@ -60,7 +68,15 @@ export function useFinanceiro() {
       console.error('Tentativa de inserirBulk financeiro sem tenant_id')
       return { error: 'Identificação da conta não encontrada.' }
     }
-    const rows = items.map(i => ({ ...i, tenant_id: tenantId }))
+    const rows = items.map(i => {
+      let coreData = { ...i }
+      if (coreData.taxa && coreData.taxa > 0) {
+        const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(coreData.taxa)
+        coreData.descricao = `${coreData.descricao} (Taxa: ${taxaFmt})`
+      }
+      delete coreData.taxa
+      return { ...coreData, tenant_id: tenantId }
+    })
     const { error, count } = await sb.from('lancamentos').insert(rows)
     if (!error) fetch()
     return { error, count }
