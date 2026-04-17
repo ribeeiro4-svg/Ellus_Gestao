@@ -78,53 +78,56 @@ export default function ConciliacaoPage() {
       const isCredit = ext.type === 'CREDIT'
       const cnpjNoMemo = (ext.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
       const cpfNoMemo = (ext.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
-      const docNoMemo = cnpjNoMemo || cpfNoMemo
+      
+      // Tenta extrair qualquer sequência de 11 ou 14 dígitos que sobrou se os regex falharem
+      const rawDigits = ext.memo.replace(/[^\d]/g, '')
+      const extractedDoc = cpfNoMemo || cnpjNoMemo || (rawDigits.length >= 11 ? rawDigits.slice(-11) : null)
 
       let finalAssoc = null
       let finalFor = null
       let isCpfMatch = false
 
       if (isCredit) {
-        const match = docNoMemo ? associados.find(a => (a.cpf || '').replace(/[^\d]/g, '') === docNoMemo) : null
+        const match = extractedDoc ? associados.find(a => (a.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
         if (match) { finalAssoc = match; isCpfMatch = true }
         else {
           const memoLimpo = normalizeStr(ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
-          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1)
+          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
           finalAssoc = associados.find(a => {
             const nomeA = normalizeStr(a.nome); const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
             const count = palavrasA.filter(p => palavrasBanco.includes(p)).length
-            return count >= Math.min(palavrasA.length, 3)
+            return count >= Math.min(palavrasA.length, 2)
           })
         }
       } else {
-        const match = docNoMemo ? fornecedores.find(f => (f.cpf_cnpj || '').replace(/[^\d]/g, '') === docNoMemo) : null
+        const match = extractedDoc ? fornecedores.find(f => (f.cpf_cnpj || '').replace(/[^\d]/g, '') === extractedDoc) : null
         if (match) { finalFor = match; isCpfMatch = true }
         else {
-          const memoLimpo = normalizeStr(ext.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
-          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1)
-          finalFor = fornecedores.find(f => {
-            const nomeF = normalizeStr(f.nome); const palavrasF = nomeF.split(' ').filter(p => p.length > 2)
-            const count = palavrasF.filter(p => palavrasBanco.includes(p)).length
-            return count >= Math.min(palavrasF.length, 2)
-          })
-        }
-
-        // NOVO: Match com Diretoria (Saídas)
-        if (!finalFor) {
-          const matchDir = docNoMemo ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === docNoMemo) : null
+          // Tenta diretoria primeiro para saídas
+          const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
           if (matchDir) {
             finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
             isCpfMatch = true
           } else {
             const memoLimpo = normalizeStr(ext.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
-            const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1)
+            const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
+            
+            // Tenta diretoria por nome
             const dMatch = diretoria.find(d => {
               const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
               const count = palavrasD.filter(p => palavrasBanco.includes(p)).length
               return count >= Math.min(palavrasD.length, 2)
             })
+            
             if (dMatch) {
               finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
+            } else {
+              // Tenta fornecedor por nome
+              finalFor = fornecedores.find(f => {
+                const nomeF = normalizeStr(f.nome); const palavrasF = nomeF.split(' ').filter(p => p.length > 2)
+                const count = palavrasF.filter(p => palavrasBanco.includes(p)).length
+                return count >= Math.min(palavrasF.length, 2)
+              })
             }
           }
         }
