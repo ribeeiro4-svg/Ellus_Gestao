@@ -197,10 +197,19 @@ export default function ConciliacaoPage() {
 
   const handleSalvarNovo = async (data: any) => {
     if (!selectedExtrato) return
+
+    // Inteligência: Se o usuário confirmou um CPF no modal, atualizamos o associado
+    if (data.associado_id && data.cpf) {
+      console.log(`Salvando CPF ${data.cpf} para associado ${data.associado_id}...`)
+      await atualizarAssociado(data.associado_id, { cpf: data.cpf })
+    }
+
+    const { cpf, ...lancamentoData } = data // Removemos CPF dos dados do lançamento (vai no associado)
+
     const res = await inserir({
-      ...data,
+      ...lancamentoData,
       valor: selectedExtrato.amount,
-      taxa: selectedExtrato.taxa, // Inclui a taxa calculada no salvamento individual
+      taxa: selectedExtrato.taxa,
       data: selectedExtrato.date,
       conciliado: true,
       banco_transacao_id: selectedExtrato.fitid
@@ -218,9 +227,10 @@ export default function ConciliacaoPage() {
     return {
       descricao: selectedExtrato.memo,
       associado_id: m?.assocMatch?.id || '',
+      cpf: selectedExtrato.cpf_extraido || m?.assocMatch?.cpf || '',
       categoria: m?.suggestedCategory || 'Mensalidades',
       conta_id: selectedContaId,
-      forma_pagamento: selectedExtrato.metodo_inferido, // Pré-preenche modal
+      forma_pagamento: selectedExtrato.metodo_inferido,
       tipo: 'receita',
       status: 'pago'
     }
@@ -504,6 +514,7 @@ export default function ConciliacaoPage() {
             { value: '', label: '⚠️ SELECIONE UM ASSOCIADO (OBRIGATÓRIO)' },
             ...associados.map(a => ({ value: a.id, label: a.nome }))
           ]},
+          { name: 'cpf', label: 'CPF/CNPJ Identificado (Será salvo no cadastro)', type: 'text' },
           { name: 'status', label: 'Status do Fluxo', type: 'select', required: true, options: [
             { value: 'pago', label: 'Confirmado (Pago)' },
             { value: 'pendente', label: 'Aguardando Aprovação' }
