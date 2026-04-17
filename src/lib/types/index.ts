@@ -32,6 +32,7 @@ export interface Lancamento {
   categoria: string
   tipo: TipoLancamento
   valor: number
+  taxa?: number // Taxa bancária vinculada ao lançamento
   status: StatusLancamento
   forma_pagamento?: FormaPagamento
   valor_recebido?: number

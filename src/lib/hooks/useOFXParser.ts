@@ -10,6 +10,7 @@ export interface OFXTransaction {
   fitid: string
   metodo_inferido?: 'PIX' | 'Boleto' | 'Transferência'
   cpf_extraido?: string
+  taxa?: number
 }
 
 export function useOFXParser() {
@@ -85,6 +86,12 @@ export function useOFXParser() {
         inferedMethod = 'Transferência'
       }
 
+      // Cálculo automático de taxa (O que passar de 50.00 em créditos)
+      let taxa = 0
+      if (isCredit && amount > 50) {
+        taxa = amount - 50
+      }
+
       transactions.push({
         id: fitid || Math.random().toString(36).substring(7),
         type: isCredit ? 'CREDIT' : 'DEBIT',
@@ -93,7 +100,8 @@ export function useOFXParser() {
         memo: cleanMemo,
         fitid,
         metodo_inferido: inferedMethod,
-        cpf_extraido: extractCPF(cleanMemo)
+        cpf_extraido: extractCPF(cleanMemo),
+        taxa // Adicionando a taxa calculada
       })
     }
     

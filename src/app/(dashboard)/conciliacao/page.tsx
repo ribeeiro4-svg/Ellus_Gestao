@@ -118,10 +118,11 @@ export default function ConciliacaoPage() {
         tipo: 'receita',
         descricao: t.bank.memo,
         valor: t.bank.amount,
+        taxa: t.bank.taxa, // Salvando a taxa calculada
         data: t.bank.date,
         categoria: t.suggestedCategory,
         conta_id: selectedContaId,
-        forma_pagamento: t.bank.metodo_inferido, // Adicionando forma de pagamento
+        forma_pagamento: t.bank.metodo_inferido,
         status: 'pago',
         conciliado: true,
         banco_transacao_id: t.bank.fitid,
@@ -165,6 +166,7 @@ export default function ConciliacaoPage() {
     const res = await inserir({
       ...data,
       valor: selectedExtrato.amount,
+      taxa: selectedExtrato.taxa, // Inclui a taxa calculada no salvamento individual
       data: selectedExtrato.date,
       conciliado: true,
       banco_transacao_id: selectedExtrato.fitid
@@ -312,7 +314,14 @@ export default function ConciliacaoPage() {
                       <div>
                         <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{fmtData(item.bank.date)}</div>
                         <div className="text-sm font-bold text-gray-900 break-words leading-tight">{item.bank.memo}</div>
-                        <div className="text-xs font-extrabold text-gray-500 mt-1">{fmtR(item.bank.amount)}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-black text-gray-700">{fmtR(item.bank.amount)}</span>
+                          {item.bank.taxa && item.bank.taxa > 0 ? (
+                            <span className="text-[9px] font-bold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100 flex items-center gap-1">
+                              % Taxa: {fmtR(item.bank.taxa)}
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
