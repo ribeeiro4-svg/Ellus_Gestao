@@ -62,18 +62,13 @@ export default function ConciliacaoPage() {
 
   // Lógica de matching inteligente e FILTRAGEM
   const matchedTransactions = useMemo(() => {
+    // Memória local do loop: garante apenas UMA adesão por pessoa neste lote
+    const adesaoJaSugerida = new Set<string>()
+
     const allMatches = extrato.map((ext: OFXTransaction) => {
       // Se o usuário desvinculou manualmente, ignoramos
       if (ignoredMatches.has(ext.fitid)) {
-        return {
-          bank: ext,
-          match: null,
-          assocMatch: null,
-          isCpfMatch: false,
-          suggestedCategory: 'Mensalidades',
-          isFirstPayment: false,
-          similarCount: 0
-        }
+        return { bank: ext, match: null, assocMatch: null, isCpfMatch: false, suggestedCategory: 'Mensalidades', isFirstPayment: false, similarCount: 0 }
       }
 
       // 1. Prioridade 1: Match por CPF (Se existir na descrição)
@@ -96,15 +91,21 @@ export default function ConciliacaoPage() {
         return memoLimpo.includes(nomeA) || nomeA.includes(memoLimpo)
       }) : null
 
-      const finalAssoc = cpfMatch || nameMatch
+      const finalAssoc = (cpfMatch || nameMatch) as any
 
-      // 3. Regra de Categoria (Adesão vs Mensalidade)
+      // 3. Regra de Categoria (Adesão vs Mensalidade) - RÍGIDA
       let suggestedCategory = 'Mensalidades'
       if (finalAssoc) {
-        const jaTemLancamento = lancamentos.some(l => 
+        const temNoBanco = lancamentos.some(l => 
           l.associado_id === finalAssoc.id && l.status === 'pago' && l.tipo === 'receita'
         )
-        suggestedCategory = jaTemLancamento ? 'Mensalidades' : 'ADESÃO'
+        // Só é adesão se: Não tem no Banco E não foi sugerido adesão pra ele ANTES neste mesmo lote
+        if (!temNoBanco && !adesaoJaSugerida.has(finalAssoc.id)) {
+          suggestedCategory = 'ADESÃO'
+          adesaoJaSugerida.add(finalAssoc.id)
+        } else {
+          suggestedCategory = 'Mensalidades'
+        }
       }
 
       // 4. Busca lançamentos no sistema
