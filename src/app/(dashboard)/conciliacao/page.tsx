@@ -551,6 +551,7 @@ export default function ConciliacaoPage() {
           { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
           { name: 'associado_id', label: 'Associado', type: 'select', showIf: (d) => d.tipo === 'receita', options: [{ value: '', label: 'Selecione...' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
           { name: 'fornecedor_id', label: 'Fornecedor', type: 'select', showIf: (d) => d.tipo === 'despesa', options: [{ value: '', label: 'Selecione...' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))] },
+          { name: 'diretor_id', label: 'Membro Diretoria', type: 'select', showIf: (d) => d.tipo === 'despesa', options: [{ value: '', label: 'Sem vínculo...' }, ...diretoria.map(d => ({ value: d.id, label: `${d.nome} (${d.cargo})` }))] },
           { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'pago', label: 'Liquidado' }, { value: 'pendente', label: 'Pendente' }] },
         ]}
       />

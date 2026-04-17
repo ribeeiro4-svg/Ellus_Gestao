@@ -9,6 +9,7 @@ import { Bar, Doughnut } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
+import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
@@ -33,6 +34,7 @@ export default function DespesasPage() {
   const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
   const { contas } = useContas()
   const { fornecedores } = useFornecedores()
+  const { diretoria } = useDiretoria()
   
   const despesas = useMemo(() => lancamentos.filter(l => l.tipo === 'despesa'), [lancamentos])
 
@@ -308,6 +310,8 @@ export default function DespesasPage() {
             { value: 'Transferência', label: 'Transferência' },
             { value: 'Cartão', label: 'Cartão' },
           ]},
+          { name: 'fornecedor_id', label: 'Fornecedor', type: 'select', options: [{ value: '', label: 'Nenhum' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))] },
+          { name: 'diretor_id', label: 'Membro Diretoria', type: 'select', options: [{ value: '', label: 'Nenhum' }, ...diretoria.map(d => ({ value: d.id, label: `${d.nome} (${d.cargo})` }))] },
         ]}
       />
     </div>

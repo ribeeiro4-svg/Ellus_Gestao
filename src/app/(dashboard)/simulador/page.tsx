@@ -22,6 +22,7 @@ import {
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
 import { useProjecao } from '@/lib/hooks/useProjecao'
+import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { fmtR, fmtPct, MESES } from '@/lib/utils/formatters'
 import { Bar, Line } from 'react-chartjs-2'
 import {
@@ -35,6 +36,7 @@ const ANOS = [2024, 2025, 2026, 2027, 2028]
 
 export default function SimuladorPage() {
   const { cenario, setCenario, visao, setVisao, salvarCenario, limparTudo, carregarDadosReais, loading, syncing, calculos, projecaoAnual } = useProjecao()
+  const { diretoria } = useDiretoria()
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
@@ -78,6 +80,20 @@ export default function SimuladorPage() {
     setCenario({
       ...cenario,
       pro_labores: cenario.pro_labores.map(d => d.id === id ? { ...d, nome } : d)
+    })
+  }
+
+  const applyDirectorTemplate = (id: string, boardMemberId: string) => {
+    const member = diretoria.find(m => m.id === boardMemberId)
+    if (!member) return
+    
+    setCenario({
+      ...cenario,
+      pro_labores: cenario.pro_labores.map(d => d.id === id ? { 
+        ...d, 
+        nome: `${member.nome} (${member.cargo})`,
+        periodos: d.periodos.map((p, idx) => idx === 0 ? { ...p, valor: member.pro_labore_base || 0 } : p)
+      } : d)
     })
   }
 
@@ -335,13 +351,34 @@ export default function SimuladorPage() {
                       <div className="w-10 h-10 rounded-2xl bg-[#2d8c6f]/10 flex items-center justify-center text-[#2d8c6f]">
                         <Users size={18} />
                       </div>
-                      <input 
-                        type="text" 
-                        value={dir.nome} 
-                        onChange={(e) => updateDirectorName(dir.id, e.target.value)}
-                        className="bg-transparent border-none outline-none font-bold text-gray-800 text-base w-full"
-                        placeholder="Cargo/Diretor"
-                      />
+                      <div className="flex-1 flex flex-col">
+                        <select 
+                          value={diretoria.find(m => `${m.nome} (${m.cargo})` === dir.nome)?.id || ""}
+                          onChange={(e) => {
+                            if (e.target.value === "custom") {
+                              updateDirectorName(dir.id, "Cargo Customizado")
+                            } else {
+                              applyDirectorTemplate(dir.id, e.target.value)
+                            }
+                          }}
+                          className="bg-transparent border-none outline-none font-bold text-gray-800 text-base w-full cursor-pointer appearance-none hover:text-[#2d8c6f] transition-colors"
+                        >
+                          <option value="" disabled>{dir.nome || "Selecione um Membro..."}</option>
+                          {diretoria.map(m => (
+                            <option key={m.id} value={m.id}>{m.nome} ({m.cargo})</option>
+                          ))}
+                          <option value="custom">+ DEFINIR NOME MANUALMENTE</option>
+                        </select>
+                        {(!diretoria.some(m => `${m.nome} (${m.cargo})` === dir.nome) || dir.nome === "Cargo Customizado") && (
+                           <input 
+                             type="text" 
+                             value={dir.nome} 
+                             onChange={(e) => updateDirectorName(dir.id, e.target.value)}
+                             className="bg-transparent border-b border-dashed border-slate-200 outline-none font-medium text-gray-500 text-[11px] w-full mt-1 animate-in slide-in-from-top-1 duration-300"
+                             placeholder="Digite o nome/cargo personalizado..."
+                           />
+                        )}
+                      </div>
                    </div>
 
                    <div className="space-y-3 mb-6">

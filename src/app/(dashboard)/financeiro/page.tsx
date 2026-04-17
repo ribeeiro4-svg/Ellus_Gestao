@@ -9,6 +9,8 @@ import { Chart, Line } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
+import { useFornecedores } from '@/lib/hooks/useFornecedores'
+import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
@@ -23,6 +25,8 @@ export default function FinanceiroPage() {
   const { lancamentos, loading, inserir, atualizar, remover, removerBulk } = useFinanceiro()
   const { contas } = useContas()
   const { associados } = useAssociados()
+  const { fornecedores } = useFornecedores()
+  const { diretoria } = useDiretoria()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -479,9 +483,30 @@ export default function FinanceiroPage() {
             name: 'associado_id', 
             label: 'Associado Vinculado', 
             type: 'select',
+            showIf: (f) => f.tipo === 'receita',
             options: [
               { value: '', label: 'Nenhum' },
               ...associados.map(a => ({ value: a.id, label: a.nome }))
+            ]
+          },
+          { 
+            name: 'fornecedor_id', 
+            label: 'Fornecedor Vinculado', 
+            type: 'select',
+            showIf: (f) => f.tipo === 'despesa',
+            options: [
+              { value: '', label: 'Nenhum' },
+              ...fornecedores.map(f => ({ value: f.id, label: f.nome }))
+            ]
+          },
+          { 
+            name: 'diretor_id', 
+            label: 'Membro Diretoria (Seletor)', 
+            type: 'select',
+            showIf: (f) => f.tipo === 'despesa',
+            options: [
+              { value: '', label: 'Nenhum / Sem vínculo' },
+              ...diretoria.map(d => ({ value: d.id, label: `${d.nome} (${d.cargo})` }))
             ]
           },
         ]}
