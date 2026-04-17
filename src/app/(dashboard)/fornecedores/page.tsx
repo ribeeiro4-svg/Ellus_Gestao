@@ -23,13 +23,29 @@ export default function FornecedoresPage() {
   }, [fornecedores, searchQ])
 
   const handleSalvar = async (data: any) => {
-    if (editingItem) {
-      await atualizar(editingItem.id, data)
-    } else {
-      await inserir({ ...data, status: 'ativo' })
+    try {
+      const res = editingItem 
+        ? await atualizar(editingItem.id, data)
+        : await inserir({ ...data, status: 'ativo' })
+
+      if (res?.error) {
+        const errorMsg = typeof res.error === 'object' ? (res.error as any).message : String(res.error)
+        alert(`Erro ao salvar: ${errorMsg}\n\nCERTIFIQUE-SE DE QUE CRIOU A TABELA NO SUPABASE!`)
+      } else {
+        setIsModalOpen(false)
+        setEditingItem(null)
+      }
+    } catch (err: any) {
+      alert(`Erro inesperado: ${err.message}`)
     }
-    setIsModalOpen(false)
-    setEditingItem(null)
+  }
+
+  const handleExcluir = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este fornecedor?')) return
+    const res = await excluir(id)
+    if (res?.error) {
+      alert(`Erro ao excluir: ${(res.error as any).message}`)
+    }
   }
 
   const columns = [
@@ -73,7 +89,7 @@ export default function FornecedoresPage() {
           <button onClick={() => { setEditingItem(i); setIsModalOpen(true) }} className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
           </button>
-          <button onClick={() => confirm('Excluir fornecedor?') && excluir(i.id)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-colors">
+          <button onClick={() => handleExcluir(i.id)} className="p-2 text-rose-400 hover:bg-rose-50 rounded-lg transition-colors">
             <Trash2 size={14} />
           </button>
         </div>
