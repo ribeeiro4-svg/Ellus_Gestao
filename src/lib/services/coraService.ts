@@ -49,14 +49,16 @@ export class CoraService {
         cleaned = cleaned.substring(1, cleaned.length - 1);
       }
 
-      // Removemos quebras de linha escapadas e reais para facilitar a extração do bloco pura
+      // Removemos quebras de linha e espaços para expor o bloco Base64 puro
       cleaned = cleaned.replace(/\\n/g, '').replace(/\r/g, '').replace(/\n/g, '').replace(/\s/g, '');
       
       // 4. EXTRATOR CIRÚRGICO: Localiza o maior bloco contínuo de caracteres Base64
       const matches = cleaned.match(/[A-Za-z0-9+/=]{100,}/g);
       let base64Content = (matches || []).sort((a, b) => b.length - a.length)[0] || '';
 
-      // Se houver padding (== ou =), removemos qualquer caractere que tenha "grudado" depois dele
+      const rawLen = base64Content.length;
+
+      // Se houver padding (== ou =), removemos rigorosamente qualquer caractere que tenha "grudado" depois dele
       if (base64Content.includes('=')) {
         base64Content = base64Content.substring(0, base64Content.lastIndexOf('=') + 1);
       }
@@ -66,13 +68,11 @@ export class CoraService {
         label = 'PRIVATE KEY';
       }
 
-      // Reconstrução direta (64 chars por linha para segurança máxima com OpenSSL)
-      const lines = base64Content.match(/.{1,64}/g) || [];
-      const finalPem = `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
+      const finalPem = `-----BEGIN ${label}-----\n${base64Content}\n-----END ${label}-----`;
 
       return { 
         pem: Buffer.from(finalPem, 'utf-8'), 
-        debug: `[${type.toUpperCase()}: ${base64Content.length}b, inicia com ${base64Content.substring(0, 6)}...]`
+        debug: `[${type.toUpperCase()}: ${base64Content.length}b (era ${rawLen}), final: ...${base64Content.substring(base64Content.length - 15)}]`
       };
     };
 
