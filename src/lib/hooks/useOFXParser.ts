@@ -56,19 +56,21 @@ export function useOFXParser() {
       const cleanVal = trnAmtRaw.replace(/[^-0-9,.]/g, '')
       
       // Converte para float (identificando se o separador decimal é vírgula ou ponto)
-      let amount = 0
+      let rawAmount = 0
       if (cleanVal.includes(',') && cleanVal.includes('.')) {
-        // Formato com milhar (ex: 1.234,56) -> remove o milhar (.) e troca o decimal (,) por (.)
-        amount = Math.abs(parseFloat(cleanVal.replace(/\./g, '').replace(',', '.')))
+        rawAmount = parseFloat(cleanVal.replace(/\./g, '').replace(',', '.'))
       } else if (cleanVal.includes(',')) {
-        // Formato europeu/brasileiro simples (ex: 1234,56)
-        amount = Math.abs(parseFloat(cleanVal.replace(',', '.')))
+        rawAmount = parseFloat(cleanVal.replace(',', '.'))
       } else {
-        // Formato padrão (ex: 1234.56)
-        amount = Math.abs(parseFloat(cleanVal))
+        rawAmount = parseFloat(cleanVal)
       }
 
-      if (isNaN(amount)) amount = 0
+      if (isNaN(rawAmount)) rawAmount = 0
+
+      // REGRA DE OURO: O sinal do valor determina se é crédito ou débito
+      // Créditos são positivos, Débitos são negativos no OFX padrão
+      const isCredit = rawAmount > 0 || type.includes('DEP') || type.includes('CREDIT')
+      const amount = Math.abs(rawAmount)
 
       // Inferência automática da forma de pagamento
       let inferedMethod: 'PIX' | 'Boleto' | 'Transferência' | undefined = undefined
@@ -84,7 +86,7 @@ export function useOFXParser() {
 
       transactions.push({
         id: fitid || Math.random().toString(36).substring(7),
-        type: type.includes('DEP') || type.includes('CREDIT') ? 'CREDIT' : 'DEBIT',
+        type: isCredit ? 'CREDIT' : 'DEBIT',
         date: formattedDate,
         amount,
         memo: cleanMemo,
