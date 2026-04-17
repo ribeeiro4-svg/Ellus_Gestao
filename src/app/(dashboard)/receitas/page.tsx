@@ -173,16 +173,24 @@ export default function ReceitasPage() {
   ]
 
   const handleFieldChange = (name: string, value: any, setFormData: any) => {
-    // Regra 1: Se for Dinheiro, tenta auto-selecionar a conta "Caixa"
+    // Regra 1: Se for Dinheiro, auto-seleciona a conta de Caixa
     if (name === 'forma_pagamento' && value === 'Dinheiro') {
-      const contaCaixa = contas.find(c => c.nome.toUpperCase().includes('CAIXA'))
+      const contaCaixa = contas.find(c => 
+        c.nome.toUpperCase().includes('CAIXA') || 
+        c.nome.toUpperCase().includes('ESPÉCIE')
+      )
       if (contaCaixa) {
         setFormData((prev: any) => ({ ...prev, conta_id: contaCaixa.id }))
       }
     }
-    // Regra 2: Se a descrição tiver "Adesão", auto-seleciona a categoria "ADESÃO"
-    if (name === 'descricao' && value?.toString().toUpperCase().includes('ADESÃO')) {
+    // Regra 2: Atalho para Adesão pela descrição ou pelo valor padrão (50)
+    const isAdesao = value?.toString().toUpperCase().includes('ADESÃO')
+    if (name === 'descricao' && isAdesao) {
       setFormData((prev: any) => ({ ...prev, categoria: 'ADESÃO' }))
+    }
+    if (name === 'valor' && value === 50 && !isAdesao) {
+      // Se o valor for 50 e ainda não tiver categoria, sugere Mensalidades que é o mais comum
+      setFormData((prev: any) => ({ ...prev, categoria: prev.categoria || 'Mensalidades' }))
     }
   }
 
