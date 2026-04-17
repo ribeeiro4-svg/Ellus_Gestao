@@ -52,6 +52,7 @@ export default function ConciliacaoPage() {
   const [selectedExtrato, setSelectedExtrato] = useState<OFXTransaction | null>(null)
   const [selectedContaId, setSelectedContaId] = useState<string>('')
   const [filterMatch, setFilterMatch] = useState<'todos' | 'com_match' | 'sem_match'>('todos')
+  const [filterType, setFilterType] = useState<'todos' | 'receita' | 'despesa'>('todos')
   const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
   const [editedMemos, setEditedMemos] = useState<Record<string, string>>({})
 
@@ -192,15 +193,21 @@ export default function ConciliacaoPage() {
     return allMatches.filter(m => !m.match)
   }, [extrato, lancamentos, associados, fornecedores, ignoredMatches, diretoria])
 
-  const batchTargets = useMemo(() => matchedTransactions.filter(t => !t.match), [matchedTransactions])
   const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch || t.forMatch).length, [matchedTransactions])
   const countSemMatch = useMemo(() => matchedTransactions.filter(t => !t.assocMatch && !t.forMatch).length, [matchedTransactions])
 
   const transacoesFiltradas = useMemo(() => {
-    if (filterMatch === 'com_match') return matchedTransactions.filter(t => t.assocMatch || t.forMatch)
-    if (filterMatch === 'sem_match') return matchedTransactions.filter(t => !t.assocMatch && !t.forMatch)
-    return matchedTransactions
-  }, [matchedTransactions, filterMatch])
+    let list = matchedTransactions
+    if (filterMatch === 'com_match') list = list.filter(t => t.assocMatch || t.forMatch)
+    if (filterMatch === 'sem_match') list = list.filter(t => !t.assocMatch && !t.forMatch)
+    
+    if (filterType === 'receita') list = list.filter(t => t.bank.type === 'CREDIT')
+    if (filterType === 'despesa') list = list.filter(t => t.bank.type !== 'CREDIT')
+    
+    return list
+  }, [matchedTransactions, filterMatch, filterType])
+
+  const batchTargets = useMemo(() => transacoesFiltradas.filter(t => !t.match), [transacoesFiltradas])
 
   const handleProcessarLote = async () => {
     if (!batchTargets.length || !selectedContaId) return alert('Verifique os alvos do lote.')
@@ -482,7 +489,24 @@ export default function ConciliacaoPage() {
                       <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">OUT {fmtR(totals.saidas)}</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-4">
+                    {/* Filtro de Tipo */}
+                    <div className="flex gap-2 border-r border-gray-100 pr-4">
+                      {[
+                        { key: 'todos', label: 'Tudo' },
+                        { key: 'receita', label: '⬇ Entradas' },
+                        { key: 'despesa', label: '⬆ Saídas' },
+                      ].map(f => (
+                        <button 
+                          key={f.key} 
+                          onClick={() => setFilterType(f.key as any)} 
+                          className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-all ${filterType === f.key ? 'bg-slate-800 text-white border-slate-800 shadow-md shadow-slate-200' : 'bg-white text-gray-400 border-gray-100 hover:border-slate-200'}`}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Filtro de Match */}
                     {[
                       { key: 'todos', label: `Todas (${matchedTransactions.length})` },
                       { key: 'com_match', label: `✓ Com Match (${countComMatch})` },
