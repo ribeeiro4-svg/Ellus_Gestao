@@ -1,8 +1,8 @@
 export const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
 export function fmtR(v: number): string {
-  if (isNaN(v) || v == null) return 'R$ 0'
-  return 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  if (isNaN(v) || v == null) return 'R$ 0,00'
+  return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 export function fmtPct(v: number): string {

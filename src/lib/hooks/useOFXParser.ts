@@ -49,10 +49,11 @@ export function useOFXParser() {
       
       const cleanMemo = memo.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
 
-      // Regex mais robusto para capturar a string numérica bruta
-      const trnAmtRaw = /<TRNAMT>\s*([^<\s]*)/i.exec(content)?.[1] || '0'
+      // Captura a string bruta entre a tag TRNAMT e o próximo sinal de < ou quebra de linha
+      const trnAmtMatch = content.match(/<TRNAMT>([^<\n\r]*)/i)
+      const trnAmtRaw = trnAmtMatch ? trnAmtMatch[1].trim() : '0'
       
-      // Limpeza agressiva: remove qualquer coisa que não seja número, ponto, vírgula ou sinal
+      // Limpeza ainda mais resiliente: remove espaços e caracteres de controle
       const cleanVal = trnAmtRaw.replace(/[^-0-9,.]/g, '')
       
       // Converte para float (identificando se o separador decimal é vírgula ou ponto)
