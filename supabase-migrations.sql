@@ -145,3 +145,20 @@ CREATE TRIGGER trg_metas_updated BEFORE UPDATE ON metas
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER trg_projetos_updated BEFORE UPDATE ON projetos
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
+-- 006_create_tenant_mapping.sql
+-- ============================================================
+CREATE TABLE IF NOT EXISTS tenant_id_mapping (
+  id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Inserir o ID padrão do Bruno para garantir que as Cron Jobs funcionem no MVP
+INSERT INTO tenants (id, nome, slug) 
+VALUES ('971f92af-a72b-4bc4-a8e0-333d712ce6a7', 'ACPROBEC', 'acprobec')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO tenant_id_mapping (id)
+VALUES ('971f92af-a72b-4bc4-a8e0-333d712ce6a7')
+ON CONFLICT (id) DO NOTHING;
