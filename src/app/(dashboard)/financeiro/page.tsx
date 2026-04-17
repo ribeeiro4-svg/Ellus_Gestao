@@ -128,13 +128,21 @@ export default function FinanceiroPage() {
         const batch: any[] = []
         
         for (let i = 0; i <= mesesAFrente; i++) {
-          // Usamos UTC para evitar que o fuso horário mude o dia do mês
           const parts = safeData.data.split('-').map(Number)
-          const d = new Date(Date.UTC(parts[0], parts[1] - 1 + i, parts[2]))
+          let year = parts[0]
+          let month = parts[1] - 1 + i
+          let day = parts[2]
+
+          // Ajusta o estouro de meses para o próximo ano
+          const d = new Date(year, month, day)
+          const finalYear = d.getFullYear()
+          const finalMonth = String(d.getMonth() + 1).padStart(2, '0')
+          const finalDay = String(d.getDate()).padStart(2, '0')
+          const dataString = `${finalYear}-${finalMonth}-${finalDay}`
           
           batch.push({
             ...safeData,
-            data: d.toISOString().split('T')[0],
+            data: dataString,
             status: i === 0 ? (safeData.status || 'aberto') : 'aberto',
             recorrencia_ativa: true
           })
