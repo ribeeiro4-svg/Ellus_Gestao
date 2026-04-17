@@ -81,14 +81,20 @@ export default function ConciliacaoPage() {
         return cleanA === cleanB && cleanA.length >= 11
       }) : null
 
-      // 2. Prioridade 2: Match por NOME (Fuzzy)
-      const memoLimpo = normalizeStr(
-        ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, '')
-      )
+      // 2. Prioridade 2: Match por NOME (Fuzzy por Interseção de Palavras)
+      const memoLimpo = normalizeStr(ext.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
+      const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1) // Ignora letras soltas
       
       const nameMatch = !cpfMatch ? associados.find(a => {
         const nomeA = normalizeStr(a.nome)
-        return memoLimpo.includes(nomeA) || nomeA.includes(memoLimpo)
+        const palavrasAssoc = nomeA.split(' ').filter(p => p.length > 1)
+        
+        // Conta quantas palavras do associado aparecem no Banco
+        const matchesCount = palavrasAssoc.filter(p => palavrasBanco.includes(p)).length
+        
+        // Regra de Match: Se baterem 3 palavras OU se baterem todas as palavras (para nomes curtos)
+        const threshold = Math.min(palavrasAssoc.length, 3)
+        return matchesCount >= threshold
       }) : null
 
       const finalAssoc = (cpfMatch || nameMatch) as any
