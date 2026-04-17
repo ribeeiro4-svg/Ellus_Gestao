@@ -40,7 +40,15 @@ export class CoraService {
 
       if (!pem) return defaultValue;
       
-      let cleaned = pem.trim();
+      // 1. Decodifica entidades HTML comuns que podem ter vindo no copy-paste
+      let cleaned = pem
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .trim();
+
       if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
         cleaned = cleaned.substring(1, cleaned.length - 1);
       }
@@ -51,6 +59,7 @@ export class CoraService {
         .replace(/-----BEGIN[\s\S]+?-----/i, '')
         .replace(/-----END[\s\S]+?-----/i, '');
 
+      // 4. LIMPEZA TOTAL: Remove TUDO que não for caractere base64 válido
       const base64Content = base64Part.replace(/[^a-zA-Z0-9+/=]/g, '');
 
       let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
@@ -119,7 +128,7 @@ export class CoraService {
         });
       });
 
-      req.on('error', (e) => reject(e));
+      req.on('error', (e) => reject(new Error(`Conexão mTLS Falhou: ${e.message}`)));
       if (body) req.write(body);
       req.end();
     });
