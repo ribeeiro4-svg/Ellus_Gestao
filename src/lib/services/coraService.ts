@@ -22,6 +22,7 @@ export class CoraService {
   private static AUTH_HOST = 'matls-auth.cora.com.br';
   private static API_HOST = 'api.cora.com.br';
   private static clientId = process.env.CORA_CLIENTE_ID || 'int-3sBr4azofg364myXzNx6H9';
+  private static _lastDiag: string = '';
   
   private static getCertConfig() {
     const cert = process.env.CORA_CERT;
@@ -75,11 +76,7 @@ export class CoraService {
 
       return { 
         pem: finalPem, 
-        debug: {
-          len: base64Content.length,
-          start: base64Content.substring(0, 10),
-          end: base64Content.substring(base64Content.length - 10)
-        }
+        debug: `[${type.toUpperCase()}: ${base64Content.length}b, inicia com ${base64Content.substring(0, 6)}...]`
       };
     };
 
@@ -93,9 +90,7 @@ export class CoraService {
         rejectUnauthorized: true
       };
       
-      if (normCert.debug.len < 100 || normKey.debug.len < 100) {
-        throw new Error(`Dados insuficientes. Cert: ${normCert.debug.len}b [${normCert.debug.start}...], Key: ${normKey.debug.len}b [${normKey.debug.start}...]`);
-      }
+      this._lastDiag = `${normCert.debug} ${normKey.debug}`;
 
       return config;
     } catch (err: any) {
@@ -133,7 +128,7 @@ export class CoraService {
         if (body) req.write(body);
         req.end();
       } catch (syncErr: any) {
-        reject(new Error(`Conexão mTLS Falhou (Sync): ${syncErr.message}`));
+        reject(new Error(`Conexão mTLS Falhou (Sync): ${syncErr.message}. Diag: ${this._lastDiag}`));
       }
     });
   }
