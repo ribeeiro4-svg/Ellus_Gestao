@@ -37,7 +37,7 @@ export default function FinanceiroPage() {
   const [filterStatus, setFilterStatus] = useState('todos')
   const [filterPagamento, setFilterPagamento] = useState('todos')
   const [filterTipo, setFilterTipo] = useState('todos')
-  const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
+  const [filterMonth, setFilterMonth] = useState<number>(-1)
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [onlyUnlinked, setOnlyUnlinked] = useState(false)
@@ -520,7 +520,7 @@ export default function FinanceiroPage() {
         {/* Limpar */}
         {(searchTerm || filterStatus !== 'todos' || filterPagamento !== 'todos' || filterTipo !== 'todos' || filterMonth !== -1 || onlyUnlinked) && (
           <button 
-            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos'); setFilterTipo('todos'); setFilterMonth(new Date().getMonth()); setOnlyUnlinked(false) }}
+            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos'); setFilterTipo('todos'); setFilterMonth(-1); setOnlyUnlinked(false) }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
           >
             <XCircle size={14} /> Limpar
