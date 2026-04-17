@@ -30,7 +30,7 @@ export default function FinanceiroPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   /* ── Filtros ── */
   const [searchTerm, setSearchTerm] = useState('')
@@ -123,64 +123,87 @@ export default function FinanceiroPage() {
     } 
     else { 
       if (safeData.recorrencia_ativa) {
-        // Gera o atual + N meses à frente
         const mesesAFrente = Number(safeData.recorrencia_meses || 12)
         const batch: any[] = []
+        const datesGenerated: string[] = []
         
+        // Removemos campos virtuais ANTES do loop para performance
+        const { recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
+
         for (let i = 0; i <= mesesAFrente; i++) {
-          const parts = safeData.data.split('-').map(Number)
-          let year = parts[0]
-          let month = parts[1] - 1 + i
-          let day = parts[2]
+          const parts = safeData.data.includes('-') 
+            ? safeData.data.split('-').map(Number)
+            : safeData.data.split('/').reverse().map(Number); // [YYYY, MM, DD]
 
-          const d = new Date(year, month, day)
-          const finalYear = d.getFullYear()
-          const finalMonth = String(d.getMonth() + 1).padStart(2, '0')
-          const finalDay = String(d.getDate()).padStart(2, '0')
-          const dataString = `${finalYear}-${finalMonth}-${finalDay}`
+          const targetMonth = parts[1] - 1 + i;
+          const targetYear = parts[0];
           
-          // Removemos campos virtuais antes de enviar pro banco
-          const { recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
-
+          // Lógica Robusta: Vai para o dia 1 do mês alvo e depois tenta setar o dia original
+          // Se o dia 31 não existir, o Date() automaticamente ajusta para o último dia do mês correto
+          const tempDate = new Date(targetYear, targetMonth, 1);
+          const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+          const finalDay = Math.min(parts[2], lastDayOfTargetMonth);
+          
+          const d = new Date(targetYear, targetMonth, finalDay);
+          const dataString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          
           batch.push({
             ...dbData,
             data: dataString,
             status: i === 0 ? (safeData.status || 'aberto') : 'aberto'
-          })
+          });
+          datesGenerated.push(fmtData(dataString));
         }
-        const res = await inserirBulk(batch)
+
+        const res = await inserirBulk(batch);
         if (res.error) {
-          alert(`Erro ao salvar recorrência: ${JSON.stringify(res.error)}`)
+          alert(`Erro ao salvar recorrência: ${JSON.stringify(res.error)}`);
+        } else {
+          alert(`Sucesso! ${batch.length} lançamentos gerados para as datas:\n${datesGenerated.join(', ')}`);
         }
       } else {
         const { recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
-        const res = await inserir({ ...dbData, status: safeData.status || 'aberto' }) 
+        const res = await inserir({ ...dbData, status: safeData.status || 'aberto' });
         if (res.error) {
-          alert(`Erro ao salvar: ${JSON.stringify(res.error)}`)
+          alert(`Erro ao salvar: ${JSON.stringify(res.error)}`);
         }
       }
     }
+    setEditingItem(null);
+    setIsModalOpen(false);
   }
-  const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
+
   const handleDelete = async (id: string) => {
-    if (confirm('Excluir este lançamento?')) await remover(id)
+    if (confirm('Deseja excluir este lançamento?')) {
+      await remover(id)
+    }
   }
 
   const handleBulkDelete = async () => {
-    if (confirm(`Excluir ${selectedIds.length} lançamentos selecionados?`)) {
-      await removerBulk(selectedIds)
-      setSelectedIds([])
+    if (selectedIds.size === 0) return
+    if (confirm(`Deseja excluir ${selectedIds.size} lançamentos selecionados?`)) {
+      await removerBulk(Array.from(selectedIds))
+      setSelectedIds(new Set())
     }
   }
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === filteredLancamentos.length) setSelectedIds([])
-    else setSelectedIds(filteredLancamentos.map(l => l.id))
+    if (selectedIds.size === filteredLancamentos.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filteredLancamentos.map(l => l.id)))
+    }
   }
 
-  const toggleSelectOne = (id: string) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
+  const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
 
   const fontSm = { size: 10 }
   const gridFaint = { color: 'rgba(0,0,0,.04)' }
@@ -188,10 +211,20 @@ export default function FinanceiroPage() {
   /* ── Colunas ── */
   const columns = [
     { 
-      header: <input type="checkbox" checked={selectedIds.length === filteredLancamentos.length && filteredLancamentos.length > 0} onChange={toggleSelectAll} className="rounded border-gray-300" />,
+      header: <input 
+        type="checkbox" 
+        checked={selectedIds.size === filteredLancamentos.length && filteredLancamentos.length > 0} 
+        onChange={toggleSelectAll} 
+        className="rounded border-gray-300" 
+      />,
       key: 'select',
       className: 'w-10',
-      render: (i: any) => <input type="checkbox" checked={selectedIds.includes(i.id)} onChange={() => toggleSelectOne(i.id)} className="rounded border-gray-300" />
+      render: (i: any) => <input 
+        type="checkbox" 
+        checked={selectedIds.has(i.id)} 
+        onChange={() => toggleSelect(i.id)} 
+        className="rounded border-gray-300" 
+      />
     },
     { header: 'Data', key: 'data', render: (i: any) => <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{fmtData(i.data)}</span> },
     {
@@ -448,19 +481,19 @@ export default function FinanceiroPage() {
 
       {/* ── Tabela ── */}
       <div className="flex flex-col gap-4">
-        {selectedIds.length > 0 && (
+        {selectedIds.size > 0 && (
           <div className="flex items-center justify-between bg-red-50 border border-red-100 p-4 rounded-2xl animate-in fade-in slide-in-from-top-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
               </div>
               <div>
-                <span className="text-sm font-bold text-red-900">{selectedIds.length} Itens selecionados</span>
+                <span className="text-sm font-bold text-red-900">{selectedIds.size} Itens selecionados</span>
                 <p className="text-xs text-red-600">As ações realizadas aqui removerão definitivamente os registros.</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => setSelectedIds([])} className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors">Cancelar</button>
+              <button onClick={() => setSelectedIds(new Set())} className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors">Cancelar</button>
               <button onClick={handleBulkDelete} className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-red-200 hover:bg-red-700 transition-all">
                 Excluir em Lote
               </button>
