@@ -169,17 +169,27 @@ export default function ConciliacaoPage() {
         categoria: t.suggestedCategory,
         conta_id: selectedContaId,
         valor: t.bank.amount,
-        taxa: t.bank.taxa,
+        taxa: t.bank.taxa || 0,
         data: t.bank.date,
         status: 'pago',
-        associado_id: t.assocMatch?.id,
-        fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || t.forMatch?.id),
+        associado_id: t.assocMatch?.id || null,
+        fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
         diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
         conciliado: true,
         banco_transacao_id: t.bank.fitid
       }))
-      await inserirBulk(items as any)
-      alert(`${items.length} itens processados!`)
+      
+      const res = await inserirBulk(items as any)
+      
+      if (res.error) {
+        alert(`Erro ao processar lote: ${typeof res.error === 'object' ? (res.error as any).message : String(res.error)}`)
+      } else {
+        alert(`${items.length} itens lançados com sucesso no financeiro!`)
+        setExtrato([]) // Limpa para mostrar que terminou
+        setEditedMemos({})
+      }
+    } catch (err: any) {
+      alert(`Erro inesperado: ${err.message}`)
     } finally {
       setIsProcessingBatch(false)
     }
