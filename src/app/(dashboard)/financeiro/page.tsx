@@ -22,7 +22,7 @@ import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, Trend
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 export default function FinanceiroPage() {
-  const { lancamentos, loading, inserir, atualizar, remover, removerBulk } = useFinanceiro()
+  const { lancamentos, loading, inserir, atualizar, remover, removerBulk, inserirBulk } = useFinanceiro()
   const { contas } = useContas()
   const { associados } = useAssociados()
   const { fornecedores } = useFornecedores()
@@ -108,6 +108,7 @@ export default function FinanceiroPage() {
   const resultado = totalRec - totalDesp
 
   /* ── CRUD helpers ── */
+
   const handleSalvar = async (data: any) => {
     const safeData = {
       ...data,
@@ -116,8 +117,32 @@ export default function FinanceiroPage() {
       diretor_id: data.diretor_id || null,
       conta_id: data.conta_id || null
     }
-    if (editingItem) { await atualizar(editingItem.id, safeData) }
-    else { await inserir({ ...safeData, status: safeData.status || 'aberto' }) }
+
+    if (editingItem) { 
+      await atualizar(editingItem.id, safeData) 
+    } 
+    else { 
+      if (safeData.recorrencia_ativa) {
+        // Gera o atual + 12 meses à frente (Total 13)
+        const batch: any[] = []
+        const baseDate = new Date(safeData.data)
+        
+        for (let i = 0; i <= 12; i++) {
+          const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate())
+          // Trata caso de dia 31 em meses que tem 30 (Date faz roll over, o que é razoável)
+          
+          batch.push({
+            ...safeData,
+            data: d.toISOString().split('T')[0],
+            status: i === 0 ? (safeData.status || 'aberto') : 'aberto', // Só o primeiro mantém o status selecionado
+            recorrencia_ativa: true
+          })
+        }
+        await inserirBulk(batch)
+      } else {
+        await inserir({ ...safeData, status: safeData.status || 'aberto' }) 
+      }
+    }
   }
   const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
   const handleDelete = async (id: string) => {
@@ -244,9 +269,11 @@ export default function FinanceiroPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {/* Mini KPIs no header */}
           {[
+            { label: '📈 Total Receitas', value: fmtR(totalRec), color: 'var(--green)' },
+            { label: '📉 Total Despesas', value: fmtR(totalDesp), color: 'var(--red)' },
             { label: '💰 Em Caixa', value: fmtR(saldoCaixa), color: 'var(--accent)' },
             { label: '🏦 Conta Bancária', value: fmtR(saldoBanco), color: 'var(--blue)' },
-            { label: '📊 Resultado Total', value: fmtR(Math.abs(resultado)), color: resultado >= 0 ? 'var(--green)' : 'var(--red)' },
+            { label: '📊 Resultado Total', value: fmtR(resultado), color: resultado >= 0 ? 'var(--green)' : 'var(--red)' },
           ].map(k => (
             <div key={k.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '8px 16px', textAlign: 'center', minWidth: 120 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{k.label}</div>
@@ -483,8 +510,9 @@ export default function FinanceiroPage() {
           },
           { 
             name: 'recorrencia_ativa', 
-            label: 'Recorrência Ativa?', 
+            label: '⚠️ Recorrência (Gerar 12 meses à frente)?', 
             type: 'checkbox',
+            placeholder: 'Isso criará automaticamente 12 meses de lançamentos futuros'
           },
           { 
             name: 'associado_id', 

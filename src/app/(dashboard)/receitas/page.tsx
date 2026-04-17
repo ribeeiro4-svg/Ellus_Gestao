@@ -138,7 +138,29 @@ export default function ReceitasPage() {
 
   /* ── Colunas da tabela ── */
   const columns = [
-    { header: 'Data', key: 'data', render: (i: any) => <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{fmtData(i.data)}</span> },
+    { 
+      header: 'Datas', 
+      key: 'data', 
+      render: (i: any) => {
+        const assoc = associados.find(a => a.id === i.associado_id)
+        const vencDia = assoc?.vencimento_dia || 10
+        const d = new Date(i.data)
+        const venc = new Date(d.getFullYear(), d.getMonth(), vencDia)
+        
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Venc:</span>
+              <span className="text-[11px] font-bold text-gray-600">{fmtData(venc.toISOString())}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Pag:</span>
+              <span className="text-[11px] font-bold text-emerald-600">{fmtData(i.data)}</span>
+            </div>
+          </div>
+        )
+      }
+    },
     {
       header: 'Descrição', key: 'descricao', render: (i: any) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -443,9 +465,26 @@ export default function ReceitasPage() {
                         const taxaStr = taxaMatch ? `R$ ${taxaMatch[1]}` : null
                         return (
                           <div key={i.id} className="group flex items-center gap-4 px-5 py-3 hover:bg-gray-50/60 transition-all border-b border-gray-50 last:border-0" style={{ paddingLeft: 60 }}>
-                            {/* Data */}
-                            <div className="w-20 shrink-0">
-                              <span className="text-[11px] font-semibold text-gray-500">{fmtData(i.data)}</span>
+                            {/* Datas */}
+                            <div className="w-24 shrink-0">
+                                {(() => {
+                                  const assoc = associados.find(a => a.id === i.associado_id)
+                                  const vencDia = assoc?.vencimento_dia || 10
+                                  const ds = new Date(i.data)
+                                  const vDate = new Date(ds.getFullYear(), ds.getMonth(), vencDia)
+                                  return (
+                                    <div className="flex flex-col gap-0.5">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">Venc:</span>
+                                        <span className="text-[10px] font-bold text-gray-500">{fmtData(vDate.toISOString())}</span>
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">Pag:</span>
+                                        <span className="text-[10px] font-bold text-emerald-600">{fmtData(i.data)}</span>
+                                      </div>
+                                    </div>
+                                  )
+                                })()}
                             </div>
                             {/* Descrição */}
                             <div className="flex-1 min-w-0">
