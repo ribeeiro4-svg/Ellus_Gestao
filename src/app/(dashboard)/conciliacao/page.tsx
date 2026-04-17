@@ -164,7 +164,7 @@ export default function ConciliacaoPage() {
     return allMatches.filter(m => !m.match)
   }, [extrato, lancamentos, associados, fornecedores, ignoredMatches])
 
-  const batchTargets = useMemo(() => matchedTransactions.filter(t => (t.assocMatch || t.forMatch) && !t.match), [matchedTransactions])
+  const batchTargets = useMemo(() => matchedTransactions.filter(t => !t.match), [matchedTransactions])
   const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch || t.forMatch).length, [matchedTransactions])
   const countSemMatch = useMemo(() => matchedTransactions.filter(t => !t.assocMatch && !t.forMatch).length, [matchedTransactions])
 

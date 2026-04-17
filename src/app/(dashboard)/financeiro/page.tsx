@@ -15,7 +15,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle } from 'lucide-react'
+import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, TrendingUp } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -33,9 +33,16 @@ export default function FinanceiroPage() {
   const [filterStatus, setFilterStatus] = useState('todos')
   const [filterPagamento, setFilterPagamento] = useState('todos')
   const [filterTipo, setFilterTipo] = useState('todos')
+  const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
+  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
+  const [onlyUnlinked, setOnlyUnlinked] = useState(false)
 
   const filteredLancamentos = useMemo(() => {
     return lancamentos.filter(l => {
+      const d = new Date(l.data)
+      const matchMonth = filterMonth === -1 || d.getMonth() === filterMonth
+      const matchYear = d.getFullYear() === filterYear
+      
       const searchLower = searchTerm.toLowerCase()
       const assoc = associados.find(a => a.id === l.associado_id)
       const conta = contas.find(c => c.id === l.conta_id)
@@ -49,10 +56,11 @@ export default function FinanceiroPage() {
       const matchStatus = filterStatus === 'todos' || l.status === filterStatus
       const matchPagamento = filterPagamento === 'todos' || l.forma_pagamento === filterPagamento
       const matchTipo = filterTipo === 'todos' || l.tipo === filterTipo
+      const matchUnlinked = !onlyUnlinked || (!l.associado_id && !l.fornecedor_id)
 
-      return matchSearch && matchStatus && matchPagamento && matchTipo
+      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchTipo && matchUnlinked
     })
-  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterTipo, associados, contas])
+  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterTipo, filterMonth, filterYear, onlyUnlinked, associados, contas])
 
   /* ── Dados para gráficos (baseados no filtro) ── */
   const { recMensal, despMensal } = useMemo(() => {
@@ -155,9 +163,17 @@ export default function FinanceiroPage() {
       }
     },
     {
-      header: 'Associado', key: 'associado_id', render: (i: any) => {
+      header: 'Vínculo (Assoc./Fornec.)', key: 'associado_id', render: (i: any) => {
         const a = associados.find(as => as.id === i.associado_id)
-        return <span className="text-[11px] font-bold text-gray-700">{a?.nome || '--'}</span>
+        // Note: I also need to fetch suppliers to show here, but for now let's handle directors and others
+        if (i.associado_id) return <span className="text-[11px] font-bold text-gray-700 uppercase tracking-tight">{a?.nome || 'Associado não encontrado'}</span>
+        if (i.fornecedor_id) return <span className="text-[11px] font-bold text-orange-600 uppercase tracking-tight italic">Fornecedor Vinculado</span>
+        if (i.diretor_id) return <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-tight">Diretoria</span>
+        return (
+          <span className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full text-[9px] font-black uppercase border border-amber-100 animate-pulse">
+             <AlertCircle size={10} /> Sem Vínculo
+          </span>
+        )
       }
     },
     {
@@ -279,18 +295,47 @@ export default function FinanceiroPage() {
       </div>
 
       {/* ── BARRA DE PESQUISA E FILTROS ── */}
-      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative z-20">
         {/* Busca */}
         <div className="relative flex-1 min-w-[280px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
           <input 
             type="text" 
             placeholder="Buscar por descrição, associado, conta ou categoria..." 
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-indigo-300 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-indigo-300 transition-all font-medium"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+
+        {/* Filtro Período (Mês e Ano Separados) */}
+        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(Number(e.target.value))}
+          >
+            <option value={-1}>Mês: Todos</option>
+            {MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}
+          </select>
+          <div className="w-[1px] h-3 bg-gray-300 mx-1" />
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterYear}
+            onChange={(e) => setFilterYear(Number(e.target.value))}
+          >
+            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+
+        {/* Filtro Sem Vínculo */}
+        <button 
+          onClick={() => setOnlyUnlinked(!onlyUnlinked)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold ${onlyUnlinked ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-100' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-amber-200'}`}
+        >
+          {onlyUnlinked ? <TrendingUp size={14} className="rotate-45" /> : <AlertCircle size={14} />} 
+          SEM VÍNCULO
+        </button>
 
         {/* Filtro Tipo */}
         <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
@@ -336,12 +381,12 @@ export default function FinanceiroPage() {
         </select>
 
         {/* Limpar */}
-        {hasFilters && (
+        {(searchTerm || filterStatus !== 'todos' || filterPagamento !== 'todos' || filterTipo !== 'todos' || filterMonth !== -1 || onlyUnlinked) && (
           <button 
-            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos'); setFilterTipo('todos') }}
+            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos'); setFilterTipo('todos'); setFilterMonth(new Date().getMonth()); setOnlyUnlinked(false) }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
           >
-            <XCircle size={14} /> Limpar Filtros
+            <XCircle size={14} /> Limpar
           </button>
         )}
       </div>

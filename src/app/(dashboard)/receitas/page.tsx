@@ -15,7 +15,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingUp, Plus, RefreshCw, Copy, ChevronDown, ChevronRight, Search, Filter, XCircle } from 'lucide-react'
+import { TrendingUp, Plus, RefreshCw, Copy, ChevronDown, ChevronRight, Search, Filter, XCircle, AlertCircle } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -43,9 +43,16 @@ export default function ReceitasPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('todos')
   const [filterPagamento, setFilterPagamento] = useState('todos')
+  const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
+  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
+  const [onlyUnlinked, setOnlyUnlinked] = useState(false)
 
   const filteredReceitas = useMemo(() => {
     return receitas.filter(r => {
+      const d = new Date(r.data)
+      const matchMonth = filterMonth === -1 || d.getMonth() === filterMonth
+      const matchYear = d.getFullYear() === filterYear
+      
       const searchLower = searchTerm.toLowerCase()
       const assoc = associados.find(a => a.id === r.associado_id)
       const conta = contas.find(c => c.id === r.conta_id)
@@ -58,10 +65,11 @@ export default function ReceitasPage() {
       
       const matchStatus = filterStatus === 'todos' || r.status === filterStatus
       const matchPagamento = filterPagamento === 'todos' || r.forma_pagamento === filterPagamento
+      const matchUnlinked = !onlyUnlinked || !r.associado_id
 
-      return matchSearch && matchStatus && matchPagamento
+      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchUnlinked
     })
-  }, [receitas, searchTerm, filterStatus, filterPagamento, associados, contas])
+  }, [receitas, searchTerm, filterStatus, filterPagamento, filterMonth, filterYear, onlyUnlinked, associados, contas])
 
   const toggleGroup = (key: string) => {
     setExpandedGroups(prev => {
@@ -164,7 +172,12 @@ export default function ReceitasPage() {
       key: 'associado_id', 
       render: (i: any) => {
         const assoc = associados.find(a => a.id === i.associado_id)
-        return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{assoc?.nome || '—'}</span>
+        if (assoc) return <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{assoc.nome}</span>
+        return (
+          <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full text-[9px] font-black uppercase border border-amber-100 animate-pulse">
+            <AlertCircle size={10} /> Sem Vínculo
+          </span>
+        )
       }
     },
     { header: 'Valor', key: 'valor', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)' }}>{fmtR(i.valor)}</span> },
@@ -315,27 +328,39 @@ export default function ReceitasPage() {
           </select>
         </div>
 
-        {/* Filtro Pagamento */}
+        {/* Filtro Período (Mês e Ano Separados) */}
         <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
-          <Filter size={14} className="text-gray-400" />
           <select 
             className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
-            value={filterPagamento}
-            onChange={(e) => setFilterPagamento(e.target.value)}
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(Number(e.target.value))}
           >
-            <option value="todos">Todas as Formas</option>
-            <option value="Dinheiro">Dinheiro</option>
-            <option value="PIX">PIX</option>
-            <option value="Boleto">Boleto</option>
-            <option value="Transferência">Transferência</option>
-            <option value="Cartão">Cartão</option>
+            <option value={-1}>Mês: Todos</option>
+            {MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}
+          </select>
+          <div className="w-[1px] h-3 bg-gray-300 mx-1" />
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterYear}
+            onChange={(e) => setFilterYear(Number(e.target.value))}
+          >
+            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
 
+        {/* Filtro Sem Vínculo */}
+        <button 
+          onClick={() => setOnlyUnlinked(!onlyUnlinked)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold ${onlyUnlinked ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-100' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-amber-200'}`}
+        >
+          {onlyUnlinked ? <TrendingUp size={14} className="rotate-45" /> : <AlertCircle size={14} />} 
+          SEM VÍNCULO
+        </button>
+
         {/* Limpar */}
-        {(searchTerm || filterStatus !== 'todos' || filterPagamento !== 'todos') && (
+        {(searchTerm || filterStatus !== 'todos' || filterPagamento !== 'todos' || filterMonth !== -1 || onlyUnlinked) && (
           <button 
-            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos') }}
+            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos'); setFilterMonth(new Date().getMonth()); setOnlyUnlinked(false) }}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
           >
             <XCircle size={14} /> Limpar

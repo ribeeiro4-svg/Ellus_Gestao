@@ -7,13 +7,15 @@ import {
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
+import { useContas } from '@/lib/hooks/useContas'
+import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingDown, Plus, Copy } from 'lucide-react'
+import { TrendingDown, Plus, Copy, Search, Filter, XCircle, AlertCircle, TrendingUp } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -29,28 +31,63 @@ const axisDefaults = {
 
 export default function DespesasPage() {
   const { lancamentos, loading, inserir, atualizar, remover } = useFinanceiro()
+  const { contas } = useContas()
+  const { fornecedores } = useFornecedores()
+  
   const despesas = useMemo(() => lancamentos.filter(l => l.tipo === 'despesa'), [lancamentos])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
 
-  /* ── Dados para gráficos ── */
+  /* ── Filtros ── */
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState('todos')
+  const [filterPagamento, setFilterPagamento] = useState('todos')
+  const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
+  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
+  const [onlyUnlinked, setOnlyUnlinked] = useState(false)
+
+  const filteredDespesas = useMemo(() => {
+    return despesas.filter(d => {
+      const dt = new Date(d.data)
+      const matchMonth = filterMonth === -1 || dt.getMonth() === filterMonth
+      const matchYear = dt.getFullYear() === filterYear
+      
+      const searchLower = searchTerm.toLowerCase()
+      const fornecedor = fornecedores.find(f => f.id === d.fornecedor_id)
+      const conta = contas.find(c => c.id === d.conta_id)
+      
+      const matchSearch = !searchTerm || 
+        d.descricao.toLowerCase().includes(searchLower) ||
+        fornecedor?.nome.toLowerCase().includes(searchLower) ||
+        conta?.nome.toLowerCase().includes(searchLower) ||
+        d.categoria.toLowerCase().includes(searchLower)
+      
+      const matchStatus = filterStatus === 'todos' || d.status === filterStatus
+      const matchPagamento = filterPagamento === 'todos' || d.forma_pagamento === filterPagamento
+      const matchUnlinked = !onlyUnlinked || (!d.fornecedor_id && !d.diretor_id)
+
+      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchUnlinked
+    })
+  }, [despesas, searchTerm, filterStatus, filterPagamento, filterMonth, filterYear, onlyUnlinked, fornecedores, contas])
+
+  /* ── Dados para gráficos (baseados no filtro) ── */
   const despesaMensal = useMemo(() => {
     const arr = Array(12).fill(0)
-    despesas.forEach(d => {
+    filteredDespesas.forEach(d => {
       const m = new Date(d.data).getMonth()
       if (!isNaN(m)) arr[m] += d.valor || 0
     })
     return arr
-  }, [despesas])
+  }, [filteredDespesas])
 
   const despesaCats = useMemo(() => {
     const m: Record<string, number> = {}
-    despesas.forEach(d => { const c = d.categoria || 'Outros'; m[c] = (m[c] || 0) + (d.valor || 0) })
+    filteredDespesas.forEach(d => { const c = d.categoria || 'Outros'; m[c] = (m[c] || 0) + (d.valor || 0) })
     return Object.keys(m).length ? m : { 'Sem dados': 1 }
-  }, [despesas])
+  }, [filteredDespesas])
 
-  const totalDespesas = despesas.reduce((s, d) => s + (d.valor || 0), 0)
+  const totalDespesas = filteredDespesas.reduce((s, d) => s + (d.valor || 0), 0)
 
   /* ── CRUD helpers ── */
   const handleSalvar = async (data: any) => {
@@ -169,8 +206,77 @@ export default function DespesasPage() {
         </ChartCard>
       </div>
 
+      {/* ── BARRA DE PESQUISA E FILTROS ── */}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm relative z-20">
+        {/* Busca */}
+        <div className="relative flex-1 min-w-[280px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input 
+            type="text" 
+            placeholder="Buscar por descrição, fornecedor, conta ou categoria..." 
+            className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-red-300 transition-all font-medium"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Filtro Período (Mês e Ano Separados) */}
+        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(Number(e.target.value))}
+          >
+            <option value={-1}>Mês: Todos</option>
+            {MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}
+          </select>
+          <div className="w-[1px] h-3 bg-gray-300 mx-1" />
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterYear}
+            onChange={(e) => setFilterYear(Number(e.target.value))}
+          >
+            {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+
+        {/* Filtro Sem Vínculo */}
+        <button 
+          onClick={() => setOnlyUnlinked(!onlyUnlinked)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-bold ${onlyUnlinked ? 'bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-100' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-amber-200'}`}
+        >
+          {onlyUnlinked ? <TrendingUp size={14} className="rotate-45" /> : <AlertCircle size={14} />} 
+          SEM VÍNCULO
+        </button>
+
+        {/* Filtro Status */}
+        <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+          <div className={`w-2 h-2 rounded-full ${filterStatus === 'todos' ? 'bg-gray-300' : 'bg-red-500'}`} />
+          <select 
+            className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            <option value="todos">Todos os Status</option>
+            <option value="pago">Pago</option>
+            <option value="aberto">Pendente</option>
+            <option value="atrasado">Atrasado</option>
+          </select>
+        </div>
+
+        {/* Limpar */}
+        {(searchTerm || filterStatus !== 'todos' || filterPagamento !== 'todos' || filterMonth !== -1 || onlyUnlinked) && (
+          <button 
+            onClick={() => { setSearchTerm(''); setFilterStatus('todos'); setFilterPagamento('todos'); setFilterMonth(new Date().getMonth()); setOnlyUnlinked(false) }}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
+          >
+            <XCircle size={14} /> Limpar
+          </button>
+        )}
+      </div>
+
       {/* ── Tabela ── */}
-      <DataTable columns={columns} data={despesas} loading={loading} />
+      <DataTable columns={columns} data={filteredDespesas} loading={loading} />
 
       <CrudModal
         isOpen={isModalOpen}
