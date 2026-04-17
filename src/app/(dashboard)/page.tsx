@@ -273,7 +273,7 @@ export default function DashboardPage() {
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                       l.status === 'pago' ? 'bg-emerald-50 text-emerald-700' : 
-                      l.status === 'aberto' || l.status === 'pendente' ? 'bg-amber-50 text-amber-700' : 
+                      l.status === 'aberto' ? 'bg-amber-50 text-amber-700' : 
                       l.status === 'parcial' ? 'bg-blue-50 text-blue-700' :
                       'bg-red-50 text-red-700'
                     }`}>
