@@ -88,16 +88,21 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
             foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || signer.external_id || ''
           }
 
+          // 3. Garantir Identificador Único Estável (Deduplicação por Pessoa)
+          // Prioridade: CPF limpo -> E-mail limpo -> Signer Token
+          const cleanedCpf = foundCpf.replace(/\D/g, '')
+          const stableKey = cleanedCpf || signer.email?.toLowerCase().trim() || (signer as any).token
+
           newAssociates.push({
             nome: signer.name,
             email: signer.email || '',
-            cpf: foundCpf,
+            cpf: cleanedCpf || foundCpf,
             telefone: signer.phone_number || '',
             categoria: 'ZapSign',
             mensalidade: 50,
             status: sysStatus,
             data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
-            codigo: foundCpf || (signer as any).token || `ZS-${Math.random().toString(36).substr(2, 5)}`
+            codigo: stableKey // O código no banco será o CPF ou E-mail, garantindo unicidade por pessoa
           })
         })
       }
@@ -109,15 +114,17 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
         page++
       }
 
-      // Segurança: Limite de 20 páginas (500 docs) para evitar loop infinito em erros
       if (page > 20) hasMore = false
     }
 
-    // Deduplica pelo CPF (prioridade) ou Nome para evitar redundância no import
-    const uniqueMap = new Map()
+    // Deduplica pelo código estável antes de enviar ao banco
+    // Se houver conflito (mesma pessoa em docs diferentes), damos prioridade ao registro 'ativo'
+    const uniqueMap = new Map<string, AssociadoInput>()
     newAssociates.forEach(a => {
-      const key = (a.cpf || a.nome).toLowerCase().replace(/\D/g, '') || a.nome.toLowerCase()
-      uniqueMap.set(key, a)
+      const existing = uniqueMap.get(a.codigo)
+      if (!existing || (existing.status !== 'ativo' && a.status === 'ativo')) {
+        uniqueMap.set(a.codigo, a)
+      }
     })
     
     return { data: Array.from(uniqueMap.values()) }
