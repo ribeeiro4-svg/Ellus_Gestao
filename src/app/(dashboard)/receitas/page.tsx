@@ -15,7 +15,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingUp, Plus, RefreshCw, Copy } from 'lucide-react'
+import { TrendingUp, Plus, RefreshCw, Copy, ChevronDown, ChevronRight } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -37,6 +37,21 @@ export default function ReceitasPage() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['__all__']))
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
+  const expandAll = () => {
+    const keys = receitasPorAssociado ? [...receitasPorAssociado.keys()] : []
+    setExpandedGroups(new Set(keys))
+  }
+  const collapseAll = () => setExpandedGroups(new Set())
 
   /* ── Dados para gráficos ── */
   const receitaMensal = useMemo(() => {
@@ -70,6 +85,25 @@ export default function ReceitasPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Excluir esta receita?')) await remover(id)
   }
+
+  /* ── Agrupamento por associado ── */
+  const receitasPorAssociado = useMemo(() => {
+    const groups = new Map<string, { assoc: any; items: any[] }>()
+    receitas.forEach(r => {
+      const assoc = associados.find(a => a.id === r.associado_id)
+      const key = r.associado_id || '__sem_assoc__'
+      if (!groups.has(key)) groups.set(key, { assoc: assoc || null, items: [] })
+      groups.get(key)!.items.push(r)
+    })
+    // Ordena por total desc, sem associado no final
+    return new Map([...groups.entries()].sort(([ka, a], [kb, b]) => {
+      if (ka === '__sem_assoc__') return 1
+      if (kb === '__sem_assoc__') return -1
+      const totalA = a.items.reduce((s: number, i: any) => s + (i.valor || 0), 0)
+      const totalB = b.items.reduce((s: number, i: any) => s + (i.valor || 0), 0)
+      return totalB - totalA
+    }))
+  }, [receitas, associados])
 
   /* ── Colunas da tabela ── */
   const columns = [
@@ -208,8 +242,123 @@ export default function ReceitasPage() {
         </ChartCard>
       </div>
 
-      {/* ── Tabela ── */}
-      <DataTable columns={columns} data={receitas} loading={loading} />
+      {/* ── Agrupado por Associado ── */}
+      <div className="table-card overflow-hidden">
+        {/* Cabeçalho da tabela */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/40">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            {receitasPorAssociado.size} grupos &bull; {receitas.length} lançamentos
+          </span>
+          <div className="flex items-center gap-3">
+            <button onClick={expandAll} className="text-[10px] font-bold text-indigo-500 hover:underline">Expandir todos</button>
+            <span className="text-gray-200">|</span>
+            <button onClick={collapseAll} className="text-[10px] font-bold text-gray-400 hover:underline">Recolher todos</button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="p-16 text-center text-sm text-gray-400">Carregando...</div>
+        ) : receitas.length === 0 ? (
+          <div className="p-16 text-center text-sm text-gray-400">Nenhuma receita encontrada.</div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {[...receitasPorAssociado.entries()].map(([key, { assoc, items }]) => {
+              const isOpen = expandedGroups.has(key)
+              const total = items.reduce((s, i) => s + (i.valor || 0), 0)
+              const initials = assoc ? assoc.nome.split(' ').slice(0, 2).map((w: string) => w[0]).join('').toUpperCase() : '?'
+              const label = assoc ? assoc.nome : 'Sem Associado'
+
+              return (
+                <div key={key}>
+                  {/* ─ Cabeçalho do grupo (clicavel) ─ */}
+                  <div
+                    onClick={() => toggleGroup(key)}
+                    className="flex items-center gap-4 px-5 py-3.5 cursor-pointer select-none hover:bg-indigo-50/30 transition-all group"
+                    style={{ background: isOpen ? 'rgba(79,126,248,.04)' : 'transparent' }}
+                  >
+                    {/* Chevron */}
+                    <div className="text-gray-400 group-hover:text-indigo-500 transition-colors">
+                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </div>
+
+                    {/* Avatar */}
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                      background: assoc ? 'rgba(45,140,111,.12)' : 'rgba(148,163,184,.12)',
+                      border: `2px solid ${assoc ? 'rgba(45,140,111,.25)' : 'rgba(148,163,184,.25)'}`,
+                      color: assoc ? 'var(--accent)' : '#94a3b8',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 900
+                    }}>{initials}</div>
+
+                    {/* Nome e contagem */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-gray-800 truncate">{label}</div>
+                      <div className="text-[10px] text-gray-400 font-medium">{items.length} recebimento(s)</div>
+                    </div>
+
+                    {/* Total */}
+                    <div className="text-right">
+                      <div className="text-sm font-black text-emerald-600">{fmtR(total)}</div>
+                      <div className="text-[9px] text-gray-400 uppercase tracking-widest">acumulado</div>
+                    </div>
+                  </div>
+
+                  {/* ─ Linhas de detalhe (expandidas) ─ */}
+                  {isOpen && (
+                    <div className="border-t border-dashed border-gray-100">
+                      {items.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((i: any) => {
+                        const conta = contas.find(c => c.id === i.conta_id)
+                        const taxaMatch = i.descricao?.match(/\(Taxa: R\$\s*([^)]+)\)/)
+                        const taxaStr = taxaMatch ? `R$ ${taxaMatch[1]}` : null
+                        return (
+                          <div key={i.id} className="group flex items-center gap-4 px-5 py-3 hover:bg-gray-50/60 transition-all border-b border-gray-50 last:border-0" style={{ paddingLeft: 60 }}>
+                            {/* Data */}
+                            <div className="w-20 shrink-0">
+                              <span className="text-[11px] font-semibold text-gray-500">{fmtData(i.data)}</span>
+                            </div>
+                            {/* Descrição */}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[12px] font-semibold text-gray-700 truncate">{i.descricao}</div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">{i.categoria}</span>
+                                {conta && <span className="text-[9px] text-gray-400">&bull; {conta.nome}</span>}
+                                {taxaStr && <span className="text-[9px] font-bold text-amber-600">Taxa: {taxaStr}</span>}
+                              </div>
+                            </div>
+                            {/* Forma */}
+                            <div className="shrink-0">
+                              {i.forma_pagamento && (
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
+                                  {i.forma_pagamento}
+                                </span>
+                              )}
+                            </div>
+                            {/* Valor */}
+                            <div className="w-24 text-right shrink-0">
+                              <span className="text-[13px] font-black text-emerald-600">{fmtR(i.valor)}</span>
+                            </div>
+                            {/* Ações */}
+                            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <button onClick={() => handleDuplicate(i)} className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors" title="Duplicar"><Copy size={13} /></button>
+                              <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+                              </button>
+                              <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Excluir">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
 
       <CrudModal
         isOpen={isModalOpen}
