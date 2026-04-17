@@ -71,11 +71,21 @@ export class CoraService {
       return finalPem;
     };
 
-    return {
-      cert: normalizePEM(cert, 'cert'),
-      key: normalizePEM(key, 'key'),
-      rejectUnauthorized: true
-    };
+    try {
+      const config = {
+        cert: normalizePEM(cert, 'cert'),
+        key: normalizePEM(key, 'key'),
+        rejectUnauthorized: true
+      };
+      
+      if (config.cert.length < 100 || config.key.length < 100) {
+        throw new Error(`Certificados inválidos. Cert: ${config.cert.length} bytes, Key: ${config.key.length} bytes.`);
+      }
+
+      return config;
+    } catch (err: any) {
+      throw new Error(`Falha na configuração mTLS: ${err.message}`);
+    }
   }
 
   /**
