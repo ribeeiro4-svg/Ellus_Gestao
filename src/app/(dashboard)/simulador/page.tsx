@@ -42,7 +42,7 @@ export default function SimuladorPage() {
     const res = await salvarCenario(cenario)
     setIsSaving(false)
     if (res.error) {
-      alert(`Erro ao salvar simulação: ${res.error}`)
+      alert(`Erro ao salvar simulação: ${(res.error as any).message || res.error}`)
     } else {
       alert('Simulação salva com sucesso! Agora você pode atualizar a página sem perder nada.')
     }
