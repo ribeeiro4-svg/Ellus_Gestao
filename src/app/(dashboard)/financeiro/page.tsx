@@ -17,7 +17,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, TrendingUp } from 'lucide-react'
+import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, TrendingUp, Users } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -39,7 +39,48 @@ export default function FinanceiroPage() {
   const [filterTipo, setFilterTipo] = useState('todos')
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [onlyUnlinked, setOnlyUnlinked] = useState(false)
+
+  // Identifica associados que nunca tiveram nenhuma receita lançada
+  const associadosSemPagamento = useMemo(() => {
+    return associados.filter(a => 
+      !lancamentos.some(l => l.associado_id === a.id && l.tipo === 'receita')
+    )
+  }, [associados, lancamentos])
+
+  const handleGerarRecorrenciaParaNovos = async (meses: number = 12) => {
+    if (!associadosSemPagamento.length) return
+    const contaCora = contas.find(c => c.nome.toLowerCase().includes('cora')) || contas[0]
+    
+    const batch: any[] = []
+    const hoje = new Date()
+    
+    associadosSemPagamento.forEach(assoc => {
+      for (let i = 0; i < meses; i++) {
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 10) // Padrão dia 10
+        batch.push({
+          tipo: 'receita',
+          descricao: `Mensalidade - ${assoc.nome}`,
+          categoria: 'Mensalidades',
+          valor: 50,
+          data: d.toISOString().split('T')[0],
+          status: 'pendente',
+          associado_id: assoc.id,
+          conta_id: contaCora?.id || null,
+          forma_pagamento: 'Boleto'
+        })
+      }
+    })
+
+    const res = await inserirBulk(batch)
+    if (!res.error) {
+      alert(`${batch.length} lançamentos gerados para ${associadosSemPagamento.length} novos associados!`)
+      setIsSyncModalOpen(false)
+    } else {
+      alert('Erro ao gerar lançamentos em lote.')
+    }
+  }
 
   const filteredLancamentos = useMemo(() => {
     return lancamentos.filter(l => {
@@ -330,6 +371,14 @@ export default function FinanceiroPage() {
               <div style={{ fontSize: 13, fontWeight: 800, color: k.color }}>{k.value}</div>
             </div>
           ))}
+          {associadosSemPagamento.length > 0 && (
+            <button 
+              onClick={() => setIsSyncModalOpen(true)} 
+              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-50 text-indigo-700 rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-100 transition-all"
+            >
+              <Users size={14} /> Sincronizar Novos ({associadosSemPagamento.length})
+            </button>
+          )}
           <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}>
             <Plus size={16} /> Novo Lançamento
           </button>
@@ -601,6 +650,38 @@ export default function FinanceiroPage() {
               ...diretoria.map(d => ({ value: d.id, label: `${d.nome} (${d.cargo})` }))
             ]
           },
+        ]}
+      />
+      {/* Modal de Sincronização de Novos Associados */}
+      <CrudModal 
+        isOpen={isSyncModalOpen}
+        onClose={() => setIsSyncModalOpen(false)}
+        title="Sincronizar Novos Associados"
+        initialData={{ meses: 12 }}
+        onSubmit={(data) => handleGerarRecorrenciaParaNovos(Number(data.meses))}
+        fields={[
+          { 
+            name: '_info', 
+            label: 'Atenção', 
+            type: 'text', 
+            render: () => (
+              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-6">
+                <div className="flex items-center gap-2 text-indigo-700 font-bold text-sm mb-2">
+                  <AlertCircle size={16} /> {associadosSemPagamento.length} Associados encontrados
+                </div>
+                <p className="text-xs text-indigo-600 leading-relaxed">
+                  Estes associados foram cadastrados mas ainda não possuem nenhum lançamento financeiro vinculado. 
+                  Ao confirmar, o sistema gerará as mensalidades pendentes para cada um deles.
+                </p>
+              </div>
+            )
+          } as any,
+          { name: 'meses', label: 'Quantidade de meses a gerar', type: 'select', required: true, options: [
+            { value: 1, label: '1 Mês' },
+            { value: 6, label: '6 Meses' },
+            { value: 12, label: '12 Meses (1 Ano)' },
+            { value: 24, label: '24 Meses (2 Anos)' }
+          ]},
         ]}
       />
     </div>
