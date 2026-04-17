@@ -40,7 +40,8 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
       
       if (!docsRes.ok) throw new Error(`Erro na página ${page} da ZapSign`)
 
-      const results = (await docsRes.json()) as ZapSignDoc[]
+      const body = await docsRes.json()
+      const results = Array.isArray(body) ? body : (body.results || [])
       
       // Se a página vier vazia, paramos
       if (!results || results.length === 0) {
