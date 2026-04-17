@@ -19,7 +19,8 @@ import {
   Calculator,
   FileCheck,
   ShoppingCart,
-  ShieldCheck
+  ShieldCheck,
+  Lock
 } from 'lucide-react'
 
 const MENU = [
