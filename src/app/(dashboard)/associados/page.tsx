@@ -17,7 +17,7 @@ import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, Refre
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
 export default function AssociadosPage() {
-  const { associados, loading, isSyncing, inserir, atualizar, remover, syncZapSign } = useAssociados()
+  const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign } = useAssociados()
   
   // Helper para normalização de strings (busca sem acentos)
   const normalizeStr = (str: string) => {
@@ -36,6 +36,7 @@ export default function AssociadosPage() {
   const [filterStatus, setFilterStatus] = useState<string>('todos')
   const [filterCategoria, setFilterCategoria] = useState<string>('todas')
   const [filterCpfInvalido, setFilterCpfInvalido] = useState(false)
+  const [isUpdatingBulk, setIsUpdatingBulk] = useState(false)
 
   const handleSyncZapSign = async () => {
     const res = await syncZapSign()
@@ -132,6 +133,23 @@ export default function AssociadosPage() {
       setSelectedIds(new Set())
     } finally {
       setIsDeleting(false)
+    }
+  }
+
+  const handleBatchUpdateVencimento = async (dia: number) => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Deseja definir o vencimento dia ${dia} para ${selectedIds.size} associado(s)?`)) return
+    setIsUpdatingBulk(true)
+    try {
+      const ids = Array.from(selectedIds)
+      const res = await atualizarBulk(ids, { vencimento_dia: dia } as any)
+      if (res.error) alert(`Erro ao atualizar: ${res.error}`)
+      else {
+        alert(`${selectedIds.size} associados atualizados com sucesso!`)
+        setSelectedIds(new Set())
+      }
+    } finally {
+      setIsUpdatingBulk(false)
     }
   }
 
@@ -295,6 +313,21 @@ export default function AssociadosPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleBatchUpdateVencimento(10)}
+              disabled={isUpdatingBulk}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50"
+            >
+              Definir Dia 10
+            </button>
+            <button
+              onClick={() => handleBatchUpdateVencimento(20)}
+              disabled={isUpdatingBulk}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-xl text-xs font-black hover:bg-orange-700 transition-all shadow-lg shadow-orange-100 disabled:opacity-50"
+            >
+              Definir Dia 20
+            </button>
+            <div className="w-px h-6 bg-red-200 mx-2" />
             <button
               onClick={() => setSelectedIds(new Set())}
               className="px-4 py-2 text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
@@ -470,6 +503,10 @@ export default function AssociadosPage() {
             { value: 'ativo', label: 'Ativo (Adimplente)' },
             { value: 'inadimplente', label: 'Inadimplente' },
             { value: 'inativo', label: 'Inativo' },
+          ]},
+          { name: 'vencimento_dia', label: 'Dia de Vencimento', type: 'select', required: true, options: [
+            { value: '10', label: 'Dia 10' },
+            { value: '20', label: 'Dia 20' },
           ]},
         ]}
       />

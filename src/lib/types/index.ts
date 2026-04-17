@@ -78,6 +78,7 @@ export interface Associado {
   status: StatusAssociado
   meses_atraso?: number
   ultimo_pagamento?: string
+  vencimento_dia?: number // 10 ou 20
   created_at: string
   updated_at: string
 }

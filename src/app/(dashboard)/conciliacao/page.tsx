@@ -13,9 +13,12 @@ import {
   Users,
   ChevronRight,
   ShieldCheck,
-  X
+  X,
+  CreditCard,
+  CloudLightning
 } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
+import { useCoraStaged } from '@/lib/hooks/useCoraStaged'
 import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
@@ -31,6 +34,15 @@ export default function ConciliacaoPage() {
   const { fornecedores, inserir: inserirFornecedor } = useFornecedores()
   const { diretoria } = useDiretoria()
   const { parseOFX } = useOFXParser()
+  const { 
+    items: coraItems, 
+    loading: coraLoading, 
+    syncWithBank, 
+    updateStatus: updateCoraStatus,
+    updateStatusBulk: updateCoraBulk 
+  } = useCoraStaged()
+
+  const [activeTab, setActiveTab] = useState<'ofx' | 'cora'>('ofx')
 
   const [extrato, setExtrato] = useState<OFXTransaction[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
@@ -275,103 +287,254 @@ export default function ConciliacaoPage() {
         )}
       </div>
 
-      {!extrato.length ? (
-        <div onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)} onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFileUpload(e); }} className={`relative border-2 border-dashed rounded-[32px] p-20 flex flex-col items-center justify-center transition-all bg-white shadow-xl shadow-indigo-900/5 ${isDragOver ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01]' : 'border-gray-200 hover:border-indigo-300'}`}>
-          <input type="file" accept=".ofx" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-          <div className="w-20 h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-200 mb-8 animate-bounce-slow"><Upload size={36} /></div>
-          <h3 className="text-xl font-bold text-gray-900">Importe seu extrato OFX</h3>
-          <p className="text-sm text-gray-500 mt-2 max-w-sm text-center">Arraste aqui ou clique para selecionar o arquivo .ofx.</p>
+      {/* Tabs Selector */}
+      <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-gray-100 shadow-sm w-fit">
+        <button 
+          onClick={() => setActiveTab('ofx')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'ofx' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}
+        >
+          <Upload size={14} /> EXTRATO OFX
+        </button>
+        <button 
+          onClick={() => setActiveTab('cora')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'cora' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}
+        >
+          <CloudLightning size={14} /> CONEXÃO CORA (API)
+        </button>
+      </div>
+
+      {activeTab === 'cora' ? (
+        <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
+           {/* Cora Toolbar */}
+           <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-xl shadow-indigo-900/5 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100 shadow-sm"><CreditCard size={24} /></div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-800">Sincronização Direta Cora</h3>
+                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">Aguardando seu OK para lançar no financeiro.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={async () => {
+                    const res = await syncWithBank()
+                    if (res?.success) alert(`${res.new_items} novas transações encontradas!`)
+                  }} 
+                  disabled={coraLoading}
+                  className="px-6 py-3 bg-white text-indigo-600 border border-indigo-100 rounded-2xl text-xs font-black hover:bg-indigo-50 transition-all flex items-center gap-2"
+                >
+                  <RefreshCw size={14} className={coraLoading ? 'animate-spin' : ''} /> ATUALIZAR BANCO
+                </button>
+                <button 
+                  onClick={async () => {
+                    if (!coraItems.length) return
+                    setIsProcessingBatch(true)
+                    try {
+                      const rows = coraItems.map(item => ({
+                        tipo: item.tipo === 'CREDIT' ? 'receita' : 'despesa',
+                        descricao: item.descricao,
+                        categoria: item.tipo === 'CREDIT' ? 'Mensalidades' : 'Serviços',
+                        conta_id: selectedContaId,
+                        valor: item.valor,
+                        data: item.data,
+                        status: 'pago',
+                        conciliado: true,
+                        banco_transacao_id: item.cora_id
+                      }))
+                      const res = await inserirBulk(rows as any)
+                      if (!res?.error) {
+                        await updateCoraBulk(coraItems.map(i => i.id), 'sincronizado')
+                        alert('Lote sincronizado com sucesso!')
+                      }
+                    } finally {
+                      setIsProcessingBatch(false)
+                    }
+                  }}
+                  disabled={isProcessingBatch || !coraItems.length || !selectedContaId}
+                  className="px-8 py-3 bg-indigo-600 text-white rounded-2xl text-xs font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-2"
+                >
+                  {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />} LANÇAR {coraItems.length} EM LOTE
+                </button>
+              </div>
+           </div>
+
+           {/* Cora Items Table */}
+           <div className="table-card overflow-hidden">
+              <div className="p-0 overflow-x-auto">
+                <table className="w-full text-left">
+                   <thead>
+                      <tr className="bg-gray-50/50">
+                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase">Data</th>
+                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase">Descrição Bancária</th>
+                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase text-right">Valor</th>
+                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase text-center">Ações</th>
+                      </tr>
+                   </thead>
+                   <tbody className="divide-y divide-gray-50">
+                      {coraItems.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50 transition-all">
+                          <td className="p-5">
+                            <div className="text-xs font-black text-gray-900">{fmtData(item.data)}</div>
+                            <div className="text-[9px] font-bold text-gray-400 uppercase">CORA API</div>
+                          </td>
+                          <td className="p-5">
+                            <div className="text-sm font-bold text-gray-700">{item.descricao}</div>
+                            {item.documento && <div className="text-[10px] text-indigo-500 font-bold">{item.documento}</div>}
+                          </td>
+                          <td className={`p-5 text-right font-black ${item.tipo === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {fmtR(item.valor)}
+                          </td>
+                          <td className="p-5 whitespace-nowrap">
+                            <div className="flex items-center justify-center gap-2">
+                              <button 
+                                onClick={async () => {
+                                  const res = await inserir({
+                                    tipo: item.tipo === 'CREDIT' ? 'receita' : 'despesa',
+                                    descricao: item.descricao,
+                                    categoria: item.tipo === 'CREDIT' ? 'Mensalidades' : 'Serviços',
+                                    conta_id: selectedContaId,
+                                    valor: item.valor,
+                                    data: item.data,
+                                    status: 'pago',
+                                    conciliado: true,
+                                    banco_transacao_id: item.cora_id
+                                  } as any)
+                                  if (!res?.error) await updateCoraStatus(item.id, 'sincronizado')
+                                }}
+                                className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-[10px] font-black hover:bg-emerald-100 transition-all border border-emerald-100"
+                              >
+                                SINCRONIZAR
+                              </button>
+                              <button 
+                                onClick={() => updateCoraStatus(item.id, 'ignorado')}
+                                className="p-2 text-gray-300 hover:text-red-500 transition-all"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {coraItems.length === 0 && (
+                        <tr>
+                          <td colSpan={4} className="p-20 text-center">
+                            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-300"><CloudLightning size={32} /></div>
+                            <h4 className="text-sm font-bold text-gray-800">Nenhuma transação pendente</h4>
+                            <p className="text-xs text-gray-400 mt-1">Clique em 'Atualizar Banco' para buscar novidades.</p>
+                          </td>
+                        </tr>
+                      )}
+                   </tbody>
+                </table>
+              </div>
+           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-          <div className="table-card overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between bg-gray-50/30 gap-4 flex-wrap">
-              <div className="flex items-center gap-6">
-                <h2 className="text-sm font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2"><Search size={16} className="text-indigo-600" /> Transações ({extrato.length})</h2>
-                <div className="flex gap-4">
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">IN {fmtR(totals.entradas)}</span>
-                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">OUT {fmtR(totals.saidas)}</span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {[
-                  { key: 'todos', label: `Todas (${matchedTransactions.length})` },
-                  { key: 'com_match', label: `✓ Com Match (${countComMatch})` },
-                  { key: 'sem_match', label: `⚠ Sem Match (${countSemMatch})` },
-                ].map(f => (
-                  <button 
-                    key={f.key} 
-                    onClick={() => setFilterMatch(f.key as any)} 
-                    className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-all ${filterMatch === f.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
+        <>
+          {!extrato.length ? (
+            <div 
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} 
+              onDragLeave={() => setIsDragOver(false)} 
+              onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFileUpload(e); }} 
+              className={`relative border-2 border-dashed rounded-[32px] p-20 flex flex-col items-center justify-center transition-all bg-white shadow-xl shadow-indigo-900/5 ${isDragOver ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01]' : 'border-gray-200 hover:border-indigo-300'}`}
+            >
+              <input type="file" accept=".ofx" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+              <div className="w-20 h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-200 mb-8 animate-bounce-slow"><Upload size={36} /></div>
+              <h3 className="text-xl font-bold text-gray-900">Importe seu extrato OFX</h3>
+              <p className="text-sm text-gray-500 mt-2 max-w-sm text-center">Arraste aqui ou clique para selecionar o arquivo .ofx.</p>
             </div>
-
-            <div className="divide-y divide-gray-50">
-              {transacoesFiltradas.map((item) => (
-                <div key={item.bank.fitid} className="p-5 hover:bg-slate-50 transition-all flex flex-col md:flex-row items-center gap-6">
-                  <div className="flex-1 flex items-center gap-4 w-full">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.bank.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><Banknote size={20} /></div>
-                    <div className="flex-1">
-                      <div className="text-[10px] font-black text-gray-400 uppercase">{fmtData(item.bank.date)}</div>
-                      {item.bank.type === 'DEBIT' ? (
-                        <div className="flex flex-col gap-1">
-                          <input 
-                            type="text" 
-                            value={editedMemos[item.bank.fitid] !== undefined ? editedMemos[item.bank.fitid] : item.bank.memo}
-                            onChange={(e) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: e.target.value }))}
-                            className="text-sm font-bold text-indigo-700 bg-white border border-gray-100 rounded-lg p-1.5 px-3 focus:ring-2 focus:ring-indigo-100 w-full outline-none shadow-sm"
-                            placeholder="Descrição da Saída..."
-                          />
-                          <span className="text-[9px] text-gray-300 italic truncate max-w-[250px]">Banco: {item.bank.memo}</span>
-                        </div>
-                      ) : (
-                        <div className="text-sm font-bold text-gray-900">{item.bank.memo}</div>
-                      )}
-                      <div className="text-xs font-black text-gray-700 mt-1">{fmtR(item.bank.amount)}</div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              <div className="table-card overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between bg-gray-50/30 gap-4 flex-wrap">
+                  <div className="flex items-center gap-6">
+                    <h2 className="text-sm font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2"><Search size={16} className="text-indigo-600" /> Transações ({extrato.length})</h2>
+                    <div className="flex gap-4">
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">IN {fmtR(totals.entradas)}</span>
+                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">OUT {fmtR(totals.saidas)}</span>
                     </div>
                   </div>
-
-                  <ArrowRight className="text-gray-200 hidden md:block" />
-
-                  <div className="flex-[1.2] w-full">
-                    {item.assocMatch || item.forMatch ? (
-                      <button onClick={() => handleQuickCreate(item.bank)} className={`flex items-center gap-4 w-full p-4 rounded-2xl border border-dashed transition-all hover:shadow-lg ${(item.forMatch as any)?.isDirector ? 'border-indigo-200 bg-indigo-50/20' : (item.forMatch ? 'border-orange-200 bg-orange-50/20' : 'border-emerald-200 bg-emerald-50/20')}`}>
-                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${(item.forMatch as any)?.isDirector ? 'bg-indigo-600' : (item.forMatch ? 'bg-orange-500' : 'bg-emerald-500')}`}>
-                          {(item.forMatch as any)?.isDirector ? <ShieldCheck size={20} /> : (item.forMatch ? <Banknote size={20} /> : <Users size={20} />)}
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className={`text-[10px] font-black uppercase tracking-widest ${(item.forMatch as any)?.isDirector ? 'text-indigo-600' : (item.forMatch ? 'text-orange-600' : 'text-emerald-600')}`}>
-                            {(item.forMatch as any)?.isDirector ? 'DIRETORIA' : (item.forMatch ? 'FORNECEDOR' : (item.isFirstPayment ? '🌟 ADESÃO' : 'ASSOCIADO'))}
-                          </div>
-                          <div className="text-xs font-bold text-gray-800">{(item.forMatch ? (item.forMatch as any).nome : (item.assocMatch as any).nome)}</div>
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); handleUnmatch(item.bank.fitid) }} className="p-2 text-gray-300 hover:text-red-500"><X size={16} /></button>
+                  <div className="flex gap-2">
+                    {[
+                      { key: 'todos', label: `Todas (${matchedTransactions.length})` },
+                      { key: 'com_match', label: `✓ Com Match (${countComMatch})` },
+                      { key: 'sem_match', label: `⚠ Sem Match (${countSemMatch})` },
+                    ].map(f => (
+                      <button 
+                        key={f.key} 
+                        onClick={() => setFilterMatch(f.key as any)} 
+                        className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-all ${filterMatch === f.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}
+                      >
+                        {f.label}
                       </button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {item.bank.type === 'DEBIT' && (
-                          <button onClick={() => { setSelectedExtrato(item.bank); setIsSupplierModalOpen(true) }} className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-orange-200 bg-orange-50/10 text-orange-600 text-[10px] font-black rounded-xl hover:bg-orange-50">
-                            <Plus size={14} /> FORNECEDOR
-                          </button>
-                        )}
-                        <button onClick={() => handleQuickCreate(item.bank)} className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-gray-200 bg-gray-50/50 text-gray-600 text-[10px] font-black rounded-xl hover:bg-gray-100">
-                          <Plus size={14} /> MANUAL
-                        </button>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
-              ))}
+
+                <div className="divide-y divide-gray-50">
+                  {transacoesFiltradas.map((item) => (
+                    <div key={item.bank.fitid} className="p-5 hover:bg-slate-50 transition-all flex flex-col md:flex-row items-center gap-6">
+                      <div className="flex-1 flex items-center gap-4 w-full">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.bank.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><Banknote size={20} /></div>
+                        <div className="flex-1">
+                          <div className="text-[10px] font-black text-gray-400 uppercase">{fmtData(item.bank.date)}</div>
+                          {item.bank.type === 'DEBIT' ? (
+                            <div className="flex flex-col gap-1">
+                              <input 
+                                type="text" 
+                                value={editedMemos[item.bank.fitid] !== undefined ? editedMemos[item.bank.fitid] : item.bank.memo}
+                                onChange={(e) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: e.target.value }))}
+                                className="text-sm font-bold text-indigo-700 bg-white border border-gray-100 rounded-lg p-1.5 px-3 focus:ring-2 focus:ring-indigo-100 w-full outline-none shadow-sm"
+                                placeholder="Descrição da Saída..."
+                              />
+                              <span className="text-[9px] text-gray-300 italic truncate max-w-[250px]">Banco: {item.bank.memo}</span>
+                            </div>
+                          ) : (
+                            <div className="text-sm font-bold text-gray-900">{item.bank.memo}</div>
+                          )}
+                          <div className="text-xs font-black text-gray-700 mt-1">{fmtR(item.bank.amount)}</div>
+                        </div>
+                      </div>
+
+                      <ArrowRight className="text-gray-200 hidden md:block" />
+
+                      <div className="flex-[1.2] w-full">
+                        {item.assocMatch || item.forMatch ? (
+                          <button onClick={() => handleQuickCreate(item.bank)} className={`flex items-center gap-4 w-full p-4 rounded-2xl border border-dashed transition-all hover:shadow-lg ${(item.forMatch as any)?.isDirector ? 'border-indigo-200 bg-indigo-50/20' : (item.forMatch ? 'border-orange-200 bg-orange-50/20' : 'border-emerald-200 bg-emerald-50/20')}`}>
+                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${(item.forMatch as any)?.isDirector ? 'bg-indigo-600' : (item.forMatch ? 'bg-orange-500' : 'bg-emerald-500')}`}>
+                              {(item.forMatch as any)?.isDirector ? <ShieldCheck size={20} /> : (item.forMatch ? <Banknote size={20} /> : <Users size={20} />)}
+                            </div>
+                            <div className="flex-1 text-left">
+                              <div className={`text-[10px] font-black uppercase tracking-widest ${(item.forMatch as any)?.isDirector ? 'text-indigo-600' : (item.forMatch ? 'text-orange-600' : 'text-emerald-600')}`}>
+                                {(item.forMatch as any)?.isDirector ? 'DIRETORIA' : (item.forMatch ? 'FORNECEDOR' : (item.isFirstPayment ? '🌟 ADESÃO' : 'ASSOCIADO'))}
+                              </div>
+                              <div className="text-xs font-bold text-gray-800">{(item.forMatch ? (item.forMatch as any).nome : (item.assocMatch as any).nome)}</div>
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); handleUnmatch(item.bank.fitid) }} className="p-2 text-gray-300 hover:text-red-500"><X size={16} /></button>
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {item.bank.type === 'DEBIT' && (
+                              <button onClick={() => { setSelectedExtrato(item.bank); setIsSupplierModalOpen(true) }} className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-orange-200 bg-orange-50/10 text-orange-600 text-[10px] font-black rounded-xl hover:bg-orange-50">
+                                <Plus size={14} /> FORNECEDOR
+                              </button>
+                            )}
+                            <button onClick={() => handleQuickCreate(item.bank)} className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-gray-200 bg-gray-50/50 text-gray-600 text-[10px] font-black rounded-xl hover:bg-gray-100">
+                              <Plus size={14} /> MANUAL
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
-      {/* Modal de Lançamento */}
+      {/* Model de Lançamento */}
       <CrudModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

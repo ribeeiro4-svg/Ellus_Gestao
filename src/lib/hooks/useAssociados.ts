@@ -38,6 +38,12 @@ export function useAssociados() {
     return { error }
   }
 
+  const atualizarBulk = async (ids: string[], input: Partial<AssociadoInput>) => {
+    const { error } = await sb.from('associados').update(input).in('id', ids)
+    if (!error) fetch()
+    return { error }
+  }
+
   const remover = async (id: string) => {
     const { error } = await sb.from('associados').delete().eq('id', id)
     if (!error) fetch()
@@ -90,5 +96,5 @@ export function useAssociados() {
     return { error }
   }
 
-  return { associados, loading, isSyncing, inserir, atualizar, remover, inserirBulk, syncZapSign, limparTudo, refresh: fetch }
+  return { associados, loading, isSyncing, inserir, atualizar, atualizarBulk, remover, inserirBulk, syncZapSign, limparTudo, refresh: fetch }
 }
