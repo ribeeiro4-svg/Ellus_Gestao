@@ -7,7 +7,7 @@ import {
   Activity,
   Calendar,
   Trash2
-} from 'lucide-center'
+} from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
 import ChartModal from '@/components/ui/ChartModal'
