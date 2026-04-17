@@ -373,6 +373,7 @@ export default function ConciliacaoPage() {
         fields={[
           { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },
           { name: 'descricao', label: 'Descrição Final', type: 'text', required: true },
+          { name: 'cpf', label: 'CPF / CNPJ Encontrado', type: 'text', placeholder: 'Apenas para conferência...' },
           { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
             { value: 'Mensalidades', label: 'Mensalidades' }, { value: 'ADESÃO', label: 'Adesão' }, { value: 'Serviços', label: 'Serviços' }, { value: 'Outros', label: 'Outros' }
           ] },
