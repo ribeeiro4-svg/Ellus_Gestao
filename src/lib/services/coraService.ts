@@ -36,51 +36,47 @@ export class CoraService {
     const normalizePEM = (pem: string, type: 'cert' | 'key') => {
       if (!pem) return { pem: Buffer.from(''), debug: 'VAZIO' };
       
-      // 1. Decodifica entidades HTML e limpa aspas
+      // 1. Limpeza inicial de sujeira de ambiente (escapes, aspas, etc)
       let cleaned = pem
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
+        .replace(/\\n/g, '\n')
+        .replace(/\r/g, '')
         .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
         .trim();
 
+      // Se estiver entre aspas, remove
       if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
         cleaned = cleaned.substring(1, cleaned.length - 1);
       }
 
-      // Removemos quebras de linha e espaços para expor o bloco Base64 puro
-      cleaned = cleaned.replace(/\\n/g, '').replace(/\r/g, '').replace(/\n/g, '').replace(/\s/g, '');
+      // 2. Extração do conteúdo base64 puro
+      // Remove headers se existirem para reformatar do zero de forma limpa
+      let base64 = cleaned
+        .replace(/-----BEGIN [^-]+-----/g, '')
+        .replace(/-----END [^-]+-----/g, '')
+        .replace(/\s/g, ''); // Remove todos os espaços e quebras
+
+      if (!base64) return { pem: Buffer.from(''), debug: 'BASE64_VAZIO' };
+
+      // 3. Garantia de Padding (ESSENCIAL: em vez de cortar, nós completamos)
+      while (base64.length % 4 !== 0) {
+        base64 += '=';
+      }
+
+      // 4. Determinação do Header correto
+      let header = type === 'cert' ? 'CERTIFICATE' : 'PRIVATE KEY';
       
-      // 4. EXTRATOR CIRÚRGICO: Localiza o maior bloco contínuo de caracteres Base64
-      const matches = cleaned.match(/[A-Za-z0-9+/=]{100,}/g);
-      let base64Content = (matches || []).sort((a, b) => b.length - a.length)[0] || '';
-
-      const rawLen = base64Content.length;
-
-      // 5. CORREÇÃO DE TAMANHO (Múltiplo de 4): Essencial para evitar "bad base64 decode"
-      // Se o tamanho não for divisível por 4 (como o 1937 encontrado), removemos o excesso.
-      if (base64Content.length % 4 !== 0) {
-        base64Content = base64Content.substring(0, base64Content.length - (base64Content.length % 4));
+      // Se for chave e tiver indícios de ser RSA, usamos o header específico
+      if (type === 'key' && (cleaned.includes('RSA') || base64.length > 2000)) {
+        header = 'RSA PRIVATE KEY';
       }
 
-      // Se houver padding (== ou =), garantimos que nada venha depois
-      if (base64Content.includes('=')) {
-        base64Content = base64Content.substring(0, base64Content.indexOf('='));
-        // Re-adicionamos o padding necessário após a limpeza
-        while (base64Content.length % 4 !== 0) base64Content += '=';
-      }
-
-      let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
-      if (type === 'key' && cleaned.toUpperCase().includes('BEGIN PRIVATE KEY') && !cleaned.toUpperCase().includes('RSA')) {
-        label = 'PRIVATE KEY';
-      }
-
-      const finalPem = `-----BEGIN ${label}-----\n${base64Content}\n-----END ${label}-----`;
+      // 5. remontagem no formato PEM padrão (64 colunas)
+      const lines = base64.match(/.{1,64}/g) || [];
+      const finalPem = `-----BEGIN ${header}-----\n${lines.join('\n')}\n-----END ${header}-----`;
 
       return { 
         pem: Buffer.from(finalPem, 'utf-8'), 
-        debug: `[${type.toUpperCase()}: ${base64Content.length}b (era ${rawLen}), final: ...${base64Content.substring(base64Content.length - 15)}]`
+        debug: `[${type.toUpperCase()}: ${base64.length}b]`
       };
     };
 
@@ -113,24 +109,27 @@ export class CoraService {
           let data = '';
           res.on('data', (chunk) => data += chunk);
           res.on('end', () => {
+            let parsed: any = {};
             try {
-              const parsed = JSON.parse(data);
-              if (res.statusCode && res.statusCode >= 400) {
-                reject(new Error(parsed.message || `Erro API Cora: ${res.statusCode}`));
-              } else {
-                resolve(parsed);
-              }
+              parsed = data ? JSON.parse(data) : {};
             } catch (e) {
-              reject(new Error('Falha ao processar resposta da Cora.'));
+              parsed = { raw: data };
+            }
+
+            if (res.statusCode && res.statusCode >= 400) {
+              const errMsg = parsed.message || parsed.error_description || JSON.stringify(parsed);
+              reject(new Error(`Cora API (${res.statusCode}): ${errMsg}`));
+            } else {
+              resolve(parsed);
             }
           });
         });
 
-        req.on('error', (e) => reject(new Error(`Conexão mTLS Falhou (Async): ${e.message}`)));
+        req.on('error', (e) => reject(new Error(`Falha de Conexão mTLS: ${e.message}. Verifique se os certificados no Vercel estão no formato correto.`)));
         if (body) req.write(body);
         req.end();
       } catch (syncErr: any) {
-        reject(new Error(`Conexão mTLS Falhou (Sync): ${syncErr.message}. Diag: ${this._lastDiag}`));
+        reject(new Error(`Erro Crítico Cora (Sync): ${syncErr.message}. Diag: ${this._lastDiag}`));
       }
     });
   }
