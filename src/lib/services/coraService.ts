@@ -35,29 +35,38 @@ export class CoraService {
     const normalizePEM = (pem: string, type: 'cert' | 'key') => {
       if (!pem) return '';
       
-      // 1. Limpa \n literais (escapados), \r e espaços no início/fim
-      const cleaned = pem.replace(/\\n/g, '\n').replace(/\r/g, '').trim();
-      
-      // 2. Extrai o conteúdo base64 ignorando qualquer header/footer ou whitespace
-      // Removemos as tags -----BEGIN...----- e -----END...----- caso existam
-      const base64Content = cleaned
-        .replace(/-----BEGIN[\s\S]+?-----/, '')
-        .replace(/-----END[\s\S]+?-----/, '')
-        .replace(/\s/g, ''); // Remove todos os espaços, quebras de linha e tabs
-
-      // 3. Define o Label adequado
-      // O Cora geralmente usa 'RSA PRIVATE KEY' mas pode ser apenas 'PRIVATE KEY'
-      let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
-      if (type === 'key' && cleaned.toUpperCase().includes('BEGIN PRIVATE KEY') && !cleaned.toUpperCase().includes('RSA')) {
-        label = 'PRIVATE KEY';
+      // 1. Limpeza inicial de aspas (caso venha entre aspas no env do Vercel)
+      let cleaned = pem.trim();
+      if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+        cleaned = cleaned.substring(1, cleaned.length - 1);
       }
 
-      // 4. Reconstrói formalmente (64 chars por linha)
+      // 2. Transforma \n escapado em quebra de linha real
+      cleaned = cleaned.replace(/\\n/g, '\n').replace(/\r/g, '');
+      
+      // 3. Extrai o conteúdo base64
+      // Removemos os cabeçalhos/rodapés caso existam
+      const base64Part = cleaned
+        .replace(/-----BEGIN[\s\S]+?-----/i, '')
+        .replace(/-----END[\s\S]+?-----/i, '');
+
+      // 4. LIMPEZA TOTAL: Remove TUDO que não for caractere base64 válido
+      const base64Content = base64Part.replace(/[^a-zA-Z0-9+/=]/g, '');
+
+      // 5. IDENTIFICAÇÃO DO LABEL
+      let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
+      if (type === 'key') {
+        const upper = cleaned.toUpperCase();
+        if (upper.includes('BEGIN PRIVATE KEY') && !upper.includes('RSA')) {
+          label = 'PRIVATE KEY';
+        }
+      }
+
+      // 6. RECONSTRUÇÃO FORMAL
       const lines = base64Content.match(/.{1,64}/g) || [];
       const finalPem = `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
 
-      // Log de segurança para acompanhamento no Vercel Logs
-      console.log(`[PEM-Fix] Normalizado ${type}: length=${base64Content.length}, lines=${lines.length}, label=${label}`);
+      console.log(`[PEM-Fix] Normalizado ${type}: raw_length=${pem.length}, b64_length=${base64Content.length}, label=${label}`);
       
       return finalPem;
     };
