@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { Associado, AssociadoInput } from '@/lib/types'
 import { useTenant } from './useTenant'
-import { zapsignService } from '../services/zapsign'
+import { fetchZapSignAssociatesAction } from '@/app/actions/zapsign'
 
 export function useAssociados() {
   const tenantId = useTenantId()
@@ -71,13 +71,15 @@ export function useAssociados() {
 
     setIsSyncing(true)
     try {
-      const news = await zapsignService.fetchNewAssociates(tenant.zapsign_token)
-      if (news.length === 0) return { message: 'Nenhum novo associado encontrado na ZapSign.' }
+      const res = await fetchZapSignAssociatesAction(tenant.zapsign_token)
       
-      const { error } = await inserirBulk(news)
-      return { error, count: news.length }
+      if (res.error) return { error: res.error }
+      if (!res.data || res.data.length === 0) return { message: 'Nenhum novo associado encontrado na ZapSign.' }
+      
+      const { error } = await inserirBulk(res.data)
+      return { error, count: res.data.length }
     } catch (err) {
-      return { error: 'Falha na comunicação com a ZapSign.' }
+      return { error: 'Falha na comunicação com o servidor de integração.' }
     } finally {
       setIsSyncing(false)
     }
