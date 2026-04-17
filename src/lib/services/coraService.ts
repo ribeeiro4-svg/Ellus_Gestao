@@ -58,9 +58,17 @@ export class CoraService {
 
       const rawLen = base64Content.length;
 
-      // Se houver padding (== ou =), removemos rigorosamente qualquer caractere que tenha "grudado" depois dele
+      // 5. CORREÇÃO DE TAMANHO (Múltiplo de 4): Essencial para evitar "bad base64 decode"
+      // Se o tamanho não for divisível por 4 (como o 1937 encontrado), removemos o excesso.
+      if (base64Content.length % 4 !== 0) {
+        base64Content = base64Content.substring(0, base64Content.length - (base64Content.length % 4));
+      }
+
+      // Se houver padding (== ou =), garantimos que nada venha depois
       if (base64Content.includes('=')) {
-        base64Content = base64Content.substring(0, base64Content.lastIndexOf('=') + 1);
+        base64Content = base64Content.substring(0, base64Content.indexOf('='));
+        // Re-adicionamos o padding necessário após a limpeza
+        while (base64Content.length % 4 !== 0) base64Content += '=';
       }
 
       let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
