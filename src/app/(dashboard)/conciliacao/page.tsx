@@ -81,6 +81,7 @@ export default function ConciliacaoPage() {
   // Lógica de matching inteligente
   const matchedTransactions = useMemo(() => {
     const adesaoJaSugerida = new Set<string>()
+    const usedSystemIds = new Set<string>() // Evita que um lançamento do sistema case com duas do banco
 
     const allMatches = extrato.map((ext: OFXTransaction) => {
       if (ignoredMatches.has(ext.fitid)) {
@@ -91,7 +92,6 @@ export default function ConciliacaoPage() {
       const cnpjNoMemo = (ext.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
       const cpfNoMemo = (ext.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
       
-      // Tenta extrair qualquer sequência de 11 ou 14 dígitos que sobrou se os regex falharem
       const rawDigits = ext.memo.replace(/[^\d]/g, '')
       const extractedDoc = cpfNoMemo || cnpjNoMemo || (rawDigits.length >= 11 ? rawDigits.slice(-11) : null)
 
@@ -115,7 +115,6 @@ export default function ConciliacaoPage() {
         const match = extractedDoc ? fornecedores.find(f => (f.cpf_cnpj || '').replace(/[^\d]/g, '') === extractedDoc) : null
         if (match) { finalFor = match; isCpfMatch = true }
         else {
-          // Tenta diretoria primeiro para saídas
           const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
           if (matchDir) {
             finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
@@ -123,8 +122,6 @@ export default function ConciliacaoPage() {
           } else {
             const memoLimpo = normalizeStr(ext.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
             const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
-            
-            // Tenta diretoria por nome
             const dMatch = diretoria.find(d => {
               const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
               const count = palavrasD.filter(p => palavrasBanco.includes(p)).length
@@ -134,7 +131,6 @@ export default function ConciliacaoPage() {
             if (dMatch) {
               finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
             } else {
-              // Tenta fornecedor por nome
               finalFor = fornecedores.find(f => {
                 const nomeF = normalizeStr(f.nome); const palavrasF = nomeF.split(' ').filter(p => p.length > 2)
                 const count = palavrasF.filter(p => palavrasBanco.includes(p)).length
@@ -153,16 +149,34 @@ export default function ConciliacaoPage() {
         }
       }
 
+      // Procura possíveis matches no sistema que ainda não foram usados nesta rodada
       const matches = lancamentos.filter(l => {
+        if (usedSystemIds.has(l.id)) return false // Se já casou com outro item do banco, ignora
         if (l.banco_transacao_id === ext.fitid) return true
-        return Math.abs(l.valor - ext.amount) < 0.01 && !l.conciliado
+        
+        const sameValue = Math.abs(l.valor - ext.amount) < 0.01
+        const sameType = (l.tipo === 'receita' && ext.amount > 0) || (l.tipo === 'despesa' && ext.amount < 0)
+        
+        return sameValue && sameType && !l.conciliado
       })
       
-      return { bank: ext, match: matches[0] || null, assocMatch: finalAssoc || null, forMatch: finalFor || null, isCpfMatch, suggestedCategory, isFirstPayment: suggestedCategory === 'ADESÃO', similarCount: matches.length }
+      const bestMatch = matches[0] || null
+      if (bestMatch) usedSystemIds.add(bestMatch.id) // Consome o match
+
+      return { 
+        bank: ext, 
+        match: bestMatch, 
+        assocMatch: finalAssoc || null, 
+        forMatch: finalFor || null, 
+        isCpfMatch, 
+        suggestedCategory, 
+        isFirstPayment: suggestedCategory === 'ADESÃO', 
+        similarCount: matches.length 
+      }
     })
 
     return allMatches.filter(m => !m.match)
-  }, [extrato, lancamentos, associados, fornecedores, ignoredMatches])
+  }, [extrato, lancamentos, associados, fornecedores, ignoredMatches, diretoria])
 
   const batchTargets = useMemo(() => matchedTransactions.filter(t => !t.match), [matchedTransactions])
   const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch || t.forMatch).length, [matchedTransactions])
