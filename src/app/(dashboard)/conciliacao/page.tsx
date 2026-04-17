@@ -53,7 +53,6 @@ export default function ConciliacaoPage() {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[0-9]/g, '')
       .replace(/-|\.|\/|<|>|\|/g, ' ')
       .replace(/\b(de|da|do|das|dos|e)\b/g, '')
       .replace(/\s+/g, ' ')
