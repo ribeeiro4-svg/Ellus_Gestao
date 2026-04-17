@@ -12,7 +12,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, MESES } from '@/lib/utils/formatters'
-import { Plus, Users, Mail, Phone, Copy, AlertCircle } from 'lucide-react'
+import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
@@ -21,6 +21,8 @@ export default function AssociadosPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [searchQ, setSearchQ] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [isDeleting, setIsDeleting] = useState(false)
 
   /* ── Dados para gráficos ── */
   const ativos = useMemo(() => associados.filter(a => (a.status || '').toLowerCase().includes('ativ')).length, [associados])
@@ -55,10 +57,55 @@ export default function AssociadosPage() {
     if (confirm('Excluir este associado?')) await remover(id)
   }
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtrados.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtrados.map((a: any) => a.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Excluir ${selectedIds.size} associado(s) selecionado(s)? Esta ação não pode ser desfeita.`)) return
+    setIsDeleting(true)
+    try {
+      for (const id of selectedIds) {
+        await remover(id)
+      }
+      setSelectedIds(new Set())
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const barFontSm = { size: 10 }
 
   /* ── Colunas ── */
+  const allSelected = filtrados.length > 0 && selectedIds.size === filtrados.length
+  const someSelected = selectedIds.size > 0 && selectedIds.size < filtrados.length
+
   const columns = [
+    {
+      header: '', key: 'checkbox', className: 'w-10',
+      render: (i: any) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.has(i.id)}
+          onChange={() => toggleSelect(i.id)}
+          onClick={e => e.stopPropagation()}
+          className="w-4 h-4 rounded border-gray-300 text-red-600 cursor-pointer accent-red-600"
+        />
+      )
+    },
     {
       header: 'Associado', key: 'nome',
       render: (i: any) => (
@@ -138,6 +185,24 @@ export default function AssociadosPage() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Checkbox Selecionar Todos */}
+          <div
+            className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all select-none"
+            onClick={toggleSelectAll}
+            title={allSelected ? 'Desmarcar todos' : 'Selecionar todos'}
+          >
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={el => { if (el) el.indeterminate = someSelected }}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded accent-red-600 cursor-pointer"
+            />
+            <span className="text-xs font-bold text-gray-500">
+              {selectedIds.size > 0 ? `${selectedIds.size} selecionado(s)` : 'Sel. todos'}
+            </span>
+          </div>
+
           {[
             { label: 'Ativos', value: ativos, color: 'var(--green)' },
             { label: 'Inadimpl.', value: inadimplentes, color: 'var(--red)' },
@@ -153,6 +218,41 @@ export default function AssociadosPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Barra de Exclusão em Lote ── */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-2xl animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
+              <CheckSquare size={16} className="text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-red-800">{selectedIds.size} associado(s) selecionado(s)</p>
+              <p className="text-[10px] text-red-500 font-medium">Confirme antes de excluir — a ação é irreversível.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-4 py-2 text-xs font-bold text-red-500 hover:text-red-700 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={isDeleting}
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl text-xs font-black hover:bg-red-700 transition-all shadow-lg shadow-red-200 disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              ) : (
+                <Trash2 size={14} />
+              )}
+              Excluir {selectedIds.size} registro(s)
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Gráficos ── */}
       <div className="charts-grid" style={{ gridTemplateColumns: '2fr 1fr' }}>
