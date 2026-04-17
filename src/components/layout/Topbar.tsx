@@ -15,6 +15,7 @@ const TITLES: Record<string, string> = {
   '/evolucao':      'Evolução',
   '/importar':      'Importar',
   '/simulador':     'Simulador Estratégico',
+  '/diretoria':     'Gestão da Diretoria',
   '/configuracoes': 'Configurações',
   '/conciliacao':   'Conciliação Bancária',
 }

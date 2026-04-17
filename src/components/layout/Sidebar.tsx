@@ -18,7 +18,8 @@ import {
   Settings,
   Calculator,
   FileCheck,
-  ShoppingCart
+  ShoppingCart,
+  ShieldCheck
 } from 'lucide-react'
 
 const MENU = [
@@ -52,6 +53,7 @@ const MENU = [
     items: [
       { href: '/metas', icon: Target, label: 'Metas' },
       { href: '/projetos', icon: Briefcase, label: 'Projetos' },
+      { href: '/diretoria', icon: ShieldCheck, label: 'Diretoria' },
     ]
   },
   { 

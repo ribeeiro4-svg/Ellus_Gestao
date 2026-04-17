@@ -84,6 +84,11 @@ export function useProjecao() {
       .eq('tenant_id', tenantId)
       .eq('status', 'ativo')
 
+    const { data: diretoria } = await sb.from('diretoria')
+      .select('id, nome, pro_labore_base')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'ativo')
+
     if (financeiro) {
       const receitaReal = financeiro.filter(l => l.tipo === 'receita').reduce((s, l) => s + l.valor, 0)
       const despesaReal = financeiro.filter(l => l.tipo === 'despesa')
@@ -93,13 +98,25 @@ export function useProjecao() {
         .reduce((s, l) => s + l.valor, 0)
       const fixaReal = totalDespesa - folhaReal
 
+      const proLaboresReais = (diretoria || []).map(d => ({
+        id: d.id,
+        nome: d.nome,
+        periodos: [{
+          id: Math.random().toString(),
+          valor: d.pro_labore_base || 0,
+          mes_inicio: cenario.mes_referencia,
+          ano_inicio: cenario.ano_referencia
+        }]
+      }))
+
       setCenario(prev => ({
         ...prev,
         num_associados: assocCount || prev.num_associados,
         valor_mensalidade: assocCount ? Math.round(receitaReal / assocCount) : prev.valor_mensalidade,
         despesas_fixas: Math.round(fixaReal * 0.7),
         despesas_variaveis: Math.round(fixaReal * 0.3),
-        folha_pagamento: folhaReal
+        folha_pagamento: folhaReal,
+        pro_labores: proLaboresReais.length > 0 ? proLaboresReais : prev.pro_labores
       }))
     }
     setSyncing(false)
