@@ -49,26 +49,25 @@ export default function FinanceiroPage() {
     )
   }, [associados, lancamentos])
 
-  const handleGerarRecorrenciaParaNovos = async (meses: number = 12) => {
+  const handleGerarRecorrenciaParaNovos = async (params: { meses: number, forma_pagamento: string, conta_id: string, dia: number }) => {
     if (!associadosSemPagamento.length) return
-    const contaCora = contas.find(c => c.nome.toLowerCase().includes('cora')) || contas[0]
     
     const batch: any[] = []
     const hoje = new Date()
     
     associadosSemPagamento.forEach(assoc => {
-      for (let i = 0; i < meses; i++) {
-        const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 10) // Padrão dia 10
+      for (let i = 0; i < params.meses; i++) {
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, params.dia)
         batch.push({
           tipo: 'receita',
-          descricao: `Mensalidade - ${assoc.nome}`,
+          descricao: `MENSALIDADE DE ASSOCIADO - ${assoc.nome}`,
           categoria: 'Mensalidades',
           valor: 50,
           data: d.toISOString().split('T')[0],
           status: 'pendente',
           associado_id: assoc.id,
-          conta_id: contaCora?.id || null,
-          forma_pagamento: 'Boleto'
+          conta_id: params.conta_id,
+          forma_pagamento: params.forma_pagamento
         })
       }
     })
@@ -657,8 +656,8 @@ export default function FinanceiroPage() {
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
         title="Sincronizar Novos Associados"
-        initialData={{ meses: 12 }}
-        onSubmit={(data) => handleGerarRecorrenciaParaNovos(Number(data.meses))}
+        initialData={{ meses: 12, forma_pagamento: 'Boleto', conta_id: contas.find(c => c.nome.toLowerCase().includes('cora'))?.id || contas[0]?.id || '', dia: 10 }}
+        onSubmit={(data) => handleGerarRecorrenciaParaNovos(data)}
         fields={[
           { 
             name: '_info', 
@@ -670,8 +669,8 @@ export default function FinanceiroPage() {
                   <AlertCircle size={16} /> {associadosSemPagamento.length} Associados encontrados
                 </div>
                 <p className="text-xs text-indigo-600 leading-relaxed">
-                  Estes associados foram cadastrados mas ainda não possuem nenhum lançamento financeiro vinculado. 
-                  Ao confirmar, o sistema gerará as mensalidades pendentes para cada um deles.
+                  Estes associados ainda não possuem nenhum lançamento financeiro. 
+                  Defina as regras abaixo para gerar as mensalidades em lote.
                 </p>
               </div>
             )
@@ -681,6 +680,14 @@ export default function FinanceiroPage() {
             { value: 6, label: '6 Meses' },
             { value: 12, label: '12 Meses (1 Ano)' },
             { value: 24, label: '24 Meses (2 Anos)' }
+          ]},
+          { name: 'dia', label: 'Dia de Vencimento (Todo mês)', type: 'number', required: true },
+          { name: 'conta_id', label: 'Conta para Depósito', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
+          { name: 'forma_pagamento', label: 'Forma de Pagamento Padrão', type: 'select', required: true, options: [
+            { value: 'Boleto', label: 'Boleto' },
+            { value: 'PIX', label: 'PIX' },
+            { value: 'Dinheiro', label: 'Dinheiro' },
+            { value: 'Transferência', label: 'Transferência' }
           ]},
         ]}
       />
