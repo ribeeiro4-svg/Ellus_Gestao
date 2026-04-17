@@ -18,6 +18,16 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 
 export default function AssociadosPage() {
   const { associados, loading, isSyncing, inserir, atualizar, remover, syncZapSign } = useAssociados()
+  
+  // Helper para normalização de strings (busca sem acentos)
+  const normalizeStr = (str: string) => {
+    return (str || '')
+      .normalize('NFD') // Decompõe acentos
+      .replace(/[\u0300-\u036f]/g, "") // Remove acentos
+      .toLowerCase()
+      .trim()
+  }
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [searchQ, setSearchQ] = useState('')
@@ -54,8 +64,20 @@ export default function AssociadosPage() {
 
   const filtrados = useMemo(() => {
     let res = associados
-    // Filtro de busca textual
-    if (searchQ) res = res.filter((a: any) => JSON.stringify(a).toLowerCase().includes(searchQ.toLowerCase()))
+    
+    // Filtro de busca textual inteligente
+    if (searchQ) {
+      const q = normalizeStr(searchQ)
+      res = res.filter((a: any) => {
+        const nome = normalizeStr(a.nome)
+        const cpf = (a.cpf || '').replace(/\D/g, '')
+        const email = (a.email || '').toLowerCase()
+        const codigo = (a.codigo || '').toLowerCase()
+        
+        return nome.includes(q) || cpf.includes(q) || email.includes(q) || codigo.includes(q)
+      })
+    }
+
     // Filtro de status
     if (filterStatus !== 'todos') res = res.filter((a: any) => (a.status || '').toLowerCase() === filterStatus)
     // Filtro de categoria
