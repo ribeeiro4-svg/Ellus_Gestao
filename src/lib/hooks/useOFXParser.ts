@@ -36,11 +36,11 @@ export function useOFXParser() {
     while ((match = trnRegex.exec(ofxContent)) !== null) {
       const content = match[1]
       
-      const type = /<TRNTYPE>(.*)/i.exec(content)?.[1]?.trim() || 'OTHER'
-      const dtPosted = /<DTPOSTED>(.*)/i.exec(content)?.[1]?.trim() || '' // YYYYMMDD...
-      const trnAmt = /<TRNAMT>(.*)/i.exec(content)?.[1]?.trim() || '0'
-      const fitid = /<FITID>(.*)/i.exec(content)?.[1]?.trim() || ''
-      const memo = /<MEMO>(.*)/i.exec(content)?.[1]?.trim() || /<NAME>(.*)/i.exec(content)?.[1]?.trim() || 'Sem descrição'
+      const type = content.match(/<TRNTYPE>([^<\n\r]*)/i)?.[1]?.trim() || 'OTHER'
+      const dtPosted = content.match(/<DTPOSTED>([^<\n\r]*)/i)?.[1]?.trim() || '' // YYYYMMDD...
+      const trnAmt = content.match(/<TRNAMT>([^<\n\r]*)/i)?.[1]?.trim() || '0'
+      const fitid = content.match(/<FITID>([^<\n\r]*)/i)?.[1]?.trim() || ''
+      const memo = content.match(/<MEMO>([^<\n\r]*)/i)?.[1]?.trim() || content.match(/<NAME>([^<\n\r]*)/i)?.[1]?.trim() || 'Sem descrição'
       
       // Convert Date: YYYYMMDD -> YYYY-MM-DD
       const year = dtPosted.substring(0, 4)
@@ -48,7 +48,12 @@ export function useOFXParser() {
       const day = dtPosted.substring(6, 8)
       const formattedDate = `${year}-${month}-${day}`
       
-      const cleanMemo = memo.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      const cleanMemo = memo
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/<\/?[A-Z0-9]+>/gi, '') // Remove tags residuais como </MEMO>
+        .trim()
 
       // Captura a string bruta entre a tag TRNAMT e o próximo sinal de < ou quebra de linha
       const trnAmtMatch = content.match(/<TRNAMT>([^<\n\r]*)/i)
