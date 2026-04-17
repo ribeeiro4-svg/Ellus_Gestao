@@ -27,11 +27,6 @@ export default function AssociadosPage() {
   const [filterCategoria, setFilterCategoria] = useState<string>('todas')
   const [filterCpfInvalido, setFilterCpfInvalido] = useState(false)
 
-  /* ── Dados para gráficos ── */
-  const ativos = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('ativ')).length, [associados])
-  const inadimplentes = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('inadimp')).length, [associados])
-  const inativos = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('inat')).length, [associados])
-
   const handleSyncZapSign = async () => {
     const res = await syncZapSign()
     if (res.error) {
@@ -42,6 +37,11 @@ export default function AssociadosPage() {
       alert(res.message || 'Sincronização concluída.')
     }
   }
+
+  /* ── Dados para gráficos ── */
+  const ativos = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('ativ')).length, [associados])
+  const inadimplentes = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('inadimp')).length, [associados])
+  const inativos = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('inat')).length, [associados])
 
   const catMap = useMemo(() => {
     const m: Record<string, number> = {}
@@ -210,6 +210,18 @@ export default function AssociadosPage() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button 
+            onClick={handleSyncZapSign} 
+            disabled={isSyncing}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl text-[10px] font-black uppercase hover:bg-indigo-100 transition-all disabled:opacity-50"
+          >
+            {isSyncing ? (
+              <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            ) : (
+              <RefreshCw size={14} />
+            )}
+            Sincronizar ZapSign
+          </button>
           {/* Checkbox Selecionar Todos */}
           <div
             className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-all select-none"
