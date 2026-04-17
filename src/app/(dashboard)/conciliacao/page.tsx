@@ -314,13 +314,20 @@ export default function ConciliacaoPage() {
                       <div>
                         <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{fmtData(item.bank.date)}</div>
                         <div className="text-sm font-bold text-gray-900 break-words leading-tight">{item.bank.memo}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs font-black text-gray-700">{fmtR(item.bank.amount)}</span>
-                          {item.bank.taxa && item.bank.taxa > 0 ? (
-                            <span className="text-[9px] font-bold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100 flex items-center gap-1">
-                              % Taxa: {fmtR(item.bank.taxa)}
+                        <div className="flex items-center gap-6 mt-2">
+                          <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Valor Bruto</span>
+                            <span className="text-xs font-black text-gray-700">{fmtR(item.bank.amount)}</span>
+                          </div>
+                          
+                          <div className="w-px h-6 bg-gray-100" />
+                          
+                          <div className="flex flex-col">
+                            <span className="text-[8px] font-black text-amber-500 uppercase tracking-widest">Taxa Bancária</span>
+                            <span className={`text-xs font-black ${item.bank.taxa && item.bank.taxa > 0 ? 'text-amber-600' : 'text-gray-300'}`}>
+                              {fmtR(item.bank.taxa || 0)}
                             </span>
-                          ) : null}
+                          </div>
                         </div>
                       </div>
                     </div>
