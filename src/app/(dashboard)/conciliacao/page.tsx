@@ -32,6 +32,7 @@ export default function ConciliacaoPage() {
   const [isProcessingBatch, setIsProcessingBatch] = useState(false)
   const [selectedExtrato, setSelectedExtrato] = useState<OFXTransaction | null>(null)
   const [selectedContaId, setSelectedContaId] = useState<string>('')
+  const [filterMatch, setFilterMatch] = useState<'todos' | 'com_match' | 'sem_match'>('todos')
 
   // Inicializa conta padrão
   useEffect(() => {
@@ -115,6 +116,17 @@ export default function ConciliacaoPage() {
   const batchTargets = useMemo(() => {
     return matchedTransactions.filter(t => t.assocMatch && !t.match)
   }, [matchedTransactions])
+
+  // Contadores para os filtros de match
+  const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch).length, [matchedTransactions])
+  const countSemMatch = useMemo(() => matchedTransactions.filter(t => !t.assocMatch).length, [matchedTransactions])
+
+  // Lista filtrada por match
+  const transacoesFiltradas = useMemo(() => {
+    if (filterMatch === 'com_match') return matchedTransactions.filter(t => t.assocMatch)
+    if (filterMatch === 'sem_match') return matchedTransactions.filter(t => !t.assocMatch)
+    return matchedTransactions
+  }, [matchedTransactions, filterMatch])
 
   const handleProcessarLote = async () => {
     if (!batchTargets.length || !selectedContaId) {
@@ -332,10 +344,35 @@ export default function ConciliacaoPage() {
                 Trocar Arquivo
               </button>
             </div>
-            
+
+            {/* ── Filtros de Match ── */}
+            <div className="px-6 py-3 border-b border-gray-100 flex items-center gap-3 flex-wrap bg-white">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Filtrar:</span>
+              {[
+                { key: 'todos', label: `Todas (${matchedTransactions.length})`, color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe' },
+                { key: 'com_match', label: `✓ Com Match (${countComMatch})`, color: '#16a34a', bg: '#dcfce7', border: '#86efac' },
+                { key: 'sem_match', label: `⚠ Sem Match (${countSemMatch})`, color: '#dc2626', bg: '#fee2e2', border: '#fca5a5' },
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilterMatch(f.key as any)}
+                  style={{
+                    fontSize: 11, fontWeight: 800, padding: '5px 14px', borderRadius: 20,
+                    border: filterMatch === f.key ? `2px solid ${f.border}` : '1px solid #e5e7eb',
+                    background: filterMatch === f.key ? f.bg : 'transparent',
+                    color: filterMatch === f.key ? f.color : '#9ca3af',
+                    cursor: 'pointer', transition: 'all .15s'
+                  }}
+                >{f.label}</button>
+              ))}
+              <span className="ml-auto text-[10px] font-bold text-gray-400">
+                {transacoesFiltradas.length} exibindo
+              </span>
+            </div>
+
             <div className="divide-y divide-gray-50">
-              {matchedTransactions.length > 0 ? (
-                matchedTransactions.map((item, idx) => (
+              {transacoesFiltradas.length > 0 ? (
+                transacoesFiltradas.map((item, idx) => (
                   <div key={item.bank.id} className="group p-5 hover:bg-indigo-50/30 transition-all flex flex-col md:flex-row items-center gap-6">
                     
                     {/* Extrato Entry */}
