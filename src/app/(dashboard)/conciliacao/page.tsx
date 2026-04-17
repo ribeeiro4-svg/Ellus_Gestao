@@ -12,12 +12,14 @@ import {
   FileCheck,
   Users,
   ChevronRight,
+  ShieldCheck,
   X
 } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
+import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { useOFXParser, OFXTransaction } from '@/lib/hooks/useOFXParser'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import CrudModal from '@/components/ui/CrudModal'
@@ -27,6 +29,7 @@ export default function ConciliacaoPage() {
   const { contas } = useContas()
   const { associados, atualizar: atualizarAssociado } = useAssociados()
   const { fornecedores, inserir: inserirFornecedor } = useFornecedores()
+  const { diretoria } = useDiretoria()
   const { parseOFX } = useOFXParser()
 
   const [extrato, setExtrato] = useState<OFXTransaction[]>([])
@@ -105,6 +108,26 @@ export default function ConciliacaoPage() {
             return count >= Math.min(palavrasF.length, 2)
           })
         }
+
+        // NOVO: Match com Diretoria (Saídas)
+        if (!finalFor) {
+          const matchDir = docNoMemo ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === docNoMemo) : null
+          if (matchDir) {
+            finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
+            isCpfMatch = true
+          } else {
+            const memoLimpo = normalizeStr(ext.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
+            const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 1)
+            const dMatch = diretoria.find(d => {
+              const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
+              const count = palavrasD.filter(p => palavrasBanco.includes(p)).length
+              return count >= Math.min(palavrasD.length, 2)
+            })
+            if (dMatch) {
+              finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
+            }
+          }
+        }
       }
 
       let suggestedCategory = isCredit ? 'Mensalidades' : (finalFor?.categoria_padrao || 'Serviços')
@@ -150,7 +173,8 @@ export default function ConciliacaoPage() {
         data: t.bank.date,
         status: 'pago',
         associado_id: t.assocMatch?.id,
-        fornecedor_id: t.forMatch?.id,
+        fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || t.forMatch?.id),
+        diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
         conciliado: true,
         banco_transacao_id: t.bank.fitid
       }))
@@ -297,13 +321,13 @@ export default function ConciliacaoPage() {
 
                   <div className="flex-[1.2] w-full">
                     {item.assocMatch || item.forMatch ? (
-                      <button onClick={() => handleQuickCreate(item.bank)} className={`flex items-center gap-4 w-full p-4 rounded-2xl border border-dashed transition-all hover:shadow-lg ${item.forMatch ? 'border-orange-200 bg-orange-50/20' : 'border-emerald-200 bg-emerald-50/20'}`}>
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${item.forMatch ? 'bg-orange-500' : 'bg-emerald-500'}`}>
-                          {item.forMatch ? <Banknote size={20} /> : <Users size={20} />}
+                      <button onClick={() => handleQuickCreate(item.bank)} className={`flex items-center gap-4 w-full p-4 rounded-2xl border border-dashed transition-all hover:shadow-lg ${(item.forMatch as any)?.isDirector ? 'border-indigo-200 bg-indigo-50/20' : (item.forMatch ? 'border-orange-200 bg-orange-50/20' : 'border-emerald-200 bg-emerald-50/20')}`}>
+                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${(item.forMatch as any)?.isDirector ? 'bg-indigo-600' : (item.forMatch ? 'bg-orange-500' : 'bg-emerald-500')}`}>
+                          {(item.forMatch as any)?.isDirector ? <ShieldCheck size={20} /> : (item.forMatch ? <Banknote size={20} /> : <Users size={20} />)}
                         </div>
                         <div className="flex-1 text-left">
-                          <div className={`text-[10px] font-black uppercase tracking-widest ${item.forMatch ? 'text-orange-600' : 'text-emerald-600'}`}>
-                            {item.forMatch ? 'FORNECEDOR' : (item.isFirstPayment ? '🌟 ADESÃO' : 'ASSOCIADO')}
+                          <div className={`text-[10px] font-black uppercase tracking-widest ${(item.forMatch as any)?.isDirector ? 'text-indigo-600' : (item.forMatch ? 'text-orange-600' : 'text-emerald-600')}`}>
+                            {(item.forMatch as any)?.isDirector ? 'DIRETORIA' : (item.forMatch ? 'FORNECEDOR' : (item.isFirstPayment ? '🌟 ADESÃO' : 'ASSOCIADO'))}
                           </div>
                           <div className="text-xs font-bold text-gray-800">{(item.forMatch ? (item.forMatch as any).nome : (item.assocMatch as any).nome)}</div>
                         </div>

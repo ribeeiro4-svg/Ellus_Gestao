@@ -42,6 +42,8 @@ export interface Lancamento {
   conciliado?: boolean
   banco_transacao_id?: string
   associado_id?: string // ID do associado vinculado (opcional)
+  fornecedor_id?: string // ID do fornecedor vinculado (opcional)
+  diretor_id?: string // ID do diretor vinculado (opcional)
   created_at: string
   updated_at: string
 }
@@ -55,7 +57,9 @@ export interface ContaBancaria {
   created_at: string
 }
 
-export interface LancamentoInput extends Omit<Lancamento, 'id' | 'tenant_id' | 'created_at' | 'updated_at'> {}
+export interface LancamentoInput extends Omit<Lancamento, 'id' | 'tenant_id' | 'created_at' | 'updated_at'> {
+  taxa?: number // Campo virtual para cálculo
+}
 
 // ─── Associados ────────────────────────────────────────────────────────────
 export type StatusAssociado = 'ativo' | 'inativo' | 'inadimplente' | 'pendente'
