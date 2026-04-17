@@ -31,9 +31,21 @@ export class CoraService {
       throw new Error('Certificações Cora não encontradas em variáveis de ambiente.');
     }
 
+    // Função auxiliar para normalizar certificados vindos do Vercel
+    const normalizePEM = (pem: string) => {
+      // Se vier com \n escapado (literal \n), transforma em quebra de linha real
+      let normalized = pem.replace(/\\n/g, '\n');
+      
+      // Remove espaços extras no início/fim de cada linha e garante quebras de linha limpas
+      normalized = normalized.split('\n').map(line => line.trim()).filter(line => line.length > 0).join('\n');
+      
+      // Garante que o cabeçalho e rodapé estejam sozinhos em suas linhas
+      return normalized;
+    };
+
     return {
-      cert: cert.replace(/\\n/g, '\n'),
-      key: key.replace(/\\n/g, '\n'),
+      cert: normalizePEM(cert),
+      key: normalizePEM(key),
       rejectUnauthorized: true
     };
   }
