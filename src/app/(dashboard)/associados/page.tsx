@@ -30,7 +30,8 @@ export default function AssociadosPage() {
   const handleSyncZapSign = async () => {
     const res = await syncZapSign()
     if (res.error) {
-      alert(res.error)
+      const msg = typeof res.error === 'object' ? (res.error as any).message : res.error
+      alert(`Erro na sincronização: ${msg}`)
     } else if (res.count) {
       alert(`Sucesso! ${res.count} associados sincronizados da ZapSign.`)
     } else {
