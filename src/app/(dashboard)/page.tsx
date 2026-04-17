@@ -59,7 +59,7 @@ export default function DashboardPage() {
   // ── CÁLCULOS DINÂMICOS ──
   
   // 1. Financeiro por mês
-  const { receitaData, despesaData, resultadoData, receitaMesAtual, taxasTotal } = useMemo(() => {
+  const { receitaData, despesaData, resultadoData, receitaTotal, taxasTotal } = useMemo(() => {
     const rec = Array(12).fill(0)
     const desp = Array(12).fill(0)
     const agora = new Date()
@@ -85,16 +85,19 @@ export default function DashboardPage() {
 
     const res = rec.map((v, i) => v - desp[i])
 
-    // Cálculo acumulado de taxas
+    // Cálculo acumulado de taxas e receitas totais
     let taxasTotal = 0
+    let rTotal = 0
     lancamentos.forEach(l => {
+      if (l.tipo === 'receita') rTotal += (l.valor || 0)
+      
       const match = l.descricao.match(/\(Taxa: R\$\s*([^)]+)\)/)
       if (match) {
         taxasTotal += parseFloat(match[1].replace(/\./g, '').replace(',', '.'))
       }
     })
 
-    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaMesAtual: rAtual, taxasTotal }
+    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaTotal: rTotal, taxasTotal }
   }, [lancamentos])
 
   // 2. Associados
@@ -108,7 +111,11 @@ export default function DashboardPage() {
 
   // 3. Lançamentos recentes
   const ultimosLancamentos = useMemo(() => {
-    return [...lancamentos].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 5)
+    return [...lancamentos].sort((a, b) => {
+      const da = a.data ? new Date(a.data).getTime() : 0
+      const db = b.data ? new Date(b.data).getTime() : 0
+      return db - da
+    }).slice(0, 20)
   }, [lancamentos])
 
   const chartConfigs: any = {
@@ -185,7 +192,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <KpiCard title="Receita (Mês Atual)" value={fmtR(receitaMesAtual)} trend={8.3} trendLabel="projeção positiva" icon={<DollarSign size={20} />} category="success" />
+        <KpiCard title="Receita Total" value={fmtR(receitaTotal)} trend={8.3} trendLabel="projeção positiva" icon={<DollarSign size={20} />} category="success" />
         <KpiCard title="Associados Ativos" value={ativos.toString()} trendLabel="na carteira" icon={<Users size={20} />} category="info" />
         <KpiCard title="Inadimplência" value={fmtPct(pctInadimp)} trend={-1.5} trendLabel="estável" icon={<Activity size={20} />} category={pctInadimp > 10 ? 'error' : 'info'} />
         <KpiCard title="Lançamentos" value={lancamentos.length.toString()} trendLabel="total registros" icon={<Briefcase size={20} />} category="purple" />
