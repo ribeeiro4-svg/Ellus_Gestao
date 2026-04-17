@@ -87,25 +87,8 @@ export default function ConciliacaoPage() {
     setIgnoredMatches(prev => new Set(prev).add(fitid))
   }
 
-  // Lógica de matching inteligente
-  const matchedTransactions = useMemo(() => {
-    const adesaoJaSugerida = new Set<string>()
-    const usedSystemIds = new Set<string>() // Evita que um lançamento do sistema case com duas do banco
-
-    const allMatches = extrato.map((ext: OFXTransaction) => {
-      if (ignoredMatches.has(ext.fitid)) {
-        return { bank: ext, match: null, assocMatch: null, forMatch: null, isCpfMatch: false, suggestedCategory: ext.type === 'CREDIT' ? 'Mensalidades' : 'Outros', isFirstPayment: false, similarCount: 0 }
-      }
-
-      const isCredit = ext.type === 'CREDIT'
-      const cnpjNoMemo = (ext.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
-      const cpfNoMemo = (ext.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
-      
-      const rawDigits = ext.memo.replace(/[^\d]/g, '')
-      const extractedDoc = cpfNoMemo || cnpjNoMemo || (rawDigits.length >= 11 ? rawDigits.slice(-11) : null)
-
   // Lógica de matching unificada para OFX e Cora
-  const processMatch = (item: { memo: string, type: 'CREDIT' | 'DEBIT', fitid: string, amount: number, date: string, doc?: string }) => {
+  const processMatch = useCallback((item: { memo: string, type: 'CREDIT' | 'DEBIT', fitid: string, amount: number, date: string, doc?: string }) => {
     const isCredit = item.type === 'CREDIT'
     const cnpjNoMemo = (item.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
     const cpfNoMemo = (item.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
@@ -181,21 +164,21 @@ export default function ConciliacaoPage() {
       suggestedCategory,
       isFirstPayment
     }
-  }
+  }, [associados, fornecedores, diretoria])
 
-  // Lógica de matching unificada
+  // Lógica de matching unificada para OFX
   const matchedTransactions = useMemo(() => {
     return extrato.filter(ext => !ignoredMatches.has(ext.fitid)).map(ext => processMatch({
-      memo: ext.memo, type: ext.type, fitid: ext.fitid, amount: ext.amount, date: ext.date
+      memo: ext.memo, type: ext.type as any, fitid: ext.fitid, amount: ext.amount, date: ext.date
     }))
-  }, [extrato, associados, fornecedores, ignoredMatches, diretoria])
+  }, [extrato, processMatch, ignoredMatches])
 
   // Lógica específica para Cora Items com Match
   const coraMatchedItems = useMemo(() => {
     return coraItems.map(item => processMatch({
-      memo: item.descricao, type: item.tipo, fitid: item.cora_id, amount: item.valor, date: item.data, doc: item.documento
+      memo: item.descricao, type: item.tipo as any, fitid: item.cora_id, amount: item.valor, date: item.data, doc: item.documento
     }))
-  }, [coraItems, associados, fornecedores, diretoria])
+  }, [coraItems, processMatch])
 
   const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch || t.forMatch).length, [matchedTransactions])
   const countSemMatch = useMemo(() => matchedTransactions.filter(t => !t.assocMatch && !t.forMatch).length, [matchedTransactions])
