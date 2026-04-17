@@ -49,10 +49,10 @@ export class CoraService {
         cleaned = cleaned.substring(1, cleaned.length - 1);
       }
 
-      cleaned = cleaned.replace(/\\n/g, '\n').replace(/\r/g, '');
+      // Removemos quebras de linha escapadas e reais para facilitar a extração do bloco pura
+      cleaned = cleaned.replace(/\\n/g, '').replace(/\r/g, '').replace(/\n/g, '').replace(/\s/g, '');
       
       // 4. EXTRATOR CIRÚRGICO: Localiza o maior bloco contínuo de caracteres Base64
-      // Isso ignora restos de cabeçalhos, aspas ou caracteres perdidos no final
       const matches = cleaned.match(/[A-Za-z0-9+/=]{100,}/g);
       let base64Content = (matches || []).sort((a, b) => b.length - a.length)[0] || '';
 
