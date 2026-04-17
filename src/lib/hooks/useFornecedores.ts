@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useState, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 
 export interface Fornecedor {
@@ -17,12 +17,13 @@ export function useFornecedores() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
   const [loading, setLoading] = useState(true)
   const tenantId = useTenantId()
+  const sb = createClient()
 
-  const fetchFornecedores = async () => {
+  const fetchFornecedores = useCallback(async () => {
     if (!tenantId) return
     setLoading(true)
     try {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('fornecedores')
         .select('*')
         .eq('tenant_id', tenantId)
@@ -30,17 +31,15 @@ export function useFornecedores() {
       
       if (!error && data) {
         setFornecedores(data)
-      } else if (error) {
-        console.error('Erro ao buscar fornecedores:', error)
       }
     } finally {
       setLoading(false)
     }
-  }
+  }, [tenantId])
 
   const inserirFornecedor = async (obj: Partial<Fornecedor>) => {
     if (!tenantId) return { error: 'Tenant não identificado' }
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from('fornecedores')
       .insert([{ ...obj, tenant_id: tenantId }])
       .select()
@@ -49,7 +48,7 @@ export function useFornecedores() {
   }
 
   const atualizarFornecedor = async (id: string, obj: Partial<Fornecedor>) => {
-    const { error } = await supabase
+    const { error } = await sb
       .from('fornecedores')
       .update(obj)
       .eq('id', id)
@@ -58,7 +57,7 @@ export function useFornecedores() {
   }
 
   const excluirFornecedor = async (id: string) => {
-    const { error } = await supabase
+    const { error } = await sb
       .from('fornecedores')
       .delete()
       .eq('id', id)
@@ -68,7 +67,7 @@ export function useFornecedores() {
 
   useEffect(() => {
     fetchFornecedores()
-  }, [tenantId])
+  }, [fetchFornecedores])
 
   return { 
     fornecedores, 
