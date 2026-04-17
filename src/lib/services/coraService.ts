@@ -33,27 +33,26 @@ export class CoraService {
 
     // Função auxiliar para normalizar certificados vindos do Vercel
     const normalizePEM = (pem: string, type: 'cert' | 'key') => {
-      if (!pem) return '';
+      const defaultValue = { 
+        pem: '', 
+        debug: { len: 0, start: 'NONE', end: 'NONE' } 
+      };
+
+      if (!pem) return defaultValue;
       
-      // 1. Limpeza inicial de aspas (caso venha entre aspas no env do Vercel)
       let cleaned = pem.trim();
       if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
         cleaned = cleaned.substring(1, cleaned.length - 1);
       }
 
-      // 2. Transforma \n escapado em quebra de linha real
       cleaned = cleaned.replace(/\\n/g, '\n').replace(/\r/g, '');
       
-      // 3. Extrai o conteúdo base64
-      // Removemos os cabeçalhos/rodapés caso existam
       const base64Part = cleaned
         .replace(/-----BEGIN[\s\S]+?-----/i, '')
         .replace(/-----END[\s\S]+?-----/i, '');
 
-      // 4. LIMPEZA TOTAL: Remove TUDO que não for caractere base64 válido
       const base64Content = base64Part.replace(/[^a-zA-Z0-9+/=]/g, '');
 
-      // 5. IDENTIFICAÇÃO DO LABEL
       let label = type === 'cert' ? 'CERTIFICATE' : 'RSA PRIVATE KEY';
       if (type === 'key') {
         const upper = cleaned.toUpperCase();
@@ -62,29 +61,36 @@ export class CoraService {
         }
       }
 
-      // 6. RECONSTRUÇÃO FORMAL
       const lines = base64Content.match(/.{1,64}/g) || [];
       const finalPem = `-----BEGIN ${label}-----\n${lines.join('\n')}\n-----END ${label}-----`;
 
-      console.log(`[PEM-Fix] Normalizado ${type}: raw_length=${pem.length}, b64_length=${base64Content.length}, label=${label}`);
-      
-      return finalPem;
+      return { 
+        pem: finalPem, 
+        debug: {
+          len: base64Content.length,
+          start: base64Content.substring(0, 10),
+          end: base64Content.substring(base64Content.length - 10)
+        }
+      };
     };
 
     try {
+      const normCert = normalizePEM(cert, 'cert');
+      const normKey = normalizePEM(key, 'key');
+
       const config = {
-        cert: normalizePEM(cert, 'cert'),
-        key: normalizePEM(key, 'key'),
+        cert: normCert.pem,
+        key: normKey.pem,
         rejectUnauthorized: true
       };
       
-      if (config.cert.length < 100 || config.key.length < 100) {
-        throw new Error(`Certificados inválidos. Cert: ${config.cert.length} bytes, Key: ${config.key.length} bytes.`);
+      if (normCert.debug.len < 100 || normKey.debug.len < 100) {
+        throw new Error(`Dados insuficientes. Cert: ${normCert.debug.len}b [${normCert.debug.start}...], Key: ${normKey.debug.len}b [${normKey.debug.start}...]`);
       }
 
       return config;
     } catch (err: any) {
-      throw new Error(`Falha na configuração mTLS: ${err.message}`);
+      throw new Error(`Config mTLS: ${err.message}`);
     }
   }
 
