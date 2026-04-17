@@ -7,7 +7,7 @@ import {
   Activity,
   Calendar,
   Trash2
-} from 'lucide-react'
+} from 'lucide-center'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
 import ChartModal from '@/components/ui/ChartModal'
@@ -40,8 +40,6 @@ export default function DashboardPage() {
   const { limparTudo: limpProjetos } = useProjetos()
   const { limparTudo: limpSim } = useProjecao()
   const [activeChart, setActiveChart] = useState<any>(null)
-  const [filterMonth, setFilterMonth] = useState<number>(-1)
-  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
 
   const handleClearAll = async () => {
     if (confirm('ATENÇÃO: Isso apagará TODOS os seus dados do banco de dados Cloud. Continuar?')) {
@@ -60,53 +58,44 @@ export default function DashboardPage() {
 
   // ── CÁLCULOS DINÂMICOS ──
   
-  // ── CÁLCULOS DINÂMICOS ──
-  
   // 1. Financeiro por mês
-  const { receitaData, despesaData, resultadoData, receitaMesAtual, taxasTotal, totalLancamentosPeriodo } = useMemo(() => {
+  const { receitaData, despesaData, resultadoData, receitaMesAtual, taxasTotal } = useMemo(() => {
     const rec = Array(12).fill(0)
     const desp = Array(12).fill(0)
+    const agora = new Date()
+    const mesAtualIndex = agora.getMonth()
     let rAtual = 0
-    let totalL = 0
 
     lancamentos.forEach(l => {
-      const data = l.data ? new Date(l.data) : null
-      if (!data || isNaN(data.getTime())) return
+      const dataStr = l.data || ''
+      // Parsing seguro para evitar problemas de timezone
+      const parts = dataStr.split('-')
+      if (parts.length < 3) return
       
-      const mesIdx = data.getMonth()
-      const ano = data.getFullYear()
+      const mesIdx = parseInt(parts[1]) - 1
       const valor = l.valor || 0
       
-      // Gráficos anuais (sempre mostram o ano selecionado)
-      if (ano === filterYear) {
-        if (l.tipo === 'receita') rec[mesIdx] += valor
-        else desp[mesIdx] += valor
-      }
-
-      // KPIs do período específico (Mês e Ano selecionados)
-      if (ano === filterYear && (filterMonth === -1 || mesIdx === filterMonth)) {
-        totalL++
-        if (l.tipo === 'receita') rAtual += valor
+      if (l.tipo === 'receita') {
+        rec[mesIdx] += valor
+        if (mesIdx === mesAtualIndex) rAtual += valor
+      } else {
+        desp[mesIdx] += valor
       }
     })
 
     const res = rec.map((v, i) => v - desp[i])
 
-    // Cálculo acumulado de taxas (filtro de período)
+    // Cálculo acumulado de taxas
     let taxasTotal = 0
     lancamentos.forEach(l => {
-      const data = l.data ? new Date(l.data) : null
-      if (!data || isNaN(data.getTime())) return
-      if (data.getFullYear() === filterYear && (filterMonth === -1 || data.getMonth() === filterMonth)) {
-        const match = l.descricao.match(/\(Taxa: R\$\s*([^)]+)\)/)
-        if (match) {
-          taxasTotal += parseFloat(match[1].replace(/\./g, '').replace(',', '.'))
-        }
+      const match = l.descricao.match(/\(Taxa: R\$\s*([^)]+)\)/)
+      if (match) {
+        taxasTotal += parseFloat(match[1].replace(/\./g, '').replace(',', '.'))
       }
     })
 
-    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaMesAtual: rAtual, taxasTotal, totalLancamentosPeriodo: totalL }
-  }, [lancamentos, filterMonth, filterYear])
+    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaMesAtual: rAtual, taxasTotal }
+  }, [lancamentos])
 
   // 2. Associados
   const { ativos, inadimplentes, inativos, pctInadimp } = useMemo(() => {
@@ -117,16 +106,10 @@ export default function DashboardPage() {
     return { ativos: a, inadimplentes: i, inativos: inat, pctInadimp: (i / total) * 100 }
   }, [associados])
 
-  // 3. Lançamentos recentes (Filtrados por período)
+  // 3. Lançamentos recentes
   const ultimosLancamentos = useMemo(() => {
-    return [...lancamentos]
-      .filter(l => {
-        const d = new Date(l.data)
-        return d.getFullYear() === filterYear && (filterMonth === -1 || d.getMonth() === filterMonth)
-      })
-      .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-      .slice(0, 5)
-  }, [lancamentos, filterMonth, filterYear])
+    return [...lancamentos].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 5)
+  }, [lancamentos])
 
   const chartConfigs: any = {
     receita: {
@@ -186,51 +169,26 @@ export default function DashboardPage() {
       {loading && <SplashScreen />}
       
       <div className={`animate-in fade-in duration-500 flex flex-col flex-1 h-full ${loading ? 'opacity-0' : 'opacity-100'}`}>
-      <div className="page-header flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="page-header flex justify-between items-center mb-6">
         <div>
           <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Dashboard Executivo</h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Análise em tempo real do desempenho da ACPROBEC.</p>
         </div>
-        
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-200">
-            <Calendar size={14} className="text-indigo-600" />
-            <select 
-              className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
-              value={filterMonth}
-              onChange={(e) => setFilterMonth(Number(e.target.value))}
-            >
-              <option value={-1}>Ano Inteiro</option>
-              {MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}
-            </select>
-          </div>
-
-          <select 
-            className="bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 outline-none cursor-pointer"
-            value={filterYear}
-            onChange={(e) => setFilterYear(Number(e.target.value))}
-          >
-            {[2023, 2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-
-          <div className="w-[1px] h-6 bg-gray-200 mx-1" />
-
-          <button 
-            onClick={handleClearAll}
-            className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold text-rose-600 hover:bg-rose-50 rounded-xl transition-all uppercase tracking-widest"
-            title="Apagar todos os dados registrados"
-          >
-            <Trash2 size={14} />
-            <span>Resetar</span>
-          </button>
-        </div>
+        <button 
+          onClick={handleClearAll}
+          className="flex items-center gap-2 px-4 py-2 text-[11px] font-bold text-rose-600 border border-rose-200 bg-rose-50/50 hover:bg-rose-50 rounded-xl transition-all uppercase tracking-widest"
+          title="Apagar todos os dados registrados"
+        >
+          <Trash2 size={14} />
+          <span>Apagar Tudo</span>
+        </button>
       </div>
 
       <div className="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <KpiCard title="Receita (Mês Atual)" value={fmtR(receitaMesAtual)} trend={8.3} trendLabel="projeção positiva" icon={<DollarSign size={20} />} category="success" />
         <KpiCard title="Associados Ativos" value={ativos.toString()} trendLabel="na carteira" icon={<Users size={20} />} category="info" />
         <KpiCard title="Inadimplência" value={fmtPct(pctInadimp)} trend={-1.5} trendLabel="estável" icon={<Activity size={20} />} category={pctInadimp > 10 ? 'error' : 'info'} />
-        <KpiCard title="Lançamentos" value={totalLancamentosPeriodo.toString()} trendLabel="total no período" icon={<Briefcase size={20} />} category="purple" />
+        <KpiCard title="Lançamentos" value={lancamentos.length.toString()} trendLabel="total registros" icon={<Briefcase size={20} />} category="purple" />
         <KpiCard title="Taxas Bancárias" value={fmtR(taxasTotal)} trendLabel="total acumulado" icon={<DollarSign size={20} className="text-amber-500" />} category="info" />
       </div>
 
@@ -315,7 +273,7 @@ export default function DashboardPage() {
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                       l.status === 'pago' ? 'bg-emerald-50 text-emerald-700' : 
-                      l.status === 'aberto' ? 'bg-amber-50 text-amber-700' : 
+                      l.status === 'aberto' || l.status === 'pendente' ? 'bg-amber-50 text-amber-700' : 
                       l.status === 'parcial' ? 'bg-blue-50 text-blue-700' :
                       'bg-red-50 text-red-700'
                     }`}>
