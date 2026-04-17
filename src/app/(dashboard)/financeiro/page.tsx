@@ -126,16 +126,16 @@ export default function FinanceiroPage() {
         // Gera o atual + N meses à frente
         const mesesAFrente = Number(safeData.recorrencia_meses || 12)
         const batch: any[] = []
-        const baseDate = new Date(safeData.data)
         
         for (let i = 0; i <= mesesAFrente; i++) {
-          const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, baseDate.getDate())
-          // Trata caso de dia 31 em meses que tem 30 (Date faz roll over, o que é razoável)
+          // Usamos UTC para evitar que o fuso horário mude o dia do mês
+          const parts = safeData.data.split('-').map(Number)
+          const d = new Date(Date.UTC(parts[0], parts[1] - 1 + i, parts[2]))
           
           batch.push({
             ...safeData,
             data: d.toISOString().split('T')[0],
-            status: i === 0 ? (safeData.status || 'aberto') : 'aberto', // Só o primeiro mantém o status selecionado
+            status: i === 0 ? (safeData.status || 'aberto') : 'aberto',
             recorrencia_ativa: true
           })
         }
