@@ -133,23 +133,31 @@ export default function FinanceiroPage() {
           let month = parts[1] - 1 + i
           let day = parts[2]
 
-          // Ajusta o estouro de meses para o próximo ano
           const d = new Date(year, month, day)
           const finalYear = d.getFullYear()
           const finalMonth = String(d.getMonth() + 1).padStart(2, '0')
           const finalDay = String(d.getDate()).padStart(2, '0')
           const dataString = `${finalYear}-${finalMonth}-${finalDay}`
           
+          // Removemos campos virtuais antes de enviar pro banco
+          const { recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
+
           batch.push({
-            ...safeData,
+            ...dbData,
             data: dataString,
-            status: i === 0 ? (safeData.status || 'aberto') : 'aberto',
-            recorrencia_ativa: true
+            status: i === 0 ? (safeData.status || 'aberto') : 'aberto'
           })
         }
-        await inserirBulk(batch)
+        const res = await inserirBulk(batch)
+        if (res.error) {
+          alert(`Erro ao salvar recorrência: ${JSON.stringify(res.error)}`)
+        }
       } else {
-        await inserir({ ...safeData, status: safeData.status || 'aberto' }) 
+        const { recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
+        const res = await inserir({ ...dbData, status: safeData.status || 'aberto' }) 
+        if (res.error) {
+          alert(`Erro ao salvar: ${JSON.stringify(res.error)}`)
+        }
       }
     }
   }
