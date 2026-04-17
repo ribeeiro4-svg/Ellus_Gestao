@@ -11,7 +11,8 @@ import {
   RefreshCw,
   FileCheck,
   Users,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
@@ -33,6 +34,7 @@ export default function ConciliacaoPage() {
   const [selectedExtrato, setSelectedExtrato] = useState<OFXTransaction | null>(null)
   const [selectedContaId, setSelectedContaId] = useState<string>('')
   const [filterMatch, setFilterMatch] = useState<'todos' | 'com_match' | 'sem_match'>('todos')
+  const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
 
   // Inicializa conta padrão
   useEffect(() => {
@@ -52,9 +54,26 @@ export default function ConciliacaoPage() {
       .trim()
   }
 
+  const handleUnmatch = (fitid: string) => {
+    setIgnoredMatches(prev => new Set(prev).add(fitid))
+  }
+
   // Lógica de matching inteligente e FILTRAGEM
   const matchedTransactions = useMemo(() => {
     const allMatches = extrato.map(ext => {
+      // Se o usuário desvinculou manualmente, ignoramos
+      if (ignoredMatches.has(ext.fitid)) {
+        return {
+          bank: ext,
+          match: null,
+          assocMatch: null,
+          isCpfMatch: false,
+          suggestedCategory: 'Mensalidades',
+          isFirstPayment: false,
+          similarCount: 0
+        }
+      }
+
       // 1. Prioridade 1: Busca associado pelo CPF/CNPJ exato extraído do memo
       const cpfNoMemo = (ext.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/) || 
                          ext.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
@@ -110,7 +129,7 @@ export default function ConciliacaoPage() {
 
     // REGRA: Exibir apenas o que NÃO tem match perfeito no sistema (Pendentes de conciliação/lançamento)
     return allMatches.filter(m => !m.match)
-  }, [extrato, lancamentos, associados])
+  }, [extrato, lancamentos, associados, ignoredMatches])
 
   // Transações que podem ser lançadas em lote
   const batchTargets = useMemo(() => {
@@ -450,6 +469,16 @@ export default function ConciliacaoPage() {
                              <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-[10px] font-bold text-gray-500">
                                {contas.find(c => c.id === selectedContaId)?.nome || 'Selecione Conta'}
                              </div>
+                             <button 
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleUnmatch(item.bank.fitid)
+                                }}
+                                title="Desfazer Match"
+                                className="p-2 rounded-lg bg-gray-50 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors border border-gray-100 group/btn"
+                             >
+                                <X size={14} className="group-hover/btn:scale-110 transition-transform" />
+                             </button>
                              <ChevronRight size={18} className="text-gray-300 group-hover/card:text-indigo-500 group-hover/card:translate-x-1 transition-all" />
                           </div>
                         </button>
