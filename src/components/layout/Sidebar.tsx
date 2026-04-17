@@ -17,7 +17,8 @@ import {
   LogOut,
   Settings,
   Calculator,
-  FileCheck
+  FileCheck,
+  ShoppingCart
 } from 'lucide-react'
 
 const MENU = [
@@ -42,6 +43,7 @@ const MENU = [
     section: 'Associados', 
     items: [
       { href: '/associados', icon: Users, label: 'Associados' },
+      { href: '/fornecedores', icon: ShoppingCart, label: 'Fornecedores' },
       { href: '/inadimplencia', icon: AlertTriangle, label: 'Inadimplência' },
     ]
   },
