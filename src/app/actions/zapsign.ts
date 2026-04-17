@@ -65,61 +65,34 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           // 1. Ignoramos o próprio e-mail da associação para não importar o administrador como associado
           if (signer.email === 'acprobec@gmail.com') return
 
-          // 2. Busca exaustiva e profunda de CPF/CNPJ (ignorando campos de contato)
-          const findAnyCpf = (obj: any, currentKey?: string): string => {
-            if (!obj) return ''
-            
-            // Pula campos que sabidamente não são CPF
-            const skipKeys = ['phone', 'telefone', 'email', 'name', 'nome', 'link', 'token']
-            if (currentKey && skipKeys.some(k => currentKey.toLowerCase().includes(k))) return ''
-
-            if (typeof obj === 'string') {
-              const cleaned = obj.replace(/\D/g, '')
-              // CPFs de 11 dígitos que começam com 55 geralmente são telefones (+55...)
-              if (cleaned.length === 11) {
-                if (cleaned.startsWith('55')) return '' // Provável telefone brasileiro
-                return cleaned
-              }
-              if (cleaned.length === 14) return cleaned // CNPJ
-            }
-            
-            if (typeof obj === 'object') {
-              for (const key in obj) {
-                const res = findAnyCpf(obj[key], key)
-                if (res) return res
-              }
-            }
-            return ''
-          }
-
-          // PRIORIDADE 1: Campos explícitos da API
-          let foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || signer.external_id || ''
-          
-          // PRIORIDADE 2: Busca profunda se os campos acima falharem
-          if (!foundCpf) {
-            foundCpf = findAnyCpf(signer)
-          }
-
-          // 3. Garantir Identificador Único Estável (Deduplicação por Pessoa)
-          // Prioridade: CPF limpo -> E-mail limpo -> Signer Token
+          // 2. Captura apenas campos OFICIAIS de documento (sem tentar adivinhar em campos de contato)
+          let foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || ''
           const cleanedCpf = foundCpf.replace(/\D/g, '')
-          const stableKey = cleanedCpf || signer.email?.toLowerCase().trim() || (signer as any).token
+
+          // 3. Identificador Único Estável por Nome (Slug) para evitar duplicatas infinitas
+          // Se o CPF existir, ele é o melhor código. Se não, usamos o nome normalizado.
+          const nameSlug = signer.name.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^\w\s-]/g, '')
+            .replace(/[\s_-]+/g, '-')
+            .trim()
+
+          const stableKey = cleanedCpf ? `CPF-${cleanedCpf}` : `NAME-${nameSlug}`
 
           newAssociates.push({
             nome: signer.name,
             email: signer.email || '',
-            cpf: cleanedCpf || foundCpf,
+            cpf: cleanedCpf || '',
             telefone: signer.phone_number || '',
             categoria: 'ZapSign',
             mensalidade: 50,
             status: sysStatus,
             data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
-            codigo: stableKey // O código no banco será o CPF ou E-mail, garantindo unicidade por pessoa
+            codigo: stableKey
           })
         })
       }
 
-      // Se retornou menos que 25, provavelmente é a última página
       if (results.length < 25) {
         hasMore = false
       } else {
@@ -129,11 +102,11 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
       if (page > 20) hasMore = false
     }
 
-    // Deduplica pelo código estável antes de enviar ao banco
-    // Se houver conflito (mesma pessoa em docs diferentes), damos prioridade ao registro 'ativo'
+    // Deduplica e unifica registros
     const uniqueMap = new Map<string, AssociadoInput>()
     newAssociates.forEach(a => {
       const existing = uniqueMap.get(a.codigo)
+      // Se já existe, damos prioridade para o que estiver 'ativo' (assinado)
       if (!existing || (existing.status !== 'ativo' && a.status === 'ativo')) {
         uniqueMap.set(a.codigo, a)
       }

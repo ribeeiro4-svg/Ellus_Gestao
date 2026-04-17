@@ -141,10 +141,7 @@ export default function AssociadosPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.nome}</span>
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>#{i.codigo}</span>
-              {i.cpf && <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 500 }}>• {i.cpf}</span>}
-            </div>
+            <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>#{i.codigo}</span>
           </div>
         </div>
       )
@@ -156,25 +153,31 @@ export default function AssociadosPage() {
         const isValid = digits.length >= 11
         return (
           <div className="flex items-center gap-2">
-            <span style={{ fontSize: 11, fontWeight: 600, color: isValid ? 'var(--text2)' : '#ef4444' }}>{i.cpf || 'Não inf.'}</span>
-            {!isValid && (
-              <div title="CPF/CNPJ incompleto ou inválido">
-                <AlertCircle size={14} className="text-red-500 animate-pulse" />
-              </div>
-            )}
+            <span style={{ fontSize: 11, fontWeight: 600, color: isValid ? 'var(--text2)' : '#cbd5e1' }}>
+              {i.cpf || 'Pendente'}
+            </span>
+            {!isValid && <div title="CPF não informado"><AlertCircle size={10} className="text-amber-400" /></div>}
           </div>
         )
       }
     },
-    { header: 'Categoria', key: 'categoria', render: (i: any) => <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span> },
+    { header: 'Categoria', key: 'categoria', render: (i: any) => <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', textTransform: 'uppercase' }}>{i.categoria}</span> },
     { header: 'Mensalidade', key: 'mensalidade', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text1)' }}>{fmtR(i.mensalidade)}</span> },
     { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="associado" /> },
     {
-      header: 'Contato', key: 'email',
+      header: 'Contato', key: 'id',
       render: (i: any) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text3)' }}>
-          <span title={i.email} style={{ cursor: 'pointer', display: 'flex' }}><Mail size={14} /></span>
-          {i.telefone && <span title={i.telefone} style={{ cursor: 'pointer', display: 'flex' }}><Phone size={14} /></span>}
+        <div className="flex items-center gap-3">
+          {i.email && (
+            <a href={`mailto:${i.email}`} title={i.email} className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+              <Mail size={14} />
+            </a>
+          )}
+          {i.telefone && (
+            <a href={`https://wa.me/${i.telefone.replace(/\D/g, '')}`} target="_blank" title={i.telefone} className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+              <Phone size={14} />
+            </a>
+          )}
         </div>
       )
     },

@@ -23,7 +23,7 @@ import CrudModal from '@/components/ui/CrudModal'
 export default function ConciliacaoPage() {
   const { lancamentos, conciliar, inserir, inserirBulk, loading: finLoading } = useFinanceiro()
   const { contas } = useContas()
-  const { associados } = useAssociados()
+  const { associados, atualizar: atualizarAssociado } = useAssociados()
   const { parseOFX } = useOFXParser()
 
   const [extrato, setExtrato] = useState<OFXTransaction[]>([])
@@ -140,6 +140,14 @@ export default function ConciliacaoPage() {
     setIsProcessingBatch(true)
     
     try {
+      // Inteligência: Antes de lançar o lote, atualizamos CPFs faltantes nos associados
+      for (const t of batchTargets) {
+        if (t.assocMatch && !t.assocMatch.cpf && t.bank.cpf_extraido) {
+          console.log(`Atualizando CPF do associado ${t.assocMatch.nome} via conciliação...`)
+          await atualizarAssociado(t.assocMatch.id, { cpf: t.bank.cpf_extraido })
+        }
+      }
+
       const itemsToInsert = batchTargets.map(t => ({
         tipo: 'receita',
         descricao: t.bank.memo,
