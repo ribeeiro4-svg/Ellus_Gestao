@@ -194,12 +194,15 @@ export default function ConciliacaoPage() {
 
   // Cálculos de Totais do Extrato
   const totals = useMemo(() => {
-    return extrato.reduce((acc, curr) => {
-      if (curr.type === 'CREDIT') acc.entradas += curr.amount
-      else acc.saidas += curr.amount
-      return acc
-    }, { entradas: 0, saidas: 0 })
-  }, [extrato])
+    const bankEntradas = extrato.filter(i => i.type === 'CREDIT').reduce((s, i) => s + i.amount, 0)
+    const bankSaidas = extrato.filter(i => i.type === 'DEBIT').reduce((s, i) => s + Math.abs(i.amount), 0)
+    
+    // Considera match como transações que possuem associado identificado (sugestões)
+    const matchEntradas = matchedTransactions.filter(i => i.bank.type === 'CREDIT' && i.assocMatch).reduce((s, i) => s + i.bank.amount, 0)
+    const matchSaidas = matchedTransactions.filter(i => i.bank.type === 'DEBIT' && i.match).reduce((s, i) => s + Math.abs(i.bank.amount), 0)
+
+    return { entradas: bankEntradas, saidas: bankSaidas, matchEntradas, matchSaidas }
+  }, [extrato, matchedTransactions])
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -282,17 +285,33 @@ export default function ConciliacaoPage() {
                   <Search size={16} className="text-indigo-600" /> Transações ({extrato.length})
                 </h2>
                 
-                <div className="flex items-center gap-4 bg-white/50 px-4 py-2 rounded-2xl border border-gray-200/50">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-black text-green-500 uppercase tracking-widest leading-none mb-1">Total Entradas</span>
-                    <span className="text-xs font-black text-green-600 tracking-tight">{fmtR(totals.entradas)}</span>
-                  </div>
-                  <div className="w-px h-6 bg-gray-200 mx-1" />
-                  <div className="flex flex-col">
-                    <span className="text-[8px] font-black text-red-500 uppercase tracking-widest leading-none mb-1">Total Saídas</span>
-                    <span className="text-xs font-black text-red-600 tracking-tight">{fmtR(totals.saidas)}</span>
-                  </div>
+                <div className="flex flex-wrap gap-4 mt-1 pl-12">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-0.5">Total Banco</span>
+              <div className="flex items-center gap-4 bg-gray-50/50 p-1.5 rounded-xl border border-gray-100/50">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">ENTRADAS {fmtR(totals.entradas)}</span>
+                  <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100">SAÍDAS {fmtR(totals.saidas)}</span>
                 </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col border-l border-gray-100 pl-4">
+              <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest pl-0.5">Identificado (Match)</span>
+              <div className="flex items-center gap-4 bg-amber-50/30 p-1.5 rounded-xl border border-amber-100/30 shadow-sm shadow-amber-50/50">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-emerald-700 bg-white px-2 py-1 rounded-lg border border-emerald-200 shadow-sm flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    MATCH REC. {fmtR(totals.matchEntradas)}
+                  </span>
+                  <span className="text-[10px] font-black text-rose-700 bg-white px-2 py-1 rounded-lg border border-rose-200 shadow-sm flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                    MATCH PAG. {fmtR(totals.matchSaidas)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
               </div>
 
               <button onClick={() => setExtrato([])} className="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors bg-white border border-gray-100 px-4 py-1.5 rounded-full shadow-sm">
