@@ -21,7 +21,7 @@ export interface CoraTransaction {
 export class CoraService {
   private static AUTH_HOST = 'matls-auth.cora.com.br';
   private static API_HOST = 'api.cora.com.br';
-  private static clientId = process.env.CORA_CLIENT_ID || 'int-3sBr4azofg364myXzNx6H9';
+  private static clientId = process.env.CORA_CLIENTE_ID || 'int-3sBr4azofg364myXzNx6H9';
   
   private static getCertConfig() {
     const cert = process.env.CORA_CERT;
