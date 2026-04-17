@@ -17,7 +17,7 @@ import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, Refre
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
 export default function AssociadosPage() {
-  const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign } = useAssociados()
+  const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign, refresh } = useAssociados()
   
   // Helper para normalização de strings (busca sem acentos)
   const normalizeStr = (str: string) => {
@@ -37,6 +37,7 @@ export default function AssociadosPage() {
   const [filterCategoria, setFilterCategoria] = useState<string>('todas')
   const [filterCpfInvalido, setFilterCpfInvalido] = useState(false)
   const [isUpdatingBulk, setIsUpdatingBulk] = useState(false)
+  const [isSyncingRec, setIsSyncingRec] = useState(false)
 
   const handleSyncZapSign = async () => {
     const res = await syncZapSign()
@@ -47,6 +48,28 @@ export default function AssociadosPage() {
       alert(`Sucesso! ${res.count} associados sincronizados da ZapSign.`)
     } else {
       alert(res.message || 'Sincronização concluída.')
+    }
+  }
+
+
+  const handleSyncCoraRecurrences = async () => {
+    setIsSyncingRec(true)
+    try {
+      const response = await fetch('/api/cora/recurrences/sync')
+      const res = await response.json()
+      
+      if (res.error) {
+        alert(`Erro na sincronização: ${res.error}`)
+      } else if (res.summary) {
+        alert(`Sucesso! Foram encontrados ${res.summary.total} registros e ${res.summary.updated} associados foram atualizados com o dia de vencimento.`)
+        await refresh() // Atualiza a tabela na tela
+      } else {
+        alert(res.message || 'Sincronização de recorrências concluída.')
+      }
+    } catch (err) {
+      alert('Falha na comunicação com o servidor de sincronização.')
+    } finally {
+      setIsSyncingRec(false)
     }
   }
 
@@ -265,6 +288,19 @@ export default function AssociadosPage() {
               <RefreshCw size={14} />
             )}
             Sincronizar ZapSign
+          </button>
+
+          <button 
+            onClick={handleSyncCoraRecurrences} 
+            disabled={isSyncingRec}
+            className="flex items-center gap-2 px-4 py-2 bg-pink-50 text-pink-700 border border-pink-100 rounded-xl text-[10px] font-black uppercase hover:bg-pink-100 transition-all disabled:opacity-50"
+          >
+            {isSyncingRec ? (
+              <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+            ) : (
+              <RefreshCw size={14} />
+            )}
+            Importar Vencimentos (Cora)
           </button>
           {/* Checkbox Selecionar Todos */}
           <div
