@@ -15,7 +15,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { Plus, BarChart2, RefreshCw } from 'lucide-react'
+import { Plus, BarChart2, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -27,6 +27,17 @@ export default function FinanceiroPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['receita', 'despesa']))
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+  const expandAll = () => setExpandedGroups(new Set(['receita', 'despesa']))
+  const collapseAll = () => setExpandedGroups(new Set())
 
   /* ── Dados para gráficos ── */
   const { recMensal, despMensal } = useMemo(() => {
@@ -94,6 +105,24 @@ export default function FinanceiroPage() {
   const toggleSelectOne = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
+
+  /* ── Agrupamento por tipo ── */
+  const lancamentosPorTipo = useMemo(() => {
+    const groups = new Map<string, { items: any[] }>([
+      ['receita', { items: [] }],
+      ['despesa', { items: [] }],
+    ])
+    lancamentos.forEach(l => {
+      const key = l.tipo || 'receita'
+      if (!groups.has(key)) groups.set(key, { items: [] })
+      groups.get(key)!.items.push(l)
+    })
+    // Remove grupos vazios
+    for (const [key, { items }] of groups) {
+      if (items.length === 0) groups.delete(key)
+    }
+    return groups
+  }, [lancamentos])
 
   const fontSm = { size: 10 }
   const gridFaint = { color: 'rgba(0,0,0,.04)' }
@@ -250,28 +279,127 @@ export default function FinanceiroPage() {
         </ChartCard>
       </div>
 
-      {/* ── Tabela ── */}
-      <div className="flex flex-col gap-4">
-        {selectedIds.length > 0 && (
-          <div className="flex items-center justify-between bg-red-50 border border-red-100 p-4 rounded-2xl animate-in fade-in slide-in-from-top-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-              </div>
-              <div>
-                <span className="text-sm font-bold text-red-900">{selectedIds.length} Itens selecionados</span>
-                <p className="text-xs text-red-600">As ações realizadas aqui removerão definitivamente os registros.</p>
-              </div>
+      {/* ── Bulk Delete Bar ── */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center justify-between bg-red-50 border border-red-100 p-4 rounded-2xl animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setSelectedIds([])} className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors">Cancelar</button>
-              <button onClick={handleBulkDelete} className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-red-200 hover:bg-red-700 transition-all">
-                Excluir em Lote
-              </button>
+            <div>
+              <span className="text-sm font-bold text-red-900">{selectedIds.length} Itens selecionados</span>
+              <p className="text-xs text-red-600">As ações realizadas aqui removerão definitivamente os registros.</p>
             </div>
           </div>
+          <div className="flex gap-2">
+            <button onClick={() => setSelectedIds([])} className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors">Cancelar</button>
+            <button onClick={handleBulkDelete} className="px-6 py-2 bg-red-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-red-200 hover:bg-red-700 transition-all">Excluir em Lote</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Agrupado por Tipo ── */}
+      <div className="table-card overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/40">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            {lancamentos.length} lançamentos no total
+          </span>
+          <div className="flex items-center gap-3">
+            <button onClick={expandAll} className="text-[10px] font-bold text-indigo-500 hover:underline">Expandir todos</button>
+            <span className="text-gray-200">|</span>
+            <button onClick={collapseAll} className="text-[10px] font-bold text-gray-400 hover:underline">Recolher todos</button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="p-16 text-center text-sm text-gray-400">Carregando...</div>
+        ) : lancamentos.length === 0 ? (
+          <div className="p-16 text-center text-sm text-gray-400">Nenhum lançamento encontrado.</div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {[...lancamentosPorTipo.entries()].map(([tipo, { items }]) => {
+              const isRec = tipo === 'receita'
+              const isOpen = expandedGroups.has(tipo)
+              const total = items.reduce((s, i) => s + (i.valor || 0), 0)
+              return (
+                <div key={tipo}>
+                  <div
+                    onClick={() => toggleGroup(tipo)}
+                    className="flex items-center gap-4 px-5 py-3.5 cursor-pointer select-none transition-all group"
+                    style={{ background: isOpen ? (isRec ? 'rgba(45,140,111,.04)' : 'rgba(239,68,68,.03)') : 'transparent' }}
+                  >
+                    <div className={`text-gray-400 group-hover:text-${isRec ? 'emerald' : 'rose'}-500 transition-colors`}>
+                      {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </div>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                      background: isRec ? 'rgba(45,140,111,.1)' : 'rgba(239,68,68,.08)',
+                      border: `2px solid ${isRec ? 'rgba(45,140,111,.2)' : 'rgba(239,68,68,.18)'}`,
+                      color: isRec ? 'var(--accent)' : 'var(--red)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 900
+                    }}>{isRec ? '↑' : '↓'}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-gray-800">{isRec ? 'Receitas' : 'Despesas'}</div>
+                      <div className="text-[10px] text-gray-400 font-medium">{items.length} lançamento(s)</div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`text-sm font-black ${isRec ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {isRec ? '+' : '-'}{fmtR(total)}
+                      </div>
+                      <div className="text-[9px] text-gray-400 uppercase tracking-widest">acumulado</div>
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <div className="border-t border-dashed border-gray-100">
+                      {items.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).map((i: any) => {
+                        const conta = contas.find(c => c.id === i.conta_id)
+                        const assoc = associados.find(a => a.id === i.associado_id)
+                        const taxaMatch = i.descricao?.match(/\(Taxa: R\$\s*([^)]+)\)/)
+                        const taxaStr = taxaMatch ? `Taxa: R$ ${taxaMatch[1]}` : null
+                        return (
+                          <div key={i.id} className="group flex items-center gap-3 py-2.5 hover:bg-gray-50/60 transition-all border-b border-gray-50 last:border-0" style={{ paddingLeft: 60, paddingRight: 20 }}>
+                            <input type="checkbox" checked={selectedIds.includes(i.id)} onChange={() => toggleSelectOne(i.id)} className="rounded border-gray-300 shrink-0" />
+                            <div className="w-20 shrink-0">
+                              <span className="text-[11px] font-semibold text-gray-500">{fmtData(i.data)}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[12px] font-semibold text-gray-700 truncate">{i.descricao}</div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[9px] font-black text-gray-400 uppercase">{i.categoria}</span>
+                                {conta && <span className="text-[9px] text-gray-400">&bull; {conta.nome}</span>}
+                                {assoc && <span className="text-[9px] font-bold text-indigo-500">&bull; {assoc.nome}</span>}
+                                {taxaStr && <span className="text-[9px] font-bold text-amber-600">&bull; {taxaStr}</span>}
+                              </div>
+                            </div>
+                            {i.forma_pagamento && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full shrink-0" style={{ background: isRec ? '#dcfce7' : '#fee2e2', color: isRec ? '#16a34a' : '#dc2626', border: `1px solid ${isRec ? '#86efac' : '#fca5a5'}` }}>
+                                {i.forma_pagamento}
+                              </span>
+                            )}
+                            <div className="w-28 text-right shrink-0">
+                              <span className={`text-[13px] font-black ${isRec ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {isRec ? '+' : '-'}{fmtR(i.valor)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                              <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors" title="Editar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+                              </button>
+                              <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Excluir">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         )}
-        <DataTable columns={columns as any} data={lancamentos} loading={loading} />
       </div>
 
       <CrudModal
