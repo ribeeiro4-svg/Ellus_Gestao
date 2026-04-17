@@ -3,11 +3,15 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { Associado, AssociadoInput } from '@/lib/types'
+import { useTenant } from './useTenant'
+import { zapsignService } from '../services/zapsign'
 
 export function useAssociados() {
   const tenantId = useTenantId()
+  const { tenant } = useTenant()
   const [associados, setAssociados] = useState<Associado[]>([])
   const [loading, setLoading] = useState(true)
+  const [isSyncing, setIsSyncing] = useState(false)
   const sb = createClient()
 
   const fetch = useCallback(async () => {
@@ -60,6 +64,25 @@ export function useAssociados() {
     return { error }
   }
 
+  const syncZapSign = async () => {
+    if (!tenant?.zapsign_token) {
+      return { error: 'Token da ZapSign não configurado. Vá em Configurações.' }
+    }
+
+    setIsSyncing(true)
+    try {
+      const news = await zapsignService.fetchNewAssociates(tenant.zapsign_token)
+      if (news.length === 0) return { message: 'Nenhum novo associado encontrado na ZapSign.' }
+      
+      const { error } = await inserirBulk(news)
+      return { error, count: news.length }
+    } catch (err) {
+      return { error: 'Falha na comunicação com a ZapSign.' }
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const limparTudo = async () => {
     if (!tenantId) {
       setAssociados([])
@@ -70,5 +93,5 @@ export function useAssociados() {
     return { error }
   }
 
-  return { associados, loading, inserir, atualizar, remover, inserirBulk, limparTudo, refresh: fetch }
+  return { associados, loading, isSyncing, inserir, atualizar, remover, inserirBulk, syncZapSign, limparTudo, refresh: fetch }
 }

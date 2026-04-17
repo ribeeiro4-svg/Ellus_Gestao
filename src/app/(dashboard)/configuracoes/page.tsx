@@ -13,37 +13,44 @@ import { useContas } from '@/lib/hooks/useContas'
 import { fmtR } from '@/lib/utils/formatters'
 import CrudModal from '@/components/ui/CrudModal'
 
+import { useTenant } from '@/lib/hooks/useTenant'
+
 export default function ConfigPage() {
-  const { contas, loading, inserir, atualizar, remover } = useContas()
+  const { contas, loading: loadingContas, inserir, atualizar: atualizarConta, remover } = useContas()
+  const { tenant, loading: loadingTenant, atualizar: atualizarTenant } = useTenant()
+
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
 
   // Perfil State
-  const [customName, setCustomName] = useState('Gestão Áurea')
+  const [customName, setCustomName] = useState('')
   const [customLogo, setCustomLogo] = useState('')
+  const [zapsignToken, setZapsignToken] = useState('')
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedName = localStorage.getItem('acprobec_user_name')
-      const savedLogo = localStorage.getItem('acprobec_custom_logo')
-      if (savedName) setCustomName(savedName)
-      if (savedLogo) setCustomLogo(savedLogo)
+    if (tenant) {
+      setCustomName(tenant.nome || '')
+      setCustomLogo(tenant.logo_url || '')
+      setZapsignToken(tenant.zapsign_token || '')
     }
-  }, [])
+  }, [tenant])
 
-  const handleSavePerfil = () => {
-    localStorage.setItem('acprobec_user_name', customName)
-    localStorage.setItem('acprobec_custom_logo', customLogo)
-    alert('Configurações de perfil salvas com sucesso!')
-    window.location.reload() // Force sidebar sync
+  const handleSavePerfil = async () => {
+    try {
+      await atualizarTenant({ 
+        nome: customName, 
+        logo_url: customLogo, 
+        zapsign_token: zapsignToken 
+      })
+      alert('Configurações salvas com sucesso!')
+    } catch (err) {
+      alert('Erro ao salvar configurações.')
+    }
   }
 
   const handleSalvarConta = async (data: any) => {
-    if (editingItem) {
-      await atualizar(editingItem.id, data)
-    } else {
-      await inserir(data)
-    }
+    if (editingItem) { await atualizarConta(editingItem.id, data) }
+    else { await inserir(data) }
   }
 
   return (
@@ -55,7 +62,7 @@ export default function ConfigPage() {
             Configurações
           </h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
-            Gerencie suas contas bancárias e personalize a identidade do seu portal.
+            Gerencie suas contas bancárias e configure as integrações do seu portal.
           </p>
         </div>
       </div>
@@ -65,12 +72,12 @@ export default function ConfigPage() {
         <div className="table-card p-6 flex flex-col gap-6">
           <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
             <Building2 className="text-[#2d8c6f] w-4 h-4" />
-            Identidade do Portal
+            Identidade e Integrações
           </h2>
           
           <div className="space-y-4">
             <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold text-gray-600 uppercase">Nome da Instituição / App</label>
+              <label className="text-[11px] font-bold text-gray-600 uppercase">Nome da Instituição</label>
               <input 
                 type="text" 
                 value={customName}
@@ -98,11 +105,31 @@ export default function ConfigPage() {
               </div>
             </div>
 
+            <div className="pt-4 border-t border-gray-100">
+              <div className="flex flex-col gap-2">
+                <label className="text-[11px] font-bold text-indigo-600 uppercase flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                  Token da API ZapSign
+                </label>
+                <input 
+                  type="password" 
+                  value={zapsignToken}
+                  onChange={(e) => setZapsignToken(e.target.value)}
+                  placeholder="Insira seu token Bearer..."
+                  className="w-full h-11 px-4 bg-indigo-50/30 border border-indigo-100 rounded-xl text-sm focus:bg-white focus:border-indigo-400/30 transition-all outline-none font-mono"
+                />
+                <p className="text-[9px] text-gray-400 leading-tight">
+                  Disponível em: ZapSign &gt; Configurações &gt; Integrações &gt; ZAPSIGN API
+                </p>
+              </div>
+            </div>
+
             <button 
               onClick={handleSavePerfil}
-              className="mt-2 w-full h-11 bg-[#2d8c6f] text-white text-[11px] font-black uppercase rounded-xl hover:shadow-lg hover:shadow-emerald-900/10 transition-all active:scale-95"
+              disabled={loadingTenant}
+              className="mt-2 w-full h-11 bg-[#2d8c6f] text-white text-[11px] font-black uppercase rounded-xl hover:shadow-lg hover:shadow-emerald-900/10 transition-all active:scale-95 disabled:opacity-50"
             >
-              Salvar Alterações de Perfil
+              {loadingTenant ? 'Salvando...' : 'Salvar Alterações'}
             </button>
           </div>
         </div>
@@ -146,10 +173,10 @@ export default function ConfigPage() {
                 </div>
               </div>
             ))}
-            {contas.length === 0 && !loading && (
+            {contas.length === 0 && !loadingContas && (
               <div className="text-center py-8 text-gray-400 text-xs italic">Nenhuma conta cadastrada.</div>
             )}
-            {loading && (
+            {loadingContas && (
                <div className="text-center py-8 text-gray-300 animate-pulse text-[10px] uppercase font-bold italic">Carregando contas...</div>
             )}
           </div>

@@ -12,12 +12,12 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, MESES } from '@/lib/utils/formatters'
-import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare } from 'lucide-react'
+import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, RefreshCw } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
 export default function AssociadosPage() {
-  const { associados, loading, inserir, atualizar, remover } = useAssociados()
+  const { associados, loading, isSyncing, inserir, atualizar, remover, syncZapSign } = useAssociados()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [searchQ, setSearchQ] = useState('')
@@ -28,28 +28,39 @@ export default function AssociadosPage() {
   const [filterCpfInvalido, setFilterCpfInvalido] = useState(false)
 
   /* ── Dados para gráficos ── */
-  const ativos = useMemo(() => associados.filter(a => (a.status || '').toLowerCase().includes('ativ')).length, [associados])
-  const inadimplentes = useMemo(() => associados.filter(a => (a.status || '').toLowerCase().includes('inadimp')).length, [associados])
-  const inativos = useMemo(() => associados.filter(a => (a.status || '').toLowerCase().includes('inat')).length, [associados])
+  const ativos = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('ativ')).length, [associados])
+  const inadimplentes = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('inadimp')).length, [associados])
+  const inativos = useMemo(() => associados.filter((a: any) => (a.status || '').toLowerCase().includes('inat')).length, [associados])
+
+  const handleSyncZapSign = async () => {
+    const res = await syncZapSign()
+    if (res.error) {
+      alert(res.error)
+    } else if (res.count) {
+      alert(`Sucesso! ${res.count} associados sincronizados da ZapSign.`)
+    } else {
+      alert(res.message || 'Sincronização concluída.')
+    }
+  }
 
   const catMap = useMemo(() => {
     const m: Record<string, number> = {}
-    associados.forEach(a => { const c = a.categoria || 'Sem categoria'; m[c] = (m[c] || 0) + 1 })
+    associados.forEach((a: any) => { const c = a.categoria || 'Sem categoria'; m[c] = (m[c] || 0) + 1 })
     return Object.keys(m).length ? m : { 'Sem dados': 1 }
   }, [associados])
 
-  const categorias = useMemo(() => [...new Set(associados.map(a => a.categoria || 'Sem categoria'))].sort(), [associados])
+  const categorias = useMemo(() => [...new Set(associados.map((a: any) => a.categoria || 'Sem categoria'))].sort(), [associados])
 
   const filtrados = useMemo(() => {
     let res = associados
     // Filtro de busca textual
-    if (searchQ) res = res.filter(a => JSON.stringify(a).toLowerCase().includes(searchQ.toLowerCase()))
+    if (searchQ) res = res.filter((a: any) => JSON.stringify(a).toLowerCase().includes(searchQ.toLowerCase()))
     // Filtro de status
-    if (filterStatus !== 'todos') res = res.filter(a => (a.status || '').toLowerCase() === filterStatus)
+    if (filterStatus !== 'todos') res = res.filter((a: any) => (a.status || '').toLowerCase() === filterStatus)
     // Filtro de categoria
-    if (filterCategoria !== 'todas') res = res.filter(a => (a.categoria || '') === filterCategoria)
+    if (filterCategoria !== 'todas') res = res.filter((a: any) => (a.categoria || '') === filterCategoria)
     // Filtro CPF inválido
-    if (filterCpfInvalido) res = res.filter(a => (a.cpf || '').replace(/\D/g, '').length < 11)
+    if (filterCpfInvalido) res = res.filter((a: any) => (a.cpf || '').replace(/\D/g, '').length < 11)
     return res
   }, [associados, searchQ, filterStatus, filterCategoria, filterCpfInvalido])
 

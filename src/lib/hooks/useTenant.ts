@@ -1,0 +1,41 @@
+'use client'
+import { useEffect, useState, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { useTenantId } from './useTenantId'
+
+export interface TenantData {
+  id: string
+  nome: string
+  logo_url: string
+  zapsign_token: string
+}
+
+export function useTenant() {
+  const tenantId = useTenantId()
+  const [tenant, setTenant] = useState<TenantData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const sb = createClient()
+
+  const fetch = useCallback(async () => {
+    if (!tenantId) return
+    setLoading(true)
+    const { data } = await sb.from('tenants')
+      .select('id, nome, logo_url, zapsign_token')
+      .eq('id', tenantId)
+      .single()
+    
+    if (data) setTenant(data)
+    setLoading(false)
+  }, [tenantId, sb])
+
+  useEffect(() => { fetch() }, [fetch])
+
+  const atualizar = async (input: Partial<TenantData>) => {
+    if (!tenantId) return
+    const { error } = await sb.from('tenants').update(input).eq('id', tenantId)
+    if (!error) fetch()
+    return { error }
+  }
+
+  return { tenant, loading, atualizar, refresh: fetch }
+}
