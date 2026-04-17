@@ -60,7 +60,7 @@ export default function ConciliacaoPage() {
 
   // Lógica de matching inteligente e FILTRAGEM
   const matchedTransactions = useMemo(() => {
-    const allMatches = extrato.map(ext => {
+    const allMatches = extrato.map((ext: OFXTransaction) => {
       // Se o usuário desvinculou manualmente, ignoramos
       if (ignoredMatches.has(ext.fitid)) {
         return {
@@ -160,26 +160,25 @@ export default function ConciliacaoPage() {
     
     try {
       // Inteligência: Antes de lançar o lote, atualizamos CPFs faltantes nos associados
-      for (const t of batchTargets) {
+      for (const t of batchTargets as any[]) {
         if (t.assocMatch && !t.assocMatch.cpf && t.bank.cpf_extraido) {
           console.log(`Atualizando CPF do associado ${t.assocMatch.nome} via conciliação...`)
           await atualizarAssociado(t.assocMatch.id, { cpf: t.bank.cpf_extraido })
         }
       }
 
-      const itemsToInsert = batchTargets.map(t => ({
+      const itemsToInsert = (batchTargets as any[]).map(t => ({
         tipo: 'receita',
         descricao: t.bank.memo,
-        valor: t.bank.amount,
-        taxa: t.bank.taxa, // Salvando a taxa calculada
-        data: t.bank.date,
         categoria: t.suggestedCategory,
         conta_id: selectedContaId,
-        forma_pagamento: t.bank.metodo_inferido,
+        valor: t.bank.amount,
+        taxa: t.bank.taxa,
+        data: t.bank.date,
         status: 'pago',
+        associado_id: t.assocMatch?.id,
         conciliado: true,
-        banco_transacao_id: t.bank.fitid,
-        associado_id: t.assocMatch?.id
+        banco_transacao_id: t.bank.fitid
       }))
 
       await inserirBulk(itemsToInsert as any)
@@ -242,7 +241,7 @@ export default function ConciliacaoPage() {
   // Define os dados iniciais do modal baseado na transação e match atual
   const modalInitialData = useMemo(() => {
     if (!selectedExtrato) return null
-    const m = matchedTransactions.find(mt => mt.bank.id === selectedExtrato.id)
+    const m = matchedTransactions.find(mt => (mt as any).bank.fitid === selectedExtrato.fitid) as any
     return {
       descricao: selectedExtrato.memo,
       associado_id: m?.assocMatch?.id || '',
@@ -460,7 +459,7 @@ export default function ConciliacaoPage() {
                               <span className="text-gray-300 ml-1">•</span> 
                               <span className="text-gray-400 capitalize">Associado</span>
                             </div>
-                            <div className="text-xs font-bold text-gray-800 group-hover/card:text-indigo-700 transition-colors">{item.assocMatch.nome}</div>
+                            <div className="text-xs font-bold text-gray-800 group-hover/card:text-indigo-700 transition-colors">{(item as any).assocMatch.nome}</div>
                             <div className="text-[10px] text-gray-400 font-medium">
                               {item.isFirstPayment ? 'Primeira receita! Clique para conferir adesão.' : 'Mensalidade recorrente identificada.'}
                             </div>
