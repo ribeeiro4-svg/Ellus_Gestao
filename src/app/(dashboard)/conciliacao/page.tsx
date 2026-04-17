@@ -193,15 +193,28 @@ export default function ConciliacaoPage() {
   }, [matchedTransactions, filterMatch, filterType])
 
   const handleProcessarLote = async () => {
-    if (!matchedTransactions.length || !selectedContaId) return alert('Verifique os alvos do lote.')
+    // Filtra apenas o que tem match E não foi ignorado E não existe no banco
+    const itemsToProcess = matchedTransactions.filter(t => {
+      const hasMatch = (t.assocMatch || t.forMatch);
+      const isNotIgnored = !ignoredMatches.has(t.bank.fitid);
+      const isNotDuplicate = !lancamentos.some(l => l.banco_transacao_id === t.bank.fitid);
+      return hasMatch && isNotIgnored && isNotDuplicate;
+    })
+
+    if (itemsToProcess.length === 0) {
+      const alreadyInDB = matchedTransactions.filter(t => lancamentos.some(l => l.banco_transacao_id === t.bank.fitid)).length;
+      if (alreadyInDB > 0) return alert(`${alreadyInDB} transações já tinham sido lançadas anteriormente.`);
+      return alert('Nenhum item com correspondência identificado para lançamento.');
+    }
+    
     setIsProcessingBatch(true)
     try {
-      const items = matchedTransactions.map(t => ({
+      const items = itemsToProcess.map(t => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: editedMemos[t.bank.fitid] || t.bank.memo,
-        categoria: t.suggestedCategory,
+        categoria: t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
         conta_id: selectedContaId,
-        valor: t.bank.amount,
+        valor: Math.abs(t.bank.amount),
         data: t.bank.date,
         status: 'pago',
         associado_id: t.assocMatch?.id || null,
@@ -211,21 +224,27 @@ export default function ConciliacaoPage() {
         banco_transacao_id: t.bank.fitid
       }))
       const res = await inserirBulk(items as any)
-      if (res.error) alert(`Erro: ${JSON.stringify(res.error)}`)
-      else { alert('Lote OFX processado!'); setExtrato([]) }
+      if (res.error) alert(`Erro no Banco: ${JSON.stringify(res.error)}`)
+      else { 
+        alert(`${items.length} lançamentos processados com sucesso!`)
+        // Remove os processados da visualização local
+        setExtrato(prev => prev.filter(tx => !itemsToProcess.find(it => it.bank.fitid === tx.fitid)))
+      }
     } finally { setIsProcessingBatch(false) }
   }
 
   const handleCoraBatch = async () => {
-    if (!coraMatchedItems.length || !selectedContaId) return
+    const rowsToProcess = coraMatchedItems.filter(t => (t.assocMatch || t.forMatch) && !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id))
+    if (rowsToProcess.length === 0) return alert('Nenhuma nova transação Cora com correspondência encontrada.')
+
     setIsProcessingBatch(true)
     try {
-      const rows = coraMatchedItems.map(t => ({
+      const rows = rowsToProcess.map(t => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: t.bank.memo,
-        categoria: t.suggestedCategory,
+        categoria: t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
         conta_id: selectedContaId,
-        valor: t.bank.amount,
+        valor: Math.abs(t.bank.amount),
         data: t.bank.date,
         status: 'pago',
         conciliado: true,
@@ -236,8 +255,8 @@ export default function ConciliacaoPage() {
       }))
       const res = await inserirBulk(rows as any)
       if (!res.error) {
-        await updateCoraBulk(coraItems.map(i => i.id), 'sincronizado')
-        alert(`${rows.length} transações Cora conciliadas estrategicamente!`)
+        await updateCoraBulk(rowsToProcess.map(i => (i.bank as any).id), 'sincronizado')
+        alert(`${rows.length} transações Cora sincronizadas!`)
       } else {
         alert(`Erro Cora: ${JSON.stringify(res.error)}`)
       }

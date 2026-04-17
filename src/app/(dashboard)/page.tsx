@@ -68,11 +68,19 @@ export default function DashboardPage() {
 
     lancamentos.forEach(l => {
       const dataStr = l.data || ''
-      // Parsing seguro para evitar problemas de timezone
-      const parts = dataStr.split('-')
-      if (parts.length < 3) return
+      let mesIdx = -1
       
-      const mesIdx = parseInt(parts[1]) - 1
+      // Tenta parsing por '-' (YYYY-MM-DD) ou por '/' (DD/MM/YYYY)
+      if (dataStr.includes('-')) {
+        const parts = dataStr.split('-')
+        mesIdx = parseInt(parts[1]) - 1
+      } else if (dataStr.includes('/')) {
+        const parts = dataStr.split('/')
+        mesIdx = parseInt(parts[1]) - 1
+      }
+      
+      if (mesIdx < 0 || mesIdx > 11) return
+      
       const valor = l.valor || 0
       
       if (l.tipo === 'receita') {
