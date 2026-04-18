@@ -15,7 +15,8 @@ export function useOrcamentos(mes?: number, ano?: number) {
     setLoading(true)
     let query = sb.from('orcamentos').select('*').eq('tenant_id', tenantId)
     
-    if (mes !== undefined) query = query.eq('mes', mes)
+    // Adicionamos +1 pois o banco usa 1-12 e o front usa 0-11
+    if (mes !== undefined) query = query.eq('mes', mes + 1)
     if (ano !== undefined) query = query.eq('ano', ano)
 
     const { data } = await query
@@ -26,7 +27,12 @@ export function useOrcamentos(mes?: number, ano?: number) {
   useEffect(() => { fetch() }, [fetch])
 
   const inserir = async (input: OrcamentoInput) => {
-    const { error } = await sb.from('orcamentos').insert({ ...input, tenant_id: tenantId })
+    // Ajustamos para 1-12 ao salvar
+    const { error } = await sb.from('orcamentos').insert({ 
+      ...input, 
+      mes: input.mes + 1,
+      tenant_id: tenantId 
+    })
     if (!error) fetch()
     return { error }
   }

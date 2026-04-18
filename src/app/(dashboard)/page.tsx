@@ -98,16 +98,7 @@ export default function DashboardPage() {
 
     lancamentos.forEach(l => {
       const dataStr = l.data || ''
-      let mesIdx = -1
-      
-      // Tenta parsing por '-' (YYYY-MM-DD) ou por '/' (DD/MM/YYYY)
-      if (dataStr.includes('-')) {
-        const parts = dataStr.split('-')
-        mesIdx = parseInt(parts[1]) - 1
-      } else if (dataStr.includes('/')) {
-        const parts = dataStr.split('/')
-        mesIdx = parseInt(parts[1]) - 1
-      }
+      const mesIdx = getMesIdx(dataStr)
       
       if (mesIdx < 0 || mesIdx > 11) return
       

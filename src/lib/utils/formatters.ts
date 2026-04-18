@@ -95,3 +95,32 @@ export function deleteCookie(name: string) {
   setCookie(name, '', -1)
 }
 
+/**
+ * Extrai o índice do mês (0-11) de forma segura contra fuso horário
+ */
+export function getMesIdx(dataStr: string): number {
+  if (!dataStr) return -1
+  if (dataStr.includes('-')) {
+    const parts = dataStr.split('-')
+    return parseInt(parts[1]) - 1
+  } else if (dataStr.includes('/')) {
+    const parts = dataStr.split('/')
+    return parseInt(parts[1]) - 1
+  }
+  const d = new Date(dataStr)
+  return isNaN(d.getTime()) ? -1 : d.getMonth()
+}
+
+/**
+ * Extrai o ano de forma segura contra fuso horário
+ */
+export function getAnoIdx(dataStr: string): number {
+  if (!dataStr) return -1
+  if (dataStr.includes('-')) {
+    return parseInt(dataStr.split('-')[0])
+  } else if (dataStr.includes('/')) {
+    const parts = dataStr.split('/')
+    return parseInt(parts[2])
+  }
+  return new Date(dataStr).getFullYear()
+}

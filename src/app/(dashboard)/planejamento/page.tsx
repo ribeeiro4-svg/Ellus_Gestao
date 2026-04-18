@@ -21,7 +21,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useOrcamentos } from '@/lib/hooks/useOrcamentos'
 import { useCategorias } from '@/lib/hooks/useCategorias'
-import { fmtR, MESES, fmtPct } from '@/lib/utils/formatters'
+import { fmtR, MESES, fmtPct, getMesIdx, getAnoIdx } from '@/lib/utils/formatters'
 import { Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -49,8 +49,7 @@ export default function PlanejamentoPage() {
     const realCats = Array.from(new Set(
       lancamentos
         .filter(l => {
-          const d = new Date(l.data)
-          return d.getMonth() === selectedMes && d.getFullYear() === selectedAno
+          return getMesIdx(l.data) === selectedMes && getAnoIdx(l.data) === selectedAno
         })
         .map(l => l.categoria)
     ))
@@ -60,8 +59,8 @@ export default function PlanejamentoPage() {
     return todasMes.map(cat => {
       const lancMes = lancamentos.filter(l => 
         l.categoria === cat && 
-        new Date(l.data).getMonth() === selectedMes &&
-        new Date(l.data).getFullYear() === selectedAno
+        getMesIdx(l.data) === selectedMes &&
+        getAnoIdx(l.data) === selectedAno
       )
       
       const realizado = lancMes.reduce((sum, l) => sum + l.valor, 0)
