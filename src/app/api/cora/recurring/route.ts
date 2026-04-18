@@ -25,9 +25,22 @@ export async function GET(request: Request) {
 
     const sb = await createServerSupabase();
     
-    // 2. Identificar o Tenant (conta principal)
-    const { data: tenants } = await sb.from('tenant_id_mapping').select('id').limit(1);
-    const tenantId = tenants?.[0]?.id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7';
+    // 2. Identificar o Tenant e buscar suas credenciais Cora
+    const { data: mapping } = await sb.from('tenant_id_mapping').select('id').limit(1).single();
+    const tenantId = mapping?.id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7';
+
+    const { data: tenant } = await sb.from('tenants')
+      .select('cora_id, cora_cert, cora_key')
+      .eq('id', tenantId)
+      .single();
+
+    if (!tenant) return NextResponse.json({ error: 'Tenant não encontrado.' }, { status: 404 });
+
+    const coraConfig = {
+      clientId: tenant.cora_id,
+      cert: tenant.cora_cert,
+      key: tenant.cora_key
+    };
 
 
     console.log(`[CoraBilling] Iniciando faturamento para o dia ${billingDay}`);
@@ -76,14 +89,16 @@ export async function GET(request: Request) {
           dueDate.setMonth(dueDate.getMonth() + 1);
         }
 
-        // Emitir na Cora
+        const valorFinal = assoc.mensalidade || 50.00;
+
+        // Emitir na Cora com credenciais dinâmicas do banco
         const invoice = await CoraService.createInvoice({
-          amount: 5000, // R$ 50,00 fixos conforme pedido
+          amount: Math.round(valorFinal * 100), // Converte para centavos
           name: assoc.nome,
           identity: assoc.cpf || '',
           dueDate: dueDate.toISOString().split('T')[0],
           description: description
-        });
+        }, coraConfig);
 
         // Registrar no Financeiro como Pendente
         await sb.from('financeiro').insert({
@@ -92,7 +107,7 @@ export async function GET(request: Request) {
           tipo: 'receita',
           categoria: 'Mensalidades',
           descricao: description,
-          valor: 50.00,
+          valor: valorFinal,
           status: 'aberto',
           forma_pagamento: 'Boleto',
           data: now.toISOString().split('T')[0],

@@ -156,8 +156,8 @@ export class CoraService {
     identity: string;
     dueDate: string;
     description: string;
-  }) {
-    const token = await this.getToken();
+  }, config?: { clientId?: string, cert?: string, key?: string }) {
+    const token = await this.getToken(config);
     const body = JSON.stringify({
       services: [{ name: data.description, amount: data.amount }],
       customer: { name: data.name, identity: data.identity.replace(/\D/g, '') },
@@ -173,14 +173,14 @@ export class CoraService {
         'Content-Type': 'application/json',
         'Idempotency-Key': `inv_${Date.now()}`
       }
-    }, body);
+    }, body, config);
   }
 
   /**
    * Busca boletos/cobranças por CPF/CNPJ do cliente
    */
-  static async getInvoicesByCustomer(identity: string): Promise<any[]> {
-    const token = await this.getToken();
+  static async getInvoicesByCustomer(identity: string, config?: { clientId?: string, cert?: string, key?: string }): Promise<any[]> {
+    const token = await this.getToken(config);
     const cleanId = identity.replace(/\D/g, '');
     const result = await this.request({
       hostname: this.API_HOST,
@@ -189,7 +189,7 @@ export class CoraService {
       headers: {
         'Authorization': `Bearer ${token}`
       }
-    });
+    }, null, config);
 
     return result.items || [];
   }
@@ -197,8 +197,8 @@ export class CoraService {
   /**
    * Obtém o link ou buffer do PDF da fatura
    */
-  static async getInvoicePdf(invoiceId: string): Promise<{ url: string }> {
-    const token = await this.getToken();
+  static async getInvoicePdf(invoiceId: string, config?: { clientId?: string, cert?: string, key?: string }): Promise<{ url: string }> {
+    const token = await this.getToken(config);
     return await this.request({
       hostname: this.API_HOST,
       path: `/v2/invoices/${invoiceId}/pdf`,
@@ -206,14 +206,14 @@ export class CoraService {
       headers: {
         'Authorization': `Bearer ${token}`
       }
-    });
+    }, null, config);
   }
 
   /**
    * Lista recorrências (assinaturas) ativas na conta
    */
-  static async listRecurrences() {
-    const token = await this.getToken();
+  static async listRecurrences(config?: { clientId?: string, cert?: string, key?: string }) {
+    const token = await this.getToken(config);
     return this.request({
       hostname: this.API_HOST,
       path: `/v2/recurrences`,
@@ -221,6 +221,6 @@ export class CoraService {
       headers: {
         'Authorization': `Bearer ${token}`
       }
-    });
+    }, null, config);
   }
 }
