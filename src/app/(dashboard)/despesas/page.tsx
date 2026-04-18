@@ -154,8 +154,16 @@ export default function DespesasPage() {
         const serieId = crypto.randomUUID();
 
         for (let i = 0; i <= meses; i++) {
-          const parts = dbData.data.includes('-') ? dbData.data.split('-').map(Number) : dbData.data.split('/').reverse().map(Number);
-          const d = new Date(parts[0], parts[1] - 1 + i, Math.min(parts[2], new Date(parts[0], parts[1] + i, 0).getDate()));
+          let y, m, d_val;
+          if (dbData.data.includes('-')) {
+            const [year, month, day] = dbData.data.split('-').map(Number)
+            y = year; m = month; d_val = day;
+          } else {
+            const [day, month, year] = dbData.data.split('/').map(Number)
+            y = year; m = month; d_val = day;
+          }
+          
+          const d = new Date(y, m - 1 + i, Math.min(d_val, new Date(y, m + i, 0).getDate()));
           const dataStr = d.toISOString().split('T')[0];
           batch.push({ 
             ...dbData, 
