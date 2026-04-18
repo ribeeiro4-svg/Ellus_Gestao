@@ -35,12 +35,12 @@ export default function FinanceiroPage() {
 
   /* ── Filtros ── */
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterTipo, setFilterTipo] = useState('todos')
   const [filterStatus, setFilterStatus] = useState('todos')
   const [filterPagamento, setFilterPagamento] = useState('todos')
-  const [filterTipo, setFilterTipo] = useState('todos')
-  const [filterMonth, setFilterMonth] = useState<number>(-1)
-  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [filterConta, setFilterConta] = useState('todos')
+  const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
+  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [onlyUnlinked, setOnlyUnlinked] = useState(false)
   const [batchSearch, setBatchSearch] = useState('')
@@ -52,27 +52,35 @@ export default function FinanceiroPage() {
     )
   }, [associados, lancamentos])
 
-  const handleGerarRecorrenciaParaNovos = async (params: { 
+  const handleGerarRecorrenciaLote = async (params: { 
     meses: number, 
     forma_pagamento: string, 
     conta_id: string, 
     dia: number,
     mes_inicio: number,
     ano_inicio: number,
-    descricao_padrao: string
+    descricao_padrao: string,
+    target: 'todos' | 'novos' | 'selecionados'
   }) => {
-    if (!associadosSemPagamento.length) return
+    const list = params.target === 'novos' ? associadosSemPagamento : 
+                 params.target === 'selecionados' ? associados.filter(a => selectedIds.has(a.id)) :
+                 associados.filter(a => a.status === 'ativo')
+
+    if (!list.length) {
+      alert('Nenhum associado encontrado para os critérios selecionados.')
+      return
+    }
     
     const batch: any[] = []
     
-    associadosSemPagamento.forEach(assoc => {
-      for (let i = 0; i < params.meses; i++) {
-        const d = new Date(params.ano_inicio, params.mes_inicio + i, Number(params.dia))
+    list.forEach(assoc => {
+      for (let i = 0; i < Number(params.meses); i++) {
+        const d = new Date(Number(params.ano_inicio), Number(params.mes_inicio) + i, Number(params.dia))
         batch.push({
           tipo: 'receita',
           descricao: `${params.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`,
           categoria: 'Mensalidades',
-          valor: 50,
+          valor: assoc.mensalidade || 50,
           data: d.toISOString().split('T')[0],
           status: 'aberto',
           associado_id: assoc.id,
@@ -84,39 +92,32 @@ export default function FinanceiroPage() {
 
     const res = await inserirBulk(batch)
     if (!res.error) {
-      alert(`${batch.length} lançamentos gerados com sucesso para ${associadosSemPagamento.length} associados!`)
+      alert(`Sucesso! ${res.count || batch.length} lançamentos gerados para ${list.length} associados.`)
       setIsSyncModalOpen(false)
+      setSelectedIds(new Set())
     } else {
-      console.error('Erro detalhado no lote:', res.error)
-      alert('Erro ao gerar lançamentos. Verifique as informações ou contate o suporte.')
+      alert(`Aviso: ${res.error}`)
     }
   }
 
   const filteredLancamentos = useMemo(() => {
-    return lancamentos.filter(l => {
-      const d = new Date(l.data)
+    return lancamentos.filter(item => {
+      const d = new Date(item.data)
       const matchMonth = filterMonth === -1 || d.getMonth() === filterMonth
       const matchYear = d.getFullYear() === filterYear
       
-      const searchLower = searchTerm.toLowerCase()
-      const assoc = associados.find(a => a.id === l.associado_id)
-      const conta = contas.find(c => c.id === l.conta_id)
+      const matchTipo = filterTipo === 'todos' || item.tipo === filterTipo
+      const matchPagamento = filterPagamento === 'todos' || item.forma_pagamento === filterPagamento
+      const matchConta = filterConta === 'todos' || item.conta_id === filterConta
+      const matchStatus = filterStatus === 'todos' || item.status === filterStatus
       
-      const matchSearch = !searchTerm || 
-        l.descricao.toLowerCase().includes(searchLower) ||
-        assoc?.nome.toLowerCase().includes(searchLower) ||
-        conta?.nome.toLowerCase().includes(searchLower) ||
-        l.categoria.toLowerCase().includes(searchLower)
-      
-      const matchStatus = filterStatus === 'todos' || l.status === filterStatus
-      const matchPagamento = filterPagamento === 'todos' || l.forma_pagamento === filterPagamento
-      const matchTipo = filterTipo === 'todos' || l.tipo === filterTipo
-      const matchConta = filterConta === 'todos' || l.conta_id === filterConta
-      const matchUnlinked = !onlyUnlinked || (!l.associado_id && !l.fornecedor_id)
+      const matchSearch = 
+        item.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.categoria.toLowerCase().includes(searchTerm.toLowerCase())
 
-      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchTipo && matchConta && matchUnlinked
+      return matchYear && matchMonth && matchTipo && matchPagamento && matchConta && matchStatus && matchSearch
     })
-  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterTipo, filterMonth, filterYear, filterConta, onlyUnlinked, associados, contas])
+  }, [lancamentos, filterYear, filterMonth, filterTipo, filterPagamento, filterConta, filterStatus, searchTerm])
 
   /* ── Dados para gráficos ── */
   const { recReal, recProv, despReal, despProv } = useMemo(() => {
@@ -175,7 +176,7 @@ export default function FinanceiroPage() {
           if (l.forma_pagamento === 'Dinheiro') fCash = safeDiff(fCash, v)
           else fBank = safeDiff(fBank, v)
         } else {
-          oExp = safeSum(oExp, v)
+          oExp = safeDiff(oExp, v)
         }
       }
     })
@@ -430,20 +431,45 @@ export default function FinanceiroPage() {
         </ChartCard>
       </div>
 
-      <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[300px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input type="text" placeholder="Buscar lançamentos..." className="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl text-sm border-none focus:ring-2 ring-indigo-100 transition-all font-medium" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value="todos">Todos Status</option><option value="pago">Pago</option><option value="aberto">Provisionado</option><option value="atrasado">Atrasado</option></select>
-        <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
-        <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todas Contas</option>{contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
-        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Tipos</option><option value="receita">Apenas Receitas</option><option value="despesa">Apenas Despesas</option></select>
-        <select value={filterPagamento} onChange={e => setFilterPagamento(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Pagamentos</option><option value="PIX">PIX</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option><option value="Transferência">Transferência</option></select>
-        {associadosSemPagamento.length > 0 && <button onClick={() => setIsSyncModalOpen(true)} className="px-5 py-3 bg-[#163d2f] text-white rounded-2xl text-[10px] font-black uppercase hover:bg-[#0e2d22] transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">Sincronizar Novos ({associadosSemPagamento.length})</button>}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm mb-6">
+        <div className="relative flex-1 min-w-[250px]">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input type="text" placeholder="Buscar no financeiro..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl text-sm outline-none focus:ring-2 ring-[#2d8c6f]/10 transition-all font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        </div>
+        <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+        <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
+        <div className="w-px h-8 bg-gray-100 mx-1" />
+        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Tipos</option><option value="receita">Receitas</option><option value="despesa">Despesas</option></select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Status</option><option value="pago">Pago/Recebido</option><option value="pendente">Pendente</option></select>
+        <select value={filterPagamento} onChange={e => setFilterPagamento(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Pagamento: Todos</option><option value="PIX">PIX</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option><option value="Transferência">Transferência</option></select>
+        <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Conta: Todas</option>{contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
+        <button onClick={() => setIsSyncModalOpen(true)} className="px-5 py-3 bg-[#163d2f] text-white rounded-2xl text-[10px] font-black uppercase hover:bg-[#0e2d22] transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
+          <RefreshCw size={14} /> Lançamentos Recorrentes em Lote
+        </button>
       </div>
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
 
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} />
-      <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Sincronizar Novos Associados" onSubmit={handleGerarRecorrenciaParaNovos} fields={[{ name: 'descricao_padrao', label: 'Descrição', type: 'text', defaultValue: 'MENSALIDADE' }, { name: 'mes_inicio', label: 'Mês Início', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) }, { name: 'ano_inicio', label: 'Ano Início', type: 'number', defaultValue: new Date().getFullYear().toString() }, { name: 'dia', label: 'Dia Vencimento', type: 'number', defaultValue: '10' }, { name: 'meses', label: 'Quantidade Meses', type: 'select', defaultValue: '12', options: [{ value: '12', label: '12 Meses' }, { value: '24', label: '24 Meses' }] }, { name: 'conta_id', label: 'Conta Débito', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) }]} />
+      <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Gerar Mensalidades em Lote" onSubmit={handleGerarRecorrenciaLote} fields={[
+        { name: 'target', label: 'Quem deve receber?', type: 'select', defaultValue: selectedIds.size > 0 ? 'selecionados' : 'novos', options: [
+          { value: 'novos', label: `Somente Novos (${associadosSemPagamento.length})` },
+          { value: 'todos', label: 'Todos os Associados Ativos' },
+          { value: 'selecionados', label: `Itens selecionados na tabela (${selectedIds.size})` }
+        ]},
+        { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' },
+        { name: 'mes_inicio', label: 'Partir do Mês', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) },
+        { name: 'ano_inicio', label: 'Ano', type: 'number', defaultValue: new Date().getFullYear().toString() },
+        { name: 'dia', label: 'Dia Vencimento', type: 'number', defaultValue: '10' },
+        { name: 'meses', label: 'Duração (Meses)', type: 'select', defaultValue: '12', options: [
+          { value: '1', label: 'Apenas 1 mês' },
+          { value: '6', label: '6 Meses' },
+          { value: '12', label: '12 Meses' },
+          { value: '24', label: '24 Meses' }
+        ]},
+        { name: 'forma_pagamento', label: 'Forma Padrão', type: 'select', defaultValue: 'Boleto', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
+        { name: 'conta_id', label: 'Conta de Destino', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) }
+      ]} />
     </div>
   )
 }

@@ -43,6 +43,9 @@ export default function ReceitasPage() {
   /* ── Filtros ── */
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('todos')
+  const [filterPagamento, setFilterPagamento] = useState('todos')
+  const [filterConta, setFilterConta] = useState('todos')
+  const [filterCategoria, setFilterCategoria] = useState('todos')
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [onlyUnlinked, setOnlyUnlinked] = useState(false)
@@ -61,10 +64,14 @@ export default function ReceitasPage() {
         conta?.nome.toLowerCase().includes(searchLower) ||
         r.categoria.toLowerCase().includes(searchLower)
       const matchStatus = filterStatus === 'todos' || r.status === filterStatus
+      const matchPagamento = filterPagamento === 'todos' || r.forma_pagamento === filterPagamento
+      const matchConta = filterConta === 'todos' || r.conta_id === filterConta
+      const matchCategoria = filterCategoria === 'todos' || r.categoria === filterCategoria
       const matchUnlinked = !onlyUnlinked || (!r.associado_id && !r.diretor_id)
-      return matchMonth && matchYear && matchSearch && matchStatus && matchUnlinked
+      
+      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchConta && matchCategoria && matchUnlinked
     })
-  }, [receitas, searchTerm, filterStatus, filterMonth, filterYear, onlyUnlinked, associados, contas])
+  }, [receitas, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, onlyUnlinked, associados, contas])
 
   /* ── Gráficos ── */
   const receitaMensal = useMemo(() => {
@@ -212,10 +219,40 @@ export default function ReceitasPage() {
         <ChartCard title="🍩 Mix de Receitas" subtitle="Distribuição por categoria"><Doughnut data={{ labels: Object.keys(receitaCats), datasets: [{ data: Object.values(receitaCats), backgroundColor: CHART_COLORS, hoverOffset: 6, borderWidth: 2, borderColor: '#fff' }] }} options={{ responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 14, font: { size: 11 } } } } }} /></ChartCard>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-        <div className="relative flex-1 min-w-[280px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} /><input type="text" placeholder="Buscar..." className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-indigo-300 transition-all font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-        <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-3 py-2 rounded-xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
-        <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-gray-50 px-3 py-2 rounded-xl text-xs font-bold border-none outline-none"><option value={-1}>Mês: Todos</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
+      <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
+        <div className="relative flex-1 min-w-[280px]">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+          <input type="text" placeholder="Pesquisar por descrição, associado ou categoria..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl text-sm outline-none focus:ring-2 ring-[#2d8c6f]/10 transition-all font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+          <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
+          <div className="w-px h-8 bg-gray-100 mx-1" />
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
+            <option value="todos">Status: Todos</option>
+            <option value="pago">Somente Recebidos</option>
+            <option value="pendente">Pagar / Pendentes</option>
+          </select>
+          <select value={filterPagamento} onChange={(e) => setFilterPagamento(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
+            <option value="todos">Pagamento: Todos</option>
+            <option value="PIX">PIX</option>
+            <option value="Boleto">Boleto</option>
+            <option value="Dinheiro">Dinheiro</option>
+            <option value="Transferência">Transferência</option>
+          </select>
+          <select value={filterConta} onChange={(e) => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
+            <option value="todos">Conta: Todas</option>
+            {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+          <select value={filterCategoria} onChange={(e) => setFilterCategoria(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
+            <option value="todos">Categoria: Todas</option>
+            <option value="ADESAO">Adesão</option>
+            <option value="MENSALIDADE">Mensalidade</option>
+            <option value="ESTORNO">Estorno</option>
+            <option value="OUTROS">Outros</option>
+          </select>
+        </div>
       </div>
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
