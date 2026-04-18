@@ -123,9 +123,9 @@ export default function MatchItem({
                 />
               </div>
             ) : (
-              <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditing(true)}>
-                <h4 className="text-sm font-black text-gray-800 leading-tight uppercase">{localMemo}</h4>
-                <Edit2 size={12} className="text-gray-300 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all" />
+              <div className="flex items-start gap-2 group cursor-pointer" onClick={() => setIsEditing(true)}>
+                <h4 className="text-sm font-black text-gray-800 leading-tight uppercase whitespace-normal break-words">{localMemo}</h4>
+                <Edit2 size={12} className="text-gray-300 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5" />
               </div>
             )}
             <div className="flex items-center gap-4 mt-2">
@@ -176,7 +176,7 @@ export default function MatchItem({
 
           {hasMatch ? (
             <div className="flex flex-col">
-              <h4 className="text-sm font-black text-emerald-900 uppercase">
+              <h4 className="text-sm font-black text-emerald-900 uppercase whitespace-normal break-words">
                 {assocMatch?.nome || forMatch?.nome}
                 {forMatch?.isDirector && <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg">DIRETORIA</span>}
               </h4>

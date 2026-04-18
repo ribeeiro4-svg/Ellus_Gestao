@@ -366,21 +366,22 @@ export default function DashboardPage() {
         <div className="bg-white rounded-b-3xl border-x border-b border-gray-100 shadow-sm overflow-hidden flex-grow">
           <DataTable 
             columns={[
-              { header: 'Data', key: 'data', render: (l: any) => fmtData(l.data) },
-              { header: 'Descrição', key: 'descricao', render: (l: any) => <span className="text-xs font-bold text-gray-900">{l.descricao}</span> },
-              { header: 'Valor', key: 'valor', render: (l: any) => <span className={`text-xs font-bold ${l.tipo === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>{l.tipo === 'receita' ? '+' : '-'}{fmtR(l.valor)}</span> },
-              { header: 'Taxa', key: 'taxaCalculada', render: (l: any) => (
+              { header: 'Data', key: 'data', className: 'w-[110px]', render: (l: any) => <span className="text-xs font-medium text-gray-600">{fmtData(l.data)}</span> },
+              { header: 'Descrição', key: 'descricao', className: 'min-w-[400px] whitespace-normal', render: (l: any) => <span className="text-xs font-bold text-gray-900">{l.descricao}</span> },
+              { header: 'Valor', key: 'valor', className: 'w-[130px]', render: (l: any) => <span className={`text-xs font-bold ${l.tipo === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>{l.tipo === 'receita' ? '+' : '-'}{fmtR(l.valor)}</span> },
+              { header: 'Taxa', key: 'taxaCalculada', className: 'w-[100px]', render: (l: any) => (
                 <span className={`text-[11px] font-black ${l.taxaCalculada > 0 ? 'text-amber-600' : 'text-gray-300'}`}>
                   {fmtR(l.taxaCalculada)}
                 </span>
               )},
-              { header: 'Status', key: 'status', render: (l: any) => <StatusBadge status={l.status} type="lancamento" /> }
+              { header: 'Status', key: 'status', className: 'w-[120px]', render: (l: any) => <StatusBadge status={l.status} type="lancamento" /> }
             ]} 
             data={ultimosLancamentos} 
             loading={loading} 
             selectedIds={selectedIds} 
             onSelectChange={setSelectedIds} 
             onRowClick={handleDetail}
+            showFilterInputs={true}
           />
         </div>
       </div>

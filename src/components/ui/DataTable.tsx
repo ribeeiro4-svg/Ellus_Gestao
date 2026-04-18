@@ -17,6 +17,7 @@ interface DataTableProps<T> {
   onSelectChange?: (ids: string[]) => void
   onRowClick?: (item: T) => void
   idKey?: keyof T // Chave que identifica o registro (default: 'id')
+  showFilterInputs?: boolean
 }
 
 export default function DataTable<T>({ 
@@ -27,13 +28,14 @@ export default function DataTable<T>({
   selectedIds = [],
   onSelectChange,
   onRowClick,
-  idKey = 'id' as keyof T
+  idKey = 'id' as keyof T,
+  showFilterInputs: initialShowFilters = false
 }: DataTableProps<T>) {
   
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
-  const [showFilterInputs, setShowFilterInputs] = useState(false)
+  const [showFilterInputs, setShowFilterInputs] = useState(initialShowFilters)
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -121,7 +123,7 @@ export default function DataTable<T>({
       </div>
 
       <div className="overflow-x-auto custom-scrollbar">
-        <table className="w-full text-left border-collapse table-fixed">
+        <table className="w-full text-left border-collapse table-auto">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
               {onSelectChange && (
@@ -206,7 +208,7 @@ export default function DataTable<T>({
                       </td>
                     )}
                     {columns.map((col, colIndex) => (
-                      <td key={colIndex} className={`px-6 py-4 truncate ${col.className || ''}`} onClick={col.key === 'acoes' ? (e) => e.stopPropagation() : undefined}>
+                      <td key={colIndex} className={`px-6 py-4 ${col.className || ''}`} onClick={col.key === 'acoes' ? (e) => e.stopPropagation() : undefined}>
                         {col.render ? col.render(item) : (item[col.key as keyof T] as ReactNode)}
                       </td>
                     ))}

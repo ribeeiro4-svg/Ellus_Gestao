@@ -122,10 +122,10 @@ export default function AssociadosPage() {
 
   const columns = [
     {
-      header: 'Associado', key: 'nome',
+      header: 'Associado', key: 'nome', className: 'min-w-[350px] whitespace-normal',
       render: (i: any) => (
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs uppercase">
+          <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs uppercase shrink-0">
             {(i.nome || 'A')[0]}
           </div>
           <div className="flex flex-col">
@@ -135,11 +135,11 @@ export default function AssociadosPage() {
         </div>
       )
     },
-    { header: 'CPF/CNPJ', key: 'cpf', render: (i: any) => <span className="text-[11px] font-medium text-gray-500">{i.cpf || 'Pendente'}</span> },
-    { header: 'Mensalidade', key: 'mensalidade', render: (i: any) => <span className="text-xs font-bold text-gray-900">{fmtR(i.mensalidade)}</span> },
-    { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="associado" /> },
+    { header: 'CPF/CNPJ', key: 'cpf', className: 'w-[140px]', render: (i: any) => <span className="text-[11px] font-medium text-gray-500">{i.cpf || 'Pendente'}</span> },
+    { header: 'Mensalidade', key: 'mensalidade', className: 'w-[130px]', render: (i: any) => <span className="text-xs font-bold text-gray-900">{fmtR(i.mensalidade)}</span> },
+    { header: 'Status', key: 'status', className: 'w-[120px]', render: (i: any) => <StatusBadge status={i.status} type="associado" /> },
     {
-      header: 'Contato', key: 'telefone',
+      header: 'Contato', key: 'telefone', className: 'w-[100px]',
       render: (i: any) => (
         <div className="flex items-center gap-2">
           {i.email && <a href={`mailto:${i.email}`} className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white transition-all"><Mail size={12} /></a>}
@@ -148,7 +148,7 @@ export default function AssociadosPage() {
       )
     },
     {
-      header: '', key: 'acoes', className: 'w-20 text-right',
+      header: '', key: 'acoes', className: 'w-[80px] text-right',
       render: (i: any) => (
         <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md"><Pencil size={12} /></button>
@@ -220,6 +220,7 @@ export default function AssociadosPage() {
         loading={loading} 
         selectedIds={selectedIds}
         onSelectChange={setSelectedIds}
+        showFilterInputs={true}
       />
 
       <CrudModal
