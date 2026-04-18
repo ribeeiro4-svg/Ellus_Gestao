@@ -11,7 +11,7 @@ interface Field {
   placeholder?: string
   defaultValue?: any
   showIf?: (formData: any) => boolean
-  render?: (formData: any) => React.ReactNode
+  render?: (formData: any, handleChange: (name: string, value: any) => void) => React.ReactNode
 }
 
 interface CrudModalProps {
@@ -125,7 +125,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                   )}
  
                   {field.type === 'info' ? (
-                    field.render ? field.render(formData) : null
+                    field.render ? field.render(formData, handleChange) : null
                   ) : field.type === 'select' ? (
                     <div>
                       {field.name === 'forma_pagamento' ? (

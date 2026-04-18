@@ -17,7 +17,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, TrendingUp, Users } from 'lucide-react'
+import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, TrendingUp, Users, Check } from 'lucide-react'
 import { safeSum, safeDiff } from '@/lib/utils/formatters'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
@@ -43,6 +43,7 @@ export default function FinanceiroPage() {
   const [filterConta, setFilterConta] = useState('todos')
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [onlyUnlinked, setOnlyUnlinked] = useState(false)
+  const [batchSearch, setBatchSearch] = useState('')
 
   // Identifica associados que nunca tiveram nenhuma receita lançada
   const associadosSemPagamento = useMemo(() => {
@@ -207,11 +208,23 @@ export default function FinanceiroPage() {
       await atualizar(editingItem.id, safeData) 
     } 
     else { 
-      if (safeData.recorrencia_ativa) {
+      const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
+      
+      if (is_lote && selected_associados?.length > 0) {
+        const batch: any[] = []
+        selected_associados.forEach((assocId: string) => {
+          const assoc = associados.find(a => a.id === assocId)
+          batch.push({ 
+            ...dbData, 
+            descricao: `${dbData.descricao.toUpperCase()} - ${assoc?.nome.toUpperCase() || 'LOTE'}`,
+            associado_id: assocId, 
+            status: safeData.status || 'aberto' 
+          })
+        })
+        await inserirBulk(batch)
+      } else if (safeData.recorrencia_ativa) {
         const mesesAFrente = Number(safeData.recorrencia_meses || 12)
         const batch: any[] = []
-        const { recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
-
         for (let i = 0; i <= mesesAFrente; i++) {
           const parts = safeData.data.includes('-') 
             ? safeData.data.split('-').map(Number)
@@ -229,7 +242,6 @@ export default function FinanceiroPage() {
         }
         await inserirBulk(batch);
       } else {
-        const { recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
         await inserir({ ...dbData, status: safeData.status || 'aberto' });
       }
     }
@@ -473,8 +485,72 @@ export default function FinanceiroPage() {
           { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
           { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
           { name: 'recorrencia_meses', label: 'Meses', type: 'number', showIf: (f) => f.recorrencia_ativa },
-          { name: 'associado_id', label: 'Associado', type: 'select', showIf: (f) => f.tipo === 'receita', options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+          { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f) => f.tipo === 'receita' && !f.is_lote, options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+          { name: 'is_lote', label: '🚀 Lançar em Lote?', type: 'checkbox', showIf: (f) => f.tipo === 'receita' && !editingItem },
+          { 
+            name: 'batch_selection', 
+            label: 'Selecionar Associados (Lote)', 
+            type: 'info', 
+            showIf: (f) => f.is_lote,
+            render: (formData, handleChange) => {
+              const selected = formData.selected_associados || []
+              const filteredList = associados.filter(a => 
+                a.nome.toLowerCase().includes(batchSearch.toLowerCase())
+              ).slice(0, 10)
+
+              return (
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
+                    <input 
+                      type="text" placeholder="Pesquisar nome..." 
+                      className="w-full pl-9 pr-3 py-2 bg-white rounded-xl text-xs border border-gray-100 outline-none focus:ring-2 ring-indigo-50"
+                      value={batchSearch} onChange={e => setBatchSearch(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-1 max-h-[160px] overflow-y-auto pr-2">
+                    {filteredList.map(a => {
+                      const isSel = selected.includes(a.id)
+                      return (
+                        <button 
+                          key={a.id} type="button"
+                          onClick={() => {
+                            const next = isSel ? selected.filter((sid: string) => sid !== a.id) : [...selected, a.id]
+                            handleChange('selected_associados', next)
+                          }}
+                          className={`flex items-center justify-between p-2 rounded-xl text-left transition-all ${isSel ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-100'}`}
+                        >
+                          <span className="text-xs font-bold truncate">{a.nome}</span>
+                          {isSel ? <Check size={14} /> : <Plus size={14} className="text-gray-300" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {selected.length > 0 && (
+                    <div className="mt-1 pt-2 border-t border-gray-200 flex flex-wrap gap-1">
+                      <p className="w-full text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">{selected.length} Selecionados</p>
+                      {selected.map((sid: string) => {
+                        const a = associados.find(ass => ass.id === sid)
+                        return (
+                          <span key={sid} className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">
+                            {a?.nome.split(' ')[0]}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+          }
         ]}
+        onChange={(name, value, setFormData) => {
+          // This allows us to intercept changes
+          if (name === 'batch_selection_toggle') {
+            // Not really needed if we use checkboxes correctly
+          }
+        }}
       />
 
       <CrudModal 
