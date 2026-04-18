@@ -40,6 +40,7 @@ export default function FinanceiroPage() {
   const [filterTipo, setFilterTipo] = useState('todos')
   const [filterMonth, setFilterMonth] = useState<number>(-1)
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
+  const [filterConta, setFilterConta] = useState('todos')
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [onlyUnlinked, setOnlyUnlinked] = useState(false)
 
@@ -109,11 +110,12 @@ export default function FinanceiroPage() {
       const matchStatus = filterStatus === 'todos' || l.status === filterStatus
       const matchPagamento = filterPagamento === 'todos' || l.forma_pagamento === filterPagamento
       const matchTipo = filterTipo === 'todos' || l.tipo === filterTipo
+      const matchConta = filterConta === 'todos' || l.conta_id === filterConta
       const matchUnlinked = !onlyUnlinked || (!l.associado_id && !l.fornecedor_id)
 
-      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchTipo && matchUnlinked
+      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchTipo && matchConta && matchUnlinked
     })
-  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterTipo, filterMonth, filterYear, onlyUnlinked, associados, contas])
+  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterTipo, filterMonth, filterYear, filterConta, onlyUnlinked, associados, contas])
 
   /* ── Dados para gráficos ── */
   const { recReal, recProv, despReal, despProv } = useMemo(() => {
@@ -148,7 +150,29 @@ export default function FinanceiroPage() {
     return recReal.reduce<number[]>((arr, v) => { arr.push(safeSum(arr[arr.length - 1] || 0, v)); return arr }, [])
   }, [recReal])
 
-  const { totalRec, totalDesp, provisionedRec, provisionedDesp, resultadoReal, resultadoProjetado, saldoCaixa, saldoBanco } = kpis
+  // KPIs dinâmicas baseadas no ANO selecionado
+  const filteredKpis = useMemo(() => {
+    let pInc = 0, pExp = 0, oInc = 0, oExp = 0
+    lancamentos.forEach(l => {
+      const d = new Date(l.data)
+      if (d.getFullYear() !== filterYear) return
+      
+      const v = l.valor || 0
+      const isPago = l.status === 'pago'
+      if (l.tipo === 'receita') {
+        if (isPago) pInc = safeSum(pInc, v)
+        else oInc = safeSum(oInc, v)
+      } else {
+        if (isPago) pExp = safeSum(pExp, v)
+        else oExp = safeSum(oExp, v)
+      }
+    })
+    return {
+      realizado: safeDiff(pInc, pExp),
+      provisionado: safeDiff(oInc, oExp),
+      projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp))
+    }
+  }, [lancamentos, filterYear])
 
   const margens = recReal.map((v, i) => v > 0 ? Math.round((v - despReal[i]) / v * 100) : 0)
 
@@ -303,18 +327,20 @@ export default function FinanceiroPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[
-            { label: '💰 Realizado (Mão)', value: fmtR(resultadoReal), color: resultadoReal >= 0 ? 'text-emerald-600' : 'text-rose-600' },
-            { label: '📅 Provisionado', value: fmtR(safeDiff(provisionedRec, provisionedDesp)), color: 'text-amber-600' },
-            { label: '📊 Projetado', value: fmtR(resultadoProjetado), color: 'text-indigo-600', isMain: true },
+            { label: '📟 Saldo Caixa', value: fmtR(kpis.saldoCaixa), color: 'text-amber-600' },
+            { label: '🏦 Saldo Bancos', value: fmtR(kpis.saldoBanco), color: 'text-indigo-600' },
+            { label: `💰 Realizado (${filterYear})`, value: fmtR(filteredKpis.realizado), color: filteredKpis.realizado >= 0 ? 'text-emerald-600' : 'text-rose-600' },
+            { label: `📅 Provisionado (${filterYear})`, value: fmtR(filteredKpis.provisionado), color: 'text-gray-500' },
+            { label: `📊 Projetado (${filterYear})`, value: fmtR(filteredKpis.projetado), color: 'text-indigo-900', isMain: true },
           ].map(k => (
-            <div key={k.label} className={`bg-white border border-gray-100 rounded-2xl p-3 min-w-[140px] shadow-sm ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}>
+            <div key={k.label} className={`bg-white border border-gray-100 rounded-2xl p-3 min-w-[150px] shadow-sm flex-shrink-0 ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}>
               <div className="text-[9px] font-black text-gray-400 uppercase mb-1">{k.label}</div>
               <div className={`text-sm font-black ${k.color}`}>{k.value}</div>
             </div>
           ))}
-          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="ml-2 px-6 py-3 bg-gray-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center gap-2">
+          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="ml-2 px-6 py-4 bg-gray-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center gap-2 flex-shrink-0">
             <Plus size={16} /> Novo Lançamento
           </button>
         </div>
@@ -382,8 +408,25 @@ export default function FinanceiroPage() {
           <option value="aberto">Provisionado</option>
           <option value="atrasado">Atrasado</option>
         </select>
-        <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
+        <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
           {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
+          <option value="todos">Todas Contas</option>
+          {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+        </select>
+        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
+          <option value="todos">Todos Tipos</option>
+          <option value="receita">Apenas Receitas</option>
+          <option value="despesa">Apenas Despesas</option>
+        </select>
+        <select value={filterPagamento} onChange={e => setFilterPagamento(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
+          <option value="todos">Todos Pagamentos</option>
+          <option value="PIX">PIX</option>
+          <option value="Boleto">Boleto</option>
+          <option value="Cartão">Cartão</option>
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="Transferência">Transferência</option>
         </select>
         {associadosSemPagamento.length > 0 && (
           <button onClick={() => setIsSyncModalOpen(true)} className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-bold hover:bg-indigo-100 transition-all">
