@@ -235,7 +235,9 @@ export default function FinanceiroPage() {
         }
         await inserirBulk(batch);
       } else {
-        await inserir({ ...dbData, status: safeData.status || 'aberto' });
+        const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null;
+        const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao;
+        await inserir({ ...dbData, descricao: finalDesc, status: safeData.status || 'aberto' });
       }
     }
     setEditingItem(null);
