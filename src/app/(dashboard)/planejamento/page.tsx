@@ -141,19 +141,37 @@ export default function PlanejamentoPage() {
     }
   }
 
-  const chartData = {
-    labels: comparativo.filter(c => c.realizado > 0 || c.planejado > 0).slice(0, 8).map(c => c.categoria),
+  const receitasChartData = {
+    labels: comparativo.filter(c => c.tipo === 'receita' && (c.realizado > 0 || c.planejado > 0)).slice(0, 8).map(c => c.categoria),
     datasets: [
       {
         label: 'Planejado',
-        data: comparativo.filter(c => c.realizado > 0 || c.planejado > 0).slice(0, 8).map(c => c.planejado),
-        backgroundColor: 'rgba(203, 213, 225, 0.4)',
+        data: comparativo.filter(c => c.tipo === 'receita' && (c.realizado > 0 || c.planejado > 0)).slice(0, 8).map(c => c.planejado),
+        backgroundColor: 'rgba(209, 250, 229, 0.6)',
         borderRadius: 6
       },
       {
         label: 'Realizado',
-        data: comparativo.filter(c => c.realizado > 0 || c.planejado > 0).slice(0, 8).map(c => c.realizado),
+        data: comparativo.filter(c => c.tipo === 'receita' && (c.realizado > 0 || c.planejado > 0)).slice(0, 8).map(c => c.realizado),
         backgroundColor: '#2d8c6f',
+        borderRadius: 6
+      }
+    ]
+  }
+
+  const despesasChartData = {
+    labels: comparativo.filter(c => c.tipo === 'despesa' && (c.realizado > 0 || c.planejado > 0)).slice(0, 8).map(c => c.categoria),
+    datasets: [
+      {
+        label: 'Planejado',
+        data: comparativo.filter(c => c.tipo === 'despesa' && (c.realizado > 0 || c.planejado > 0)).slice(0, 8).map(c => c.planejado),
+        backgroundColor: 'rgba(255, 228, 230, 0.6)',
+        borderRadius: 6
+      },
+      {
+        label: 'Realizado',
+        data: comparativo.filter(c => c.tipo === 'despesa' && (c.realizado > 0 || c.planejado > 0)).slice(0, 8).map(c => c.realizado),
+        backgroundColor: '#e11d48',
         borderRadius: 6
       }
     ]
@@ -268,11 +286,33 @@ export default function PlanejamentoPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <ChartCard title="Categorias em Destaque" subtitle="Realizado vs Planejado">
-          <div className="h-[300px] mt-6">
-            <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }} />
-          </div>
-        </ChartCard>
+        <div className="flex flex-col gap-6">
+          <ChartCard title="Metas de Receita" subtitle="Realizado vs Planejado">
+            <div className="h-[220px] mt-4">
+              <Bar 
+                data={receitasChartData} 
+                options={{ 
+                  responsive: true, 
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } }
+                }} 
+              />
+            </div>
+          </ChartCard>
+
+          <ChartCard title="Controle de Despesas" subtitle="Realizado vs Planejado">
+            <div className="h-[220px] mt-4">
+              <Bar 
+                data={despesasChartData} 
+                options={{ 
+                  responsive: true, 
+                  maintainAspectRatio: false,
+                  plugins: { legend: { display: false } }
+                }} 
+              />
+            </div>
+          </ChartCard>
+        </div>
 
         <div className="flex flex-col gap-4">
            <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest px-2">Detalhamento por Categoria</h3>
