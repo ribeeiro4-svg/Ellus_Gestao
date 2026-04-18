@@ -223,15 +223,20 @@ export default function FinanceiroPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Deseja excluir este lançamento?')) {
-      await remover(id)
+      const res = await remover(id)
+      if (res?.error) alert(`Erro ao excluir: ${res.error}`)
     }
   }
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return
     if (confirm(`Deseja excluir ${selectedIds.size} lançamentos selecionados?`)) {
-      await removerBulk(Array.from(selectedIds))
-      setSelectedIds(new Set())
+      const res = await removerBulk(Array.from(selectedIds))
+      if (res?.error) {
+        alert(`Erro ao excluir em lote: ${res.error}`)
+      } else {
+        setSelectedIds(new Set())
+      }
     }
   }
 
