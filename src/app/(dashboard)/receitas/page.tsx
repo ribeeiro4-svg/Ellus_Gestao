@@ -136,7 +136,8 @@ export default function ReceitasPage() {
                 data: cleanData.data,
                 status: 'pago',
                 conta_id: cleanData.conta_id,
-                categoria: 'TROCO'
+                categoria: 'TROCO',
+                forma_pagamento: 'PIX'
             });
         }
       }

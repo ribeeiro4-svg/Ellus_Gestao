@@ -250,7 +250,8 @@ export default function FinanceiroPage() {
                 data: dbData.data,
                 status: 'pago',
                 conta_id: dbData.conta_id,
-                categoria: 'TROCO'
+                categoria: 'TROCO',
+                forma_pagamento: 'PIX'
             });
         }
       }
