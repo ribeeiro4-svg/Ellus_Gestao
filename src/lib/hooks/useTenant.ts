@@ -8,6 +8,9 @@ export interface TenantData {
   nome: string
   logo_url: string
   zapsign_token: string
+  cora_id: string
+  cora_cert: string
+  cora_key: string
 }
 
 export function useTenant() {
@@ -20,7 +23,7 @@ export function useTenant() {
     if (!tenantId) return
     setLoading(true)
     const { data } = await sb.from('tenants')
-      .select('id, nome, logo_url, zapsign_token')
+      .select('id, nome, logo_url, zapsign_token, cora_id, cora_cert, cora_key')
       .eq('id', tenantId)
       .single()
     

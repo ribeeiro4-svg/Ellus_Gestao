@@ -24,94 +24,51 @@ export class CoraService {
   private static clientId = process.env.CORA_CLIENTE_ID || 'int-3sBr4azofg364myXzNx6H9';
   private static _lastDiag: string = '';
   
-  private static getCertConfig() {
-    const cert = process.env.CORA_CERT;
-    const key = process.env.CORA_KEY;
+  private static getCertConfig(config?: { cert?: string, key?: string }) {
+    const cert = config?.cert || process.env.CORA_CERT;
+    const key = config?.key || process.env.CORA_KEY;
 
     if (!cert || !key) {
-      throw new Error('Certificações Cora não encontradas em variáveis de ambiente.');
+      throw new Error('Certificações Cora não encontradas (Configure no Portal ou .env).');
     }
 
-    // Função auxiliar para normalizar certificados vindos do Vercel
     const normalizePEM = (pem: string, type: 'cert' | 'key') => {
-      if (!pem) return { pem: Buffer.from(''), debug: 'VAZIO' };
+      let cleaned = pem.replace(/\\n/g, '\n').replace(/\r/g, '').trim();
+
+      // Remove headers, limpa tudo que não é base64 e reconstrói
+      const baseHeader = type === 'cert' ? 'CERTIFICATE' : (cleaned.includes('RSA') ? 'RSA PRIVATE KEY' : 'PRIVATE KEY');
       
-      // 1. Limpeza inicial de sujeira de ambiente (escapes, aspas, etc)
-      let cleaned = pem
-        .replace(/\\n/g, '\n')
-        .replace(/\r/g, '')
-        .replace(/&quot;/g, '"')
-        .trim();
-
-      // Se estiver entre aspas, remove
-      if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
-        cleaned = cleaned.substring(1, cleaned.length - 1);
-      }
-
-      // 2. Extração e Limpeza Química do conteúdo base64
-      // Remove headers se existirem e limpa TUDO que não for Base64 válido
-      let base64 = cleaned
+      const content = cleaned
         .replace(/-----BEGIN [^-]+-----/g, '')
         .replace(/-----END [^-]+-----/g, '')
-        .replace(/\s/g, '+') // Transforma espaços em '+' antes da limpeza (correção de colagem)
-        .replace(/[^A-Za-z0-9+/=]/g, ''); // Remove qualquer caractere ilegal
+        .replace(/\s/g, '') // Remove COMPLETAMENTE qualquer espaço ou quebra de linha
+        .replace(/ /g, '+'); // Caso algum '+' tenha virado espaço físico
 
-      if (!base64) return { pem: Buffer.from(''), debug: 'BASE64_VAZIO' };
-
-      // 3. Garantia de Padding e Decodificação Binária (O Pulo do Gato)
-      // Primeiro, removemos qualquer padding existente para garantir reconstrução limpa
-      let base64Pure = base64.replace(/=/g, '');
-      while (base64Pure.length % 4 !== 0) {
-        base64Pure += '=';
-      }
-
-      // 4. Determinação do Header correto
-      let header = type === 'cert' ? 'CERTIFICATE' : 'PRIVATE KEY';
-      if (type === 'key' && cleaned.toUpperCase().includes('RSA')) {
-        header = 'RSA PRIVATE KEY';
-      }
-
-      try {
-        // Tentamos decodificar para binário e recriar o base64
-        // Isso remove qualquer erro de caractere invisível ou codificação maluca
-        const raw = Buffer.from(base64Pure, 'base64');
-        const cleanBase64 = raw.toString('base64');
-        
-        // Formata em linhas de 64 caracteres (padrão PEM)
-        const lines = cleanBase64.match(/.{1,64}/g) || [];
-        const finalPem = `-----BEGIN ${header}-----\n${lines.join('\n')}\n-----END ${header}-----`;
-
-        return {
-          pem: Buffer.from(finalPem, 'utf-8'),
-          debug: `[${type.toUpperCase()}: ${cleanBase64.length}b]`
-        };
-      } catch (err) {
-        return { pem: Buffer.from(''), debug: `ERR_BIN_${type.toUpperCase()}` };
-      }
+      const lines = content.match(/.{1,64}/g) || [];
+      const finalPem = `-----BEGIN ${baseHeader}-----\n${lines.join('\n')}\n-----END ${baseHeader}-----`;
+      
+      return {
+        buffer: Buffer.from(finalPem, 'utf-8'),
+        length: content.length
+      };
     };
 
-    try {
-      const normCert = normalizePEM(cert, 'cert');
-      const normKey = normalizePEM(key, 'key');
+    const normCert = normalizePEM(cert, 'cert');
+    const normKey = normalizePEM(key, 'key');
 
-      this._lastDiag = `${normCert.debug} ${normKey.debug}`;
+    this._lastDiag = `Cert:${normCert.length} Key:${normKey.length}`;
 
-      return {
-        cert: normCert.pem,
-        key: normKey.pem,
-        rejectUnauthorized: true
-      };
-    } catch (err: any) {
-      throw new Error(`Config mTLS: ${err.message}`);
-    }
+    return {
+      cert: normCert.buffer,
+      key: normKey.buffer,
+      rejectUnauthorized: true
+    };
   }
 
-  /**
-   * Faz uma requisição HTTPS nativa com suporte a mTLS
-   */
-  private static async request(options: https.RequestOptions, body?: any): Promise<any> {
-    const certConfig = this.getCertConfig();
-    const finalOptions = { ...options, ...certConfig };
+  private static async request(options: https.RequestOptions, body?: any, config?: { cert?: string, key?: string }): Promise<any> {
+    const certOptions = this.getCertConfig(config);
+    const finalOptions = { ...options, ...certOptions };
+    // ... rest same ...
 
     return new Promise((resolve, reject) => {
       try {
@@ -147,7 +104,7 @@ export class CoraService {
   /**
    * Obtém o Token de Acesso (OAuth2 + mTLS)
    */
-  static async getToken(): Promise<string> {
+  static async getToken(config?: { clientId?: string, cert?: string, key?: string }): Promise<string> {
     const body = new URLSearchParams({
       grant_type: 'client_credentials',
       scope: 'all'
@@ -159,9 +116,9 @@ export class CoraService {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'client_id': this.clientId,
+        'client_id': config?.clientId || this.clientId,
       }
-    }, body);
+    }, body, config);
 
     return result.access_token;
   }
@@ -169,8 +126,8 @@ export class CoraService {
   /**
    * Busca o Extrato Bancário
    */
-  static async getStatement(start: string, end: string): Promise<CoraTransaction[]> {
-    const token = await this.getToken();
+  static async getStatement(start: string, end: string, config?: { clientId?: string, cert?: string, key?: string }): Promise<CoraTransaction[]> {
+    const token = await this.getToken(config);
     const result = await this.request({
       hostname: this.API_HOST,
       path: `/v2/statement?start=${start}&end=${end}`,
@@ -178,7 +135,7 @@ export class CoraService {
       headers: {
         'Authorization': `Bearer ${token}`
       }
-    });
+    }, null, config);
 
     return result.items.map((item: any) => ({
       id: item.id,

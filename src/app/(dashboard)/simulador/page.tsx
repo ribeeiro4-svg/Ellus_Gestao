@@ -335,8 +335,9 @@ export default function SimuladorPage() {
                  <Users className="text-[#2d8c6f] w-4 h-4" />
                  Pró-labores da Diretoria
                </h2>
-               <button onClick={addDirector} className="px-4 py-2 bg-[#2d8c6f]/10 text-[#2d8c6f] text-[10px] font-bold rounded-xl hover:bg-[#2d8c6f]/20 uppercase tracking-widest">
-                 + Diretor
+               <button onClick={addDirector} className="px-5 py-2.5 bg-[#2d8c6f] text-white text-[10px] font-black rounded-xl hover:bg-[#20634f] transition-all uppercase tracking-widest shadow-lg shadow-emerald-900/10 flex items-center gap-2">
+                 <UserPlus size={14} />
+                 + Novo Diretor
                </button>
             </div>
 

@@ -192,13 +192,18 @@ body::before {
 .btn:active { transform: scale(.97); }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, #6b95fa 100%);
+  background: var(--accent);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(45, 140, 111, .35);
+  box-shadow: 0 4px 12px rgba(45, 140, 111, .2);
+  border-radius: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .btn-primary:hover {
-  box-shadow: 0 4px 16px rgba(45, 140, 111, .45);
+  background: #246d56;
+  box-shadow: 0 6px 20px rgba(45, 140, 111, .3);
   transform: translateY(-1px);
 }
 

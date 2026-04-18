@@ -6,6 +6,10 @@ export interface Tenant {
   contabilidade?: string
   logo_url?: string
   plano: 'basico' | 'pro' | 'multi'
+  zapsign_token?: string
+  cora_id?: string
+  cora_cert?: string
+  cora_key?: string
   created_at: string
 }
 
@@ -21,7 +25,7 @@ export interface Usuario {
 
 // ─── Financeiro ────────────────────────────────────────────────────────────
 export type TipoLancamento = 'receita' | 'despesa'
-export type StatusLancamento = 'pago' | 'aberto' | 'parcial' | 'cancelado'
+export type StatusLancamento = 'pago' | 'aberto' | 'atrasado' | 'parcial' | 'cancelado'
 export type FormaPagamento = 'Dinheiro' | 'PIX' | 'Boleto' | 'Transferência' | 'Cartão' | undefined
 
 export interface Lancamento {

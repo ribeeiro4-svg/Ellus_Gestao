@@ -51,8 +51,9 @@ export function statusAssocClass(status: string): string {
 }
 
 export function statusLancClass(status: string): string {
-  const s = status.toLowerCase()
+  const s = (status || '').toLowerCase()
   if (s.includes('pago') || s.includes('receb')) return 'status-pago'
+  if (s.includes('atrasado')) return 'status-inadimplente'
   if (s.includes('aberto') || s.includes('pend')) return 'status-aberto'
   return 'status-parcial'
 }

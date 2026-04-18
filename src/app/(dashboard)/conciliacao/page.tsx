@@ -387,7 +387,7 @@ export default function ConciliacaoPage() {
 
         {/* Sticky Action Toolbar */}
         {(extrato.length > 0 || (activeTab === 'cora' && (coraItems || []).length > 0)) && (
-          <div className="sticky top-[80px] z-[40] flex items-center justify-between gap-3 bg-indigo-900/90 backdrop-blur-md p-3 px-6 rounded-[24px] border border-indigo-500/30 shadow-2xl animate-in slide-in-from-top-4">
+          <div className="sticky top-[80px] z-[40] flex items-center justify-between gap-3 bg-[#1d4f3e] backdrop-blur-md p-3 px-6 rounded-[24px] border border-[#2d8c6f]/30 shadow-2xl animate-in slide-in-from-top-4">
             <div className="flex items-center gap-4">
               <div className="flex flex-col">
                 <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Conta de Destino</span>
@@ -397,7 +397,7 @@ export default function ConciliacaoPage() {
               </div>
               <div className="h-8 w-px bg-indigo-500/30 mx-2" />
               <div className="flex flex-col text-white">
-                <span className="text-indigo-200 font-bold uppercase tracking-wider text-[9px]">Itens Novos</span>
+                <span className="text-emerald-100 font-bold uppercase tracking-wider text-[9px]">Itens Novos</span>
                 <span className="text-sm font-black">
                   {activeTab === 'ofx' 
                     ? matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length 
@@ -411,14 +411,14 @@ export default function ConciliacaoPage() {
               <button 
                 onClick={handleAuditAll}
                 disabled={isAuditingBatch || filteredItems.length === 0}
-                className="flex items-center gap-2 px-6 py-3 bg-indigo-700 text-white rounded-2xl font-black text-[11px] shadow-xl hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-3 bg-[#163d2f] text-white rounded-2xl font-black text-[11px] shadow-xl hover:bg-[#0e2d22] transition-all active:scale-95 disabled:opacity-50"
               >
                 {isAuditingBatch ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
                 {isAuditingBatch ? 'AUDITANDO...' : 'AUDITAR COBRANÇAS EM LOTE'}
               </button>
 
-              <button onClick={activeTab === 'ofx' ? handleProcessarLote : handleCoraBatch} disabled={isProcessingBatch} className="flex items-center gap-3 px-8 py-3 bg-white text-indigo-900 rounded-2xl font-black text-[11px] shadow-xl hover:bg-emerald-50 hover:text-emerald-700 transition-all active:scale-95 disabled:opacity-50 group">
-                {isProcessingBatch ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} className="fill-indigo-900 group-hover:fill-emerald-600" />} 
+              <button onClick={activeTab === 'ofx' ? handleProcessarLote : handleCoraBatch} disabled={isProcessingBatch} className="flex items-center gap-3 px-8 py-3 bg-white text-[#163d2f] rounded-2xl font-black text-[11px] shadow-xl hover:bg-emerald-50 hover:text-emerald-700 transition-all active:scale-95 disabled:opacity-50 group">
+                {isProcessingBatch ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} className="fill-[#163d2f] group-hover:fill-emerald-600" />} 
                 {activeTab === 'ofx' ? 'EXECUTAR LANÇAMENTO AUDITADO' : 'SINCRONIZAR API CORA'}
               </button>
             </div>
@@ -428,8 +428,8 @@ export default function ConciliacaoPage() {
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-[32px] border border-gray-100 shadow-sm relative z-10 transition-all hover:shadow-md">
         <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 text-[11px] font-bold">
-          <button onClick={() => setActiveTab('ofx')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${activeTab === 'ofx' ? 'bg-white text-indigo-600 shadow-md border border-indigo-50' : 'text-gray-400'}`}><CloudLightning size={14} /> EXTRATO OFX</button>
-          <button onClick={() => setActiveTab('cora')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${activeTab === 'cora' ? 'bg-white text-indigo-600 shadow-md border border-indigo-50' : 'text-gray-400'}`}><RefreshCw size={14} /> CONEXÃO CORA</button>
+          <button onClick={() => setActiveTab('ofx')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${activeTab === 'ofx' ? 'bg-white text-[#2d8c6f] shadow-md border border-[#2d8c6f]/10' : 'text-gray-400'}`}><CloudLightning size={14} /> EXTRATO OFX</button>
+          <button onClick={() => setActiveTab('cora')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${activeTab === 'cora' ? 'bg-white text-[#2d8c6f] shadow-md border border-[#2d8c6f]/10' : 'text-gray-400'}`}><RefreshCw size={14} /> CONEXÃO CORA</button>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

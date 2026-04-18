@@ -17,7 +17,7 @@ import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { Plus, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, TrendingUp, Users, Check } from 'lucide-react'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, TrendingUp, Users, Check } from 'lucide-react'
 import { safeSum, safeDiff } from '@/lib/utils/formatters'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
@@ -238,22 +238,30 @@ export default function FinanceiroPage() {
         const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null;
         const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao.toUpperCase();
         
-        // Salva a receita principal
-        await inserir({ ...dbData, descricao: finalDesc, status: safeData.status || 'aberto' });
+        const itemsToInsert = [];
+        
+        // Prepara a receita principal
+        itemsToInsert.push({ 
+          ...dbData, 
+          descricao: finalDesc, 
+          status: safeData.status || 'aberto' 
+        });
 
-        // Se houver troco em PIX, lança uma despesa automática
+        // Se houver troco em PIX, prepara a despesa automática
         if (safeData.troco_via_pix && Number(safeData.valor_troco) > 0) {
-            await inserir({
-                tipo: 'despesa',
+            itemsToInsert.push({
+                tipo: 'despesa' as const,
                 descricao: `TROCO EM PIX - ${assoc?.nome.toUpperCase() || 'CLIENTE'}`,
                 valor: Number(safeData.valor_troco),
                 data: dbData.data,
-                status: 'pago',
+                status: 'pago' as const,
                 conta_id: dbData.conta_id,
                 categoria: 'TROCO',
                 forma_pagamento: 'PIX'
             });
         }
+        
+        await inserirBulk(itemsToInsert);
       }
     }
     setEditingItem(null);
@@ -334,7 +342,7 @@ export default function FinanceiroPage() {
       render: (i: any) => (
         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg">
-            <Plus size={14} className="rotate-45" />
+            <Pencil size={14} />
           </button>
           <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg">
             <XCircle size={14} />
@@ -409,7 +417,7 @@ export default function FinanceiroPage() {
           ].map(k => (
             <div key={k.label} className={`bg-white border border-gray-100 rounded-2xl p-3 min-w-[150px] shadow-sm flex-shrink-0 ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}><div className="text-[9px] font-black text-gray-400 uppercase mb-1">{k.label}</div><div className={`text-sm font-black ${k.color}`}>{k.value}</div></div>
           ))}
-          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="ml-2 px-6 py-4 bg-gray-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center gap-2 flex-shrink-0"><Plus size={16} /> Novo Lançamento</button>
+          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="ml-2 btn btn-primary" style={{ padding: '12px 24px', fontSize: 13 }}><Plus size={16} /> Novo Lançamento</button>
         </div>
       </div>
 
@@ -429,7 +437,7 @@ export default function FinanceiroPage() {
         <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todas Contas</option>{contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
         <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Tipos</option><option value="receita">Apenas Receitas</option><option value="despesa">Apenas Despesas</option></select>
         <select value={filterPagamento} onChange={e => setFilterPagamento(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Pagamentos</option><option value="PIX">PIX</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option><option value="Transferência">Transferência</option></select>
-        {associadosSemPagamento.length > 0 && <button onClick={() => setIsSyncModalOpen(true)} className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-bold hover:bg-indigo-100 transition-all">Sincronizar Novos ({associadosSemPagamento.length})</button>}
+        {associadosSemPagamento.length > 0 && <button onClick={() => setIsSyncModalOpen(true)} className="px-5 py-3 bg-[#163d2f] text-white rounded-2xl text-[10px] font-black uppercase hover:bg-[#0e2d22] transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">Sincronizar Novos ({associadosSemPagamento.length})</button>}
       </div>
 
       <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>

@@ -100,7 +100,13 @@ export function useFinanceiro() {
       )
       return !isDup
     }).map(i => {
-      let coreData = { ...i }
+      // Limpa campos que são apenas da UI e não existem no banco
+      const { 
+        troco_via_pix, valor_troco, is_lote, selected_associados, 
+        recorrencia_ativa, recorrencia_meses, batch_selection,
+        ...coreData 
+      } = i as any
+      
       if (coreData.taxa && coreData.taxa > 0) {
         const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(coreData.taxa)
         coreData.descricao = `${coreData.descricao} (Taxa: ${taxaFmt})`

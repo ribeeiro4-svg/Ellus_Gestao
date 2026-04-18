@@ -26,12 +26,18 @@ export default function ConfigPage() {
   const [customName, setCustomName] = useState('')
   const [customLogo, setCustomLogo] = useState('')
   const [zapsignToken, setZapsignToken] = useState('')
+  const [coraId, setCoraId] = useState('')
+  const [coraCert, setCoraCert] = useState('')
+  const [coraKey, setCoraKey] = useState('')
 
   useEffect(() => {
     if (tenant) {
       setCustomName(tenant.nome || '')
       setCustomLogo(tenant.logo_url || '')
       setZapsignToken(tenant.zapsign_token || '')
+      setCoraId(tenant.cora_id || '')
+      setCoraCert(tenant.cora_cert || '')
+      setCoraKey(tenant.cora_key || '')
     }
   }, [tenant])
 
@@ -40,7 +46,10 @@ export default function ConfigPage() {
       await atualizarTenant({ 
         nome: customName, 
         logo_url: customLogo, 
-        zapsign_token: zapsignToken 
+        zapsign_token: zapsignToken,
+        cora_id: coraId,
+        cora_cert: coraCert,
+        cora_key: coraKey
       })
       alert('Configurações salvas com sucesso!')
     } catch (err) {
@@ -105,22 +114,59 @@ export default function ConfigPage() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-gray-100">
+            <div className="pt-4 border-t border-gray-100 flex flex-col gap-4">
+              <label className="text-[11px] font-bold text-indigo-600 uppercase flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                Integração ZapSign
+              </label>
               <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-indigo-600 uppercase flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
-                  Token da API ZapSign
-                </label>
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Token da API</label>
                 <input 
                   type="password" 
                   value={zapsignToken}
                   onChange={(e) => setZapsignToken(e.target.value)}
-                  placeholder="Insira seu token Bearer..."
-                  className="w-full h-11 px-4 bg-indigo-50/30 border border-indigo-100 rounded-xl text-sm focus:bg-white focus:border-indigo-400/30 transition-all outline-none font-mono"
+                  placeholder="Seu token ZapSign..."
+                  className="w-full h-11 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-indigo-400/30 transition-all outline-none font-mono"
                 />
-                <p className="text-[9px] text-gray-400 leading-tight">
-                  Disponível em: ZapSign &gt; Configurações &gt; Integrações &gt; ZAPSIGN API
-                </p>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 flex flex-col gap-4">
+              <label className="text-[11px] font-bold text-emerald-600 uppercase flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                Integração Cora (mTLS)
+              </label>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-bold text-gray-500 uppercase">Client ID (ID)</label>
+                <input 
+                  type="text" 
+                  value={coraId}
+                  onChange={(e) => setCoraId(e.target.value)}
+                  placeholder="int-..."
+                  className="w-full h-11 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-emerald-400/30 transition-all outline-none font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Certificado (.cert)</label>
+                  <textarea 
+                    value={coraCert}
+                    onChange={(e) => setCoraCert(e.target.value)}
+                    placeholder="-----BEGIN CERTIFICATE-----"
+                    className="w-full h-24 p-3 bg-gray-50 border border-gray-100 rounded-xl text-[10px] focus:bg-white focus:border-emerald-400/30 transition-all outline-none font-mono resize-none"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Chave Privada (.key)</label>
+                  <textarea 
+                    value={coraKey}
+                    onChange={(e) => setCoraKey(e.target.value)}
+                    placeholder="-----BEGIN RSA PRIVATE KEY-----"
+                    className="w-full h-24 p-3 bg-gray-50 border border-gray-100 rounded-xl text-[10px] focus:bg-white focus:border-emerald-400/30 transition-all outline-none font-mono resize-none"
+                  />
+                </div>
               </div>
             </div>
 
@@ -143,7 +189,7 @@ export default function ConfigPage() {
             </h2>
             <button 
               onClick={() => { setEditingItem(null); setIsModalOpen(true) }}
-              className="px-4 py-2 bg-[#2d8c6f]/10 text-[#2d8c6f] text-[10px] font-bold rounded-xl hover:bg-[#2d8c6f]/20 uppercase"
+              className="px-4 py-2 bg-[#2d8c6f] text-white text-[10px] font-bold rounded-xl hover:bg-[#246d56] transition-all uppercase shadow-sm"
             >
               + Nova Conta
             </button>

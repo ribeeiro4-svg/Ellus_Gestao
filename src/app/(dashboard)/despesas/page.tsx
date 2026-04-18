@@ -16,7 +16,7 @@ import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingDown, Plus, RefreshCw, Copy, Search, Filter, XCircle, AlertCircle, TrendingUp, Check } from 'lucide-react'
+import { TrendingDown, Plus, RefreshCw, Copy, Search, Filter, XCircle, AlertCircle, TrendingUp, Check, Pencil } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -178,7 +178,7 @@ export default function DespesasPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '10px 18px', textAlign: 'center' }}><div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.5px' }}>Total</div><div style={{ fontSize: 18, fontWeight: 800, color: 'var(--red)' }}>-{fmtR(totalDespesas)}</div></div>
-          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="btn" style={{ background: 'var(--red)', color: '#fff', padding: '10px 20px', fontSize: 13, borderRadius: 'var(--radius-sm)', boxShadow: '0 2px 8px rgba(239,68,68,.35)' }}><Plus size={16} /> Nova Despesa</button>
+          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}><Plus size={16} /> Nova Despesa</button>
         </div>
       </div>
 
@@ -199,7 +199,16 @@ export default function DespesasPage() {
         { header: 'Valor', key: 'valor', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--red)' }}>-{fmtR(i.valor)}</span> },
         { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
         { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
-        { header: '', key: 'acoes', className: 'w-20 text-right', render: (i: any) => <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg"><Plus size={14} className="rotate-45" /></button><button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg"><XCircle size={14} /></button></div> }
+        { header: '', key: 'acoes', className: 'w-20 text-right', render: (i: any) => (
+          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => handleEdit(i)} title="Editar" className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+              <Pencil size={14} />
+            </button>
+            <button onClick={() => handleDelete(i.id)} title="Excluir" className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+              <XCircle size={14} />
+            </button>
+          </div>
+        ) }
       ]} data={filteredDespesas} loading={loading} /></div>
 
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Despesa' : 'Nova Despesa'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} />
