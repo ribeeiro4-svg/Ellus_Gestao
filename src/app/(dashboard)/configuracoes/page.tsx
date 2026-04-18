@@ -74,8 +74,23 @@ export default function ConfigPage() {
   }
 
   const handleSalvarCat = async (data: any) => {
-    if (editingCat) { await atualizarCat(editingCat.id, data) }
-    else { await inserirCat(data) }
+    try {
+      let res;
+      if (editingCat) { 
+        res = await atualizarCat(editingCat.id, data) 
+      } else { 
+        res = await inserirCat(data) 
+      }
+      
+      if (res?.error) {
+        alert('Erro ao salvar categoria: ' + (res.error as any).message)
+      } else {
+        setIsCatModalOpen(false)
+        setEditingCat(null)
+      }
+    } catch (err) {
+      alert('Erro de conexão ao salvar categoria.')
+    }
   }
 
   if (loadingTenant && !tenant) {
@@ -277,8 +292,18 @@ export default function ConfigPage() {
                     <span className="text-xs font-bold text-gray-700">{cat.nome}</span>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => { setEditingCat(cat); setIsCatModalOpen(true) }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={12} /></button>
-                    <button onClick={() => confirm('Excluir esta categoria?') && removerCat(cat.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={12} /></button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); setEditingCat(cat); setIsCatModalOpen(true) }} 
+                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); confirm('Excluir esta categoria?') && removerCat(cat.id) }} 
+                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"
+                    >
+                      <Trash2 size={12} />
+                    </button>
                   </div>
                 </div>
               ))}

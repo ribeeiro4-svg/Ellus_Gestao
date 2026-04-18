@@ -12,7 +12,7 @@ import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
 import ChartModal from '@/components/ui/ChartModal'
 import SplashScreen from '@/components/ui/SplashScreen'
-import { fmtR, MESES, fmtData, fmtPct } from '@/lib/utils/formatters'
+import { fmtR, MESES, fmtData, fmtPct, getMesIdx, deleteCookie } from '@/lib/utils/formatters'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
@@ -20,7 +20,6 @@ import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { useMetas } from '@/lib/hooks/useMetas'
 import { useProjetos } from '@/lib/hooks/useProjetos'
 import { useProjecao } from '@/lib/hooks/useProjecao'
-import { deleteCookie } from '@/lib/utils/formatters'
 import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement, LineElement,

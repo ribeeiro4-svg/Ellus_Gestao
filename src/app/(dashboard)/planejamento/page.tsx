@@ -84,26 +84,37 @@ export default function PlanejamentoPage() {
   }, [lancamentos, orcamentos, categorias, selectedMes, selectedAno, editValues])
 
   const handleSaveOrcamento = async (categoria: string, valor: number, id: string) => {
+    if (savingIds.has(id)) return
     setSavingIds(prev => new Set(prev).add(id))
     try {
+      let res;
       if (id.startsWith('new-')) {
-        await inserir({
+        const catObj = comparativo.find(c => c.categoria === categoria)
+        res = await inserir({
           mes: selectedMes,
           ano: selectedAno,
           categoria,
-          tipo: comparativo.find(c => c.categoria === categoria)?.tipo || 'despesa',
+          tipo: catObj?.tipo || 'despesa',
           valor_planejado: valor
         })
       } else {
-        await atualizar(id, { valor_planejado: valor })
+        res = await atualizar(id, { valor_planejado: valor })
       }
-      setLastSavedId(id)
-      setTimeout(() => setLastSavedId(null), 2000)
-      setEditValues(prev => {
-        const next = { ...prev }
-        delete next[categoria]
-        return next
-      })
+      
+      if (res?.error) {
+        alert('Erro ao salvar: ' + (res.error as any).message)
+      } else {
+        setLastSavedId(id)
+        setTimeout(() => setLastSavedId(null), 2000)
+        setEditValues(prev => {
+          const next = { ...prev }
+          delete next[categoria]
+          return next
+        })
+        refresh() // Força atualização para pegar o novo ID do banco
+      }
+    } catch (err) {
+      alert('Falha na comunicação com o servidor.')
     } finally {
       setSavingIds(prev => {
         const next = new Set(prev)
@@ -114,29 +125,45 @@ export default function PlanejamentoPage() {
   }
 
   const handleRemoverOrcamento = async (item: any) => {
-    if (confirm(`Remover "${item.categoria}" do orçamento deste mês?`)) {
+    if (!confirm(`Remover "${item.categoria}" do orçamento mensal? (Itens com lançamentos reais continuarão visíveis)`)) return
+    
+    try {
       if (!item.id.startsWith('new-')) {
-        await remover(item.id)
+        const { error } = await remover(item.id)
+        if (error) {
+          alert('Erro ao excluir do banco: ' + (error as any).message)
+          return
+        }
       }
+      
       setEditValues(prev => {
         const next = { ...prev }
         delete next[item.categoria]
         return next
       })
+      
+      refresh()
+      if (item.realizado > 0) {
+        alert('Planejamento removido. A categoria permanece na lista pois há registros REAIS para ela.')
+      }
+    } catch (err) {
+      alert('Erro inesperado ao excluir.')
     }
   }
 
   const handleAddItem = async (data: any) => {
     const cat = categorias.find(c => c.id === data.categoria_id)
     if (cat) {
-      await inserir({
+      const res = await inserir({
         mes: selectedMes,
         ano: selectedAno,
         categoria: cat.nome,
         tipo: cat.tipo,
         valor_planejado: 0
       })
+      if (res.error) alert('Erro ao incluir item: ' + (res.error as any).message)
       setIsAddModalOpen(false)
+      refresh()
     }
   }
 
@@ -218,8 +245,11 @@ export default function PlanejamentoPage() {
     )},
     { header: '', key: 'actions', className: 'w-[40px]', render: (c: any) => (
       <button 
-        onClick={() => handleRemoverOrcamento(c)}
-        className="p-2 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+        onClick={(e) => { 
+          e.stopPropagation(); 
+          handleRemoverOrcamento(c);
+        }}
+        className="p-2 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all active:scale-95"
         title="Remover do Orçamento"
       >
         <Trash2 size={14} />
