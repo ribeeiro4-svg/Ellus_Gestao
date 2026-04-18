@@ -1,23 +1,20 @@
 'use client'
-import { useState, useMemo, useEffect, useCallback } from 'react'
-import { 
-  Upload, 
-  CheckCircle2, 
-  AlertCircle, 
-  ArrowRight, 
-  Search, 
-  Plus, 
-  Banknote,
-  RefreshCw,
+import React, { useState, useMemo, useEffect } from 'react'
+import {
   FileCheck,
-  Users,
-  ChevronRight,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  Filter,
+  RefreshCw,
   ShieldCheck,
   X,
   CreditCard,
   CloudLightning,
   Trash2,
-  Zap
+  Zap,
+  Info
 } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useCoraStaged } from '@/lib/hooks/useCoraStaged'
@@ -25,192 +22,111 @@ import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
-import { useOFXParser, OFXTransaction } from '@/lib/hooks/useOFXParser'
+import { useOFXParser } from '@/lib/hooks/useOFXParser'
+import OFXUpload from '@/components/conciliacao/OFXUpload'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
-import CrudModal from '@/components/ui/CrudModal'
+import MatchItem from '@/components/conciliacao/MatchItem'
+import ManualMatchModal from '@/components/conciliacao/ManualMatchModal'
+import SupplierMatchModal from '@/components/conciliacao/SupplierMatchModal'
 
 export default function ConciliacaoPage() {
-  const { lancamentos, conciliar, inserir, inserirBulk, loading: finLoading } = useFinanceiro()
+  const { lancamentos, inserirBulk } = useFinanceiro()
+  const { items: coraItems, updateStatusBulk: updateCoraStatusBulk } = useCoraStaged()
   const { contas } = useContas()
-  const { associados, atualizar: atualizarAssociado } = useAssociados()
-  const { fornecedores, inserir: inserirFornecedor } = useFornecedores()
+  const { associados } = useAssociados()
+  const { fornecedores } = useFornecedores()
   const { diretoria } = useDiretoria()
   const { parseOFX } = useOFXParser()
-  const { 
-    items: coraItems, 
-    loading: coraLoading, 
-    syncWithBank, 
-    updateStatus: updateCoraStatus,
-    updateStatusBulk: updateCoraBulk 
-  } = useCoraStaged()
 
   const [activeTab, setActiveTab] = useState<'ofx' | 'cora'>('ofx')
-
-  const [extrato, setExtrato] = useState<OFXTransaction[]>([])
-  const [isDragOver, setIsDragOver] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false)
+  const [extrato, setExtrato] = useState<any[]>([])
   const [isProcessingBatch, setIsProcessingBatch] = useState(false)
-  const [selectedExtrato, setSelectedExtrato] = useState<OFXTransaction | null>(null)
   const [selectedContaId, setSelectedContaId] = useState<string>('')
-  const [filterMatch, setFilterMatch] = useState<'todos' | 'com_match' | 'sem_match'>('todos')
-  const [filterType, setFilterType] = useState<'todos' | 'receita' | 'despesa'>('todos')
+  
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState<'ALL' | 'CREDIT' | 'DEBIT'>('ALL')
+  const [filterMatch, setFilterMatch] = useState<'ALL' | 'FOUND' | 'NOT_FOUND'>('ALL')
   const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
   const [editedMemos, setEditedMemos] = useState<Record<string, string>>({})
 
-  // Inicializa conta padrão inteligentemente (evitando CAIXA ESPÉCIE)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false)
+  const [selectedExtrato, setSelectedExtrato] = useState<any>(null)
+
   useEffect(() => {
     if (contas.length > 0 && !selectedContaId) {
-      // Prioriza achar a conta Cora, ou qualquer Banco. Nunca o Caixa.
-      const contaCora = contas.find(c => c.nome.toLowerCase().includes('cora'))
-      const bancoQualquer = contas.find(c => !c.nome.toLowerCase().includes('caixa'))
-      
-      if (contaCora) {
-        setSelectedContaId(contaCora.id)
-      } else if (bancoQualquer) {
-        setSelectedContaId(bancoQualquer.id)
-      }
+      const cora = contas.find(c => c.nome.toLowerCase().includes('cora'))
+      setSelectedContaId(cora ? cora.id : contas[0].id)
     }
   }, [contas, selectedContaId])
-  
-  // Helper para normalização robusta
-  const normalizeStr = (str: string) => {
-    return (str || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/-|\.|\/|<|>|\|/g, ' ')
-      .replace(/\b(de|da|do|das|dos|e)\b/g, '')
-      .replace(/\s+/g, ' ')
-      .trim()
-  }
-  
-  const handleUnmatch = (fitid: string) => {
-    setIgnoredMatches(prev => new Set(prev).add(fitid))
-  }
 
-  // Lógica de matching unificada para OFX e Cora
-  const processMatch = useCallback((item: { memo: string, type: 'CREDIT' | 'DEBIT', fitid: string, amount: number, date: string, doc?: string }) => {
-    const isCredit = item.type === 'CREDIT'
-    const cnpjNoMemo = (item.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
-    const cpfNoMemo = (item.memo.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '')
-    const rawDigits = item.memo.replace(/[^\d]/g, '')
-    const extractedDoc = item.doc?.replace(/[^\d]/g, '') || cpfNoMemo || cnpjNoMemo || (rawDigits.length >= 11 ? rawDigits.slice(-11) : null)
-
-    let finalAssoc = null
-    let finalFor = null
-    let isCpfMatch = false
-
-    if (isCredit) {
-      const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
-      if (matchDir) {
-        finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Outros', isDirector: true } as any
-        isCpfMatch = true
-      } else {
-        const match = extractedDoc ? associados.find(a => (a.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
-        if (match) { finalAssoc = match; isCpfMatch = true }
-        else {
-          const memoLimpo = normalizeStr(item.memo.replace(/PIX RECEBIDO|TRANSFERENCIA|RECEBIDA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED|DE|PARA/gi, ''))
-          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
-          const dMatch = diretoria.find(d => {
-            const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
-            if (!palavrasBanco.includes(palavrasD[0])) return false
-            return palavrasD.filter(p => palavrasBanco.includes(p)).length >= Math.min(palavrasD.length, 2)
-          })
-          if (dMatch) finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Outros', isDirector: true } as any
-          else {
-            finalAssoc = associados.find(a => {
-              const nomeA = normalizeStr(a.nome); const palavrasA = nomeA.split(' ').filter(p => p.length > 2)
-              if (!palavrasBanco.includes(palavrasA[0])) return false
-              const count = palavrasA.filter(p => palavrasBanco.includes(p)).length
-              return count >= Math.min(palavrasA.length, 3) || (palavrasA.length <= 2 && count === palavrasA.length)
-            })
-          }
-        }
-      }
-    } else {
-      const match = extractedDoc ? fornecedores.find(f => (f.cpf_cnpj || '').replace(/[^\d]/g, '') === extractedDoc) : null
-      if (match) { finalFor = match; isCpfMatch = true }
-      else {
-        const matchDir = extractedDoc ? diretoria.find(d => (d.cpf || '').replace(/[^\d]/g, '') === extractedDoc) : null
-        if (matchDir) { finalFor = { id: matchDir.id, nome: matchDir.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any; isCpfMatch = true }
-        else {
-          const memoLimpo = normalizeStr(item.memo.replace(/PIX ENVIADO|TRANSFERENCIA|ENVIADA|TRANSF|PIX|CONTA|MEMO|PAGTO|DOC|TED/gi, ''))
-          const palavrasBanco = memoLimpo.split(' ').filter(p => p.length > 2)
-          const dMatch = diretoria.find(d => {
-            const nomeD = normalizeStr(d.nome); const palavrasD = nomeD.split(' ').filter(p => p.length > 2)
-            if (!palavrasBanco.includes(palavrasD[0])) return false
-            return palavrasD.filter(p => palavrasBanco.includes(p)).length >= Math.min(palavrasD.length, 2)
-          })
-          if (dMatch) finalFor = { id: dMatch.id, nome: dMatch.nome, categoria_padrao: 'Pró-labore', isDirector: true } as any
-          else {
-            finalFor = fornecedores.find(f => {
-              const nomeF = normalizeStr(f.nome); const palavrasF = nomeF.split(' ').filter(p => p.length > 2)
-              if (!palavrasBanco.includes(palavrasF[0])) return false
-              return palavrasF.filter(p => palavrasBanco.includes(p)).length >= Math.min(palavrasF.length, 2)
-            })
-          }
-        }
-      }
-    }
-
-    const suggestedCategory = isCredit ? 'Mensalidades' : (finalFor?.categoria_padrao || 'Serviços')
-    const isFirstPayment = isCredit && suggestedCategory === 'ADESÃO'
-
-    return { 
-      bank: item as any, 
-      match: null, 
-      assocMatch: finalAssoc, 
-      forMatch: finalFor, 
-      isCpfMatch, 
-      suggestedCategory,
-      isFirstPayment
-    }
-  }, [associados, fornecedores, diretoria])
-
-  // Lógica de matching unificada para OFX
   const matchedTransactions = useMemo(() => {
-    return extrato.filter(ext => !ignoredMatches.has(ext.fitid)).map(ext => processMatch({
-      memo: ext.memo, type: ext.type as any, fitid: ext.fitid, amount: ext.amount, date: ext.date
-    }))
-  }, [extrato, processMatch, ignoredMatches])
+    return extrato.map((bank: any) => {
+      const memoNormalize = bank.memo.toUpperCase()
+      
+      const assocMatch = associados.find(a => 
+        memoNormalize.includes(a.nome.toUpperCase()) || 
+        (a.cpf_cnpj && memoNormalize.includes(a.cpf_cnpj.replace(/\D/g, '')))
+      )
+      
+      const forMatch = fornecedores.find(f => 
+        memoNormalize.includes(f.nome.toUpperCase()) || 
+        (f.cpf_cnpj && memoNormalize.includes(f.cpf_cnpj.replace(/\D/g, '')))
+      )
 
-  // Lógica específica para Cora Items com Match
+      const dirMatch = diretoria.find(d => memoNormalize.includes(d.nome.toUpperCase()))
+
+      return {
+        bank,
+        assocMatch: assocMatch || null,
+        forMatch: forMatch ? { ...forMatch, isDirector: false } : (dirMatch ? { ...dirMatch, isDirector: true } : null),
+        suggestedCategory: assocMatch ? 'Mensalidades' : (forMatch ? (forMatch as any).categoria_padrao : 'Outros')
+      }
+    })
+  }, [extrato, associados, fornecedores, diretoria])
+
   const coraMatchedItems = useMemo(() => {
-    return coraItems.map(item => processMatch({
-      memo: item.descricao, type: item.tipo as any, fitid: item.cora_id, amount: item.valor, date: item.data, doc: item.documento
-    }))
-  }, [coraItems, processMatch])
+    return (coraItems || []).map((bank: any) => {
+      const memoNormalize = bank.memo.toUpperCase()
+      const assocMatch = associados.find(a => memoNormalize.includes(a.nome.toUpperCase()) || (a.cpf_cnpj && memoNormalize.includes(a.cpf_cnpj.replace(/\D/g, ''))))
+      const forMatch = fornecedores.find(f => memoNormalize.includes(f.nome.toUpperCase()) || (f.cpf_cnpj && memoNormalize.includes(f.cpf_cnpj.replace(/\D/g, ''))))
+      const dirMatch = diretoria.find(d => memoNormalize.includes(d.nome.toUpperCase()))
 
-  const countComMatch = useMemo(() => matchedTransactions.filter(t => t.assocMatch || t.forMatch).length, [matchedTransactions])
-  const countSemMatch = useMemo(() => matchedTransactions.filter(t => !t.assocMatch && !t.forMatch).length, [matchedTransactions])
+      return {
+        bank,
+        assocMatch: assocMatch || null,
+        forMatch: forMatch ? { ...forMatch, isDirector: false } : (dirMatch ? { ...dirMatch, isDirector: true } : null),
+        suggestedCategory: assocMatch ? 'Mensalidades' : (forMatch ? (forMatch as any).categoria_padrao : 'Outros')
+      }
+    })
+  }, [coraItems, associados, fornecedores, diretoria])
 
-  const transacoesFiltradas = useMemo(() => {
-    let list = matchedTransactions
-    if (filterMatch === 'com_match') list = list.filter(t => t.assocMatch || t.forMatch)
-    if (filterMatch === 'sem_match') list = list.filter(t => !t.assocMatch && !t.forMatch)
-    if (filterType === 'receita') list = list.filter(t => t.bank.type === 'CREDIT')
-    if (filterType === 'despesa') list = list.filter(t => t.bank.type !== 'CREDIT')
-    return list
-  }, [matchedTransactions, filterMatch, filterType])
+  const filteredItems = useMemo(() => {
+    const list = activeTab === 'ofx' ? matchedTransactions : coraMatchedItems
+    return list.filter((item: any) => {
+      const matchesSearch = item.bank.memo.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesType = filterType === 'ALL' || item.bank.type === filterType
+      const hasMatch = !!(item.assocMatch || item.forMatch)
+      const matchesMatch = filterMatch === 'ALL' || (filterMatch === 'FOUND' ? hasMatch : !hasMatch)
+      return matchesSearch && matchesType && matchesMatch
+    })
+  }, [activeTab, matchedTransactions, coraMatchedItems, searchTerm, filterType, filterMatch])
 
   const handleProcessarLote = async () => {
-    // Agora permite lançar QUALQUER item que não foi ignorado nem é duplicado
-    const itemsToProcess = matchedTransactions.filter(t => {
+    const itemsToProcess = matchedTransactions.filter((t: any) => {
       const isNotIgnored = !ignoredMatches.has(t.bank.fitid);
       const isNotDuplicate = !lancamentos.some(l => l.banco_transacao_id === t.bank.fitid);
       return isNotIgnored && isNotDuplicate;
     })
 
     if (itemsToProcess.length === 0) {
-      const alreadyInDB = matchedTransactions.filter(t => lancamentos.some(l => l.banco_transacao_id === t.bank.fitid)).length;
-      if (alreadyInDB > 0) return alert(`${alreadyInDB} transações deste arquivo já existem no sistema.`);
-      return alert('Nenhuma transação nova encontrada para lançamento.');
+      alert('Nenhuma transação nova encontrada para lançamento.')
+      return
     }
     
     setIsProcessingBatch(true)
     try {
-      const items = itemsToProcess.map(t => ({
+      const items = itemsToProcess.map((t: any) => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: editedMemos[t.bank.fitid] || t.bank.memo,
         categoria: t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
@@ -218,6 +134,7 @@ export default function ConciliacaoPage() {
         valor: Math.abs(t.bank.amount),
         data: t.bank.date,
         status: 'pago',
+        forma_pagamento: (t.bank as any).metodo_inferido || 'Transferência',
         associado_id: t.assocMatch?.id || null,
         fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
         diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
@@ -228,19 +145,18 @@ export default function ConciliacaoPage() {
       if (res.error) alert(`Erro no Banco: ${JSON.stringify(res.error)}`)
       else { 
         alert(`${items.length} lançamentos processados com sucesso!`)
-        setExtrato(prev => prev.filter(tx => !itemsToProcess.find(it => it.bank.fitid === tx.fitid)))
+        setExtrato(prev => prev.filter((tx: any) => !itemsToProcess.find((it: any) => it.bank.fitid === tx.fitid)))
       }
     } finally { setIsProcessingBatch(false) }
   }
 
   const handleCoraBatch = async () => {
-    // Permite sincronizar tudo da Cora que não é duplicado
-    const rowsToProcess = coraMatchedItems.filter(t => !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id))
-    if (rowsToProcess.length === 0) return alert('Nenhuma nova transação Cora encontrada para sincronizar.')
+    const rowsToProcess = coraMatchedItems.filter((t: any) => !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id))
+    if (rowsToProcess.length === 0) return alert('Nenhuma nova transação Cora encontrada.')
 
     setIsProcessingBatch(true)
     try {
-      const rows = rowsToProcess.map(t => ({
+      const rows = rowsToProcess.map((t: any) => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: t.bank.memo,
         categoria: t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
@@ -248,67 +164,24 @@ export default function ConciliacaoPage() {
         valor: Math.abs(t.bank.amount),
         data: t.bank.date,
         status: 'pago',
+        forma_pagamento: (t.bank as any).metodo_inferido || 'Transferência',
         conciliado: true,
         associado_id: t.assocMatch?.id || null,
         fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
         diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
-        banco_transacao_id: t.bank.fitid
+        banco_transacao_id: (t.bank as any).id
       }))
       const res = await inserirBulk(rows as any)
       if (!res.error) {
-        await updateCoraBulk(rowsToProcess.map(i => (i.bank as any).id), 'sincronizado')
+        if (updateCoraStatusBulk) {
+          await updateCoraStatusBulk(rowsToProcess.map((i: any) => (i.bank as any).id), 'sincronizado')
+        }
         alert(`${rows.length} transações Cora sincronizadas com sucesso!`)
       } else {
         alert(`Erro Cora: ${JSON.stringify(res.error)}`)
       }
     } finally { setIsProcessingBatch(false) }
   }
-
-  const handleFileUpload = async (e: any) => {
-    const file = e.target.files?.[0] || e.dataTransfer?.files?.[0]
-    if (!file) return
-    const reader = new FileReader(); reader.onload = (evt) => setExtrato(parseOFX(evt.target?.result as string)); reader.readAsText(file)
-  }
-
-  const handleQuickCreate = (tx: OFXTransaction) => { setSelectedExtrato(tx); setIsModalOpen(true) }
-
-  const handleSalvarNovo = async (data: any) => {
-    if (!selectedExtrato) return
-    const { cpf, ...lancamentoData } = data
-    const res = await inserir({ 
-      ...lancamentoData, 
-      valor: selectedExtrato.amount, 
-      data: selectedExtrato.date, 
-      conciliado: true, 
-      banco_transacao_id: selectedExtrato.fitid 
-    } as any)
-    if (!res.error) { setIsModalOpen(false); setSelectedExtrato(null) } else { alert(`Erro: ${JSON.stringify(res.error)}`) }
-  }
-
-  const handleSalvarFornecedor = async (data: any) => {
-    const res = await inserirFornecedor(data)
-    if (!res.error) { setIsSupplierModalOpen(false); alert('Fornecedor cadastrado!') } else { alert(`Erro: ${res.error}`) }
-  }
-
-  const modalInitialData = useMemo(() => {
-    if (!selectedExtrato) return null
-    const m = matchedTransactions.find(mt => mt.bank.fitid === selectedExtrato.fitid)
-    return {
-      descricao: editedMemos[selectedExtrato.fitid] || selectedExtrato.memo,
-      associado_id: m?.assocMatch?.id || '',
-      fornecedor_id: m?.forMatch?.id || '',
-      categoria: m?.suggestedCategory || (selectedExtrato.type === 'DEBIT' ? 'Serviços' : 'Mensalidades'),
-      conta_id: selectedContaId,
-      tipo: selectedExtrato.type === 'DEBIT' ? 'despesa' : 'receita',
-      status: 'pago'
-    }
-  }, [selectedExtrato, matchedTransactions, selectedContaId, editedMemos])
-
-  const totals = useMemo(() => {
-    const entries = extrato.filter(i => i.type === 'CREDIT').reduce((s, i) => s + i.amount, 0)
-    const exits = extrato.filter(i => i.type === 'DEBIT').reduce((s, i) => s + Math.abs(i.amount), 0)
-    return { entradas: entries, saidas: exits }
-  }, [extrato])
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -323,18 +196,18 @@ export default function ConciliacaoPage() {
             </div>
           </div>
 
-          {(extrato.length > 0 || (activeTab === 'cora' && coraItems.length > 0)) && (
+          {(extrato.length > 0 || (activeTab === 'cora' && (coraItems || []).length > 0)) && (
             <div className="hidden md:block">
               <div className="flex items-center gap-3 bg-white p-2 pl-4 rounded-[20px] border border-gray-100 shadow-xl shadow-indigo-900/5">
                 <select value={selectedContaId} onChange={(e) => setSelectedContaId(e.target.value)} className="bg-transparent border-none text-xs font-bold text-gray-700 focus:ring-0 p-0 cursor-pointer min-w-[150px]">
-                  {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  {contas.map((c: any) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
                 {activeTab === 'ofx' ? (
                   <button onClick={handleProcessarLote} disabled={isProcessingBatch || !matchedTransactions.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
                     {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Lançar Lote OFX
                   </button>
                 ) : (
-                  <button onClick={handleCoraBatch} disabled={isProcessingBatch || !coraItems.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
+                  <button onClick={handleCoraBatch} disabled={isProcessingBatch || !coraItems?.length} className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-30">
                     {isProcessingBatch ? <RefreshCw size={14} className="animate-spin" /> : <ShieldCheck size={14} />} Sincronizar Tudo (Cora)
                   </button>
                 )}
@@ -343,8 +216,8 @@ export default function ConciliacaoPage() {
           )}
         </div>
 
-        {/* Sticky Mobile/Global Toolbar for Batch Actions */}
-        {(extrato.length > 0 || (activeTab === 'cora' && coraItems.length > 0)) && (
+        {/* Sticky Action Toolbar */}
+        {(extrato.length > 0 || (activeTab === 'cora' && (coraItems || []).length > 0)) && (
           <div className="sticky top-[80px] z-[40] flex items-center justify-between gap-3 bg-indigo-900/90 backdrop-blur-md p-3 px-6 rounded-[24px] border border-indigo-500/30 shadow-2xl shadow-indigo-900/20 animate-in slide-in-from-top-4">
             <div className="flex items-center gap-4">
               <div className="flex flex-col">
@@ -354,7 +227,7 @@ export default function ConciliacaoPage() {
                   onChange={(e) => setSelectedContaId(e.target.value)} 
                   className="bg-transparent border-none text-sm font-black text-white focus:ring-0 p-0 cursor-pointer"
                 >
-                  {contas.map(c => <option key={c.id} value={c.id} className="text-gray-900">{c.nome}</option>)}
+                  {contas.map((c: any) => <option key={c.id} value={c.id} className="text-gray-900">{c.nome}</option>)}
                 </select>
               </div>
               <div className="h-8 w-px bg-indigo-500/30 mx-2" />
@@ -362,8 +235,8 @@ export default function ConciliacaoPage() {
                 <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Prontos p/ Lançar</span>
                 <span className="text-sm font-black text-white">
                   {activeTab === 'ofx' 
-                    ? matchedTransactions.filter(t => !ignoredMatches.has(t.bank.fitid) && !lancamentos.some(l => l.banco_transacao_id === t.bank.fitid)).length 
-                    : coraMatchedItems.filter(t => !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id)).length
+                    ? matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !lancamentos.some(l => l.banco_transacao_id === t.bank.fitid)).length 
+                    : coraMatchedItems.filter((t: any) => !lancamentos.some(l => l.banco_transacao_id === (t.bank as any).id)).length
                   } itens
                 </span>
               </div>
@@ -381,260 +254,153 @@ export default function ConciliacaoPage() {
         )}
       </div>
 
-      {/* Tabs Selector */}
-      <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-gray-100 shadow-sm w-fit">
-        <button 
-          onClick={() => setActiveTab('ofx')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'ofx' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}
-        >
-          <Upload size={14} /> EXTRATO OFX
-        </button>
-        <button 
-          onClick={() => setActiveTab('cora')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${activeTab === 'cora' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-gray-400 hover:bg-gray-50'}`}
-        >
-          <CloudLightning size={14} /> CONEXÃO CORA (API)
-        </button>
+      {/* Tabs & Controls */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-[32px] border border-gray-100 shadow-sm relative z-10">
+        <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+          <button 
+            onClick={() => setActiveTab('ofx')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'ofx' ? 'bg-white text-indigo-600 shadow-md border border-indigo-50' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <CloudLightning size={14} /> EXTRATO OFX
+          </button>
+          <button 
+            onClick={() => setActiveTab('cora')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${activeTab === 'cora' ? 'bg-white text-indigo-600 shadow-md border border-indigo-50' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <RefreshCw size={14} className={activeTab === 'cora' ? 'animate-spin' : ''} /> CONEXÃO CORA (API)
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+            <input 
+              type="text" 
+              placeholder="Pesquisar..." 
+              className="pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500/10 min-w-[200px]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+            <Filter size={14} className="text-gray-400" />
+            <select 
+              className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as any)}
+            >
+              <option value="ALL">Tudo</option>
+              <option value="CREDIT">↑ Entradas</option>
+              <option value="DEBIT">↓ Saídas</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
+            <select 
+              className="bg-transparent text-xs font-bold text-gray-600 outline-none cursor-pointer"
+              value={filterMatch}
+              onChange={(e) => setFilterMatch(e.target.value as any)}
+            >
+              <option value="ALL">Todas ({activeTab === 'ofx' ? extrato.length : (coraItems || []).length})</option>
+              <option value="FOUND">✓ Com Match</option>
+              <option value="NOT_FOUND">⚠ Sem Match</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      {activeTab === 'cora' ? (
-        <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-500">
-           {/* Cora Toolbar */}
-           <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-xl shadow-indigo-900/5 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100 shadow-sm"><CreditCard size={24} /></div>
-                <div>
-                  <h3 className="text-sm font-bold text-gray-800">Sincronização Direta Cora</h3>
-                  <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest">Aguardando seu OK para lançar no financeiro.</p>
-                </div>
+      {activeTab === 'ofx' ? (
+        extrato.length === 0 ? (
+          <OFXUpload onUpload={(data: any) => {
+            const parsed = parseOFX(data)
+            setExtrato(parsed)
+          }} />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex gap-4">
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Transações ({filteredItems.length})</span>
+                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">IN {fmtR(filteredItems.reduce((acc: number, i: any) => acc + (i.bank.type === 'CREDIT' ? i.bank.amount : 0), 0))}</span>
+                <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">OUT {fmtR(filteredItems.reduce((acc: number, i: any) => acc + (i.bank.type === 'DEBIT' ? Math.abs(i.bank.amount) : 0), 0))}</span>
               </div>
-              <div className="flex items-center gap-3">
-                <button 
-                  onClick={async () => {
-                    const res = await syncWithBank()
-                    if (res?.success) alert(`${res.new_items} novas transações encontradas!`)
-                    else alert(`Erro: ${res?.error || 'Verifique as configurações Cora'}`)
-                  }} 
-                  disabled={coraLoading}
-                  className="px-6 py-3 bg-white text-indigo-600 border border-indigo-100 rounded-2xl text-xs font-black hover:bg-indigo-50 transition-all flex items-center gap-2"
-                >
-                  <RefreshCw size={14} className={coraLoading ? 'animate-spin' : ''} /> ATUALIZAR BANCO
-                </button>
-              </div>
-           </div>
-
-           {/* Cora Items Table */}
-           <div className="table-card overflow-hidden">
-              <div className="p-0 overflow-x-auto">
-                <table className="w-full text-left">
-                   <thead>
-                      <tr className="bg-gray-50/50">
-                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase">Data</th>
-                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase">Descrição Bancária</th>
-                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase text-right">Valor</th>
-                        <th className="p-5 text-[10px] font-black text-gray-400 uppercase text-center">Ações</th>
-                      </tr>
-                   </thead>
-                   <tbody className="divide-y divide-gray-50">
-                      {coraMatchedItems.map((m) => (
-                        <tr key={m.bank.fitid} className="hover:bg-slate-50 transition-all">
-                          <td className="p-5">
-                            <div className="text-xs font-black text-gray-900">{fmtData(m.bank.date)}</div>
-                          </td>
-                          <td className="p-5">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-sm font-bold text-gray-700">{m.bank.memo}</span>
-                              {m.assocMatch || m.forMatch ? (
-                                <span className={`text-[10px] font-black uppercase flex items-center gap-1 ${m.assocMatch ? 'text-emerald-500' : 'text-orange-500'}`}>
-                                  {m.assocMatch ? <Users size={10}/> : <Banknote size={10}/>}
-                                  Sugerido: {m.assocMatch?.nome || m.forMatch?.nome}
-                                </span>
-                              ) : <span className="text-[9px] text-gray-300 italic">Nenhum match encontrado</span>}
-                            </div>
-                          </td>
-                          <td className={`p-5 text-right font-black ${m.bank.type === 'CREDIT' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {fmtR(m.bank.amount)}
-                          </td>
-                          <td className="p-5 whitespace-nowrap">
-                            <div className="flex items-center justify-center gap-2">
-                               <button 
-                                 onClick={() => { setSelectedExtrato(m.bank); setIsModalOpen(true) }}
-                                 className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all"
-                               >
-                                 CONCILIAR
-                               </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {coraItems.length === 0 && (
-                        <tr>
-                          <td colSpan={4} className="p-20 text-center">
-                            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-gray-300"><CloudLightning size={32} /></div>
-                            <h4 className="text-sm font-bold text-gray-800">Nenhuma transação pendente</h4>
-                            <p className="text-xs text-gray-400 mt-1">Clique em 'Atualizar Banco' para buscar novidades.</p>
-                          </td>
-                        </tr>
-                      )}
-                   </tbody>
-                </table>
-              </div>
-           </div>
-        </div>
+              <button 
+                onClick={() => setExtrato([])}
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
+              >
+                <Trash2 size={14} /> LIMPAR TUDO
+              </button>
+            </div>
+            {filteredItems.map((item: any, idx: number) => (
+              <MatchItem 
+                key={idx} 
+                {...item} 
+                onEditMemo={(newMemo: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: newMemo }))}
+                onLinkManual={() => { setSelectedExtrato(item); setIsModalOpen(true) }}
+                onLinkSupplier={() => { setSelectedExtrato(item); setIsSupplierModalOpen(true) }}
+                onIgnore={() => setIgnoredMatches(prev => {
+                  const next = new Set(prev)
+                  if (next.has(item.bank.fitid)) next.delete(item.bank.fitid)
+                  else next.add(item.bank.fitid)
+                  return next
+                })}
+                isIgnored={ignoredMatches.has(item.bank.fitid)}
+                isDuplicate={lancamentos.some(l => l.banco_transacao_id === item.bank.fitid)}
+              />
+            ))}
+          </div>
+        )
       ) : (
-        <>
-          {!extrato.length ? (
-            <div 
-              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} 
-              onDragLeave={() => setIsDragOver(false)} 
-              onDrop={(e) => { e.preventDefault(); setIsDragOver(false); handleFileUpload(e); }} 
-              className={`relative border-2 border-dashed rounded-[32px] p-20 flex flex-col items-center justify-center transition-all bg-white shadow-xl shadow-indigo-900/5 ${isDragOver ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01]' : 'border-gray-200 hover:border-indigo-300'}`}
-            >
-              <input type="file" accept=".ofx" onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-              <div className="w-20 h-20 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-200 mb-8 animate-bounce-slow"><Upload size={36} /></div>
-              <h3 className="text-xl font-bold text-gray-900">Importe seu extrato OFX</h3>
-              <p className="text-sm text-gray-500 mt-2 max-w-sm text-center">Arraste aqui ou clique para selecionar o arquivo .ofx.</p>
-            </div>
+        <div className="grid grid-cols-1 gap-4 animate-in fade-in slide-in-from-bottom-2">
+          {(!coraItems || coraItems?.length === 0) ? (
+             <div className="flex flex-col items-center justify-center p-20 bg-white rounded-[40px] border border-dashed border-gray-200">
+               <RefreshCw size={48} className="text-gray-300 mb-4 animate-spin" />
+               <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">Buscando transações da API Cora...</p>
+             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6">
-              <div className="table-card overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between bg-gray-50/30 gap-4 flex-wrap">
-                  <div className="flex items-center gap-6">
-                    <h2 className="text-sm font-bold text-gray-800 uppercase tracking-widest flex items-center gap-2"><Search size={16} className="text-indigo-600" /> Transações ({extrato.length})</h2>
-                    <div className="flex gap-4">
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">IN {fmtR(totals.entradas)}</span>
-                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-1 rounded-lg">OUT {fmtR(totals.saidas)}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    {/* Filtro de Tipo */}
-                    <div className="flex gap-2 border-r border-gray-100 pr-4">
-                      {[
-                        { key: 'todos', label: 'Tudo' },
-                        { key: 'receita', label: '⬇ Entradas' },
-                        { key: 'despesa', label: '⬆ Saídas' },
-                      ].map(f => (
-                        <button 
-                          key={f.key} 
-                          onClick={() => setFilterType(f.key as any)} 
-                          className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-all ${filterType === f.key ? 'bg-slate-800 text-white border-slate-800 shadow-md shadow-slate-200' : 'bg-white text-gray-400 border-gray-100 hover:border-slate-200'}`}
-                        >
-                          {f.label}
-                        </button>
-                      ))}
-                    </div>
-                    {/* Filtro de Match */}
-                    {[
-                      { key: 'todos', label: `Todas (${matchedTransactions.length})` },
-                      { key: 'com_match', label: `✓ Com Match (${countComMatch})` },
-                      { key: 'sem_match', label: `⚠ Sem Match (${countSemMatch})` },
-                    ].map(f => (
-                      <button 
-                        key={f.key} 
-                        onClick={() => setFilterMatch(f.key as any)} 
-                        className={`text-[10px] font-black px-4 py-1.5 rounded-full border transition-all ${filterMatch === f.key ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100' : 'bg-white text-gray-400 border-gray-100 hover:border-indigo-200'}`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="divide-y divide-gray-50">
-                  {transacoesFiltradas.map((item) => (
-                    <div key={item.bank.fitid} className="p-5 hover:bg-slate-50 transition-all flex flex-col md:flex-row items-center gap-6">
-                      <div className="flex-1 flex items-center gap-4 w-full">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.bank.type === 'CREDIT' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}><Banknote size={20} /></div>
-                        <div className="flex-1">
-                          <div className="text-[10px] font-black text-gray-400 uppercase">{fmtData(item.bank.date)}</div>
-                          <div className="flex flex-col gap-1">
-                            <input 
-                              type="text" 
-                              value={editedMemos[item.bank.fitid] !== undefined ? editedMemos[item.bank.fitid] : item.bank.memo}
-                              onChange={(e) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: e.target.value }))}
-                              className={`text-sm font-bold bg-white border border-gray-100 rounded-lg p-1.5 px-3 focus:ring-2 w-full outline-none shadow-sm ${item.bank.type === 'DEBIT' ? 'text-indigo-700 focus:ring-indigo-100' : 'text-emerald-700 focus:ring-emerald-100'}`}
-                              placeholder={`Descrição da ${item.bank.type === 'DEBIT' ? 'Saída' : 'Entrada'}...`}
-                            />
-                            <span className="text-[9px] text-gray-300 italic truncate max-w-[250px]">Banco: {item.bank.memo}</span>
-                          </div>
-                          <div className="text-xs font-black text-gray-700 mt-1">{fmtR(item.bank.amount)}</div>
-                        </div>
-                      </div>
-
-                      <ArrowRight className="text-gray-200 hidden md:block" />
-
-                      <div className="flex-[1.2] w-full">
-                        {item.assocMatch || item.forMatch ? (
-                          <button onClick={() => handleQuickCreate(item.bank)} className={`flex items-center gap-4 w-full p-4 rounded-2xl border border-dashed transition-all hover:shadow-lg ${(item.forMatch as any)?.isDirector ? 'border-indigo-200 bg-indigo-50/20' : (item.forMatch ? 'border-orange-200 bg-orange-50/20' : 'border-emerald-200 bg-emerald-50/20')}`}>
-                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${(item.forMatch as any)?.isDirector ? 'bg-indigo-600' : (item.forMatch ? 'bg-orange-500' : 'bg-emerald-500')}`}>
-                              {(item.forMatch as any)?.isDirector ? <ShieldCheck size={20} /> : (item.forMatch ? <Banknote size={20} /> : <Users size={20} />)}
-                            </div>
-                            <div className="flex-1 text-left">
-                              <div className={`text-[10px] font-black uppercase tracking-widest ${(item.forMatch as any)?.isDirector ? 'text-indigo-600' : (item.forMatch ? 'text-orange-600' : 'text-emerald-600')}`}>
-                                {(item.forMatch as any)?.isDirector ? 'DIRETORIA' : (item.forMatch ? 'FORNECEDOR' : (item.isFirstPayment ? '🌟 ADESÃO' : 'ASSOCIADO'))}
-                              </div>
-                              <div className="text-xs font-bold text-gray-800">{(item.forMatch ? (item.forMatch as any).nome : (item.assocMatch as any).nome)}</div>
-                            </div>
-                            <button onClick={(e) => { e.stopPropagation(); handleUnmatch(item.bank.fitid) }} className="p-2 text-gray-300 hover:text-red-500"><X size={16} /></button>
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            {item.bank.type === 'DEBIT' && (
-                              <button onClick={() => { setSelectedExtrato(item.bank); setIsSupplierModalOpen(true) }} className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-orange-200 bg-orange-50/10 text-orange-600 text-[10px] font-black rounded-xl hover:bg-orange-50">
-                                <Plus size={14} /> FORNECEDOR
-                              </button>
-                            )}
-                            <button onClick={() => handleQuickCreate(item.bank)} className="flex-1 flex items-center justify-center gap-2 py-3 border border-dashed border-gray-200 bg-gray-50/50 text-gray-600 text-[10px] font-black rounded-xl hover:bg-gray-100">
-                              <Plus size={14} /> MANUAL
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            filteredItems.map((item: any, idx: number) => (
+              <MatchItem 
+                key={idx} 
+                {...item} 
+                isCora
+                isDuplicate={lancamentos.some(l => l.banco_transacao_id === (item.bank as any).id)}
+              />
+            ))
           )}
-        </>
+        </div>
       )}
 
-      {/* Model de Lançamento */}
-      <CrudModal 
+      <ManualMatchModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Confirmar Lançamento"
-        initialData={modalInitialData}
-        onSubmit={handleSalvarNovo}
-        fields={[
-          { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },
-          { name: 'descricao', label: 'Descrição Final', type: 'text', required: true },
-          { name: 'cpf', label: 'CPF / CNPJ Encontrado', type: 'text', placeholder: 'Apenas para conferência...' },
-          { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
-            { value: 'Mensalidades', label: 'Mensalidades' }, { value: 'ADESÃO', label: 'Adesão' }, { value: 'Serviços', label: 'Serviços' }, { value: 'Outros', label: 'Outros' }
-          ] },
-          { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
-          { name: 'associado_id', label: 'Associado', type: 'select', showIf: (d) => d.tipo === 'receita', options: [{ value: '', label: 'Selecione...' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
-          { name: 'fornecedor_id', label: 'Fornecedor', type: 'select', showIf: (d) => d.tipo === 'despesa', options: [{ value: '', label: 'Selecione...' }, ...fornecedores.map(f => ({ value: f.id, label: f.nome }))] },
-          { name: 'diretor_id', label: 'Membro Diretoria', type: 'select', options: [{ value: '', label: 'Sem vínculo...' }, ...diretoria.map(d => ({ value: d.id, label: `${d.nome} (${d.cargo})` }))] },
-          { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'pago', label: 'Liquidado' }, { value: 'pendente', label: 'Pendente' }] },
-        ]}
+        extrato={selectedExtrato}
+        onSelect={(assoc: any) => {
+          setExtrato(prev => prev.map((item: any) => 
+            item.fitid === selectedExtrato.bank.fitid 
+              ? { ...item, assocMatch: assoc, suggestedCategory: 'Mensalidades' }
+              : item
+          ))
+          setIsModalOpen(false)
+          setSelectedExtrato(null)
+        }}
       />
 
-      {/* Modal de Novo Fornecedor */}
-      <CrudModal 
+      <SupplierMatchModal 
         isOpen={isSupplierModalOpen}
         onClose={() => setIsSupplierModalOpen(false)}
-        title="Novo Fornecedor / Prestador"
-        initialData={{ nome: selectedExtrato?.memo || '', cpf_cnpj: (selectedExtrato?.memo.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/))?.[0]?.replace(/[^\d]/g, '') || '' }}
-        onSubmit={handleSalvarFornecedor}
-        fields={[
-          { name: 'nome', label: 'Nome / Razão Social', type: 'text', required: true },
-          { name: 'cpf_cnpj', label: 'CPF ou CNPJ', type: 'text' },
-          { name: 'categoria_padrao', label: 'Categoria Padrão', type: 'text' },
-          { name: 'email', label: 'E-mail', type: 'text' },
-          { name: 'telefone', label: 'Telefone', type: 'text' },
-        ]}
+        extrato={selectedExtrato}
+        onSelect={(sup: any) => {
+          const targetFitid = selectedExtrato.bank.fitid;
+          setExtrato(prev => prev.map((tx: any) => {
+            if (tx.fitid === targetFitid) {
+               setEditedMemos(prev => ({ ...prev, [targetFitid]: sup.nome }));
+               return tx;
+            }
+            return tx;
+          }));
+          setIsSupplierModalOpen(false);
+          setSelectedExtrato(null);
+        }}
       />
     </div>
   )

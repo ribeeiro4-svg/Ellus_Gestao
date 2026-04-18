@@ -49,18 +49,25 @@ export default function FinanceiroPage() {
     )
   }, [associados, lancamentos])
 
-  const handleGerarRecorrenciaParaNovos = async (params: { meses: number, forma_pagamento: string, conta_id: string, dia: number }) => {
+  const handleGerarRecorrenciaParaNovos = async (params: { 
+    meses: number, 
+    forma_pagamento: string, 
+    conta_id: string, 
+    dia: number,
+    mes_inicio: number,
+    ano_inicio: number,
+    descricao_padrao: string
+  }) => {
     if (!associadosSemPagamento.length) return
     
     const batch: any[] = []
-    const hoje = new Date()
     
     associadosSemPagamento.forEach(assoc => {
       for (let i = 0; i < params.meses; i++) {
-        const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, Number(params.dia))
+        const d = new Date(params.ano_inicio, params.mes_inicio + i, Number(params.dia))
         batch.push({
           tipo: 'receita',
-          descricao: `MENSALIDADE DE ASSOCIADO - ${assoc.nome}`,
+          descricao: `${params.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`,
           categoria: 'Mensalidades',
           valor: 50,
           data: d.toISOString().split('T')[0],
@@ -74,7 +81,7 @@ export default function FinanceiroPage() {
 
     const res = await inserirBulk(batch)
     if (!res.error) {
-      alert(`${batch.length} lançamentos gerados com sucesso!`)
+      alert(`${batch.length} lançamentos gerados com sucesso para ${associadosSemPagamento.length} associados!`)
       setIsSyncModalOpen(false)
     } else {
       console.error('Erro detalhado no lote:', res.error)
@@ -657,7 +664,6 @@ export default function FinanceiroPage() {
         isOpen={isSyncModalOpen}
         onClose={() => setIsSyncModalOpen(false)}
         title="Sincronizar Novos Associados"
-        initialData={{ meses: 12, forma_pagamento: 'Boleto', conta_id: contas.find(c => c.nome.toLowerCase().includes('cora'))?.id || contas[0]?.id || '', dia: 10 }}
         onSubmit={(data) => handleGerarRecorrenciaParaNovos(data)}
         fields={[
           { 
@@ -665,26 +671,29 @@ export default function FinanceiroPage() {
             label: 'Atenção', 
             type: 'info', 
             render: () => (
-              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-6">
-                <div className="flex items-center gap-2 text-indigo-700 font-bold text-sm mb-2">
-                  <AlertCircle size={16} /> {associadosSemPagamento.length} Associados encontrados
+              <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 mb-6 font-bold">
+                <div className="flex items-center gap-2 text-indigo-700 text-sm mb-2 uppercase tracking-tighter">
+                  <AlertCircle size={16} /> {associadosSemPagamento.length} Associados sem histórico
                 </div>
-                <p className="text-xs text-indigo-600 leading-relaxed">
-                  Estes associados ainda não possuem nenhum lançamento financeiro. 
-                  Defina as regras abaixo para gerar as mensalidades em lote.
+                <p className="text-[11px] text-indigo-600 leading-relaxed font-medium">
+                  Estes associados não possuem nenhum lançamento financeiro. 
+                  O sistema gerará mensalidades automáticas de R$ 50,00 para cada um deles.
                 </p>
               </div>
             )
           } as any,
-          { name: 'meses', label: 'Quantidade de meses a gerar', type: 'select', required: true, options: [
+          { name: 'descricao_padrao', label: 'Descrição dos Lançamentos', type: 'text', required: true, defaultValue: 'MENSALIDADE DE ASSOCIADO' },
+          { name: 'mes_inicio', label: 'Mês de Início', type: 'select', required: true, defaultValue: new Date().getMonth(), options: MESES.map((m, idx) => ({ value: idx, label: m })) },
+          { name: 'ano_inicio', label: 'Ano de Início', type: 'number', required: true, defaultValue: new Date().getFullYear() },
+          { name: 'dia', label: 'Dia de Vencimento', type: 'number', required: true, defaultValue: 10 },
+          { name: 'meses', label: 'Quantidade de Meses (Lote)', type: 'select', required: true, defaultValue: 12, options: [
             { value: 1, label: '1 Mês' },
             { value: 6, label: '6 Meses' },
             { value: 12, label: '12 Meses (1 Ano)' },
             { value: 24, label: '24 Meses (2 Anos)' }
           ]},
-          { name: 'dia', label: 'Dia de Vencimento (Todo mês)', type: 'number', required: true },
           { name: 'conta_id', label: 'Conta para Depósito', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
-          { name: 'forma_pagamento', label: 'Forma de Pagamento Padrão', type: 'select', required: true, options: [
+          { name: 'forma_pagamento', label: 'Forma de Pagamento', type: 'select', required: true, defaultValue: 'Boleto', options: [
             { value: 'Boleto', label: 'Boleto' },
             { value: 'PIX', label: 'PIX' },
             { value: 'Dinheiro', label: 'Dinheiro' },
