@@ -300,6 +300,7 @@ export default function ReceitasPage() {
           <span>REC: {lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita').length}</span>
           <span>FILT: {filteredReceitas.length}</span>
           <span>Y/M: {filterYear}/{filterMonth}</span>
+          <span>OLD: {String(lancamentos[lancamentos.length-1]?.data || '').slice(0,10)}</span>
         </div>
         {lancamentos.length > 0 && (
           <div className="text-[7px] text-blue-300 truncate">
