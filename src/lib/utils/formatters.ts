@@ -12,20 +12,14 @@ export const fmtR = (v: number | string | undefined | null) => {
 
 export const fmtData = (d: string | Date | undefined | null) => {
   if (!d) return '--'
-  
-  // Se for string, tenta limpar o fuso horário
   if (typeof d === 'string') {
     const isoDate = d.split('T')[0]
     const parts = isoDate.includes('-') ? isoDate.split('-') : isoDate.split('/')
-    
     if (parts.length === 3) {
-      if (parts[0].length === 4) { // YYYY-MM-DD
-        return `${parts[2]}/${parts[1]}/${parts[0]}`
-      }
-      return `${parts[0]}/${parts[1]}/${parts[2]}` // DD/MM/YYYY
+      if (parts[0].length === 4) return `${parts[2]}/${parts[1]}/${parts[0]}`
+      return `${parts[0]}/${parts[1]}/${parts[2]}`
     }
   }
-
   try {
     const date = new Date(d)
     return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
@@ -39,15 +33,46 @@ export const fmtHora = (d: string | Date) => {
 }
 
 export const fmtPct = (v: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1 }).format(v / 100)
+  return new Intl.NumberFormat('pt-BR', { style: 'percent', minimumFractionDigits: 1 }).format((v || 0) / 100)
+}
+
+export const pctMeta = (atual: number, meta: number) => {
+  if (!meta || meta === 0) return 0
+  return Math.round((atual / meta) * 100)
+}
+
+export const roundMoney = (v: number) => {
+  return Math.round(v * 100) / 100
 }
 
 export const safeSum = (a: number, b: number) => {
-  return Math.round((a + b) * 100) / 100
+  return Math.round(((a || 0) + (b || 0)) * 100) / 100
 }
 
 export const safeDiff = (a: number, b: number) => {
-  return Math.round((a - b) * 100) / 100
+  return Math.round(((a || 0) - (b || 0)) * 100) / 100
+}
+
+export const statusAssocClass = (s: string) => {
+  switch (s?.toLowerCase()) {
+    case 'ativo': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    case 'inadimplente': return 'bg-rose-100 text-rose-700 border-rose-200'
+    case 'cancelado': return 'bg-slate-100 text-slate-700 border-slate-200'
+    default: return 'bg-gray-100 text-gray-700 border-gray-200'
+  }
+}
+
+export const statusLancClass = (s: string) => {
+  switch (s?.toLowerCase()) {
+    case 'pago': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    case 'aberto': return 'bg-amber-100 text-amber-700 border-amber-200'
+    case 'atrasado': return 'bg-rose-100 text-rose-700 border-rose-200'
+    default: return 'bg-gray-100 text-gray-700 border-gray-200'
+  }
+}
+
+export const deleteCookie = (name: string) => {
+  document.cookie = name + '=; Max-Age=-99999999; path=/;'
 }
 
 export const MESES = [
@@ -65,57 +90,35 @@ export const STATUS_LANCAMENTO = [
   { value: 'atrasado', label: 'Atrasado', color: 'bg-rose-100 text-rose-700' }
 ]
 
-/**
- * Pega o índice do mês (0-11) de forma robusta ignorando fuso horário.
- * Aceita "YYYY-MM-DD", "YYYY-MM-DDTHH:mm:ssZ" ou "DD/MM/YYYY"
- */
 export function getMesIdx(dataStr: any): number {
   if (!dataStr) return -1
   const str = String(dataStr).trim()
-  
   if (str.includes('-')) {
     const cleanStr = str.split('T')[0].split(' ')[0]
     const parts = cleanStr.split('-')
     if (parts.length >= 2) {
-      // Se parts[0] tem 4 dígitos, é YYYY-MM-DD
       const mesStr = parts[0].length === 4 ? parts[1] : parts[1]
       return (parseInt(mesStr, 10) || 0) - 1
     }
   } 
-  
   if (str.includes('/')) {
     const parts = str.split('/')
-    if (parts.length >= 2) {
-      // DD/MM/YYYY ou MM/YYYY
-      const mesStr = parts[1]
-      return (parseInt(mesStr, 10) || 0) - 1
-    }
+    if (parts.length >= 2) return (parseInt(parts[1], 10) || 0) - 1
   }
-
   return -1
 }
 
-/**
- * Pega o ano (YYYY) de forma robusta.
- */
 export function getAnoIdx(dataStr: any): number {
   if (!dataStr) return -1
   const str = String(dataStr).trim()
-  
   if (str.includes('-')) {
     const cleanStr = str.split('T')[0].split(' ')[0]
     const parts = cleanStr.split('-')
-    if (parts.length >= 1) {
-      return parts[0].length === 4 ? parseInt(parts[0], 10) : parseInt(parts[2], 10)
-    }
+    if (parts.length >= 1) return parts[0].length === 4 ? parseInt(parts[0], 10) : parseInt(parts[2], 10)
   } 
-  
   if (str.includes('/')) {
     const parts = str.split('/')
-    if (parts.length >= 3) {
-      return parseInt(parts[2], 10)
-    }
+    if (parts.length >= 3) return parseInt(parts[2], 10)
   }
-
   return -1
 }
