@@ -162,3 +162,46 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO tenant_id_mapping (id)
 VALUES ('971f92af-a72b-4bc4-a8e0-333d712ce6a7')
 ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- 007_create_config_categorias.sql
+-- ============================================================
+CREATE TABLE IF NOT EXISTS config_categorias (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  nome        TEXT NOT NULL,
+  tipo        TEXT NOT NULL CHECK (tipo IN ('receita','despesa')),
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(tenant_id, nome)
+);
+
+ALTER TABLE config_categorias ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "config_categorias_tenant" ON config_categorias
+  FOR ALL USING (tenant_id IN (SELECT tenant_id FROM usuarios WHERE id = auth.uid()));
+
+CREATE TRIGGER trg_config_categorias_updated BEFORE UPDATE ON config_categorias
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
+-- 008_create_orcamentos.sql
+-- ============================================================
+CREATE TABLE IF NOT EXISTS orcamentos (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id       UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+  mes             INTEGER NOT NULL CHECK (mes >= 1 AND mes <= 12),
+  ano             INTEGER NOT NULL,
+  categoria       TEXT NOT NULL,
+  tipo            TEXT NOT NULL CHECK (tipo IN ('receita','despesa')),
+  valor_planejado NUMERIC(12,2) NOT NULL DEFAULT 0,
+  created_at      TIMESTAMPTZ DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(tenant_id, mes, ano, categoria)
+);
+
+ALTER TABLE orcamentos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "orcamentos_tenant" ON orcamentos
+  FOR ALL USING (tenant_id IN (SELECT tenant_id FROM usuarios WHERE id = auth.uid()));
+
+CREATE TRIGGER trg_orcamentos_updated BEFORE UPDATE ON orcamentos
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
