@@ -32,20 +32,31 @@ export class CoraService {
       throw new Error('Certificações Cora não encontradas (Configure no Portal ou .env).');
     }
 
-    const normalize = (val: string) => {
-      // 1. Converte \n literais (strings) em quebras reais
-      // 2. Remove espaços em branco nas pontas de cada linha
-      // 3. Garante que não haja linhas vazias no meio
-      return val
-        .replace(/\\n/g, '\n')
-        .split('\n')
-        .map(l => l.trim())
-        .filter(l => l.length > 0)
-        .join('\n');
+    const normalize = (val: string, label: string) => {
+      // 1. Limpa quebras de linha falsas e espaços nas pontas
+      let cleaned = val.replace(/\\n/g, '\n').replace(/\r/g, '').trim();
+      
+      // 2. Tenta extrair o tipo real do cabeçalho original (para chaves RSA vs PKCS8)
+      const matchHeader = cleaned.match(/-----BEGIN ([^-]+)-----/);
+      const headerType = matchHeader ? matchHeader[1] : label;
+
+      // 3. Pega apenas o miolo (remove cabeçalhos e rodapés)
+      let body = cleaned
+        .replace(/-----BEGIN [^-]+-----/g, '')
+        .replace(/-----END [^-]+-----/g, '')
+        .replace(/\s/g, ''); // Remove TODA quebra de linha e espaço
+
+      // 4. CORREÇÃO CRÍTICA: Se houver espaços que viraram " " em vez de "+", corrigimos
+      // Isso é comum em cópias de PDF/Emails
+      body = body.replace(/ /g, '+');
+
+      // 5. Reconstrói o PEM com quebras a cada 64 caracteres
+      const lines = body.match(/.{1,64}/g) || [];
+      return `-----BEGIN ${headerType}-----\n${lines.join('\n')}\n-----END ${headerType}-----`;
     };
 
-    const finalCert = normalize(cert);
-    const finalKey = normalize(key);
+    const finalCert = normalize(cert, 'CERTIFICATE');
+    const finalKey = normalize(key, 'PRIVATE KEY');
 
     this._lastDiag = `CertLen:${finalCert.length} KeyLen:${finalKey.length}`;
 
