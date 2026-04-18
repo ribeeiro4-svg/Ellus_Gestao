@@ -43,7 +43,7 @@ export default function ConfigPage() {
 
   const handleSavePerfil = async () => {
     try {
-      await atualizarTenant({ 
+      const { error } = await atualizarTenant({ 
         nome: customName, 
         logo_url: customLogo, 
         zapsign_token: zapsignToken,
@@ -51,9 +51,15 @@ export default function ConfigPage() {
         cora_cert: coraCert,
         cora_key: coraKey
       })
-      alert('Configurações salvas com sucesso!')
-    } catch (err) {
-      alert('Erro ao salvar configurações.')
+      if (error) {
+        console.error('[ConfigPage] Erro ao salvar:', error)
+        alert(`Erro ao salvar no banco: ${error.message}`)
+      } else {
+        alert('Configurações salvas com sucesso!')
+      }
+    } catch (err: any) {
+      console.error('[ConfigPage] Erro inesperado:', err)
+      alert('Erro inesperado: ' + err.message)
     }
   }
 

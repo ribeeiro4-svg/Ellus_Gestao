@@ -47,7 +47,7 @@ export function useTenant() {
   useEffect(() => { fetch() }, [fetch])
 
   const atualizar = async (input: Partial<TenantData>) => {
-    if (!tenantId) return
+    if (!tenantId) return { error: { message: 'ID do inquilino não identificado', code: 'NO_ID', details: '', hint: '' } }
     // Usamos upsert para garantir que o registro seja criado se não existir
     const { error } = await sb.from('tenants').upsert({ ...input, id: tenantId })
     if (!error) fetch()
