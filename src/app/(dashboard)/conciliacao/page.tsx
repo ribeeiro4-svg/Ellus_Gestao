@@ -67,18 +67,26 @@ export default function ConciliacaoPage() {
     }
   }, [contas, selectedContaId])
 
-  // Cérebro de Auditoria 2.0 - Precisão Cirúrgica
+  const { atualizar: atualizarAssociado } = useAssociados()
+
+  // Scanner de Documentos (CPF/CNPJ)
+  const extractDocument = (memo: string) => {
+    const raw = memo.replace(/\D/g, '')
+    const cnpjMatch = raw.match(/\d{14}/)
+    const cpfMatch = raw.match(/\d{11}/)
+    return cnpjMatch ? cnpjMatch[0] : (cpfMatch ? cpfMatch[0] : null)
+  }
+
+  // Cérebro de Auditoria 2.1 - Precisão + Enriquecimento
   const getAuditMatch = (bankMemo: string, bankAmount: number, bankType: string) => {
-    const memo = bankMemo.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
+    const memo = bankMemo.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    const numbersInMemo = memo.replace(/\D/g, '')
+    const extractedDoc = extractDocument(bankMemo)
     
     // 1. Prioridade Máxima: CPF / CNPJ
-    const numbersInMemo = memo.replace(/\D/g, '')
-    
-    // Busca em Diretoria por CPF
     const dirCpfMatch = diretoria.find(d => d.cpf && numbersInMemo.includes(d.cpf.replace(/\D/g, '')))
     if (dirCpfMatch) return { forMatch: { ...dirCpfMatch, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false }
 
-    // Busca em Associados por CPF
     const assocCpfMatch = associados.find(a => a.cpf && numbersInMemo.includes(a.cpf.replace(/\D/g, '')))
     if (assocCpfMatch) {
       const isAdesao = !lancamentos.some(l => l.associado_id === assocCpfMatch.id)
@@ -91,25 +99,37 @@ export default function ConciliacaoPage() {
     const assocExactMatch = associados.find(a => memo.includes(normalizeName(a.nome)))
     if (assocExactMatch) {
       const isAdesao = !lancamentos.some(l => l.associado_id === assocExactMatch.id)
-      return { assocMatch: assocExactMatch, forMatch: null, suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', isAdesao }
+      return { 
+        assocMatch: assocExactMatch, 
+        forMatch: null, 
+        suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', 
+        isAdesao,
+        needsUpdate: !assocExactMatch.cpf && !!extractedDoc,
+        newDocument: extractedDoc
+      }
     }
 
     const dirExactMatch = diretoria.find(d => memo.includes(normalizeName(d.nome)))
     if (dirExactMatch) return { forMatch: { ...dirExactMatch, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false }
 
     // 3. Match Inteligente de Fragmentos (Fuzzy)
-    // Exige que pelo menos 2 partes significativas do nome (min 4 letras) estejam no memo
     const fuzzyMatch = (targetName: string) => {
       const parts = normalizeName(targetName).split(' ').filter(p => p.length > 3)
       if (parts.length < 2) return false
-      // Verifica se pelo menos o primeiro nome e um sobrenome significativo batem
       return memo.includes(parts[0]) && parts.slice(1).some(p => memo.includes(p))
     }
 
     const assocFuzzy = associados.find(a => fuzzyMatch(a.nome))
     if (assocFuzzy) {
       const isAdesao = !lancamentos.some(l => l.associado_id === assocFuzzy.id)
-      return { assocMatch: assocFuzzy, forMatch: null, suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', isAdesao }
+      return { 
+        assocMatch: assocFuzzy, 
+        forMatch: null, 
+        suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', 
+        isAdesao,
+        needsUpdate: !assocFuzzy.cpf && !!extractedDoc,
+        newDocument: extractedDoc
+      }
     }
 
     const dirFuzzy = diretoria.find(d => fuzzyMatch(d.nome))
@@ -190,6 +210,14 @@ export default function ConciliacaoPage() {
     
     setIsProcessingBatch(true)
     try {
+      // 1. Enriquecimento Cadastral (Parallel)
+      const enrichments = itemsToProcess
+        .filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument)
+        .map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument }))
+      
+      if (enrichments.length > 0) await Promise.all(enrichments)
+
+      // 2. Lançamentos Financeiros
       const items = itemsToProcess.map((t: any) => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: editedMemos[t.bank.fitid] || t.bank.memo,
@@ -208,7 +236,7 @@ export default function ConciliacaoPage() {
       const res = await inserirBulk(items as any)
       if (res.error) alert(`Erro na Auditoria/Banco: ${res.error}`)
       else { 
-        alert(`${items.length} lançamentos processados com sucesso!`)
+        alert(`${items.length} lançamentos processados ${enrichments.length > 0 ? `com ${enrichments.length} atualizações cadastrais!` : 'com sucesso!'}`)
         setProcessedIds(prev => {
           const next = new Set(prev)
           itemsToProcess.forEach(it => next.add(it.bank.fitid))
@@ -224,6 +252,14 @@ export default function ConciliacaoPage() {
 
     setIsProcessingBatch(true)
     try {
+      // 1. Enriquecimento Cadastral (Parallel)
+      const enrichments = rowsToProcess
+        .filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument)
+        .map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument }))
+      
+      if (enrichments.length > 0) await Promise.all(enrichments)
+
+      // 2. Sincronização
       const rows = rowsToProcess.map((t: any) => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: t.bank.memo,
@@ -244,7 +280,7 @@ export default function ConciliacaoPage() {
         if (updateStatusBulk) {
           await updateStatusBulk(rowsToProcess.map((i: any) => i.bank.fitid), 'sincronizado')
         }
-        alert(`${rows.length} transações Cora sincronizadas com auditoria!`)
+        alert(`${rows.length} transações Cora sincronizadas ${enrichments.length > 0 ? `com ${enrichments.length} CPFs coletados!` : 'com auditoria!'}`)
         setProcessedIds(prev => {
           const next = new Set(prev)
           rowsToProcess.forEach(it => next.add(it.bank.fitid))
