@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { X, Check, Loader2 } from 'lucide-react'
 
-interface Field {
+export interface Field {
   name: string
   label: string
   type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox' | 'info'

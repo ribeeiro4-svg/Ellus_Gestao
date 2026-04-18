@@ -13,7 +13,7 @@ import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
-import CrudModal from '@/components/ui/CrudModal'
+import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
@@ -326,7 +326,7 @@ export default function FinanceiroPage() {
     }
   ]
 
-  const modalFields = useMemo(() => [
+  const modalFields: Field[] = useMemo(() => [
     { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },
     { name: 'descricao', label: 'Descrição', type: 'text', required: true },
     { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
