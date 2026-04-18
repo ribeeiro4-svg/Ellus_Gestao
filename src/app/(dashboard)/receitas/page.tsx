@@ -302,11 +302,16 @@ export default function ReceitasPage() {
           <span>Y/M: {filterYear}/{filterMonth}</span>
           <span>OLD: {String(lancamentos[lancamentos.length-1]?.data || '').slice(0,10)}</span>
         </div>
-        {lancamentos.length > 0 && (
-          <div className="text-[7px] text-blue-300 truncate">
-            EX: {JSON.stringify(lancamentos.find(l => (l.tipo || '').toLowerCase() === 'receita') || lancamentos[0]).slice(0, 150)}
-          </div>
-        )}
+        {lancamentos.length > 0 && (() => {
+          const rec = lancamentos.find(l => (l.tipo || '').trim().toLowerCase() === 'receita') || lancamentos[0]
+          const m = getMesIdx(rec.data)
+          const a = getAnoIdx(rec.data)
+          return (
+            <div className="text-[7px] text-blue-300 truncate">
+              EX: {a}/{m} | TIPO: [{rec.tipo}] | STATUS: [{rec.status}] | DATA: {JSON.stringify(rec.data)}
+            </div>
+          )
+        })()}
       </div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
