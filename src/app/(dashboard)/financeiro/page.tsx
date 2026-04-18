@@ -146,9 +146,9 @@ export default function FinanceiroPage() {
   const resultMensalReal = recReal.map((v, i) => safeDiff(v, despReal[i]))
   const resultMensalProjetado = recReal.map((v, i) => safeDiff(safeSum(v, recProv[i]), safeSum(despReal[i], despProv[i])))
   
-  const recAcumReal = useMemo(() => {
-    return recReal.reduce<number[]>((arr, v) => { arr.push(safeSum(arr[arr.length - 1] || 0, v)); return arr }, [])
-  }, [recReal])
+  const resultAcumReal = useMemo(() => {
+    return resultMensalReal.reduce<number[]>((arr, v) => { arr.push(safeSum(arr[arr.length - 1] || 0, v)); return arr }, [])
+  }, [resultMensalReal])
 
   // KPIs dinâmicas baseadas no ANO selecionado
   const filteredKpis = useMemo(() => {
@@ -348,7 +348,8 @@ export default function FinanceiroPage() {
           {[
             { label: `📥 Receitas (${filterYear})`, value: fmtR(filteredKpis.pInc), color: 'text-emerald-600' },
             { label: `📤 Despesas (${filterYear})`, value: fmtR(filteredKpis.pExp), color: 'text-rose-600' },
-            { label: `💰 Resultado (${filterYear})`, value: fmtR(filteredKpis.realizado), color: filteredKpis.realizado >= 0 ? 'text-indigo-600' : 'text-amber-600' },
+            { label: `📅 Provisionado (${filterYear})`, value: fmtR(filteredKpis.provisionado), color: 'text-amber-500' },
+            { label: `💰 Resultado (${filterYear})`, value: fmtR(filteredKpis.realizado), color: filteredKpis.realizado >= 0 ? 'text-indigo-600' : 'text-red-600' },
             { label: `📟 Em Caixa (${filterYear})`, value: fmtR(filteredKpis.saldoCaixa), color: 'text-amber-600' },
             { label: `🏦 Em Banco (${filterYear})`, value: fmtR(filteredKpis.saldoBanco), color: 'text-indigo-600' },
             { label: `📊 Projetado (${filterYear})`, value: fmtR(filteredKpis.projetado), color: 'text-indigo-900', isMain: true },
@@ -395,7 +396,7 @@ export default function FinanceiroPage() {
             data={{
               labels: MESES,
               datasets: [
-                { label: 'Saldo Acumulado', data: recAcumReal, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.05)', fill: true, tension: 0.4 },
+                { label: 'Saldo Acumulado (R$)', data: resultAcumReal, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 },
                 { label: 'Margem %', data: margens, borderColor: '#f59e0b', borderDash: [5, 5], yAxisID: 'y2', tension: 0.4 }
               ]
             }}
