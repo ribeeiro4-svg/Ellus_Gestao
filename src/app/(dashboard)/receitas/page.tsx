@@ -67,29 +67,42 @@ export default function ReceitasPage() {
     const rawRecs = lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita')
     console.log('[Debug-Receitas] Receitas (tipo):', rawRecs.length)
 
-    return rawRecs.filter(r => {
+    const reasons: string[] = []
+    const firstRec = rawRecs[0]
+    if (firstRec) {
+      const m = getMesIdx(firstRec.data), a = getAnoIdx(firstRec.data)
+      if (Number(m) !== Number(filterMonth)) reasons.push('Month')
+      if (Number(a) !== Number(filterYear)) reasons.push('Year')
+      if (filterStatus !== 'todos' && firstRec.status !== filterStatus) reasons.push('Status')
+      if (filterConta !== 'todos' && firstRec.conta_id !== filterConta) reasons.push('Conta')
+      if (filterCategoria !== 'todos' && firstRec.categoria !== filterCategoria) reasons.push('Cat')
+    }
+
+    const filtered = rawRecs.filter(r => {
       const mesIdx = getMesIdx(r.data)
       const anoIdx = getAnoIdx(r.data)
       
       const matchMonth = Number(filterMonth) === -1 || Number(mesIdx) === Number(filterMonth)
       const matchYear = Number(anoIdx) === Number(filterYear)
-      const searchLower = searchTerm.toLowerCase()
+      
+      const searchLower = searchTerm.toLowerCase().trim()
       const associado = associados.find(a => a.id === r.associado_id)
       const conta = contas.find(c => c.id === r.conta_id)
-      const matchSearch = !searchTerm || 
+      
+      const matchSearch = !searchLower || 
         (r.descricao || '').toLowerCase().includes(searchLower) ||
         (associado?.nome || '').toLowerCase().includes(searchLower) ||
         (conta?.nome || '').toLowerCase().includes(searchLower) ||
         (r.categoria || '').toLowerCase().includes(searchLower)
-      const matchStatus = filterStatus === 'todos' || r.status === filterStatus
-      const matchPagamento = filterPagamento === 'todos' || r.forma_pagamento === filterPagamento
-      const matchConta = filterConta === 'todos' || r.conta_id === filterConta
-      const matchCategoria = filterCategoria === 'todos' || r.categoria === filterCategoria
-      const matchUnlinked = !onlyUnlinked || (!r.associado_id && !r.diretor_id)
+        
+      const matchStatus = String(filterStatus).toLowerCase() === 'todos' || String(r.status).toLowerCase() === String(filterStatus).toLowerCase()
+      const matchPagamento = String(filterPagamento).toLowerCase() === 'todos' || String(r.forma_pagamento).toLowerCase() === String(filterPagamento).toLowerCase()
+      const matchConta = String(filterConta).toLowerCase() === 'todos' || String(r.conta_id).toLowerCase() === String(filterConta).toLowerCase()
+      const matchCategoria = String(filterCategoria).toLowerCase() === 'todos' || String(r.categoria).toLowerCase() === String(filterCategoria).toLowerCase()
       
+      const matchUnlinked = !onlyUnlinked || (!r.associado_id && !r.diretor_id)
       const hasTax = (r.descricao || '').includes('(Taxa:')
       const matchTax = filterTax === 'todos' || (filterTax === 'com_taxa' ? hasTax : !hasTax)
-      
       const val = Number(r.valor)
       const matchMin = !filterValueMin || val >= Number(filterValueMin)
       const matchMax = !filterValueMax || val <= Number(filterValueMax)
@@ -102,25 +115,30 @@ export default function ReceitasPage() {
         taxaCalculada: match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
       }
     })
-  }, [receitas, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, filterTax, filterValueMin, filterValueMax, onlyUnlinked, associados, contas])
+
+    return { data: filtered, reasons }
+  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, filterTax, filterValueMin, filterValueMax, onlyUnlinked, associados, contas])
+
+  const filteredData = filteredReceitas.data
+  const failReasons = filteredReceitas.reasons
 
   /* ── Gráficos ── */
   const receitaMensal = useMemo(() => {
     const arr = Array(12).fill(0)
-    filteredReceitas.forEach(r => {
-      const m = getMesIdx(r.data)
-      if (m >= 0 && m <= 11) arr[m] += r.valor || 0
+    filteredData.forEach(r => {
+      const mes = getMesIdx(r.data)
+      if (mes >= 0 && mes < 12) arr[mes] += (r.valor || 0)
     })
     return arr
-  }, [filteredReceitas])
+  }, [filteredData])
 
   const receitaCats = useMemo(() => {
     const m: Record<string, number> = {}
-    filteredReceitas.forEach(r => { const c = r.categoria || 'Outros'; m[c] = (m[c] || 0) + (r.valor || 0) })
+    filteredReceitas.data.forEach(r => { const c = r.categoria || 'Outros'; m[c] = (m[c] || 0) + (r.valor || 0) })
     return Object.keys(m).length ? m : { 'Sem dados': 1 }
   }, [filteredReceitas])
 
-  const totalReceitas = filteredReceitas.reduce((s, r) => s + (r.valor || 0), 0)
+  const totalReceitas = filteredData.reduce((s, r) => s + (r.valor || 0), 0)
 
   /* ── CRUD helpers ── */
   const handleSalvar = async (data: any) => {
@@ -298,9 +316,12 @@ export default function ReceitasPage() {
           <span>T_ID: {String(lancamentos[0]?.tenant_id || 'NULL').slice(0,8)}</span>
           <span>LEN: {lancamentos.length}</span>
           <span>REC: {lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita').length}</span>
-          <span>FILT: {filteredReceitas.length}</span>
+          <span>FILT: {filteredData.length}</span>
           <span>Y/M: {filterYear}/{filterMonth}</span>
-          <span>OLD: {String(lancamentos[lancamentos.length-1]?.data || '').slice(0,10)}</span>
+          <span>FAIL: {failReasons.join(', ') || 'NONE'}</span>
+        </div>
+        <div className="text-[7px] text-blue-300 truncate">
+          OLD: {String(lancamentos[lancamentos.length-1]?.data || '').slice(0,10)}
         </div>
         {lancamentos.length > 0 && (() => {
           const rec = lancamentos.find(l => (l.tipo || '').trim().toLowerCase() === 'receita') || lancamentos[0]
@@ -402,7 +423,7 @@ export default function ReceitasPage() {
               </button>
             </div>
           )}
-        ]} data={filteredReceitas} loading={loading} selectedIds={selectedIds} onSelectChange={setSelectedIds} onRowClick={handleDetail} showFilterInputs={true} />
+        ]} data={filteredData} loading={loading} selectedIds={selectedIds} onSelectChange={setSelectedIds} onRowClick={handleDetail} showFilterInputs={true} />
       </div>
 
       <BatchActionBar 
