@@ -95,32 +95,42 @@ export function deleteCookie(name: string) {
   setCookie(name, '', -1)
 }
 
-/**
- * Extrai o índice do mês (0-11) de forma segura contra fuso horário
- */
 export function getMesIdx(dataStr: string): number {
   if (!dataStr) return -1
+  
+  // Se for ISO ou formato com traço (2024-05-31)
   if (dataStr.includes('-')) {
-    const parts = dataStr.split('-')
-    return parseInt(parts[1]) - 1
-  } else if (dataStr.includes('/')) {
+    const parts = dataStr.split('T')[0].split('-')
+    if (parts[0].length === 4) { // YYYY-MM-DD
+      return parseInt(parts[1], 10) - 1
+    } else { // DD-MM-YYYY (raro mas possível)
+      return parseInt(parts[1], 10) - 1
+    }
+  } 
+  
+  // Se for formato brasileiro com barra (31/05/2024)
+  if (dataStr.includes('/')) {
     const parts = dataStr.split('/')
-    return parseInt(parts[1]) - 1
+    if (parts[2]?.length === 4) { // DD/MM/YYYY
+      return parseInt(parts[1], 10) - 1
+    } else { // MM/DD/YYYY
+      return parseInt(parts[0], 10) - 1
+    }
   }
+
   const d = new Date(dataStr)
   return isNaN(d.getTime()) ? -1 : d.getMonth()
 }
 
-/**
- * Extrai o ano de forma segura contra fuso horário
- */
 export function getAnoIdx(dataStr: string): number {
   if (!dataStr) return -1
   if (dataStr.includes('-')) {
-    return parseInt(dataStr.split('-')[0])
-  } else if (dataStr.includes('/')) {
+    const parts = dataStr.split('T')[0].split('-')
+    return parts[0].length === 4 ? parseInt(parts[0], 10) : parseInt(parts[2], 10)
+  } 
+  if (dataStr.includes('/')) {
     const parts = dataStr.split('/')
-    return parseInt(parts[2])
+    return parts[2]?.length === 4 ? parseInt(parts[2], 10) : parseInt(parts[2], 10)
   }
   return new Date(dataStr).getFullYear()
 }

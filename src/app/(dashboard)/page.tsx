@@ -12,7 +12,7 @@ import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
 import ChartModal from '@/components/ui/ChartModal'
 import SplashScreen from '@/components/ui/SplashScreen'
-import { fmtR, MESES, fmtData, fmtPct, getMesIdx, deleteCookie } from '@/lib/utils/formatters'
+import { fmtR, MESES, fmtData, fmtPct, getMesIdx, getAnoIdx, deleteCookie } from '@/lib/utils/formatters'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
@@ -92,13 +92,17 @@ export default function DashboardPage() {
     const rec = Array(12).fill(0)
     const desp = Array(12).fill(0)
     const agora = new Date()
+    const anoAtual = agora.getFullYear()
     const mesAtualIndex = agora.getMonth()
     let rAtual = 0
 
     lancamentos.forEach(l => {
       const dataStr = l.data || ''
       const mesIdx = getMesIdx(dataStr)
+      const anoIdx = getAnoIdx(dataStr)
       
+      // Filtrar apenas o ano atual para o dashboard principal
+      if (anoIdx !== anoAtual) return
       if (mesIdx < 0 || mesIdx > 11) return
       
       const valor = l.valor || 0
