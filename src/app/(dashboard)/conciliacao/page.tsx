@@ -213,7 +213,12 @@ export default function ConciliacaoPage() {
       // 1. Enriquecimento Cadastral (Parallel)
       const enrichments = itemsToProcess
         .filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument)
-        .map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument }))
+        .map(t => {
+          if (t.assocMatch?.id && t.newDocument) {
+            return atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument })
+          }
+          return Promise.resolve({ error: null })
+        })
       
       if (enrichments.length > 0) await Promise.all(enrichments)
 
@@ -255,7 +260,12 @@ export default function ConciliacaoPage() {
       // 1. Enriquecimento Cadastral (Parallel)
       const enrichments = rowsToProcess
         .filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument)
-        .map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument }))
+        .map(t => {
+          if (t.assocMatch?.id && t.newDocument) {
+            return atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument })
+          }
+          return Promise.resolve({ error: null })
+        })
       
       if (enrichments.length > 0) await Promise.all(enrichments)
 
@@ -413,8 +423,8 @@ export default function ConciliacaoPage() {
                <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Sincronizando com Banco Cora...</p>
              </div>
           ) : (
-            filteredItems.map((item: any, idx: number) => (
-              <MatchItem key={idx} {...item} isCora isDuplicate={existingTxIds.has(item.bank.fitid)} />
+            filteredItems.map((item: any) => (
+              <MatchItem key={item.bank.fitid} {...item} isCora isDuplicate={existingTxIds.has(item.bank.fitid)} />
             ))
           )}
         </div>

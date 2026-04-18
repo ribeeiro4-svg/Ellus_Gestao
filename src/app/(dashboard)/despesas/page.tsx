@@ -16,7 +16,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingDown, Plus, Copy, Search, Filter, XCircle, AlertCircle, TrendingUp } from 'lucide-react'
+import { TrendingDown, Plus, RefreshCw, Copy, Search, Filter, XCircle, AlertCircle, TrendingUp } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -118,7 +118,14 @@ export default function DespesasPage() {
     {
       header: 'Descrição', key: 'descricao', render: (i: any) => (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>
+            {i.banco_transacao_id && (
+              <span className="text-[8px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1 shadow-sm uppercase tracking-tighter">
+                <RefreshCw size={8} /> OFX
+              </span>
+            )}
+          </div>
           <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span>
         </div>
       )

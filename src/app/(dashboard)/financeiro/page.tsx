@@ -237,10 +237,17 @@ export default function FinanceiroPage() {
     {
       header: 'Descrição', key: 'descricao', render: (i: any) => (
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-gray-800">{i.descricao}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-gray-800">{i.descricao}</span>
+            {i.banco_transacao_id && (
+              <span className="text-[9px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1 shadow-sm">
+                <RefreshCw size={8} /> OFX
+              </span>
+            )}
+          </div>
           <div className="flex gap-2">
             <span className="text-[10px] text-gray-400 font-bold uppercase">{i.categoria}</span>
-            {i.recorrencia_ativa && <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1 rounded">RECORRENTE</span>}
+            {i.recorrencia_ativa && <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1 rounded uppercase tracking-tighter">RECORRENTE</span>}
           </div>
         </div>
       )

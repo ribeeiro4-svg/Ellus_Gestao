@@ -166,6 +166,11 @@ export default function ReceitasPage() {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="flex items-center gap-2">
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>
+            {i.banco_transacao_id && (
+              <span className="text-[8px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1 shadow-sm uppercase tracking-tighter">
+                <RefreshCw size={8} /> OFX
+              </span>
+            )}
             {i.recorrencia_ativa && (
               <span className="flex items-center gap-1 text-[8px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">
                 <RefreshCw size={8} /> ↺ Recorrente
