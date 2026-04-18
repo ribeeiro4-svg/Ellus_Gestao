@@ -55,6 +55,9 @@ export default function DespesasPage() {
   const [filterCategoria, setFilterCategoria] = useState('todos')
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
+  const [filterTax, setFilterTax] = useState('todos')
+  const [filterValueMin, setFilterValueMin] = useState('')
+  const [filterValueMax, setFilterValueMax] = useState('')
   const [onlyUnlinked, setOnlyUnlinked] = useState(false)
 
   const filteredDespesas = useMemo(() => {
@@ -75,9 +78,23 @@ export default function DespesasPage() {
       const matchConta = filterConta === 'todos' || d.conta_id === filterConta
       const matchCategoria = filterCategoria === 'todos' || d.categoria === filterCategoria
       const matchUnlinked = !onlyUnlinked || (!d.fornecedor_id && !d.diretor_id)
-      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchConta && matchCategoria && matchUnlinked
+
+      const hasTax = (d.descricao || '').includes('(Taxa:')
+      const matchTax = filterTax === 'todos' || (filterTax === 'com_taxa' ? hasTax : !hasTax)
+      
+      const val = Number(d.valor)
+      const matchMin = !filterValueMin || val >= Number(filterValueMin)
+      const matchMax = !filterValueMax || val <= Number(filterValueMax)
+
+      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchConta && matchCategoria && matchUnlinked && matchTax && matchMin && matchMax
+    }).map(d => {
+      const match = (d.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+      return {
+        ...d,
+        taxaCalculada: match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
+      }
     })
-  }, [despesas, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, onlyUnlinked, fornecedores, contas])
+  }, [despesas, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, filterTax, filterValueMin, filterValueMax, onlyUnlinked, fornecedores, contas])
 
   /* ── Gráficos ── */
   const despesaMensal = useMemo(() => {
@@ -277,6 +294,21 @@ export default function DespesasPage() {
             <option value="PRO_LABORE">Pró-Labore</option>
             <option value="OUTROS">Outros</option>
           </select>
+          
+          <div className="w-px h-8 bg-gray-100 mx-1" />
+
+          <select value={filterTax} onChange={(e) => setFilterTax(e.target.value)} className="bg-orange-50 text-orange-700 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-orange-100 transition-all">
+            <option value="todos">Taxas: Todas</option>
+            <option value="com_taxa">Com Taxa</option>
+            <option value="sem_taxa">Sem Taxa</option>
+          </select>
+
+          <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-2xl border border-transparent focus-within:border-orange-200 focus-within:bg-white transition-all">
+            <span className="text-[10px] font-black text-gray-400 uppercase">Valor R$</span>
+            <input type="number" placeholder="Min" className="w-16 bg-transparent border-none outline-none text-xs font-bold" value={filterValueMin} onChange={(e) => setFilterValueMin(e.target.value)} />
+            <span className="text-gray-300">-</span>
+            <input type="number" placeholder="Max" className="w-16 bg-transparent border-none outline-none text-xs font-bold" value={filterValueMax} onChange={(e) => setFilterValueMax(e.target.value)} />
+          </div>
         </div>
       </div>
 
@@ -284,6 +316,11 @@ export default function DespesasPage() {
         { header: 'Data', key: 'data', render: (i: any) => <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{fmtData(i.data)}</span> },
         { header: 'Descrição', key: 'descricao', render: (i: any) => <div style={{ display: 'flex', flexDirection: 'column' }}><div className="flex items-center gap-2"><span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>{i.banco_transacao_id && <span className="text-[8px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1 shadow-sm uppercase tracking-tighter"><RefreshCw size={8} /> OFX</span>}</div><span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span></div> },
         { header: 'Valor', key: 'valor', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--red)' }}>-{fmtR(i.valor)}</span> },
+        { header: 'Taxa', key: 'taxaCalculada', render: (i: any) => (
+          <span className={`text-[11px] font-black ${i.taxaCalculada > 0 ? 'text-amber-600' : 'text-gray-300'}`}>
+            {fmtR(i.taxaCalculada)}
+          </span>
+        )},
         { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
         { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
         { header: '', key: 'acoes', className: 'w-20 text-right', render: (i: any) => (

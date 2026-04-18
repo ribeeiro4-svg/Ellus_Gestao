@@ -172,6 +172,12 @@ export default function DashboardPage() {
       const da = a.data ? new Date(a.data).getTime() : 0
       const db = b.data ? new Date(b.data).getTime() : 0
       return db - da
+    }).map(l => {
+      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+      return {
+        ...l,
+        taxaCalculada: match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
+      }
     })
   }, [lancamentos, searchTerm, filterType, filterStatus])
 
@@ -359,10 +365,11 @@ export default function DashboardPage() {
               { header: 'Data', key: 'data', render: (l: any) => fmtData(l.data) },
               { header: 'Descrição', key: 'descricao', render: (l: any) => <span className="text-xs font-bold text-gray-900">{l.descricao}</span> },
               { header: 'Valor', key: 'valor', render: (l: any) => <span className={`text-xs font-bold ${l.tipo === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>{l.tipo === 'receita' ? '+' : '-'}{fmtR(l.valor)}</span> },
-              { header: 'Taxa', key: 'taxa', render: (l: any) => {
-                const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
-                return <span className={`text-[11px] font-black ${match ? 'text-amber-600' : 'text-gray-300'}`}>{match ? `R$ ${match[1]}` : 'R$ 0,00'}</span>
-              }},
+              { header: 'Taxa', key: 'taxaCalculada', render: (l: any) => (
+                <span className={`text-[11px] font-black ${l.taxaCalculada > 0 ? 'text-amber-600' : 'text-gray-300'}`}>
+                  {fmtR(l.taxaCalculada)}
+                </span>
+              )},
               { header: 'Status', key: 'status', render: (l: any) => <StatusBadge status={l.status} type="lancamento" /> }
             ]} 
             data={ultimosLancamentos} 
