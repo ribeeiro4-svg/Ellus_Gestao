@@ -27,6 +27,9 @@ import {
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import { useSearch } from '@/lib/contexts/SearchContext'
+import DataTable from '@/components/ui/DataTable'
+import StatusBadge from '@/components/ui/StatusBadge'
+import BatchActionBar from '@/components/ui/BatchActionBar'
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement, 
@@ -35,13 +38,26 @@ ChartJS.register(
 )
 
 export default function DashboardPage() {
-  const { lancamentos, loading: loadingFin, limparTudo: limpFin } = useFinanceiro()
+  const { lancamentos, loading: loadingFin, limparTudo: limpFin, removerBulk, atualizarBulk } = useFinanceiro()
   const { associados, loading: loadingAssoc, limparTudo: limpAssoc } = useAssociados()
   const { limparTudo: limpMetas } = useMetas()
   const { limparTudo: limpProjetos } = useProjetos()
   const { limparTudo: limpSim } = useProjecao()
   const { searchTerm, filterType, setFilterType, filterStatus, setFilterStatus } = useSearch()
   const [activeChart, setActiveChart] = useState<any>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  const handleBatchDelete = async () => {
+    if (confirm(`Deseja excluir os ${selectedIds.length} itens selecionados?`)) {
+      await removerBulk(selectedIds)
+      setSelectedIds([])
+    }
+  }
+
+  const handleBatchStatus = async (status: 'pago' | 'aberto') => {
+    await atualizarBulk(selectedIds, { status })
+    setSelectedIds([])
+  }
 
   const handleClearAll = async () => {
     if (confirm('ATENÇÃO: Isso apagará TODOS os seus dados do banco de dados Cloud. Continuar?')) {
@@ -329,54 +345,32 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-gray-50/50">
-                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Data</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Descrição</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Valor</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Taxa</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {ultimosLancamentos.map(l => {
-                const match = l.descricao.match(/\(Taxa: R\$\s*([^)]+)\)/)
-                const taxaStr = match ? `R$ ${match[1]}` : 'R$ 0,00'
-                
-                return (
-                <tr key={l.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-xs font-medium text-gray-500">{fmtData(l.data)}</td>
-                  <td className="px-6 py-4 text-xs font-bold text-gray-900">{l.descricao}</td>
-                  <td className={`px-6 py-4 text-xs font-bold ${l.tipo === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>
-                    {l.tipo === 'receita' ? '+' : '-'}{fmtR(l.valor)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-[11px] font-black ${match ? 'text-amber-600' : 'text-gray-300'}`}>{taxaStr}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      l.status === 'pago' ? 'bg-emerald-50 text-emerald-700' : 
-                      l.status === 'aberto' ? 'bg-amber-50 text-amber-700' : 
-                      l.status === 'parcial' ? 'bg-blue-50 text-blue-700' :
-                      'bg-red-50 text-red-700'
-                    }`}>
-                      {l.status}
-                    </span>
-                  </td>
-                </tr>
-                )
-              })}
-              {ultimosLancamentos.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-gray-400 text-xs italic">Nenhum lançamento registrado recentemente.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="bg-white rounded-b-3xl border-x border-b border-gray-100 shadow-sm overflow-hidden flex-grow">
+          <DataTable 
+            columns={[
+              { header: 'Data', key: 'data', render: (l: any) => fmtData(l.data) },
+              { header: 'Descrição', key: 'descricao', render: (l: any) => <span className="text-xs font-bold text-gray-900">{l.descricao}</span> },
+              { header: 'Valor', key: 'valor', render: (l: any) => <span className={`text-xs font-bold ${l.tipo === 'receita' ? 'text-emerald-600' : 'text-red-600'}`}>{l.tipo === 'receita' ? '+' : '-'}{fmtR(l.valor)}</span> },
+              { header: 'Taxa', key: 'taxa', render: (l: any) => {
+                const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+                return <span className={`text-[11px] font-black ${match ? 'text-amber-600' : 'text-gray-300'}`}>{match ? `R$ ${match[1]}` : 'R$ 0,00'}</span>
+              }},
+              { header: 'Status', key: 'status', render: (l: any) => <StatusBadge status={l.status} type="lancamento" /> }
+            ]} 
+            data={ultimosLancamentos} 
+            loading={loading} 
+            selectedIds={selectedIds} 
+            onSelectChange={setSelectedIds} 
+          />
         </div>
       </div>
+
+      <BatchActionBar 
+        selectedCount={selectedIds.length} 
+        onClear={() => setSelectedIds([])} 
+        onDelete={handleBatchDelete} 
+        onStatusChange={handleBatchStatus} 
+      />
 
       <ChartModal 
         isOpen={!!activeChart}

@@ -15,7 +15,8 @@ import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { TrendingUp, Plus, RefreshCw, Copy, Search, Filter, XCircle, AlertCircle, TrendingDown, Check, Pencil } from 'lucide-react'
+import { TrendingUp, Plus, RefreshCw, Copy, Search, Filter, XCircle, AlertCircle, TrendingDown, Check, Pencil, Trash2 } from 'lucide-react'
+import BatchActionBar from '@/components/ui/BatchActionBar'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -30,7 +31,10 @@ const axisDefaults = {
 }
 
 export default function ReceitasPage() {
-  const { lancamentos, loading, inserir, atualizar, remover, inserirBulk, removerSerie, atualizarSerie } = useFinanceiro()
+  const { 
+    lancamentos, loading, inserir, atualizar, remover, 
+    inserirBulk, removerSerie, atualizarSerie, atualizarBulk, removerBulk
+  } = useFinanceiro()
   const { contas } = useContas()
   const { associados } = useAssociados()
   
@@ -39,6 +43,7 @@ export default function ReceitasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [batchSearch, setBatchSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   /* ── Filtros ── */
   const [searchTerm, setSearchTerm] = useState('')
@@ -195,6 +200,18 @@ export default function ReceitasPage() {
     }
   }
 
+  const handleBatchDelete = async () => {
+    if (confirm(`Deseja excluir os ${selectedIds.length} itens selecionados?`)) {
+      await removerBulk(selectedIds)
+      setSelectedIds([])
+    }
+  }
+
+  const handleBatchStatus = async (status: 'pago' | 'aberto') => {
+    await atualizarBulk(selectedIds, { status })
+    setSelectedIds([])
+  }
+
   const modalFields: Field[] = useMemo(() => [
     { name: 'descricao', label: 'Descrição', type: 'text', required: true },
     { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
@@ -304,8 +321,15 @@ export default function ReceitasPage() {
               </button>
             </div>
           )}
-        ]} data={filteredReceitas} loading={loading} />
+        ]} data={filteredReceitas} loading={loading} selectedIds={selectedIds} onSelectChange={setSelectedIds} />
       </div>
+
+      <BatchActionBar 
+        selectedCount={selectedIds.length} 
+        onClear={() => setSelectedIds([])} 
+        onDelete={handleBatchDelete} 
+        onStatusChange={handleBatchStatus} 
+      />
 
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Receita' : 'Nova Receita'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} />
     </div>

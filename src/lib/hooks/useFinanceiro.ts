@@ -169,6 +169,16 @@ export function useFinanceiro() {
     return { error }
   }
 
+  const atualizarBulk = async (ids: string[], input: Partial<LancamentoInput>) => {
+    if (!ids.length) return { error: null }
+    const hasLocked = lancamentos.some(l => ids.includes(l.id) && isPeriodoBloqueado(l.data))
+    if (hasLocked) return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
+
+    const { error } = await sb.from('lancamentos').update(input).in('id', ids)
+    if (!error) fetch()
+    return { error }
+  }
+
   const kpis = useMemo(() => {
     let pagoIncome = 0, pagoExpenses = 0
     let openIncome = 0, openExpenses = 0
@@ -219,6 +229,7 @@ export function useFinanceiro() {
     removerBulk, 
     removerSerie,
     atualizarSerie,
+    atualizarBulk,
     inserirBulk, 
     limparTudo, 
     conciliar, 
