@@ -9,12 +9,12 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { fmtR, fmtData, MESES, getMesIdx, getAnoIdx } from '@/lib/utils/formatters'
-import { DataTable } from '@/components/ui/DataTable'
-import { StatusBadge } from '@/components/ui/StatusBadge'
-import { PaymentBadge } from '@/components/ui/PaymentBadge'
-import { CrudModal } from '@/components/ui/CrudModal'
-import { LaunchDetailsModal } from '@/components/ui/LaunchDetailsModal'
-import { BatchActionBar } from '@/components/ui/BatchActionBar'
+import DataTable from '@/components/ui/DataTable'
+import StatusBadge from '@/components/ui/StatusBadge'
+import PaymentBadge from '@/components/ui/PaymentBadge'
+import CrudModal from '@/components/ui/CrudModal'
+import LaunchDetailsModal from '@/components/ui/LaunchDetailsModal'
+import BatchActionBar from '@/components/ui/BatchActionBar'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -179,17 +179,17 @@ export default function ReceitasPage() {
   }
 
   const modalFields = useMemo(() => [
-    { name: 'data', label: 'Data', type: 'date', required: true },
-    { name: 'descricao', label: 'Descrição', type: 'text', required: true },
-    { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
-    { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: [
+    { name: 'data', label: 'Data', type: 'date' as const, required: true },
+    { name: 'descricao', label: 'Descrição', type: 'text' as const, required: true },
+    { name: 'valor', label: 'Valor (R$)', type: 'number' as const, required: true },
+    { name: 'categoria', label: 'Categoria', type: 'select' as const, required: true, options: [
       { value: 'MENSALIDADE', label: 'Mensalidade' },
       { value: 'ADESAO', label: 'Adesão' },
       { value: 'PROJETOS', label: 'Projetos' },
       { value: 'OUTROS', label: 'Outros' }
     ]},
-    { name: 'conta_id', label: 'Conta Bancária', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
-    { name: 'associado_id', label: 'Associado (Opcional)', type: 'select', options: associados.map(a => ({ value: a.id, label: a.nome })) }
+    { name: 'conta_id', label: 'Conta Bancária', type: 'select' as const, required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
+    { name: 'associado_id', label: 'Associado (Opcional)', type: 'select' as const, options: associados.map(a => ({ value: a.id, label: a.nome })) }
   ], [contas, associados])
 
   return (
@@ -264,7 +264,7 @@ export default function ReceitasPage() {
             { header: 'Data', key: 'data', render: (l: any) => <span className="text-xs font-medium text-gray-600">{fmtData(l.data)}</span> },
             { header: 'Descrição', key: 'descricao', render: (l: any) => <div className="flex flex-col"><span className="text-sm font-bold">{l.descricao}</span><span className="text-[10px] text-gray-400 font-bold uppercase">{l.categoria}</span></div> },
             { header: 'Valor', key: 'valor', render: (l: any) => <span className="text-sm font-black text-emerald-600">+{fmtR(l.valor)}</span> },
-            { header: 'Status', key: 'status', render: (l: any) => <StatusBadge status={l.status} type="lancamento" /> },
+            { header: 'Status', key: 'status', render: (l: any) => <StatusBadge status={l.status as any} type="lancamento" /> },
             { header: 'Pagamento', key: 'forma_pagamento', render: (l: any) => <PaymentBadge method={l.forma_pagamento} /> },
             { header: '', key: 'id', render: (l: any) => (
               <div className="flex justify-end gap-2">
