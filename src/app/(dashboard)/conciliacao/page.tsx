@@ -353,8 +353,19 @@ export default function ConciliacaoPage() {
                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Lista de Lançamentos ({filteredItems.length})</span>
                <button onClick={() => setExtrato([])} className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={14} /> LIMPAR</button>
             </div>
-            {filteredItems.map((item: any, idx: number) => (
-              <MatchItem key={idx} {...item} isAdesao={item.isAdesao} isProcessed={processedIds.has(item.bank.fitid)} onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} onLinkManual={() => { setSelectedExtrato(item); setIsModalOpen(true) }} onLinkSupplier={() => { setSelectedExtrato(item); setIsSupplierModalOpen(true) }} onIgnore={() => setIgnoredMatches(prev => { const n = new Set(prev); if (n.has(item.bank.fitid)) n.delete(item.bank.fitid); else n.add(item.bank.fitid); return n; })} isIgnored={ignoredMatches.has(item.bank.fitid)} isDuplicate={existingTxIds.has(item.bank.fitid)} />
+            {filteredItems.map((item: any) => (
+              <MatchItem 
+                key={item.bank.fitid} 
+                {...item} 
+                isAdesao={item.isAdesao} 
+                isProcessed={processedIds.has(item.bank.fitid)} 
+                onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} 
+                onLinkManual={() => { setSelectedExtrato(item); setIsModalOpen(true) }} 
+                onLinkSupplier={() => { setSelectedExtrato(item); setIsSupplierModalOpen(true) }} 
+                onIgnore={() => setIgnoredMatches(prev => { const n = new Set(prev); if (n.has(item.bank.fitid)) n.delete(item.bank.fitid); else n.add(item.bank.fitid); return n; })} 
+                isIgnored={ignoredMatches.has(item.bank.fitid)} 
+                isDuplicate={existingTxIds.has(item.bank.fitid)} 
+              />
             ))}
           </div>
         )
