@@ -26,6 +26,7 @@ import {
   BarController, LineController, DoughnutController
 } from 'chart.js'
 import { Bar, Doughnut } from 'react-chartjs-2'
+import { useSearch } from '@/lib/contexts/SearchContext'
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement, 
@@ -39,6 +40,7 @@ export default function DashboardPage() {
   const { limparTudo: limpMetas } = useMetas()
   const { limparTudo: limpProjetos } = useProjetos()
   const { limparTudo: limpSim } = useProjecao()
+  const { searchTerm, filterType, setFilterType, filterStatus, setFilterStatus } = useSearch()
   const [activeChart, setActiveChart] = useState<any>(null)
 
   const handleClearAll = async () => {
@@ -99,7 +101,7 @@ export default function DashboardPage() {
     lancamentos.forEach(l => {
       if (l.tipo === 'receita') rTotal += (l.valor || 0)
       
-      const match = l.descricao.match(/\(Taxa: R\$\s*([^)]+)\)/)
+      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
       if (match) {
         taxasTotal += parseFloat(match[1].replace(/\./g, '').replace(',', '.'))
       }
@@ -117,14 +119,39 @@ export default function DashboardPage() {
     return { ativos: a, inadimplentes: i, inativos: inat, pctInadimp: (i / total) * 100 }
   }, [associados])
 
-  // 3. Lançamentos recentes
-  const ultimosLancamentos = useMemo(() => {
-    return [...lancamentos].sort((a, b) => {
+  // 3. Lançamentos Filtrados e Ordenados
+  const filteredLancamentos = useMemo(() => {
+    let result = [...lancamentos]
+
+    // Filtro por Texto (Busca do Topbar)
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      result = result.filter(l => 
+        (l.descricao || '').toLowerCase().includes(search) ||
+        (l.categoria || '').toLowerCase().includes(search) ||
+        (l.valor || 0).toString().includes(search)
+      )
+    }
+
+    // Filtro por Tipo
+    if (filterType !== 'todos') {
+      result = result.filter(l => l.tipo === filterType)
+    }
+
+    // Filtro por Status
+    if (filterStatus !== 'todos') {
+      result = result.filter(l => l.status === filterStatus)
+    }
+
+    // Ordenação (Mais recentes primeiro)
+    return result.sort((a, b) => {
       const da = a.data ? new Date(a.data).getTime() : 0
       const db = b.data ? new Date(b.data).getTime() : 0
       return db - da
-    }).slice(0, 20)
-  }, [lancamentos])
+    })
+  }, [lancamentos, searchTerm, filterType, filterStatus])
+
+  const ultimosLancamentos = filteredLancamentos.slice(0, 30)
 
   const chartConfigs: any = {
     receita: {
@@ -255,9 +282,52 @@ export default function DashboardPage() {
       </div>
 
       <div className="table-card flex-grow min-h-[300px] flex flex-col">
-        <div className="p-5 border-b border-white/10 flex justify-between items-center bg-white/5">
-          <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Últimos Lançamentos</h2>
-          <Calendar size={18} className="text-gray-400" />
+        <div className="p-5 border-b border-white/10 flex flex-col gap-4 bg-white/5">
+          <div className="flex justify-between items-center">
+            <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Últimos Lançamentos</h2>
+            <div className="flex items-center gap-4">
+              {searchTerm && (
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md animate-pulse">
+                  Filtrando por: "{searchTerm}"
+                </span>
+              )}
+              <Calendar size={18} className="text-gray-400" />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2 bg-slate-100/50 p-1 rounded-lg border border-slate-200">
+               <button 
+                 onClick={() => setFilterType('todos')}
+                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${filterType === 'todos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+               >Todos</button>
+               <button 
+                 onClick={() => setFilterType('receita')}
+                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${filterType === 'receita' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+               >Receitas</button>
+               <button 
+                 onClick={() => setFilterType('despesa')}
+                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${filterType === 'despesa' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+               >Despesas</button>
+            </div>
+
+            <div className="h-4 w-[1px] bg-slate-200 hidden md:block"></div>
+
+            <div className="flex items-center gap-2 bg-slate-100/50 p-1 rounded-lg border border-slate-200">
+               <button 
+                 onClick={() => setFilterStatus('todos')}
+                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${filterStatus === 'todos' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+               >Qualquer Status</button>
+               <button 
+                 onClick={() => setFilterStatus('pago')}
+                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${filterStatus === 'pago' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'text-slate-400 hover:text-slate-600'}`}
+               >Pagos</button>
+               <button 
+                 onClick={() => setFilterStatus('aberto')}
+                 className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${filterStatus === 'aberto' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'text-slate-400 hover:text-slate-600'}`}
+               >Abertos</button>
+            </div>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">

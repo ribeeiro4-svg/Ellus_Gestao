@@ -1,6 +1,7 @@
 'use client'
 import { usePathname, useRouter } from 'next/navigation'
 import { Download, FileText, Bell, Search, User, Trash2, ChevronRight } from 'lucide-react'
+import { useSearch } from '@/lib/contexts/SearchContext'
 
 const TITLES: Record<string, string> = {
   '/':              'Dashboard',
@@ -24,7 +25,15 @@ const TITLES: Record<string, string> = {
 export default function Topbar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { searchTerm, setSearchTerm, setFilterType, setFilterStatus } = useSearch()
+  
   const title = TITLES[pathname] || 'Dashboard'
+
+  const handleClear = () => {
+    setSearchTerm('')
+    setFilterType('todos')
+    setFilterStatus('todos')
+  }
 
   return (
     <header className="topbar sticky top-0 z-40 px-6 h-[var(--topbar-h)] flex items-center justify-between">
@@ -37,19 +46,22 @@ export default function Topbar() {
       </div>
 
       <div className="topbar-right flex items-center gap-[10px]">
-        <div className="hidden lg:flex items-center bg-slate-50 rounded-lg px-4 py-2 gap-3 border border-slate-200 focus-within:ring-4 focus-within:ring-[var(--accent)]/5 transition-all w-72">
+        <div className="hidden lg:flex items-center bg-white rounded-lg px-4 py-2 gap-3 border border-slate-200 focus-within:ring-4 focus-within:ring-[var(--accent)]/5 focus-within:border-[var(--accent)] transition-all w-72 shadow-sm">
           <Search size={16} className="text-slate-400" />
           <input 
             type="text" 
-            placeholder="Pesquisar..." 
+            placeholder="Pesquisar em tudo..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="bg-transparent border-none outline-none text-[12.5px] text-slate-700 placeholder:text-slate-400 w-full font-medium"
           />
         </div>
 
         <div className="flex items-center gap-2">
            <button 
+             onClick={handleClear}
              className="btn btn-outline btn-icon w-[34px] h-[34px] p-0 flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)] transition-all"
-             title="Limpar Filtros"
+             title="Limpar Todos os Filtros"
            >
              <Trash2 size={16} />
            </button>
