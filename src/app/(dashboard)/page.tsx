@@ -15,6 +15,8 @@ import SplashScreen from '@/components/ui/SplashScreen'
 import { fmtR, MESES, fmtData, fmtPct } from '@/lib/utils/formatters'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
+import { useFornecedores } from '@/lib/hooks/useFornecedores'
+import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { useMetas } from '@/lib/hooks/useMetas'
 import { useProjetos } from '@/lib/hooks/useProjetos'
 import { useProjecao } from '@/lib/hooks/useProjecao'
@@ -41,6 +43,8 @@ ChartJS.register(
 export default function DashboardPage() {
   const { lancamentos, loading: loadingFin, limparTudo: limpFin, removerBulk, atualizarBulk } = useFinanceiro()
   const { associados, loading: loadingAssoc, limparTudo: limpAssoc } = useAssociados()
+  const { fornecedores } = useFornecedores()
+  const { diretoria } = useDiretoria()
   const { limparTudo: limpMetas } = useMetas()
   const { limparTudo: limpProjetos } = useProjetos()
   const { limparTudo: limpSim } = useProjecao()
@@ -398,6 +402,20 @@ export default function DashboardPage() {
         isOpen={isDetailModalOpen} 
         onClose={() => setIsDetailModalOpen(false)} 
         launch={selectedForDetail}
+        linkedName={
+          selectedForDetail?.associado_id 
+            ? associados.find(a => a.id === selectedForDetail.associado_id)?.nome
+            : selectedForDetail?.fornecedor_id 
+              ? fornecedores.find(f => f.id === selectedForDetail.fornecedor_id)?.nome
+              : selectedForDetail?.diretor_id 
+                ? diretoria.find(d => d.id === selectedForDetail.diretor_id)?.nome
+                : undefined
+        }
+        linkedType={
+          selectedForDetail?.associado_id ? 'associado' : 
+          selectedForDetail?.fornecedor_id ? 'fornecedor' : 
+          selectedForDetail?.diretor_id ? 'diretor' : undefined
+        }
       />
       </div>
     </div>

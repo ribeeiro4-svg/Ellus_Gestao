@@ -8,10 +8,11 @@ interface LaunchDetailsModalProps {
   isOpen: boolean
   onClose: () => void
   launch: Lancamento | null
-  associadoNome?: string
+  linkedName?: string
+  linkedType?: 'associado' | 'fornecedor' | 'diretor'
 }
 
-export default function LaunchDetailsModal({ isOpen, onClose, launch, associadoNome }: LaunchDetailsModalProps) {
+export default function LaunchDetailsModal({ isOpen, onClose, launch, linkedName, linkedType }: LaunchDetailsModalProps) {
   if (!isOpen || !launch) return null
 
   // Extrair taxa da descrição se existir
@@ -122,21 +123,23 @@ export default function LaunchDetailsModal({ isOpen, onClose, launch, associadoN
                   <span className="text-[10px] font-black uppercase tracking-wider">Descrição</span>
                 </div>
                 <p className="text-sm font-semibold text-gray-700 leading-relaxed italic">
-                  "{launch.descricao?.replace(matchTaxa?.[0] || '', '').trim()}"
+              {launch.descricao?.replace(matchTaxa?.[0] || '', '').trim()}
                 </p>
               </div>
 
-              {(launch.associado_id || associadoNome) && (
+              {(launch.associado_id || launch.fornecedor_id || launch.diretor_id || linkedName) && (
                 <div className="p-5 bg-emerald-50/40 rounded-2xl border border-emerald-100/50">
                   <div className="flex items-center gap-2 mb-2 text-emerald-600">
                     <User size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-wider">Vínculo com Associado</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider">
+                      Vínculo com {linkedType === 'diretor' ? 'Diretor' : linkedType === 'fornecedor' ? 'Fornecedor' : 'Associado'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-white border border-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs">
-                      {associadoNome?.charAt(0) || 'A'}
+                    <div className="w-8 h-8 rounded-lg bg-white border border-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-xs uppercase">
+                      {linkedName?.charAt(0) || (linkedType === 'fornecedor' ? 'F' : linkedType === 'diretor' ? 'D' : 'A')}
                     </div>
-                    <span className="text-sm font-bold text-emerald-800">{associadoNome || 'Associado identificado'}</span>
+                    <span className="text-sm font-bold text-emerald-800">{linkedName || 'Identificado'}</span>
                   </div>
                 </div>
               )}

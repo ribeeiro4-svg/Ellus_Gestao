@@ -381,7 +381,8 @@ export default function ReceitasPage() {
         isOpen={isDetailModalOpen} 
         onClose={() => setIsDetailModalOpen(false)} 
         launch={selectedForDetail}
-        associadoNome={selectedForDetail?.associado_id ? associados.find((a: any) => a.id === selectedForDetail.associado_id)?.nome : undefined}
+        linkedName={selectedForDetail?.associado_id ? associados.find(a => a.id === selectedForDetail.associado_id)?.nome : undefined}
+        linkedType="associado"
       />
     </div>
   )

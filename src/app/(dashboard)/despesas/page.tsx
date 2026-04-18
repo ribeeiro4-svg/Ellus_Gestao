@@ -348,7 +348,14 @@ export default function DespesasPage() {
         isOpen={isDetailModalOpen} 
         onClose={() => setIsDetailModalOpen(false)} 
         launch={selectedForDetail}
-        associadoNome={selectedForDetail?.associado_id ? (selectedForDetail.tipo === 'receita' ? undefined : undefined) : undefined}
+        linkedName={
+          selectedForDetail?.fornecedor_id 
+            ? fornecedores.find(f => f.id === selectedForDetail.fornecedor_id)?.nome
+            : selectedForDetail?.diretor_id 
+              ? diretoria.find(d => d.id === selectedForDetail.diretor_id)?.nome
+              : undefined
+        }
+        linkedType={selectedForDetail?.fornecedor_id ? 'fornecedor' : selectedForDetail?.diretor_id ? 'diretor' : undefined}
       />
     </div>
   )

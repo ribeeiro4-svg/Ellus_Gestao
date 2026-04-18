@@ -12,7 +12,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, MESES } from '@/lib/utils/formatters'
-import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, RefreshCw, Pencil, XCircle } from 'lucide-react'
+import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, RefreshCw, Pencil, XCircle, Search } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
@@ -192,7 +192,7 @@ export default function AssociadosPage() {
       <div className="flex flex-col gap-4 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="relative flex-grow min-w-[300px]">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input type="text" placeholder="Busca global..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl text-sm font-medium outline-none focus:ring-2 ring-indigo-500/10" value={searchQ} onChange={e => setSearchQ(e.target.value)} />
           </div>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{['todos', 'ativo', 'inadimplente', 'inativo'].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}</select>
