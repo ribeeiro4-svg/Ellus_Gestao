@@ -29,9 +29,11 @@ interface MatchItemProps {
   onLinkSupplier?: () => void
   onIgnore?: () => void
   onEditMemo?: (newMemo: string) => void
+  isAdesao?: boolean
   isIgnored?: boolean
   isDuplicate?: boolean
   isCora?: boolean
+  isProcessed?: boolean
 }
 
 export default function MatchItem({ 
@@ -45,7 +47,9 @@ export default function MatchItem({
   onEditMemo,
   isIgnored,
   isDuplicate,
-  isCora
+  isCora,
+  isAdesao,
+  isProcessed
 }: MatchItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [localMemo, setLocalMemo] = useState(bank.memo)
@@ -106,10 +110,14 @@ export default function MatchItem({
         </div>
       </div>
 
-      {/* Seta Central */}
+      {/* Seta Central / Check de Sucesso */}
       <div className="hidden md:flex items-center justify-center">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${hasMatch ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-gray-100 text-gray-400'}`}>
-          <ArrowRight size={18} strokeWidth={3} />
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+          isProcessed ? 'bg-indigo-600 text-white scale-110 shadow-xl' :
+          hasMatch ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 
+          'bg-gray-100 text-gray-400'
+        }`}>
+          {isProcessed ? <ShieldCheck size={20} /> : <ArrowRight size={18} strokeWidth={3} />}
         </div>
       </div>
 
@@ -131,8 +139,13 @@ export default function MatchItem({
               {assocMatch?.nome || forMatch?.nome}
               {forMatch?.isDirector && <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg">DIRETORIA</span>}
             </h4>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600/70"><Tag size={12} /> {suggestedCategory}</span>
+              {isAdesao && (
+                <span className="text-[9px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                  <Zap size={10} className="fill-white" /> 1º PAGAMENTO (ADESÃO)
+                </span>
+              )}
             </div>
           </div>
         ) : (

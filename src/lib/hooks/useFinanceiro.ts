@@ -1,8 +1,8 @@
-'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import { useFechamento } from './useFechamento'
+import { safeSum, safeDiff } from '@/lib/utils/formatters'
 import type { Lancamento, LancamentoInput } from '@/lib/types'
 
 export function useFinanceiro() {
@@ -86,7 +86,20 @@ export function useFinanceiro() {
     const hasLocked = items.some(i => isPeriodoBloqueado(i.data))
     if (hasLocked) return { error: 'Alguns itens do lote pertencem a períodos fechados.' }
 
-    const rows = items.map(i => {
+    // Auditoria: Verifica duplicatas no banco antes de inserir (mesmo tenant, data, valor e descrição)
+    const { data: existing } = await sb.from('lancamentos')
+      .select('data, valor, descricao, tenant_id')
+      .eq('tenant_id', tenantId)
+      .in('data', [...new Set(items.map(i => i.data))])
+
+    const rows = items.filter(i => {
+      const isDup = existing?.some(e => 
+        e.data === i.data && 
+        Number(e.valor) === Number(i.valor) && 
+        e.descricao === i.descricao
+      )
+      return !isDup
+    }).map(i => {
       let coreData = { ...i }
       if (coreData.taxa && coreData.taxa > 0) {
         const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(coreData.taxa)
@@ -95,9 +108,12 @@ export function useFinanceiro() {
       delete coreData.taxa
       return { ...coreData, tenant_id: tenantId }
     })
+
+    if (rows.length === 0) return { error: 'Todos os lançamentos deste lote já existem no sistema (Duplicatas detectadas).' }
+
     const { error, count } = await sb.from('lancamentos').insert(rows)
     if (!error) fetch()
-    return { error, count }
+    return { error, count: rows.length }
   }
 
   const limparTudo = async () => {
@@ -121,5 +137,57 @@ export function useFinanceiro() {
     return { error }
   }
 
-  return { lancamentos, loading, inserir, atualizar, remover, removerBulk, inserirBulk, limparTudo, conciliar, refresh: fetch }
+  const kpis = useMemo(() => {
+    let pagoIncome = 0, pagoExpenses = 0
+    let openIncome = 0, openExpenses = 0
+    let cash = 0, bank = 0
+
+    lancamentos.forEach(l => {
+      const v = l.valor || 0
+      const isPago = l.status === 'pago'
+
+      if (l.tipo === 'receita') {
+        if (isPago) {
+          pagoIncome = safeSum(pagoIncome, v)
+          if (l.forma_pagamento === 'Dinheiro') cash = safeSum(cash, v)
+          else bank = safeSum(bank, v)
+        } else {
+          openIncome = safeSum(openIncome, v)
+        }
+      } else {
+        if (isPago) {
+          pagoExpenses = safeSum(pagoExpenses, v)
+          if (l.forma_pagamento === 'Dinheiro') cash = safeDiff(cash, v)
+          else bank = safeDiff(bank, v)
+        } else {
+          openExpenses = safeSum(openExpenses, v)
+        }
+      }
+    })
+
+    return {
+      totalRec: pagoIncome,               // Realizado
+      totalDesp: pagoExpenses,           // Realizado
+      provisionedRec: openIncome,        // Provisionamento
+      provisionedDesp: openExpenses,     // Provisionamento
+      resultadoReal: safeDiff(pagoIncome, pagoExpenses),
+      resultadoProjetado: safeDiff(safeSum(pagoIncome, openIncome), safeSum(pagoExpenses, openExpenses)),
+      saldoCaixa: cash,
+      saldoBanco: bank
+    }
+  }, [lancamentos])
+
+  return { 
+    lancamentos, 
+    loading, 
+    kpis,
+    inserir, 
+    atualizar, 
+    remover, 
+    removerBulk, 
+    inserirBulk, 
+    limparTudo, 
+    conciliar, 
+    refresh: fetch 
+  }
 }

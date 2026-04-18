@@ -5,6 +5,18 @@ export function fmtR(v: number): string {
   return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+export function roundMoney(v: number): number {
+  return Math.round((v + Number.EPSILON) * 100) / 100
+}
+
+export function safeSum(a: number, b: number): number {
+  return roundMoney((a || 0) + (b || 0))
+}
+
+export function safeDiff(a: number, b: number): number {
+  return roundMoney((a || 0) - (b || 0))
+}
+
 export function fmtPct(v: number): string {
   return (isNaN(v) ? 0 : Math.round(v * 10) / 10) + '%'
 }
