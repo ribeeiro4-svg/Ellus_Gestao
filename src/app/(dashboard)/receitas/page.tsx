@@ -123,7 +123,22 @@ export default function ReceitasPage() {
       } else {
         const assoc = cleanData.associado_id ? associados.find(a => a.id === cleanData.associado_id) : null;
         const finalDesc = assoc ? `${cleanData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : cleanData.descricao.toUpperCase();
+        
+        // Salva a receita principal
         await inserir({ ...cleanData, tipo: 'receita', descricao: finalDesc, status: cleanData.status || 'pago' })
+
+        // Se houver troco em PIX, lança uma despesa automática
+        if (cleanData.troco_via_pix && Number(cleanData.valor_troco) > 0) {
+            await inserir({
+                tipo: 'despesa',
+                descricao: `TROCO EM PIX - ${assoc?.nome.toUpperCase() || 'CLIENTE'}`,
+                valor: Number(cleanData.valor_troco),
+                data: cleanData.data,
+                status: 'pago',
+                conta_id: cleanData.conta_id,
+                categoria: 'TROCO'
+            });
+        }
       }
     }
     setEditingItem(null); setIsModalOpen(false)
@@ -174,6 +189,8 @@ export default function ReceitasPage() {
         )
       }
     },
+    { name: 'troco_via_pix', label: '💸 Troco via PIX?', type: 'checkbox', showIf: (f: any) => !f.is_lote },
+    { name: 'valor_troco', label: 'Valor do Troco (R$)', type: 'number', showIf: (f: any) => f.troco_via_pix && !f.is_lote },
     { name: 'recorrencia_ativa', label: 'Lançamento Recorrente', type: 'checkbox' },
     { name: 'recorrencia_meses', label: 'Meses', type: 'number', showIf: (f: any) => f.recorrencia_ativa, defaultValue: 12 },
     { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'pago', label: 'Recebido' }, { value: 'pendente', label: 'Pendente' }] }

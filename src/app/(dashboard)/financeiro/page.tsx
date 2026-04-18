@@ -236,8 +236,23 @@ export default function FinanceiroPage() {
         await inserirBulk(batch);
       } else {
         const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null;
-        const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao;
+        const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao.toUpperCase();
+        
+        // Salva a receita principal
         await inserir({ ...dbData, descricao: finalDesc, status: safeData.status || 'aberto' });
+
+        // Se houver troco em PIX, lança uma despesa automática
+        if (safeData.troco_via_pix && Number(safeData.valor_troco) > 0) {
+            await inserir({
+                tipo: 'despesa',
+                descricao: `TROCO EM PIX - ${assoc?.nome.toUpperCase() || 'CLIENTE'}`,
+                valor: Number(safeData.valor_troco),
+                data: dbData.data,
+                status: 'pago',
+                conta_id: dbData.conta_id,
+                categoria: 'TROCO'
+            });
+        }
       }
     }
     setEditingItem(null);
@@ -340,6 +355,8 @@ export default function FinanceiroPage() {
     { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
     { name: 'recorrencia_meses', label: 'Meses', type: 'number', showIf: (f: any) => f.recorrencia_ativa },
     { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita' && !f.is_lote, options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+    { name: 'troco_via_pix', label: '💸 Troco via PIX?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' && !f.is_lote },
+    { name: 'valor_troco', label: 'Valor do Troco (R$)', type: 'number', showIf: (f: any) => f.troco_via_pix && !f.is_lote },
     { name: 'is_lote', label: '🚀 Lançar em Lote?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' && !editingItem },
     { 
       name: 'batch_selection', label: 'Selecionar Associados (Lote)', type: 'info', showIf: (f: any) => f.is_lote,
