@@ -34,13 +34,30 @@ export function useFinanceiro() {
 
   const inserir = async (input: LancamentoInput) => {
     if (isPeriodoBloqueado(input.data)) return { error: 'Este período está fechado e não permite alterações.' }
+    
     let finalInput = { ...input }
-    if (finalInput.taxa && finalInput.taxa > 0) {
+
+    // Regra de Split de Taxa para Associados: O que passar de R$ 50 é taxa
+    if (finalInput.tipo === 'receita' && 
+        (finalInput.categoria === 'MENSALIDADE' || finalInput.categoria === 'ADESAO' || finalInput.associado_id) && 
+        Number(finalInput.valor) > 50) {
+      const total = Number(finalInput.valor)
+      const valorLiquido = 50
+      const valorTaxa = total - 50
+      
+      finalInput.valor = valorLiquido
+      const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTaxa)
+      if (!finalInput.descricao.includes('(Taxa:')) {
+        finalInput.descricao = `${finalInput.descricao} (Taxa: ${taxaFmt})`
+      }
+    } else if (finalInput.taxa && finalInput.taxa > 0) {
       const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(finalInput.taxa)
-      finalInput.descricao = `${finalInput.descricao} (Taxa: ${taxaFmt})`
+      if (!finalInput.descricao.includes('(Taxa:')) {
+        finalInput.descricao = `${finalInput.descricao} (Taxa: ${taxaFmt})`
+      }
     }
-    // Removemos campos que podem não estar na tabela física
-    delete finalInput.taxa 
+    
+    delete (finalInput as any).taxa 
 
     const { error } = await sb.from('lancamentos').insert({ ...finalInput, tenant_id: tenantId })
     if (!error) fetch()
@@ -120,10 +137,25 @@ export function useFinanceiro() {
         ...coreData 
       } = i as any
       
-      if (coreData.taxa && coreData.taxa > 0) {
+      // Aplicar Regra de Split Automático em Lote
+      if (coreData.tipo === 'receita' && 
+          (coreData.categoria === 'MENSALIDADE' || coreData.categoria === 'ADESAO' || coreData.associado_id) && 
+          Number(coreData.valor) > 50) {
+        const total = Number(coreData.valor)
+        const valorLiquido = 50
+        const valorTaxa = total - 50
+        coreData.valor = valorLiquido
+        const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTaxa)
+        if (!coreData.descricao.includes('(Taxa:')) {
+          coreData.descricao = `${coreData.descricao} (Taxa: ${taxaFmt})`
+        }
+      } else if (coreData.taxa && coreData.taxa > 0) {
         const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(coreData.taxa)
-        coreData.descricao = `${coreData.descricao} (Taxa: ${taxaFmt})`
+        if (!coreData.descricao.includes('(Taxa:')) {
+          coreData.descricao = `${coreData.descricao} (Taxa: ${taxaFmt})`
+        }
       }
+      
       delete coreData.taxa
       return { ...coreData, tenant_id: tenantId, recorrencia_id: (i as any).recorrencia_id }
     })

@@ -309,6 +309,10 @@ export default function ReceitasPage() {
           { header: 'Data', key: 'data', render: (i: any) => <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)' }}>{fmtData(i.data)}</span> },
           { header: 'Descrição', key: 'descricao', render: (i: any) => <div style={{ display: 'flex', flexDirection: 'column' }}><div className="flex items-center gap-2"><span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>{i.descricao}</span>{i.banco_transacao_id && <span className="text-[8px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1 shadow-sm uppercase tracking-tighter"><RefreshCw size={8} /> OFX</span>}</div><span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.5px' }}>{i.categoria}</span></div> },
           { header: 'Valor', key: 'valor', render: (i: any) => <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--emerald)' }}>{fmtR(i.valor)}</span> },
+          { header: 'Taxa', key: 'taxa', render: (i: any) => {
+            const match = (i.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+            return <span className={`text-[11px] font-black ${match ? 'text-amber-600' : 'text-gray-300'}`}>{match ? `R$ ${match[1]}` : 'R$ 0,00'}</span>
+          }},
           { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
           { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
           { header: '', key: 'acoes', className: 'w-20 text-right', render: (i: any) => (
