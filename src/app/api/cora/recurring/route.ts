@@ -45,7 +45,14 @@ export async function GET(request: Request) {
 
     console.log(`[CoraBilling] Iniciando faturamento para o dia ${billingDay}`);
 
-    // 3. Buscar Associados Ativos com este dia de vencimento
+    // 3. Buscar recorrências ATIVAS diretamente na Cora para evitar duplicidade
+    const coraRecsResponse = await CoraService.listRecurrences(coraConfig);
+    const activeCoraRecs = coraRecsResponse?.data || [];
+    const documentsOnCoraRecurrence = new Set(
+      activeCoraRecs.map((r: any) => (r.customer?.identity || '').replace(/\D/g, ''))
+    );
+
+    // 4. Buscar Associados Ativos com este dia de vencimento
     const { data: associates, error: assocError } = await sb
       .from('associados')
       .select('id, nome, cpf, email, mensalidade')
@@ -79,6 +86,17 @@ export async function GET(request: Request) {
 
         if (existing) {
           results.skipped++;
+          continue;
+        }
+
+        // VERIFICAÇÃO CRÍTICA: Se o associado já tem recorrência ativa na CORA, não emitimos fatura manual
+        const cleanCpf = (assoc.cpf || '').replace(/\D/g, '');
+        if (documentsOnCoraRecurrence.has(cleanCpf)) {
+          console.log(`[CoraBilling] Pulando ${assoc.nome} - Já possui assinatura ativa na Cora.`);
+          results.skipped++;
+          
+          // Opcional: Registrar no financeiro apenas o lançamento informativo (já que o boleto sairá pela Cora)
+          // Por enquanto, apenas pulamos para evitar confusão.
           continue;
         }
 
