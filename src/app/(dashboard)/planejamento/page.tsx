@@ -12,7 +12,9 @@ import {
   Save,
   RefreshCw,
   Plus,
-  Trash2
+  Trash2,
+  Users,
+  Activity
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -21,6 +23,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useOrcamentos } from '@/lib/hooks/useOrcamentos'
 import { useCategorias } from '@/lib/hooks/useCategorias'
+import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { fmtR, MESES, fmtPct, getMesIdx, getAnoIdx } from '@/lib/utils/formatters'
 import { Bar } from 'react-chartjs-2'
 import {
@@ -37,12 +40,24 @@ export default function PlanejamentoPage() {
   const { lancamentos, loading: loadFin } = useFinanceiro()
   const { orcamentos, loading: loadOrc, inserir, atualizar, remover, refresh } = useOrcamentos(selectedMes, selectedAno)
   const { categorias, loading: loadCats } = useCategorias()
+  const { diretoria, loading: loadDir } = useDiretoria()
   
   // Controle de edições e estados de salvamento
   const [editValues, setEditValues] = useState<Record<string, number>>({})
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
   const [lastSavedId, setLastSavedId] = useState<string | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [reservaMeses, setReservaMeses] = useState(6)
+
+  const totalProLabore = useMemo(() => {
+    return diretoria.filter(d => d.status === 'ativo').reduce((s, d) => s + (d.pro_labore_base || 0), 0)
+  }, [diretoria])
+
+  const totals = useMemo(() => {
+    const planejadoReceita = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => s + o.valor_planejado, 0)
+    const planejadoDespesa = orcamentos.filter(o => o.tipo === 'despesa').reduce((s, o) => s + o.valor_planejado, 0)
+    return { planejadoReceita, planejadoDespesa }
+  }, [orcamentos])
 
   const comparativo = useMemo(() => {
     const orcCats = orcamentos.map(o => o.categoria)
@@ -308,9 +323,28 @@ export default function PlanejamentoPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <KpiCard title="Balanço Planejado" value={fmtR(comparativo.reduce((s, c) => s + (c.tipo === 'receita' ? c.planejado : -c.planejado), 0))} icon={<Calendar size={20} />} category="info" />
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <KpiCard title="Balanço Planejado" value={fmtR(totals.planejadoReceita - totals.planejadoDespesa)} icon={<Calendar size={20} />} category="info" />
         <KpiCard title="Balanço Realizado" value={fmtR(comparativo.reduce((s, c) => s + (c.tipo === 'receita' ? c.realizado : -c.realizado), 0))} icon={<TrendingUp size={20} />} category="success" />
+        <KpiCard title="Pró-labore (Auto)" value={fmtR(totalProLabore)} icon={<Users size={20} />} category="purple" subtitle="Total apurado na Diretoria" />
+        <KpiCard 
+          title="Reserva Ideal" 
+          value={fmtR(totals.planejadoDespesa * reservaMeses)} 
+          icon={<Activity size={20} />} 
+          category="indigo" 
+          subtitle={(
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-[10px] text-gray-500">Meta:</span>
+              <input 
+                type="number" 
+                value={reservaMeses} 
+                onChange={(e) => setReservaMeses(Number(e.target.value))}
+                className="w-10 bg-indigo-50 border-none rounded px-1 py-0.5 text-indigo-700 font-bold outline-none"
+              />
+              <span className="text-[10px] text-gray-500">meses</span>
+            </div>
+          )}
+        />
         <KpiCard title="Diferença Final" value={fmtR(comparativo.reduce((s, c) => s + (c.tipo === 'receita' ? (c.realizado - c.planejado) : (c.planejado - c.realizado)), 0))} icon={<TrendingDown size={20} />} category="purple" />
       </div>
 
