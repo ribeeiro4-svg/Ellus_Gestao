@@ -293,12 +293,19 @@ export default function ReceitasPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* DEBUG PANEL EXCLUSIVO */}
-      <div className="bg-slate-900 text-slate-400 p-2 text-[8px] rounded-lg font-mono flex gap-4">
-        <span>T_ID: {String(lancamentos[0]?.tenant_id || 'NULL').slice(0,8)}</span>
-        <span>LEN: {lancamentos.length}</span>
-        <span>FILT: {filteredReceitas.length}</span>
-        <span>YEAR: {filterYear}</span>
-        <span>MONTH: {filterMonth}</span>
+      <div className="bg-slate-900 text-slate-400 p-2 text-[8px] rounded-lg font-mono flex flex-col gap-1">
+        <div className="flex gap-4">
+          <span>T_ID: {String(lancamentos[0]?.tenant_id || 'NULL').slice(0,8)}</span>
+          <span>LEN: {lancamentos.length}</span>
+          <span>REC: {lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita').length}</span>
+          <span>FILT: {filteredReceitas.length}</span>
+          <span>Y/M: {filterYear}/{filterMonth}</span>
+        </div>
+        {lancamentos.length > 0 && (
+          <div className="text-[7px] text-blue-300 truncate">
+            EX: {JSON.stringify(lancamentos.find(l => (l.tipo || '').toLowerCase() === 'receita') || lancamentos[0]).slice(0, 150)}
+          </div>
+        )}
       </div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
