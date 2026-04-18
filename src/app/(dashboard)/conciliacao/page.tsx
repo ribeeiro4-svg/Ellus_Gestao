@@ -191,9 +191,12 @@ export default function ConciliacaoPage() {
     list.forEach(i => {
       if (processedIds.has(i.bank.fitid)) return
       
-      const val = i.bank.amount
-      if (val > 0) credits = safeSum(credits, val)
-      else debits = safeSum(debits, Math.abs(val))
+      const val = Math.abs(i.bank.amount)
+      if (i.bank.type === 'CREDIT') {
+        credits = safeSum(credits, val)
+      } else {
+        debits = safeSum(debits, val)
+      }
 
       if (existingTxIds.has(i.bank.fitid)) duplicates++
       else if (i.assocMatch || i.forMatch) linked++
