@@ -153,24 +153,39 @@ export default function FinanceiroPage() {
   // KPIs dinâmicas baseadas no ANO selecionado
   const filteredKpis = useMemo(() => {
     let pInc = 0, pExp = 0, oInc = 0, oExp = 0
+    let fCash = 0, fBank = 0
+
     lancamentos.forEach(l => {
       const d = new Date(l.data)
       if (d.getFullYear() !== filterYear) return
       
       const v = l.valor || 0
       const isPago = l.status === 'pago'
+      
       if (l.tipo === 'receita') {
-        if (isPago) pInc = safeSum(pInc, v)
-        else oInc = safeSum(oInc, v)
+        if (isPago) {
+          pInc = safeSum(pInc, v)
+          if (l.forma_pagamento === 'Dinheiro') fCash = safeSum(fCash, v)
+          else fBank = safeSum(fBank, v)
+        } else {
+          oInc = safeSum(oInc, v)
+        }
       } else {
-        if (isPago) pExp = safeSum(pExp, v)
-        else oExp = safeSum(oExp, v)
+        if (isPago) {
+          pExp = safeSum(pExp, v)
+          if (l.forma_pagamento === 'Dinheiro') fCash = safeDiff(fCash, v)
+          else fBank = safeDiff(fBank, v)
+        } else {
+          oExp = safeSum(oExp, v)
+        }
       }
     })
     return {
       realizado: safeDiff(pInc, pExp),
       provisionado: safeDiff(oInc, oExp),
-      projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp))
+      projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)),
+      saldoCaixa: fCash,
+      saldoBanco: fBank
     }
   }, [lancamentos, filterYear])
 
@@ -329,8 +344,8 @@ export default function FinanceiroPage() {
 
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {[
-            { label: '📟 Saldo Caixa', value: fmtR(kpis.saldoCaixa), color: 'text-amber-600' },
-            { label: '🏦 Saldo Bancos', value: fmtR(kpis.saldoBanco), color: 'text-indigo-600' },
+            { label: `📟 Em Caixa (${filterYear})`, value: fmtR(filteredKpis.saldoCaixa), color: filteredKpis.saldoCaixa >= 0 ? 'text-amber-600' : 'text-red-600' },
+            { label: `🏦 Em Banco (${filterYear})`, value: fmtR(filteredKpis.saldoBanco), color: filteredKpis.saldoBanco >= 0 ? 'text-indigo-600' : 'text-red-600' },
             { label: `💰 Realizado (${filterYear})`, value: fmtR(filteredKpis.realizado), color: filteredKpis.realizado >= 0 ? 'text-emerald-600' : 'text-rose-600' },
             { label: `📅 Provisionado (${filterYear})`, value: fmtR(filteredKpis.provisionado), color: 'text-gray-500' },
             { label: `📊 Projetado (${filterYear})`, value: fmtR(filteredKpis.projetado), color: 'text-indigo-900', isMain: true },
