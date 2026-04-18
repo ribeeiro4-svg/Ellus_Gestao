@@ -2,6 +2,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 
+export interface DiretorPeriodo {
+  id: string
+  valor: number
+  mes_inicio: number
+  ano_inicio: number
+  mes_fim?: number
+  ano_fim?: number
+}
+
 export interface Diretor {
   id: string
   nome: string
@@ -12,6 +21,7 @@ export interface Diretor {
   pro_labore_base: number
   status: 'ativo' | 'inativo'
   created_at: string
+  periodos?: DiretorPeriodo[]
 }
 
 export function useDiretoria() {
@@ -24,14 +34,14 @@ export function useDiretoria() {
     if (!tenantId) return
     setLoading(true)
     try {
-      const { data, error } = await sb
+      const { data: dirs, error: errDirs } = await sb
         .from('diretoria')
-        .select('*')
+        .select('*, periodos:diretoria_pro_labores(*)')
         .eq('tenant_id', tenantId)
         .order('nome')
       
-      if (!error && data) {
-        setDiretoria(data)
+      if (!errDirs && dirs) {
+        setDiretoria(dirs)
       }
     } finally {
       setLoading(false)
@@ -40,21 +50,58 @@ export function useDiretoria() {
 
   const inserir = async (obj: Partial<Diretor>) => {
     if (!tenantId) return { error: 'Tenant não identificado' }
-    const { data, error } = await sb
+    const { periodos, ...rest } = obj
+    
+    // 1. Inserir Diretor
+    const { data: newDir, error: errDir } = await sb
       .from('diretoria')
-      .insert([{ ...obj, tenant_id: tenantId }])
+      .insert([{ ...rest, tenant_id: tenantId }])
       .select()
-    if (!error) await fetchDiretoria()
-    return { data, error }
+      .single()
+
+    if (errDir) return { error: errDir }
+
+    // 2. Inserir Períodos se houver
+    if (periodos && periodos.length > 0) {
+      await sb.from('diretoria_pro_labores').insert(
+        periodos.map(p => ({ ...p, id: undefined, diretor_id: newDir.id }))
+      )
+    }
+
+    await fetchDiretoria()
+    return { data: newDir, error: null }
   }
 
   const atualizar = async (id: string, obj: Partial<Diretor>) => {
-    const { error } = await sb
+    const { periodos, ...rest } = obj
+    
+    // 1. Atualizar Diretor
+    const { error: errUpdate } = await sb
       .from('diretoria')
-      .update(obj)
+      .update(rest)
       .eq('id', id)
-    if (!error) await fetchDiretoria()
-    return { error }
+
+    if (errUpdate) return { error: errUpdate }
+
+    // 2. Sincronizar Períodos (Deletar e Re-inserir para simplificar)
+    if (periodos) {
+      await sb.from('diretoria_pro_labores').delete().eq('diretor_id', id)
+      if (periodos.length > 0) {
+        await sb.from('diretoria_pro_labores').insert(
+          periodos.map(p => ({
+            valor: p.valor,
+            mes_inicio: p.mes_inicio,
+            ano_inicio: p.ano_inicio,
+            mes_fim: p.mes_fim,
+            ano_fim: p.ano_fim,
+            diretor_id: id
+          }))
+        )
+      }
+    }
+
+    await fetchDiretoria()
+    return { error: null }
   }
 
   const remover = async (id: string) => {

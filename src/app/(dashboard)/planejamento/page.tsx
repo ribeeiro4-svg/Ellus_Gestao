@@ -50,8 +50,19 @@ export default function PlanejamentoPage() {
   const [reservaMeses, setReservaMeses] = useState(6)
 
   const totalProLabore = useMemo(() => {
-    return diretoria.filter(d => d.status === 'ativo').reduce((s, d) => s + (d.pro_labore_base || 0), 0)
-  }, [diretoria])
+    return diretoria.filter(d => d.status === 'ativo').reduce((s, d) => {
+      const targetSerial = selectedAno * 12 + selectedMes
+      
+      // Procurar se existe um período específico para este mês/ano
+      const activePeriod = d.periodos?.find(p => {
+        const start = p.ano_inicio * 12 + p.mes_inicio
+        const end = p.ano_fim !== undefined ? (p.ano_fim * 12 + (p.mes_fim ?? 11)) : 999999
+        return targetSerial >= start && targetSerial <= end
+      })
+
+      return s + (activePeriod?.valor || d.pro_labore_base || 0)
+    }, 0)
+  }, [diretoria, selectedMes, selectedAno])
 
   const totals = useMemo(() => {
     const planejadoReceita = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => s + o.valor_planejado, 0)

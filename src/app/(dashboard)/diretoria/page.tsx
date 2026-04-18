@@ -13,20 +13,23 @@ import {
   ReceiptText,
   TrendingDown,
   TrendingUp,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Calendar
 } from 'lucide-react'
 import { useDiretoria, Diretor } from '@/lib/hooks/useDiretoria'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
 import CrudModal from '@/components/ui/CrudModal'
 import KpiCard from '@/components/ui/KpiCard'
-import { fmtR, fmtData } from '@/lib/utils/formatters'
+import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
 
 export default function DiretoriaPage() {
   const { diretoria, loading, inserir, atualizar, remover } = useDiretoria()
   const { lancamentos } = useFinanceiro()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [ledgerMember, setLedgerMember] = useState<Diretor | null>(null)
+  const [periodosMember, setPeriodosMember] = useState<Diretor | null>(null)
+  const [tempPeriodos, setTempPeriodos] = useState<any[]>([])
   const [editingItem, setEditingItem] = useState<Diretor | null>(null)
   const [searchQ, setSearchQ] = useState('')
 
@@ -126,6 +129,9 @@ export default function DiretoriaPage() {
       align: 'right' as const,
       render: (i: Diretor) => (
         <div className="flex items-center justify-end gap-2">
+           <button onClick={() => { setPeriodosMember(i); setTempPeriodos(i.periodos || []) }} className="p-2 text-emerald-400 hover:bg-emerald-50 rounded-lg transition-colors" title="Gerenciar Períodos de Pró-labore (De / A)">
+            <Calendar size={14} />
+          </button>
           <button onClick={() => setLedgerMember(i)} className="p-2 text-indigo-400 hover:bg-indigo-50 rounded-lg transition-colors" title="Extrato de Conta Corrente (Retiradas / Reembolsos)">
             <ReceiptText size={14} />
           </button>
@@ -199,6 +205,81 @@ export default function DiretoriaPage() {
       />
 
       {/* Extrato do Membro (Conta Corrente / Ledger) */}
+      {/* Modal de Gerenciamento de Períodos */}
+      {periodosMember && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[32px] w-full max-w-xl shadow-2xl animate-in fade-in zoom-in-95 overflow-hidden">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold flex items-center gap-2"><Calendar className="text-emerald-500" /> Períodos de Pró-labore</h3>
+                <p className="text-sm font-medium text-gray-500 mt-1">{periodosMember.nome}</p>
+              </div>
+              <button onClick={() => setPeriodosMember(null)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors">✕</button>
+            </div>
+
+            <div className="p-6 bg-slate-50/50 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-4">
+                {tempPeriodos.map((p, idx) => (
+                  <div key={idx} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-3">
+                    <div className="flex items-center gap-2 border-b border-slate-50 pb-2">
+                       <span className="text-[10px] font-bold text-slate-300">R$</span>
+                       <input 
+                         type="number" 
+                         value={p.valor} 
+                         onChange={e => {
+                           const newP = [...tempPeriodos]
+                           newP[idx].valor = Number(e.target.value)
+                           setTempPeriodos(newP)
+                         }}
+                         className="w-full bg-transparent border-none outline-none font-bold text-sm text-slate-700"
+                       />
+                       <button onClick={() => setTempPeriodos(tempPeriodos.filter((_, i) => i !== idx))} className="text-rose-300 hover:text-rose-500"><Trash2 size={14}/></button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                       <div className="flex-1 flex flex-col gap-1">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Início</span>
+                          <div className="flex gap-1">
+                            <select value={p.mes_inicio} onChange={e => { const newP = [...tempPeriodos]; newP[idx].mes_inicio = Number(e.target.value); setTempPeriodos(newP) }} className="text-[10px] font-bold p-1 bg-slate-50 rounded border-none outline-none">{MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}</select>
+                            <select value={p.ano_inicio} onChange={e => { const newP = [...tempPeriodos]; newP[idx].ano_inicio = Number(e.target.value); setTempPeriodos(newP) }} className="text-[10px] font-bold p-1 bg-slate-50 rounded border-none outline-none font-bold text-slate-700">{[2024,2025,2026,2027].map(a => <option key={a} value={a}>{a}</option>)}</select>
+                          </div>
+                       </div>
+                       <ArrowRightLeft size={12} className="text-slate-200 mt-4" />
+                       <div className="flex-1 flex flex-col gap-1">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fim (Opcional)</span>
+                          <div className="flex gap-1">
+                            <select value={p.mes_fim ?? ''} onChange={e => { const newP = [...tempPeriodos]; newP[idx].mes_fim = e.target.value === '' ? undefined : Number(e.target.value); setTempPeriodos(newP) }} className="text-[10px] font-bold p-1 bg-slate-50 rounded border-none outline-none"><option value="">∞</option>{MESES.map((m, i) => <option key={i} value={i}>{m}</option>)}</select>
+                            <select value={p.ano_fim ?? ''} onChange={e => { const newP = [...tempPeriodos]; newP[idx].ano_fim = e.target.value === '' ? undefined : Number(e.target.value); setTempPeriodos(newP) }} className="text-[10px] font-bold p-1 bg-slate-50 rounded border-none outline-none font-bold text-slate-700"><option value="">∞</option>{[2024,2025,2026,2027].map(a => <option key={a} value={a}>{a}</option>)}</select>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+                ))}
+                <button 
+                  onClick={() => setTempPeriodos([...tempPeriodos, { valor: 0, mes_inicio: 0, ano_inicio: 2024 }])}
+                  className="w-full py-3 bg-white border border-dashed border-slate-300 rounded-2xl text-[10px] font-bold text-slate-400 hover:bg-slate-50 transition-colors uppercase tracking-widest"
+                >
+                  + Adicionar Período
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 bg-white border-t border-slate-100 flex gap-3">
+               <button onClick={() => setPeriodosMember(null)} className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-2xl text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
+               <button 
+                 onClick={async () => {
+                   const res = await atualizar(periodosMember.id, { periodos: tempPeriodos })
+                   if (!res?.error) setPeriodosMember(null)
+                   else alert('Erro ao salvar períodos')
+                 }}
+                 className="flex-[2] py-3 bg-emerald-500 text-white font-black rounded-2xl text-xs hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200"
+               >
+                 Salvar Alterações
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {ledgerMember && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
