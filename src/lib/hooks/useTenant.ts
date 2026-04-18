@@ -48,8 +48,17 @@ export function useTenant() {
 
   const atualizar = async (input: Partial<TenantData>) => {
     if (!tenantId) return { error: { message: 'ID do inquilino não identificado', code: 'NO_ID', details: '', hint: '' } }
+    
+    // Garantimos que o slug exista para não violar a restrição do banco
+    const slug = input.nome ? input.nome.toLowerCase().replace(/[^a-z0-9]/g, '-') : 'portal-acprobec';
+    
     // Usamos upsert para garantir que o registro seja criado se não existir
-    const { error } = await sb.from('tenants').upsert({ ...input, id: tenantId })
+    const { error } = await sb.from('tenants').upsert({ 
+      ...input, 
+      id: tenantId,
+      slug: slug 
+    })
+    
     if (!error) fetch()
     return { error }
   }
