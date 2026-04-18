@@ -181,6 +181,8 @@ export default function FinanceiroPage() {
       }
     })
     return {
+      pInc,
+      pExp,
       realizado: safeDiff(pInc, pExp),
       provisionado: safeDiff(oInc, oExp),
       projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)),
@@ -342,12 +344,13 @@ export default function FinanceiroPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-hide">
           {[
-            { label: `📟 Em Caixa (${filterYear})`, value: fmtR(filteredKpis.saldoCaixa), color: filteredKpis.saldoCaixa >= 0 ? 'text-amber-600' : 'text-red-600' },
-            { label: `🏦 Em Banco (${filterYear})`, value: fmtR(filteredKpis.saldoBanco), color: filteredKpis.saldoBanco >= 0 ? 'text-indigo-600' : 'text-red-600' },
-            { label: `💰 Realizado (${filterYear})`, value: fmtR(filteredKpis.realizado), color: filteredKpis.realizado >= 0 ? 'text-emerald-600' : 'text-rose-600' },
-            { label: `📅 Provisionado (${filterYear})`, value: fmtR(filteredKpis.provisionado), color: 'text-gray-500' },
+            { label: `📥 Receitas (${filterYear})`, value: fmtR(filteredKpis.pInc), color: 'text-emerald-600' },
+            { label: `📤 Despesas (${filterYear})`, value: fmtR(filteredKpis.pExp), color: 'text-rose-600' },
+            { label: `💰 Resultado (${filterYear})`, value: fmtR(filteredKpis.realizado), color: filteredKpis.realizado >= 0 ? 'text-indigo-600' : 'text-amber-600' },
+            { label: `📟 Em Caixa (${filterYear})`, value: fmtR(filteredKpis.saldoCaixa), color: 'text-amber-600' },
+            { label: `🏦 Em Banco (${filterYear})`, value: fmtR(filteredKpis.saldoBanco), color: 'text-indigo-600' },
             { label: `📊 Projetado (${filterYear})`, value: fmtR(filteredKpis.projetado), color: 'text-indigo-900', isMain: true },
           ].map(k => (
             <div key={k.label} className={`bg-white border border-gray-100 rounded-2xl p-3 min-w-[150px] shadow-sm flex-shrink-0 ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}>
