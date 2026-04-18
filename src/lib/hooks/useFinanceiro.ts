@@ -77,6 +77,19 @@ export function useFinanceiro() {
     return { error }
   }
 
+  const removerSerie = async (recorrencia_id: string) => {
+    if (!recorrencia_id) return { error: 'Este lançamento não faz parte de uma série.' }
+    
+    // Filtra os IDs da série para checar bloqueio
+    const idsSerie = lancamentos.filter(l => l.recorrencia_id === recorrencia_id).map(l => l.id)
+    const hasLocked = lancamentos.some(l => idsSerie.includes(l.id) && isPeriodoBloqueado(l.data))
+    if (hasLocked) return { error: 'Não é possível excluir a série: alguns itens pertencem a períodos fechados.' }
+
+    const { error } = await sb.from('lancamentos').delete().eq('recorrencia_id', recorrencia_id)
+    if (!error) fetch()
+    return { error }
+  }
+
   const inserirBulk = async (items: LancamentoInput[]) => {
     if (!tenantId) {
       console.error('Tentativa de inserirBulk financeiro sem tenant_id')
@@ -112,7 +125,7 @@ export function useFinanceiro() {
         coreData.descricao = `${coreData.descricao} (Taxa: ${taxaFmt})`
       }
       delete coreData.taxa
-      return { ...coreData, tenant_id: tenantId }
+      return { ...coreData, tenant_id: tenantId, recorrencia_id: (i as any).recorrencia_id }
     })
 
     if (rows.length === 0) return { error: 'Todos os lançamentos deste lote já existem no sistema (Duplicatas detectadas).' }
@@ -128,6 +141,19 @@ export function useFinanceiro() {
       return { error: null }
     }
     const { error } = await sb.from('lancamentos').delete().eq('tenant_id', tenantId)
+    if (!error) fetch()
+    return { error }
+  }
+
+  const atualizarSerie = async (recorrencia_id: string, input: Partial<LancamentoInput>) => {
+    if (!recorrencia_id) return { error: 'Este lançamento não faz parte de uma série.' }
+    
+    // Na atualização de série, geralmente editamos apenas os campos fixos (descrição, categoria, etc)
+    const { error } = await sb.from('lancamentos')
+      .update(input)
+      .eq('recorrencia_id', recorrencia_id)
+      .gt('data', new Date().toISOString()) // Opcional: editar apenas os futuros?
+    
     if (!error) fetch()
     return { error }
   }
@@ -191,6 +217,8 @@ export function useFinanceiro() {
     atualizar, 
     remover, 
     removerBulk, 
+    removerSerie,
+    atualizarSerie,
     inserirBulk, 
     limparTudo, 
     conciliar, 

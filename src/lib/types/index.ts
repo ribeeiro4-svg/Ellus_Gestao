@@ -42,6 +42,7 @@ export interface Lancamento {
   valor_recebido?: number
   troco_via_pix?: boolean
   recorrencia_ativa?: boolean
+  recorrencia_id?: string // ID comum para o grupo de lançamentos recorrentes
   conta_id?: string
   conciliado?: boolean
   banco_transacao_id?: string

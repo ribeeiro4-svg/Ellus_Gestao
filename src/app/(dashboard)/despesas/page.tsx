@@ -31,7 +31,7 @@ const axisDefaults = {
 }
 
 export default function DespesasPage() {
-  const { lancamentos, loading, inserir, atualizar, remover, inserirBulk } = useFinanceiro()
+  const { lancamentos, loading, inserir, atualizar, remover, inserirBulk, removerSerie, atualizarSerie } = useFinanceiro()
   const { contas } = useContas()
   const { fornecedores } = useFornecedores()
   const { diretoria } = useDiretoria()
@@ -95,8 +95,19 @@ export default function DespesasPage() {
   /* ── CRUD helpers ── */
   const handleSalvar = async (data: any) => {
     const cleanData = { ...data, tipo: 'despesa' }
+    
     if (editingItem) { 
-      await atualizar(editingItem.id, cleanData) 
+      if (editingItem.recorrencia_id) {
+        const updateSeries = confirm('Esta despesa faz parte de uma recorrência. Deseja aplicar as alterações a TODA a série?')
+        if (updateSeries) {
+          const { data: _d, ...serieData } = cleanData
+          await atualizarSerie(editingItem.recorrencia_id, serieData)
+        } else {
+          await atualizar(editingItem.id, cleanData)
+        }
+      } else {
+        await atualizar(editingItem.id, cleanData) 
+      }
     } else {
       const { is_lote, selected_fornecedores, recorrencia_ativa, recorrencia_meses, ...dbData } = data;
       
@@ -118,12 +129,20 @@ export default function DespesasPage() {
         const batch: any[] = []
         const forn = dbData.fornecedor_id ? fornecedores.find(f => f.id === dbData.fornecedor_id) : null;
         const baseDesc = forn ? `${dbData.descricao.toUpperCase()} - ${forn.nome.toUpperCase()}` : dbData.descricao.toUpperCase();
+        const serieId = crypto.randomUUID();
 
         for (let i = 0; i <= meses; i++) {
           const parts = dbData.data.includes('-') ? dbData.data.split('-').map(Number) : dbData.data.split('/').reverse().map(Number);
           const d = new Date(parts[0], parts[1] - 1 + i, Math.min(parts[2], new Date(parts[0], parts[1] + i, 0).getDate()));
           const dataStr = d.toISOString().split('T')[0];
-          batch.push({ ...dbData, tipo: 'despesa', descricao: baseDesc, data: dataStr, status: i === 0 ? (dbData.status || 'aberto') : 'aberto' });
+          batch.push({ 
+            ...dbData, 
+            tipo: 'despesa', 
+            descricao: baseDesc, 
+            data: dataStr, 
+            status: i === 0 ? (dbData.status || 'aberto') : 'aberto',
+            recorrencia_id: serieId
+          });
         }
         await inserirBulk(batch)
       } else {
@@ -137,7 +156,16 @@ export default function DespesasPage() {
 
   const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
   const handleDuplicate = (item: any) => { setEditingItem({ ...item, id: undefined }); setIsModalOpen(true) }
-  const handleDelete = async (id: string) => { if (confirm('Excluir esta despesa?')) await remover(id) }
+  
+  const handleDelete = async (item: any) => {
+    if (item.recorrencia_id) {
+      if (confirm('Esta despesa faz parte de uma série recorrente. Deseja excluir TODA a série?')) {
+        await removerSerie(item.recorrencia_id)
+        return
+      }
+    }
+    if (confirm('Excluir esta despesa?')) await remover(item.id)
+  }
 
   const modalFields: Field[] = useMemo(() => [
     { name: 'descricao', label: 'Descrição', type: 'text', required: true },
@@ -241,7 +269,7 @@ export default function DespesasPage() {
             <button onClick={() => handleEdit(i)} title="Editar" className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
               <Pencil size={14} />
             </button>
-            <button onClick={() => handleDelete(i.id)} title="Excluir" className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+            <button onClick={() => handleDelete(i)} title="Excluir" className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
               <XCircle size={14} />
             </button>
           </div>
