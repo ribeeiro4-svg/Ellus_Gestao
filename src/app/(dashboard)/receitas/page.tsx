@@ -62,20 +62,25 @@ export default function ReceitasPage() {
   const [onlyUnlinked, setOnlyUnlinked] = useState(false)
 
   const filteredReceitas = useMemo(() => {
-    return receitas.filter(r => {
+    // DEBUG LOG
+    console.log('[Debug-Receitas] Total Lancamentos:', lancamentos.length)
+    const rawRecs = lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita')
+    console.log('[Debug-Receitas] Receitas (tipo):', rawRecs.length)
+
+    return rawRecs.filter(r => {
       const mesIdx = getMesIdx(r.data)
       const anoIdx = getAnoIdx(r.data)
       
-      const matchMonth = filterMonth === -1 || mesIdx === filterMonth
-      const matchYear = anoIdx === filterYear
+      const matchMonth = Number(filterMonth) === -1 || Number(mesIdx) === Number(filterMonth)
+      const matchYear = Number(anoIdx) === Number(filterYear)
       const searchLower = searchTerm.toLowerCase()
       const associado = associados.find(a => a.id === r.associado_id)
       const conta = contas.find(c => c.id === r.conta_id)
       const matchSearch = !searchTerm || 
-        r.descricao.toLowerCase().includes(searchLower) ||
-        associado?.nome.toLowerCase().includes(searchLower) ||
-        conta?.nome.toLowerCase().includes(searchLower) ||
-        r.categoria.toLowerCase().includes(searchLower)
+        (r.descricao || '').toLowerCase().includes(searchLower) ||
+        (associado?.nome || '').toLowerCase().includes(searchLower) ||
+        (conta?.nome || '').toLowerCase().includes(searchLower) ||
+        (r.categoria || '').toLowerCase().includes(searchLower)
       const matchStatus = filterStatus === 'todos' || r.status === filterStatus
       const matchPagamento = filterPagamento === 'todos' || r.forma_pagamento === filterPagamento
       const matchConta = filterConta === 'todos' || r.conta_id === filterConta
@@ -287,6 +292,14 @@ export default function ReceitasPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* DEBUG PANEL EXCLUSIVO */}
+      <div className="bg-slate-900 text-slate-400 p-2 text-[8px] rounded-lg font-mono flex gap-4">
+        <span>T_ID: {String(lancamentos[0]?.tenant_id || 'NULL').slice(0,8)}</span>
+        <span>LEN: {lancamentos.length}</span>
+        <span>FILT: {filteredReceitas.length}</span>
+        <span>YEAR: {filterYear}</span>
+        <span>MONTH: {filterMonth}</span>
+      </div>
       <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(16,185,129,.1)', border: '1px solid rgba(16,185,129,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--emerald)' }}><TrendingUp size={24} /></div>
