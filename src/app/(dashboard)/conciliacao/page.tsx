@@ -14,7 +14,10 @@ import {
   CloudLightning,
   Trash2,
   Zap,
-  Info
+  Info,
+  User,
+  Store,
+  Plus
 } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useCoraStaged, CoraStagedItem } from '@/lib/hooks/useCoraStaged'
@@ -51,6 +54,9 @@ export default function ConciliacaoPage() {
   const [filterMatch, setFilterMatch] = useState<'ALL' | 'FOUND' | 'NOT_FOUND'>('ALL')
   const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
   const [editedMemos, setEditedMemos] = useState<Record<string, string>>({})
+
+  const [isAuditingBatch, setIsAuditingBatch] = useState(false)
+  const [auditResults, setAuditResults] = useState<Record<string, any[]>>({})
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false)
@@ -309,6 +315,34 @@ export default function ConciliacaoPage() {
     } finally { setIsProcessingBatch(false) }
   }
 
+  const handleAuditAll = async () => {
+    const cpfs = filteredItems
+      .map(i => i.assocMatch?.cpf || i.bank.documento)
+      .filter((cpf): cpf is string => !!cpf)
+      .map(cpf => cpf.replace(/\D/g, ''))
+    
+    const uniqueCpfs = Array.from(new Set(cpfs))
+    if (uniqueCpfs.length === 0) return alert('Nenhum associado com CPF identificado na lista.')
+
+    setIsAuditingBatch(true)
+    let foundCount = 0
+    try {
+      for (const cpf of uniqueCpfs) {
+        const resp = await fetch(`/api/cora/audit/invoices?cpf=${cpf}`)
+        const data = await resp.json()
+        if (data.success && data.invoices.length > 0) {
+          setAuditResults(prev => ({ ...prev, [cpf]: data.invoices }))
+          foundCount++
+        }
+      }
+      alert(`Auditoria finalizada! ${foundCount} associados possuem pendências na Cora.`)
+    } catch (e) {
+      alert('Erro ao processar auditoria em lote.')
+    } finally {
+      setIsAuditingBatch(false)
+    }
+  }
+
   const isLoading = loadingFinanceiro || (activeTab === 'cora' && loadingCora)
 
   return (
@@ -373,10 +407,21 @@ export default function ConciliacaoPage() {
               </div>
             </div>
 
-            <button onClick={activeTab === 'ofx' ? handleProcessarLote : handleCoraBatch} disabled={isProcessingBatch} className="flex items-center gap-3 px-8 py-3 bg-white text-indigo-900 rounded-2xl font-black text-[11px] shadow-xl hover:bg-emerald-50 hover:text-emerald-700 transition-all active:scale-95 disabled:opacity-50 group">
-              {isProcessingBatch ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} className="fill-indigo-900 group-hover:fill-emerald-600" />} 
-              {activeTab === 'ofx' ? 'EXECUTAR LANÇAMENTO AUDITADO' : 'SINCRONIZAR API CORA'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={handleAuditAll}
+                disabled={isAuditingBatch || filteredItems.length === 0}
+                className="flex items-center gap-2 px-6 py-3 bg-indigo-700 text-white rounded-2xl font-black text-[11px] shadow-xl hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {isAuditingBatch ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
+                {isAuditingBatch ? 'AUDITANDO...' : 'AUDITAR COBRANÇAS EM LOTE'}
+              </button>
+
+              <button onClick={activeTab === 'ofx' ? handleProcessarLote : handleCoraBatch} disabled={isProcessingBatch} className="flex items-center gap-3 px-8 py-3 bg-white text-indigo-900 rounded-2xl font-black text-[11px] shadow-xl hover:bg-emerald-50 hover:text-emerald-700 transition-all active:scale-95 disabled:opacity-50 group">
+                {isProcessingBatch ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} className="fill-indigo-900 group-hover:fill-emerald-600" />} 
+                {activeTab === 'ofx' ? 'EXECUTAR LANÇAMENTO AUDITADO' : 'SINCRONIZAR API CORA'}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -430,6 +475,7 @@ export default function ConciliacaoPage() {
                 onIgnore={() => setIgnoredMatches(prev => { const n = new Set(prev); if (n.has(item.bank.fitid)) n.delete(item.bank.fitid); else n.add(item.bank.fitid); return n; })} 
                 isIgnored={ignoredMatches.has(item.bank.fitid)} 
                 isDuplicate={existingTxIds.has(item.bank.fitid)} 
+                externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]}
               />
             ))}
           </div>
@@ -443,7 +489,14 @@ export default function ConciliacaoPage() {
              </div>
           ) : (
             filteredItems.map((item: any) => (
-              <MatchItem key={item.bank.fitid} {...item} isCora isDuplicate={existingTxIds.has(item.bank.fitid)} />
+              <MatchItem 
+                key={item.bank.fitid} 
+                {...item} 
+                isCora 
+                isDuplicate={existingTxIds.has(item.bank.fitid)} 
+                isProcessed={processedIds.has(item.bank.fitid)}
+                externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]}
+              />
             ))
           )}
         </div>

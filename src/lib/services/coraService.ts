@@ -220,13 +220,46 @@ export class CoraService {
   }
 
   /**
+   * Busca boletos/cobranças por CPF/CNPJ do cliente
+   */
+  static async getInvoicesByCustomer(identity: string): Promise<any[]> {
+    const token = await this.getToken();
+    const cleanId = identity.replace(/\D/g, '');
+    const result = await this.request({
+      hostname: this.API_HOST,
+      path: `/v2/invoices?customer_identity=${cleanId}`,
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return result.items || [];
+  }
+
+  /**
+   * Obtém o link ou buffer do PDF da fatura
+   */
+  static async getInvoicePdf(invoiceId: string): Promise<{ url: string }> {
+    const token = await this.getToken();
+    return await this.request({
+      hostname: this.API_HOST,
+      path: `/v2/invoices/${invoiceId}/pdf`,
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+  }
+
+  /**
    * Lista recorrências (assinaturas) ativas na conta
    */
   static async listRecurrences() {
     const token = await this.getToken();
     return this.request({
       hostname: this.API_HOST,
-      path: '/v2/recurrences',
+      path: `/v2/recurrences`,
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`
