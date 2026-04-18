@@ -22,12 +22,25 @@ export function useTenant() {
   const fetch = useCallback(async () => {
     if (!tenantId) return
     setLoading(true)
-    const { data } = await sb.from('tenants')
+    console.log('[useTenant] Buscando dados para ID:', tenantId)
+    
+    const { data, error } = await sb.from('tenants')
       .select('id, nome, logo_url, zapsign_token, cora_id, cora_cert, cora_key')
       .eq('id', tenantId)
       .single()
     
-    if (data) setTenant(data)
+    if (error) {
+      console.error('[useTenant] Erro ao buscar:', error.message)
+      if (error.code === 'PGRST116') {
+        console.warn('[useTenant] Registro não encontrado. Criando base...')
+        await sb.from('tenants').insert({ id: tenantId, nome: 'Configuração Inicial' })
+      }
+    }
+
+    if (data) {
+      console.log('[useTenant] Dados carregados com sucesso:', data.nome)
+      setTenant(data)
+    }
     setLoading(false)
   }, [tenantId, sb])
 
