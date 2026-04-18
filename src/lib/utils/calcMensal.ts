@@ -1,13 +1,13 @@
 import type { Lancamento, Associado, EvolucaoMensal } from '@/lib/types'
-import { MESES } from './formatters'
+import { getMesIdx, MESES } from './formatters'
 
 export function calcMensalFinanceiro(lancamentos: Lancamento[]) {
   const receita = Array(12).fill(0)
   const despesa = Array(12).fill(0)
 
   lancamentos.forEach(row => {
-    const m = new Date(row.data).getMonth()
-    if (isNaN(m)) return
+    const m = getMesIdx(row.data)
+    if (m < 0 || m > 11) return
     if (row.tipo === 'receita') receita[m] += row.valor
     else                        despesa[m] += row.valor
   })

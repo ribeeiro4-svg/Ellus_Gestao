@@ -4,7 +4,7 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import ChartCard from '@/components/ui/ChartCard'
 import { calcEvolucao } from '@/lib/utils/calcMensal'
-import { fmtR, MESES, fmtPct } from '@/lib/utils/formatters'
+import { fmtR, MESES, fmtPct, getAnoIdx } from '@/lib/utils/formatters'
 import { TrendingUp, Users, Activity, BarChart2, Calendar, ChevronRight, ArrowUpRight, ArrowDownRight, Percent } from 'lucide-react'
 import {
   Chart as ChartJS,
@@ -30,8 +30,8 @@ export default function EvolucaoPage() {
   const availableYears = useMemo(() => {
     const years = new Set<number>()
     lancamentos.forEach(l => {
-      const y = new Date(l.data).getFullYear()
-      if (!isNaN(y)) years.add(y)
+      const y = getAnoIdx(l.data)
+      if (y > 0) years.add(y)
     })
     if (years.size === 0) years.add(new Date().getFullYear())
     return Array.from(years).sort((a, b) => b - a)
@@ -41,13 +41,13 @@ export default function EvolucaoPage() {
 
   // ── Processamento de Dados ──
   const baseData = useMemo(() => {
-    const filtered = lancamentos.filter(l => new Date(l.data).getFullYear() === selectedYear)
+    const filtered = lancamentos.filter(l => getAnoIdx(l.data) === selectedYear)
     return calcEvolucao(filtered, associados)
   }, [lancamentos, associados, selectedYear])
 
   const compareData = useMemo(() => {
     if (!compareYear) return null
-    const filtered = lancamentos.filter(l => new Date(l.data).getFullYear() === compareYear)
+    const filtered = lancamentos.filter(l => getAnoIdx(l.data) === compareYear)
     return calcEvolucao(filtered, associados)
   }, [lancamentos, associados, compareYear])
   

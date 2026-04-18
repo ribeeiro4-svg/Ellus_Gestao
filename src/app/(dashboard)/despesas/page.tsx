@@ -15,7 +15,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
-import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
+import { fmtR, fmtData, MESES, getMesIdx, getAnoIdx } from '@/lib/utils/formatters'
 import { TrendingDown, Plus, RefreshCw, Copy, Search, Filter, XCircle, AlertCircle, TrendingUp, Check, Pencil, Trash2 } from 'lucide-react'
 import BatchActionBar from '@/components/ui/BatchActionBar'
 import LaunchDetailsModal from '@/components/ui/LaunchDetailsModal'
@@ -62,9 +62,11 @@ export default function DespesasPage() {
 
   const filteredDespesas = useMemo(() => {
     return despesas.filter(d => {
-      const dt = new Date(d.data)
-      const matchMonth = filterMonth === -1 || dt.getMonth() === filterMonth
-      const matchYear = dt.getFullYear() === filterYear
+      const mesIdx = getMesIdx(d.data)
+      const anoIdx = getAnoIdx(d.data)
+      
+      const matchMonth = filterMonth === -1 || mesIdx === filterMonth
+      const matchYear = anoIdx === filterYear
       const searchLower = searchTerm.toLowerCase()
       const fornecedor = fornecedores.find(f => f.id === d.fornecedor_id)
       const conta = contas.find(c => c.id === d.conta_id)
@@ -100,8 +102,8 @@ export default function DespesasPage() {
   const despesaMensal = useMemo(() => {
     const arr = Array(12).fill(0)
     filteredDespesas.forEach(d => {
-      const m = new Date(d.data).getMonth()
-      if (!isNaN(m)) arr[m] += d.valor || 0
+      const m = getMesIdx(d.data)
+      if (m >= 0 && m <= 11) arr[m] += d.valor || 0
     })
     return arr
   }, [filteredDespesas])

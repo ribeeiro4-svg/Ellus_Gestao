@@ -14,7 +14,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
-import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
+import { fmtR, fmtData, MESES, getMesIdx, getAnoIdx } from '@/lib/utils/formatters'
 import { TrendingUp, Plus, RefreshCw, Copy, Search, Filter, XCircle, AlertCircle, TrendingDown, Check, Pencil, Trash2 } from 'lucide-react'
 import BatchActionBar from '@/components/ui/BatchActionBar'
 import LaunchDetailsModal from '@/components/ui/LaunchDetailsModal'
@@ -63,9 +63,11 @@ export default function ReceitasPage() {
 
   const filteredReceitas = useMemo(() => {
     return receitas.filter(r => {
-      const dt = new Date(r.data)
-      const matchMonth = filterMonth === -1 || dt.getMonth() === filterMonth
-      const matchYear = dt.getFullYear() === filterYear
+      const mesIdx = getMesIdx(r.data)
+      const anoIdx = getAnoIdx(r.data)
+      
+      const matchMonth = filterMonth === -1 || mesIdx === filterMonth
+      const matchYear = anoIdx === filterYear
       const searchLower = searchTerm.toLowerCase()
       const associado = associados.find(a => a.id === r.associado_id)
       const conta = contas.find(c => c.id === r.conta_id)
@@ -101,8 +103,8 @@ export default function ReceitasPage() {
   const receitaMensal = useMemo(() => {
     const arr = Array(12).fill(0)
     filteredReceitas.forEach(r => {
-      const m = new Date(r.data).getMonth()
-      if (!isNaN(m)) arr[m] += r.valor || 0
+      const m = getMesIdx(r.data)
+      if (m >= 0 && m <= 11) arr[m] += r.valor || 0
     })
     return arr
   }, [filteredReceitas])
