@@ -15,7 +15,8 @@ import {
   DollarSign,
   Edit2,
   XCircle,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Trash2
 } from 'lucide-react'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 
