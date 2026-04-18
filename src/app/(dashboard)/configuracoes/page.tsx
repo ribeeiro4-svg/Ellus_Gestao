@@ -10,17 +10,22 @@ import {
   Wallet
 } from 'lucide-react'
 import { useContas } from '@/lib/hooks/useContas'
+import { useCategorias } from '@/lib/hooks/useCategorias'
 import { fmtR } from '@/lib/utils/formatters'
 import CrudModal from '@/components/ui/CrudModal'
 
 import { useTenant } from '@/lib/hooks/useTenant'
 
 export default function ConfigPage() {
-  const { contas, loading: loadingContas, inserir, atualizar: atualizarConta, remover } = useContas()
+  const { contas, loading: loadingContas, inserir: inserirConta, atualizar: atualizarConta, remover: removerConta } = useContas()
+  const { categorias, loading: loadingCats, inserir: inserirCat, atualizar: atualizarCat, remover: removerCat } = useCategorias()
   const { tenant, loading: loadingTenant, atualizar: atualizarTenant } = useTenant()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+
+  const [isCatModalOpen, setIsCatModalOpen] = useState(false)
+  const [editingCat, setEditingCat] = useState<any>(null)
 
   // Perfil State
   const [customName, setCustomName] = useState('')
@@ -65,7 +70,12 @@ export default function ConfigPage() {
 
   const handleSalvarConta = async (data: any) => {
     if (editingItem) { await atualizarConta(editingItem.id, data) }
-    else { await inserir(data) }
+    else { await inserirConta(data) }
+  }
+
+  const handleSalvarCat = async (data: any) => {
+    if (editingCat) { await atualizarCat(editingCat.id, data) }
+    else { await inserirCat(data) }
   }
 
   if (loadingTenant && !tenant) {
@@ -86,7 +96,7 @@ export default function ConfigPage() {
             Configurações
           </h1>
           <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
-            Gerencie suas contas bancárias e configure as integrações do seu portal.
+            Gerencie suas contas bancárias, padronize categorias e configure integrações.
           </p>
         </div>
       </div>
@@ -195,51 +205,87 @@ export default function ConfigPage() {
           </div>
         </div>
 
-        {/* Contas Bancárias */}
-        <div className="table-card p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
-              <CreditCard className="text-[#2d8c6f] w-4 h-4" />
-              Contas Bancárias
-            </h2>
-            <button 
-              onClick={() => { setEditingItem(null); setIsModalOpen(true) }}
-              className="px-4 py-2 bg-[#2d8c6f] text-white text-[10px] font-bold rounded-xl hover:bg-[#246d56] transition-all uppercase shadow-sm"
-            >
-              + Nova Conta
-            </button>
+        <div className="flex flex-col gap-8">
+          {/* Contas Bancárias */}
+          <div className="table-card p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
+                <CreditCard className="text-[#2d8c6f] w-4 h-4" />
+                Contas Bancárias
+              </h2>
+              <button 
+                onClick={() => { setEditingItem(null); setIsModalOpen(true) }}
+                className="px-4 py-2 bg-[#2d8c6f] text-white text-[10px] font-bold rounded-xl hover:bg-[#246d56] transition-all uppercase shadow-sm"
+              >
+                + Nova Conta
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {contas.map(conta => (
+                <div key={conta.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#2d8c6f] shadow-sm">
+                      {conta.tipo === 'caixa_fisico' ? <Wallet size={20} /> : <Building2 size={20} />}
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-gray-800">{conta.nome}</div>
+                      <div className="text-[10px] text-gray-400 uppercase font-black">{conta.tipo.replace('_', ' ')}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <div className="text-[10px] text-gray-400 uppercase font-bold">Saldo Inicial</div>
+                      <div className="text-sm font-black text-gray-700">{fmtR(conta.saldo_inicial)}</div>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setEditingItem(conta); setIsModalOpen(true) }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={14} /></button>
+                      <button onClick={() => confirm('Excluir esta conta?') && removerConta(conta.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {contas.length === 0 && !loadingContas && (
+                <div className="text-center py-8 text-gray-400 text-xs italic">Nenhuma conta cadastrada.</div>
+              )}
+              {loadingContas && (
+                <div className="text-center py-8 text-gray-300 animate-pulse text-[10px] uppercase font-bold italic">Carregando contas...</div>
+              )}
+            </div>
           </div>
 
-          <div className="space-y-4">
-            {contas.map(conta => (
-              <div key={conta.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#2d8c6f] shadow-sm">
-                    {conta.tipo === 'caixa_fisico' ? <Wallet size={20} /> : <Building2 size={20} />}
+          {/* Categorias Padronizadas */}
+          <div className="table-card p-6 border-amber-100 bg-amber-50/10">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
+                <Plus className="text-amber-500 w-4 h-4" />
+                Categorias Padronizadas
+              </h2>
+              <button 
+                onClick={() => { setEditingCat(null); setIsCatModalOpen(true) }}
+                className="px-4 py-2 bg-amber-500 text-white text-[10px] font-bold rounded-xl hover:bg-amber-600 transition-all uppercase shadow-sm"
+              >
+                + Nova Categoria
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {categorias.map(cat => (
+                <div key={cat.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 group hover:border-amber-200 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${cat.tipo === 'receita' ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
+                    <span className="text-xs font-bold text-gray-700">{cat.nome}</span>
                   </div>
-                  <div>
-                    <div className="text-sm font-bold text-gray-800">{conta.nome}</div>
-                    <div className="text-[10px] text-gray-400 uppercase font-black">{conta.tipo.replace('_', ' ')}</div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => { setEditingCat(cat); setIsCatModalOpen(true) }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={12} /></button>
+                    <button onClick={() => confirm('Excluir esta categoria?') && removerCat(cat.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={12} /></button>
                   </div>
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="text-right">
-                    <div className="text-[10px] text-gray-400 uppercase font-bold">Saldo Inicial</div>
-                    <div className="text-sm font-black text-gray-700">{fmtR(conta.saldo_inicial)}</div>
-                  </div>
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => { setEditingItem(conta); setIsModalOpen(true) }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={14} /></button>
-                    <button onClick={() => confirm('Excluir esta conta?') && remover(conta.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={14} /></button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {contas.length === 0 && !loadingContas && (
-              <div className="text-center py-8 text-gray-400 text-xs italic">Nenhuma conta cadastrada.</div>
-            )}
-            {loadingContas && (
-               <div className="text-center py-8 text-gray-300 animate-pulse text-[10px] uppercase font-bold italic">Carregando contas...</div>
-            )}
+              ))}
+              {categorias.length === 0 && !loadingCats && (
+                <div className="col-span-2 text-center py-8 text-gray-400 text-[10px] uppercase font-bold italic">Nenhuma categoria padronizada.</div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -258,6 +304,21 @@ export default function ConfigPage() {
             { value: 'caixa_fisico', label: 'Caixa Físico' },
           ]},
           { name: 'saldo_inicial', label: 'Saldo Inicial (R$)', type: 'number', required: true },
+        ]}
+      />
+
+      <CrudModal 
+        isOpen={isCatModalOpen}
+        onClose={() => setIsCatModalOpen(false)}
+        title={editingCat ? 'Editar Categoria' : 'Nova Categoria Padronizada'}
+        initialData={editingCat}
+        onSubmit={handleSalvarCat}
+        fields={[
+          { name: 'nome', label: 'Nome da Categoria', type: 'text', required: true, placeholder: 'Ex: Mensalidades, Aluguel...' },
+          { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
+            { value: 'receita', label: 'Receita' },
+            { value: 'despesa', label: 'Despesa' },
+          ]},
         ]}
       />
     </div>

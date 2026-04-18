@@ -13,6 +13,17 @@ export interface Tenant {
   created_at: string
 }
 
+// ─── Categorias Padronizadas ───────────────────────────────────────────────
+export interface CategoriaConfig {
+  id: string
+  tenant_id: string
+  nome: string
+  tipo: TipoLancamento
+  created_at: string
+}
+
+export interface CategoriaInput extends Omit<CategoriaConfig, 'id' | 'tenant_id' | 'created_at'> {}
+
 // ─── Usuário ───────────────────────────────────────────────────────────────
 export interface Usuario {
   id: string
