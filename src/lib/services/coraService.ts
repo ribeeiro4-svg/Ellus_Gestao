@@ -32,35 +32,26 @@ export class CoraService {
       throw new Error('Certificações Cora não encontradas (Configure no Portal ou .env).');
     }
 
-    const normalizePEM = (pem: string, type: 'cert' | 'key') => {
-      let cleaned = pem.replace(/\\n/g, '\n').replace(/\r/g, '').trim();
-
-      // Remove headers, limpa tudo que não é base64 e reconstrói
-      const baseHeader = type === 'cert' ? 'CERTIFICATE' : (cleaned.includes('RSA') ? 'RSA PRIVATE KEY' : 'PRIVATE KEY');
-      
-      const content = cleaned
-        .replace(/-----BEGIN [^-]+-----/g, '')
-        .replace(/-----END [^-]+-----/g, '')
-        .replace(/\s/g, '') // Remove COMPLETAMENTE qualquer espaço ou quebra de linha
-        .replace(/ /g, '+'); // Caso algum '+' tenha virado espaço físico
-
-      const lines = content.match(/.{1,64}/g) || [];
-      const finalPem = `-----BEGIN ${baseHeader}-----\n${lines.join('\n')}\n-----END ${baseHeader}-----`;
-      
-      return {
-        buffer: Buffer.from(finalPem, 'utf-8'),
-        length: content.length
-      };
+    const normalize = (val: string) => {
+      // 1. Converte \n literais (strings) em quebras reais
+      // 2. Remove espaços em branco nas pontas de cada linha
+      // 3. Garante que não haja linhas vazias no meio
+      return val
+        .replace(/\\n/g, '\n')
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l.length > 0)
+        .join('\n');
     };
 
-    const normCert = normalizePEM(cert, 'cert');
-    const normKey = normalizePEM(key, 'key');
+    const finalCert = normalize(cert);
+    const finalKey = normalize(key);
 
-    this._lastDiag = `Cert:${normCert.length} Key:${normKey.length}`;
+    this._lastDiag = `CertLen:${finalCert.length} KeyLen:${finalKey.length}`;
 
     return {
-      cert: normCert.buffer,
-      key: normKey.buffer,
+      cert: finalCert,
+      key: finalKey,
       rejectUnauthorized: true
     };
   }
