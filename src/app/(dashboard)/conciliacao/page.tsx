@@ -64,12 +64,12 @@ export default function ConciliacaoPage() {
     return extrato.map((bank: any) => {
       const memoNormalize = bank.memo.toUpperCase()
       
-      const assocMatch = associados.find(a => 
+      const assocMatch = (associados as any[]).find(a => 
         memoNormalize.includes(a.nome.toUpperCase()) || 
-        (a.cpf_cnpj && memoNormalize.includes(a.cpf_cnpj.replace(/\D/g, '')))
+        (a.cpf && memoNormalize.includes(a.cpf.replace(/\D/g, '')))
       )
       
-      const forMatch = fornecedores.find(f => 
+      const forMatch = (fornecedores as any[]).find(f => 
         memoNormalize.includes(f.nome.toUpperCase()) || 
         (f.cpf_cnpj && memoNormalize.includes(f.cpf_cnpj.replace(/\D/g, '')))
       )
@@ -88,13 +88,12 @@ export default function ConciliacaoPage() {
   const coraMatchedItems = useMemo(() => {
     return (coraItems || []).map((bank: CoraStagedItem) => {
       const memoNormalize = bank.descricao.toUpperCase()
-      const assocMatch = associados.find(a => memoNormalize.includes(a.nome.toUpperCase()) || (a.cpf_cnpj && memoNormalize.includes(a.cpf_cnpj.replace(/\D/g, ''))))
-      const forMatch = fornecedores.find(f => memoNormalize.includes(f.nome.toUpperCase()) || (f.cpf_cnpj && memoNormalize.includes(f.cpf_cnpj.replace(/\D/g, ''))))
+      const assocMatch = (associados as any[]).find(a => memoNormalize.includes(a.nome.toUpperCase()) || (a.cpf && memoNormalize.includes(a.cpf.replace(/\D/g, ''))))
+      const forMatch = (fornecedores as any[]).find(f => memoNormalize.includes(f.nome.toUpperCase()) || (f.cpf_cnpj && memoNormalize.includes(f.cpf_cnpj.replace(/\D/g, ''))))
       const dirMatch = diretoria.find(d => memoNormalize.includes(d.nome.toUpperCase()))
 
-      // Normaliza para o formato esperado pelo MatchItem
       const normalizedBank = {
-        fitid: bank.id,
+        fitid: bank.cora_id || bank.id,
         memo: bank.descricao,
         amount: bank.valor,
         type: bank.tipo,
