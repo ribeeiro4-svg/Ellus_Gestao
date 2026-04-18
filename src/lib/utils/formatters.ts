@@ -92,33 +92,59 @@ export const STATUS_LANCAMENTO = [
 
 export function getMesIdx(dataStr: any): number {
   if (!dataStr) return -1
+  if (dataStr instanceof Date) return dataStr.getMonth()
   const str = String(dataStr).trim()
+  
   if (str.includes('-')) {
     const cleanStr = str.split('T')[0].split(' ')[0]
     const parts = cleanStr.split('-')
     if (parts.length >= 2) {
-      const mesStr = parts[0].length === 4 ? parts[1] : parts[1]
-      return (parseInt(mesStr, 10) || 0) - 1
+      const mes = parts[0].length === 4 ? parts[1] : parts[1]
+      return (parseInt(mes, 10) || 0) - 1
     }
   } 
+  
   if (str.includes('/')) {
     const parts = str.split('/')
-    if (parts.length >= 2) return (parseInt(parts[1], 10) || 0) - 1
+    if (parts.length >= 2) {
+      const mes = parts[1]
+      return (parseInt(mes, 10) || 0) - 1
+    }
   }
+
+  try {
+    const d = new Date(str)
+    if (!isNaN(d.getTime())) return d.getMonth()
+  } catch (e) {}
+
   return -1
 }
 
 export function getAnoIdx(dataStr: any): number {
   if (!dataStr) return -1
+  if (dataStr instanceof Date) return dataStr.getFullYear()
   const str = String(dataStr).trim()
+  
   if (str.includes('-')) {
     const cleanStr = str.split('T')[0].split(' ')[0]
     const parts = cleanStr.split('-')
-    if (parts.length >= 1) return parts[0].length === 4 ? parseInt(parts[0], 10) : parseInt(parts[2], 10)
+    if (parts.length >= 1) {
+      return parts[0].length === 4 ? parseInt(parts[0], 10) : parseInt(parts[2], 10)
+    }
   } 
+  
   if (str.includes('/')) {
     const parts = str.split('/')
-    if (parts.length >= 3) return parseInt(parts[2], 10)
+    if (parts.length >= 1) {
+      const last = parts[parts.length - 1]
+      if (last.length === 4) return parseInt(last, 10)
+    }
   }
+
+  try {
+    const d = new Date(str)
+    if (!isNaN(d.getTime())) return d.getFullYear()
+  } catch (e) {}
+
   return -1
 }
