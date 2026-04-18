@@ -62,6 +62,15 @@ export default function ConfigPage() {
     else { await inserir(data) }
   }
 
+  if (loadingTenant && !tenant) {
+    return (
+      <div className="flex flex-col items-center justify-center flex-1 gap-4 py-20">
+        <div className="w-12 h-12 border-4 border-[#2d8c6f]/20 border-t-[#2d8c6f] rounded-full animate-spin"></div>
+        <p className="text-xs font-black text-[#2d8c6f] uppercase tracking-widest animate-pulse">Carregando Configurações...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20">
       <div className="page-header flex justify-between items-center">

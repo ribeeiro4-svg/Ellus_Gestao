@@ -35,7 +35,8 @@ export function useTenant() {
 
   const atualizar = async (input: Partial<TenantData>) => {
     if (!tenantId) return
-    const { error } = await sb.from('tenants').update(input).eq('id', tenantId)
+    // Usamos upsert para garantir que o registro seja criado se não existir
+    const { error } = await sb.from('tenants').upsert({ ...input, id: tenantId })
     if (!error) fetch()
     return { error }
   }
