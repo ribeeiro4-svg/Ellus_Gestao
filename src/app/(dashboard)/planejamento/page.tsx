@@ -9,7 +9,8 @@ import {
   ChevronRight,
   TrendingDown,
   TrendingUp,
-  Save
+  Save,
+  RefreshCw
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -30,14 +31,18 @@ export default function PlanejamentoPage() {
   const [selectedAno] = useState(new Date().getFullYear())
   
   const { lancamentos, loading: loadFin } = useFinanceiro()
-  const { orcamentos, loading: loadOrc, inserir, atualizar, remover } = useOrcamentos(selectedMes, selectedAno)
+  const { orcamentos, loading: loadOrc, inserir, atualizar, refresh } = useOrcamentos(selectedMes, selectedAno)
+  
+  // Controle de edições e estados de salvamento
   const [editValues, setEditValues] = useState<Record<string, number>>({})
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
+  const [lastSavedId, setLastSavedId] = useState<string | null>(null)
 
   // Extrair categorias reais dos lançamentos para sugerir orçamentos
   const todasCategorias = useMemo(() => {
     const cats = new Set<string>()
     lancamentos.forEach(l => cats.add(l.categoria))
-    return Array.from(cats)
+    return Array.from(cats).sort()
   }, [lancamentos])
 
   const comparativo = useMemo(() => {
@@ -50,8 +55,8 @@ export default function PlanejamentoPage() {
       
       const realizado = lancMes.reduce((sum, l) => sum + l.valor, 0)
       const orc = orcamentos.find(o => o.categoria === cat)
-      const planejado = orc?.valor_planejado || 0
-      const tipo = lancMes[0]?.tipo || 'despesa'
+      const planejado = editValues[cat] !== undefined ? editValues[cat] : (orc?.valor_planejado || 0)
+      const tipo = lancMes[0]?.tipo || (cat.toLowerCase().includes('receita') || cat.toLowerCase().includes('adesão') ? 'receita' : 'despesa')
 
       return {
         id: orc?.id || `new-${cat}`,
@@ -59,88 +64,153 @@ export default function PlanejamentoPage() {
         tipo,
         planejado,
         realizado,
+        isDirty: editValues[cat] !== undefined && editValues[cat] !== (orc?.valor_planejado || 0),
         variacao: planejado > 0 ? ((realizado - planejado) / planejado) * 100 : 0,
         status: realizado <= planejado ? 'dentro' : 'acima'
       }
     })
-  }, [todasCategorias, lancamentos, orcamentos, selectedMes, selectedAno])
+  }, [todasCategorias, lancamentos, orcamentos, selectedMes, selectedAno, editValues])
 
   const handleSaveOrcamento = async (categoria: string, valor: number, id: string) => {
-    if (id.startsWith('new-')) {
-      await inserir({
-        mes: selectedMes,
-        ano: selectedAno,
-        categoria,
-        tipo: comparativo.find(c => c.categoria === categoria)?.tipo || 'despesa',
-        valor_planejado: valor
+    setSavingIds(prev => new Set(prev).add(id))
+    try {
+      if (id.startsWith('new-')) {
+        await inserir({
+          mes: selectedMes,
+          ano: selectedAno,
+          categoria,
+          tipo: comparativo.find(c => c.categoria === categoria)?.tipo || 'despesa',
+          valor_planejado: valor
+        })
+      } else {
+        await atualizar(id, { valor_planejado: valor })
+      }
+      setLastSavedId(id)
+      setTimeout(() => setLastSavedId(null), 2000)
+      
+      // Limpa do estado de edição local após salvar com sucesso
+      setEditValues(prev => {
+        const next = { ...prev }
+        delete next[categoria]
+        return next
       })
-    } else {
-      await atualizar(id, { valor_planejado: valor })
+    } finally {
+      setSavingIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
     }
   }
 
+  const handleSaveAll = async () => {
+    const dirtyItems = comparativo.filter(c => c.isDirty)
+    for (const item of dirtyItems) {
+      await handleSaveOrcamento(item.categoria, item.planejado, item.id)
+    }
+    await refresh()
+  }
+
   const chartData = {
-    labels: comparativo.slice(0, 6).map(c => c.categoria),
+    labels: comparativo.filter(c => c.realizado > 0 || c.planejado > 0).slice(0, 8).map(c => c.categoria),
     datasets: [
       {
         label: 'Planejado',
-        data: comparativo.slice(0, 6).map(c => c.planejado),
-        backgroundColor: 'rgba(203, 213, 225, 0.5)',
-        borderRadius: 4
+        data: comparativo.filter(c => c.realizado > 0 || c.planejado > 0).slice(0, 8).map(c => c.planejado),
+        backgroundColor: 'rgba(203, 213, 225, 0.4)',
+        borderRadius: 6
       },
       {
         label: 'Realizado',
-        data: comparativo.slice(0, 6).map(c => c.realizado),
+        data: comparativo.filter(c => c.realizado > 0 || c.planejado > 0).slice(0, 8).map(c => c.realizado),
         backgroundColor: '#2d8c6f',
-        borderRadius: 4
+        borderRadius: 6
       }
     ]
   }
 
   const columns = [
-    { header: 'Categoria', key: 'categoria', render: (c: any) => (
-      <span className="font-bold text-gray-700">{c.categoria}</span>
+    { header: 'Categoria', key: 'categoria', className: 'w-[200px]', render: (c: any) => (
+      <span className="font-bold text-gray-700 text-xs">{c.categoria}</span>
     )},
-    { header: 'Tipo', key: 'tipo', render: (c: any) => (
-      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase ${c.tipo === 'receita' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+    { header: 'Tipo', key: 'tipo', className: 'w-[100px]', render: (c: any) => (
+      <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter ${c.tipo === 'receita' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
         {c.tipo}
       </span>
     )},
-    { header: 'Planejado (Orçamento)', key: 'planejado', render: (c: any) => (
-      <div className="flex items-center gap-2">
-        <input 
-          type="number" 
-          defaultValue={c.planejado}
-          onBlur={(e) => handleSaveOrcamento(c.categoria, Number(e.target.value), c.id)}
-          className="w-24 bg-slate-50 border border-slate-100 rounded-lg px-2 py-1 text-sm font-bold text-gray-700 focus:ring-2 focus:ring-[#2d8c6f]/20 outline-none"
-        />
+    { header: 'Planejado (Orçamento)', key: 'planejado', className: 'w-[160px]', render: (c: any) => (
+      <div className="flex items-center gap-2 relative group">
+        <div className="relative">
+          <input 
+            type="number" 
+            value={c.planejado}
+            onChange={(e) => setEditValues(prev => ({ ...prev, [c.categoria]: Number(e.target.value) }))}
+            onKeyDown={(e) => e.key === 'Enter' && handleSaveOrcamento(c.categoria, c.planejado, c.id)}
+            onBlur={() => c.isDirty && handleSaveOrcamento(c.categoria, c.planejado, c.id)}
+            className={`w-28 bg-white border rounded-xl px-3 py-2 text-sm font-black transition-all outline-none ${
+              savingIds.has(c.id) ? 'border-indigo-400 bg-indigo-50/30' : 
+              lastSavedId === c.id ? 'border-emerald-500 bg-emerald-50/30 ring-4 ring-emerald-500/10' :
+              c.isDirty ? 'border-amber-400 bg-amber-50/30' : 'border-slate-100 focus:border-[#2d8c6f] focus:ring-4 focus:ring-[#2d8c6f]/5'
+            }`}
+          />
+          {savingIds.has(c.id) && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2">
+               <RefreshCw size={12} className="text-indigo-500 animate-spin" />
+            </div>
+          )}
+          {lastSavedId === c.id && (
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 animate-in zoom-in duration-300">
+               <CheckCircle2 size={12} className="text-emerald-500" />
+            </div>
+          )}
+        </div>
+        {c.isDirty && !savingIds.has(c.id) && (
+          <button 
+            onClick={() => handleSaveOrcamento(c.categoria, c.planejado, c.id)}
+            className="p-2 bg-amber-500 text-white rounded-lg shadow-sm hover:bg-amber-600 transition-all active:scale-90"
+          >
+            <Save size={14} />
+          </button>
+        )}
       </div>
     )},
-    { header: 'Realizado', key: 'realizado', render: (c: any) => (
-      <span className="font-bold text-gray-900">{fmtR(c.realizado)}</span>
+    { header: 'Realizado', key: 'realizado', className: 'w-[120px]', render: (c: any) => (
+      <span className="font-bold text-gray-900 text-sm">{fmtR(c.realizado)}</span>
     )},
-    { header: 'Variação', key: 'variacao', render: (c: any) => (
-      <div className={`flex items-center gap-1 font-bold text-xs ${c.status === 'dentro' ? 'text-emerald-500' : 'text-rose-500'}`}>
+    { header: 'Variação', key: 'variacao', className: 'w-[100px]', render: (c: any) => (
+      <div className={`flex items-center gap-1 font-black text-[10px] ${c.status === 'dentro' ? 'text-emerald-500' : 'text-rose-500'}`}>
         {c.variacao > 0 ? '+' : ''}{fmtPct(c.variacao)}
-        {c.status === 'dentro' ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
+        {c.status === 'dentro' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
       </div>
     )}
   ]
 
+  const hasDirtyItems = comparativo.some(c => c.isDirty)
+
   return (
     <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20">
-      <div className="page-header flex justify-between items-center">
-        <div>
-          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-            <Target className="text-[#2d8c6f]" />
-            Planejamento Orçamentário
-          </h1>
-          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium font-italic">
-            Acompanhe a relação entre o que foi planejado e o que foi realizado.
-          </p>
+      <div className="page-header flex justify-between items-center bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shadow-sm">
+            <Target size={24} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Planejamento Orçamentário</h1>
+            <p className="text-[11px] text-gray-500 font-medium">Controle mensal de metas e gastos</p>
+          </div>
         </div>
         
-        <div className="flex items-center bg-white/80 backdrop-blur-md border border-white/60 p-1.5 rounded-2xl shadow-sm gap-2">
+        <div className="flex items-center gap-4">
+          {hasDirtyItems && (
+            <button 
+              onClick={handleSaveAll}
+              className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 text-white rounded-2xl font-black text-xs shadow-xl shadow-amber-500/20 hover:bg-amber-600 transition-all animate-bounce"
+            >
+              <Save size={16} /> SALVAR ALTERAÇÕES
+            </button>
+          )}
+
+          <div className="flex items-center bg-slate-50 border border-slate-100 p-1 rounded-2xl gap-1">
           <button 
             onClick={() => setSelectedMes(m => m === 0 ? 11 : m - 1)}
             className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"
@@ -159,6 +229,7 @@ export default function PlanejamentoPage() {
           >
             <ChevronRight size={16} />
           </button>
+          </div>
         </div>
       </div>
 
