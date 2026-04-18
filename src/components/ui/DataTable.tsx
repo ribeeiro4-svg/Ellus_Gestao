@@ -13,6 +13,7 @@ interface DataTableProps<T> {
   getRowClassName?: (item: T) => string
   selectedIds?: string[]
   onSelectChange?: (ids: string[]) => void
+  onRowClick?: (item: T) => void
   idKey?: keyof T // Chave que identifica o registro (default: 'id')
 }
 
@@ -23,6 +24,7 @@ export default function DataTable<T>({
   getRowClassName,
   selectedIds = [],
   onSelectChange,
+  onRowClick,
   idKey = 'id' as keyof T
 }: DataTableProps<T>) {
   
@@ -94,10 +96,11 @@ export default function DataTable<T>({
                 return (
                   <tr 
                     key={rowIndex} 
-                    className={`hover:bg-slate-50/50 transition-colors group ${isSelected ? 'bg-blue-50/30' : ''} ${getRowClassName ? getRowClassName(item) : ''}`}
+                    onClick={() => onRowClick?.(item)}
+                    className={`transition-colors group ${isSelected ? 'bg-blue-50/30' : ''} ${onRowClick ? 'cursor-pointer hover:bg-slate-50' : 'hover:bg-slate-50/50'} ${getRowClassName ? getRowClassName(item) : ''}`}
                   >
                     {onSelectChange && (
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                         <div 
                           onClick={() => handleSelectOne(id)}
                           className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-all ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}
@@ -107,7 +110,7 @@ export default function DataTable<T>({
                       </td>
                     )}
                     {columns.map((col, colIndex) => (
-                      <td key={colIndex} className={`px-6 py-4 ${col.className || ''}`}>
+                      <td key={colIndex} className={`px-6 py-4 ${col.className || ''}`} onClick={col.key === 'acoes' ? (e) => e.stopPropagation() : undefined}>
                         {col.render ? col.render(item) : (item[col.key as keyof T] as ReactNode)}
                       </td>
                     ))}

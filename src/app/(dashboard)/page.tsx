@@ -30,6 +30,7 @@ import { useSearch } from '@/lib/contexts/SearchContext'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import BatchActionBar from '@/components/ui/BatchActionBar'
+import LaunchDetailsModal from '@/components/ui/LaunchDetailsModal'
 
 ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement, 
@@ -46,6 +47,8 @@ export default function DashboardPage() {
   const { searchTerm, filterType, setFilterType, filterStatus, setFilterStatus } = useSearch()
   const [activeChart, setActiveChart] = useState<any>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectedForDetail, setSelectedForDetail] = useState<any | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   const handleBatchDelete = async () => {
     if (confirm(`Deseja excluir os ${selectedIds.length} itens selecionados?`)) {
@@ -57,6 +60,11 @@ export default function DashboardPage() {
   const handleBatchStatus = async (status: 'pago' | 'aberto') => {
     await atualizarBulk(selectedIds, { status })
     setSelectedIds([])
+  }
+
+  const handleDetail = (item: any) => {
+    setSelectedForDetail(item)
+    setIsDetailModalOpen(true)
   }
 
   const handleClearAll = async () => {
@@ -361,6 +369,7 @@ export default function DashboardPage() {
             loading={loading} 
             selectedIds={selectedIds} 
             onSelectChange={setSelectedIds} 
+            onRowClick={handleDetail}
           />
         </div>
       </div>
@@ -376,6 +385,12 @@ export default function DashboardPage() {
         isOpen={!!activeChart}
         onClose={() => setActiveChart(null)}
         {...activeChart}
+      />
+
+      <LaunchDetailsModal 
+        isOpen={isDetailModalOpen} 
+        onClose={() => setIsDetailModalOpen(false)} 
+        launch={selectedForDetail}
       />
       </div>
     </div>

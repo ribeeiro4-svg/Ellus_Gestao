@@ -17,6 +17,7 @@ import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
 import { TrendingUp, Plus, RefreshCw, Copy, Search, Filter, XCircle, AlertCircle, TrendingDown, Check, Pencil, Trash2 } from 'lucide-react'
 import BatchActionBar from '@/components/ui/BatchActionBar'
+import LaunchDetailsModal from '@/components/ui/LaunchDetailsModal'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -44,6 +45,8 @@ export default function ReceitasPage() {
   const [editingItem, setEditingItem] = useState<any>(null)
   const [batchSearch, setBatchSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectedForDetail, setSelectedForDetail] = useState<any | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
   /* ── Filtros ── */
   const [searchTerm, setSearchTerm] = useState('')
@@ -182,6 +185,11 @@ export default function ReceitasPage() {
       }
     }
     setEditingItem(null); setIsModalOpen(false)
+  }
+
+  const handleDetail = (item: any) => {
+    setSelectedForDetail(item)
+    setIsDetailModalOpen(true)
   }
 
   const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
@@ -325,7 +333,7 @@ export default function ReceitasPage() {
               </button>
             </div>
           )}
-        ]} data={filteredReceitas} loading={loading} selectedIds={selectedIds} onSelectChange={setSelectedIds} />
+        ]} data={filteredReceitas} loading={loading} selectedIds={selectedIds} onSelectChange={setSelectedIds} onRowClick={handleDetail} />
       </div>
 
       <BatchActionBar 
@@ -336,6 +344,13 @@ export default function ReceitasPage() {
       />
 
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Receita' : 'Nova Receita'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} />
+      
+      <LaunchDetailsModal 
+        isOpen={isDetailModalOpen} 
+        onClose={() => setIsDetailModalOpen(false)} 
+        launch={selectedForDetail}
+        associadoNome={selectedForDetail?.associado_id ? associados.find((a: any) => a.id === selectedForDetail.associado_id)?.nome : undefined}
+      />
     </div>
   )
 }
