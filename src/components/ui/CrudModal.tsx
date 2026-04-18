@@ -46,7 +46,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
       })
       setFormData(defaults)
     }
-  }, [initialData, isOpen, fields])
+  }, [initialData, isOpen]) // Removed 'fields' from dependencies
 
   if (!isOpen) return null
 
