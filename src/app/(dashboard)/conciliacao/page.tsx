@@ -67,52 +67,59 @@ export default function ConciliacaoPage() {
     }
   }, [contas, selectedContaId])
 
-  // Helper de Inteligência de Auditoria
+  // Cérebro de Auditoria 2.0 - Precisão Cirúrgica
   const getAuditMatch = (bankMemo: string, bankAmount: number, bankType: string) => {
-    const memo = bankMemo.toUpperCase()
+    const memo = bankMemo.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove acentos
     
-    // 1. Identificação de Diretoria (Prioridade Alta)
-    const dirMatch = diretoria.find(d => {
-      const cleanCPF = d.cpf?.replace(/\D/g, '')
-      const nameParts = d.nome.toUpperCase().split(' ').filter(p => p.length > 2)
-      return (cleanCPF && memo.includes(cleanCPF)) || 
-             (nameParts.length >= 2 && memo.includes(nameParts[0]) && memo.includes(nameParts[nameParts.length - 1])) ||
-             memo.includes(d.nome.toUpperCase())
-    })
+    // 1. Prioridade Máxima: CPF / CNPJ
+    const numbersInMemo = memo.replace(/\D/g, '')
+    
+    // Busca em Diretoria por CPF
+    const dirCpfMatch = diretoria.find(d => d.cpf && numbersInMemo.includes(d.cpf.replace(/\D/g, '')))
+    if (dirCpfMatch) return { forMatch: { ...dirCpfMatch, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false }
 
-    if (dirMatch) {
-      return {
-        forMatch: { ...dirMatch, isDirector: true },
-        assocMatch: null,
-        suggestedCategory: 'Verba Diretoria / Administrativo',
-        isAdesao: false
-      }
+    // Busca em Associados por CPF
+    const assocCpfMatch = associados.find(a => a.cpf && numbersInMemo.includes(a.cpf.replace(/\D/g, '')))
+    if (assocCpfMatch) {
+      const isAdesao = !lancamentos.some(l => l.associado_id === assocCpfMatch.id)
+      return { assocMatch: assocCpfMatch, forMatch: null, suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', isAdesao }
     }
 
-    // 2. Identificação de Associado
-    const assocMatch = associados.find(a => {
-      const cleanCPF = a.cpf?.replace(/\D/g, '')
-      const nameParts = a.nome.toUpperCase().split(' ').filter(p => p.length > 2)
-      return (cleanCPF && memo.includes(cleanCPF)) || 
-             (nameParts.length >= 2 && memo.includes(nameParts[0]) && memo.includes(nameParts[nameParts.length - 1])) ||
-             memo.includes(a.nome.toUpperCase())
-    })
-
-    if (assocMatch) {
-      const hasHistory = lancamentos.some(l => l.associado_id === assocMatch.id)
-      const isAdesao = !hasHistory
-      return {
-        assocMatch,
-        forMatch: null,
-        suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades',
-        isAdesao
-      }
+    // 2. Prioridade Média: Nome Completo (Exato)
+    const normalizeName = (n: string) => n.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+    
+    const assocExactMatch = associados.find(a => memo.includes(normalizeName(a.nome)))
+    if (assocExactMatch) {
+      const isAdesao = !lancamentos.some(l => l.associado_id === assocExactMatch.id)
+      return { assocMatch: assocExactMatch, forMatch: null, suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', isAdesao }
     }
 
-    // 3. Fornecedor
+    const dirExactMatch = diretoria.find(d => memo.includes(normalizeName(d.nome)))
+    if (dirExactMatch) return { forMatch: { ...dirExactMatch, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false }
+
+    // 3. Match Inteligente de Fragmentos (Fuzzy)
+    // Exige que pelo menos 2 partes significativas do nome (min 4 letras) estejam no memo
+    const fuzzyMatch = (targetName: string) => {
+      const parts = normalizeName(targetName).split(' ').filter(p => p.length > 3)
+      if (parts.length < 2) return false
+      // Verifica se pelo menos o primeiro nome e um sobrenome significativo batem
+      return memo.includes(parts[0]) && parts.slice(1).some(p => memo.includes(p))
+    }
+
+    const assocFuzzy = associados.find(a => fuzzyMatch(a.nome))
+    if (assocFuzzy) {
+      const isAdesao = !lancamentos.some(l => l.associado_id === assocFuzzy.id)
+      return { assocMatch: assocFuzzy, forMatch: null, suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', isAdesao }
+    }
+
+    const dirFuzzy = diretoria.find(d => fuzzyMatch(d.nome))
+    if (dirFuzzy) return { forMatch: { ...dirFuzzy, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false }
+
+    // 4. Fornecedores
     const forMatch = fornecedores.find(f => {
-      const cleanCNPJ = (f as any).cpf_cnpj?.replace(/\D/g, '')
-      return (cleanCNPJ && memo.includes(cleanCNPJ)) || memo.includes(f.nome.toUpperCase())
+      const nF = normalizeName(f.nome)
+      const cF = (f as any).cpf_cnpj?.replace(/\D/g, '')
+      return (cF && numbersInMemo.includes(cF)) || memo.includes(nF)
     })
 
     return {
