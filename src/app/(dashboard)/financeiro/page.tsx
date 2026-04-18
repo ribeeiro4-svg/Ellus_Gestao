@@ -123,7 +123,6 @@ export default function FinanceiroPage() {
     const rR = Array(12).fill(0), rP = Array(12).fill(0)
     const dR = Array(12).fill(0), dP = Array(12).fill(0)
     
-    // Usamos lancamentos (sem filtros de status p/ gráfico completo)
     lancamentos.forEach(l => {
       const d = new Date(l.data)
       if (d.getFullYear() !== filterYear) return
@@ -151,7 +150,6 @@ export default function FinanceiroPage() {
     return resultMensalReal.reduce<number[]>((arr, v) => { arr.push(safeSum(arr[arr.length - 1] || 0, v)); return arr }, [])
   }, [resultMensalReal])
 
-  // KPIs dinâmicas baseadas no ANO selecionado
   const filteredKpis = useMemo(() => {
     let pInc = 0, pExp = 0, oInc = 0, oExp = 0
     let fCash = 0, fBank = 0
@@ -182,8 +180,7 @@ export default function FinanceiroPage() {
       }
     })
     return {
-      pInc,
-      pExp,
+      pInc, pExp,
       realizado: safeDiff(pInc, pExp),
       provisionado: safeDiff(oInc, oExp),
       projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)),
@@ -194,7 +191,6 @@ export default function FinanceiroPage() {
 
   const margens = recReal.map((v, i) => v > 0 ? Math.round((v - despReal[i]) / v * 100) : 0)
 
-  /* ── CRUD helpers ── */
   const handleSalvar = async (data: any) => {
     const safeData = {
       ...data,
@@ -208,7 +204,7 @@ export default function FinanceiroPage() {
       await atualizar(editingItem.id, safeData) 
     } 
     else { 
-      const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, valor_recebido, troco_via_pix, ...dbData } = safeData;
+      const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, ...dbData } = safeData;
       
       if (is_lote && selected_associados?.length > 0) {
         const batch: any[] = []
@@ -229,15 +225,12 @@ export default function FinanceiroPage() {
           const parts = safeData.data.includes('-') 
             ? safeData.data.split('-').map(Number)
             : safeData.data.split('/').reverse().map(Number);
-
           const targetMonth = parts[1] - 1 + i;
           const targetYear = parts[0];
           const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
           const finalDay = Math.min(parts[2], lastDay);
-          
           const d = new Date(targetYear, targetMonth, finalDay);
           const dataString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          
           batch.push({ ...dbData, data: dataString, status: i === 0 ? (safeData.status || 'aberto') : 'aberto' });
         }
         await inserirBulk(batch);
@@ -274,12 +267,9 @@ export default function FinanceiroPage() {
       return next
     })
   }
+
   const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
 
-  const fontSm = { size: 10 }
-  const gridFaint = { color: 'rgba(0,0,0,.04)' }
-
-  /* ── Colunas ── */
   const columns = [
     { 
       header: <input type="checkbox" checked={selectedIds.size === filteredLancamentos.length && filteredLancamentos.length > 0} onChange={toggleSelectAll} className="rounded" />,
@@ -293,9 +283,7 @@ export default function FinanceiroPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm font-bold text-gray-800">{i.descricao}</span>
             {i.banco_transacao_id && (
-              <span className="text-[9px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1 shadow-sm">
-                <RefreshCw size={8} /> OFX
-              </span>
+              <span className="text-[9px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1 shadow-sm"><RefreshCw size={8} /> OFX</span>
             )}
           </div>
           <div className="flex gap-2">
@@ -313,16 +301,12 @@ export default function FinanceiroPage() {
     },
     {
       header: 'Tipo', key: 'tipo', render: (i: any) => (
-        <span className={`status-badge ${i.tipo === 'receita' ? 'status-ativo' : 'status-inadimplente'}`}>
-          {i.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}
-        </span>
+        <span className={`status-badge ${i.tipo === 'receita' ? 'status-ativo' : 'status-inadimplente'}`}>{i.tipo === 'receita' ? '↑ Receita' : '↓ Despesa'}</span>
       )
     },
     {
       header: 'Valor', key: 'valor', render: (i: any) => (
-        <span className={`text-sm font-extrabold ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-rose-600'}`}>
-          {i.tipo === 'receita' ? '+' : '-'}{fmtR(i.valor)}
-        </span>
+        <span className={`text-sm font-extrabold ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-rose-600'}`}>{i.tipo === 'receita' ? '+' : '-'}{fmtR(i.valor)}</span>
       )
     },
     { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
@@ -332,30 +316,67 @@ export default function FinanceiroPage() {
       render: (i: any) => (
         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+            <Plus size={14} className="rotate-45" />
           </button>
           <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+            <XCircle size={14} />
           </button>
         </div>
       )
     }
   ]
 
+  const modalFields = useMemo(() => [
+    { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },
+    { name: 'descricao', label: 'Descrição', type: 'text', required: true },
+    { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
+    { name: 'data', label: 'Data', type: 'date', required: true },
+    { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'pago', label: 'Pago' }, { value: 'aberto', label: 'Provisionado' }, { value: 'atrasado', label: 'Atrasado' }] },
+    { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
+    { name: 'categoria', label: 'Categoria', type: 'text', required: true },
+    { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
+    { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
+    { name: 'recorrencia_meses', label: 'Meses', type: 'number', showIf: (f: any) => f.recorrencia_ativa },
+    { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita' && !f.is_lote, options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+    { name: 'is_lote', label: '🚀 Lançar em Lote?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' && !editingItem },
+    { 
+      name: 'batch_selection', label: 'Selecionar Associados (Lote)', type: 'info', showIf: (f: any) => f.is_lote,
+      render: (formData: any, handleChange: any) => {
+        const selected = formData.selected_associados || []
+        const filteredList = associados.filter(a => a.nome.toLowerCase().includes(batchSearch.toLowerCase())).slice(0, 10)
+        return (
+          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3" onClick={e => e.stopPropagation()}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} /><input type="text" placeholder="Pesquisar nome..." className="w-full pl-9 pr-3 py-2 bg-white rounded-xl text-xs border border-gray-100 outline-none focus:ring-2 ring-indigo-50" value={batchSearch} onChange={e => setBatchSearch(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-1 gap-1 max-h-[160px] overflow-y-auto pr-2">
+              {filteredList.map(a => {
+                const isSel = selected.includes(a.id)
+                return (
+                  <button key={a.id} type="button" onClick={() => {
+                      const next = isSel ? selected.filter((sid: string) => sid !== a.id) : [...selected, a.id]
+                      handleChange('selected_associados', next)
+                    }} className={`flex items-center justify-between p-2 rounded-xl text-left transition-all ${isSel ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-100'}`}>
+                    <span className="text-xs font-bold truncate">{a.nome}</span>
+                    {isSel ? <Check size={14} /> : <Plus size={14} className="text-gray-300" />}
+                  </button>
+                )
+              })}
+            </div>
+            {selected.length > 0 && <div className="mt-1 pt-2 border-t border-gray-200 flex flex-wrap gap-1"><p className="w-full text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">{selected.length} Selecionados</p>{selected.map((sid: string) => { const a = associados.find(ass => ass.id === sid); return <span key={sid} className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">{a?.nome.split(' ')[0]}</span> })}</div>}
+          </div>
+        )
+      }
+    }
+  ], [contas, associados, batchSearch, editingItem])
+
   return (
     <div className="flex flex-col gap-6">
-      {/* ── Page Header ── */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
-            <BarChart2 size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-gray-800 tracking-tight">Fluxo de Caixa</h1>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Gestão de Realizado e Provisionamento</p>
-          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm"><BarChart2 size={24} /></div>
+          <div><h1 className="text-2xl font-black text-gray-800 tracking-tight">Fluxo de Caixa</h1><p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Gestão de Realizado e Provisionamento</p></div>
         </div>
-
         <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-hide">
           {[
             { label: `📥 Receitas (${filterYear})`, value: fmtR(filteredKpis.pInc), color: 'text-emerald-600' },
@@ -366,205 +387,35 @@ export default function FinanceiroPage() {
             { label: `🏦 Em Banco (${filterYear})`, value: fmtR(filteredKpis.saldoBanco), color: 'text-indigo-600' },
             { label: `📊 Projetado (${filterYear})`, value: fmtR(filteredKpis.projetado), color: 'text-indigo-900', isMain: true },
           ].map(k => (
-            <div key={k.label} className={`bg-white border border-gray-100 rounded-2xl p-3 min-w-[150px] shadow-sm flex-shrink-0 ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}>
-              <div className="text-[9px] font-black text-gray-400 uppercase mb-1">{k.label}</div>
-              <div className={`text-sm font-black ${k.color}`}>{k.value}</div>
-            </div>
+            <div key={k.label} className={`bg-white border border-gray-100 rounded-2xl p-3 min-w-[150px] shadow-sm flex-shrink-0 ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}><div className="text-[9px] font-black text-gray-400 uppercase mb-1">{k.label}</div><div className={`text-sm font-black ${k.color}`}>{k.value}</div></div>
           ))}
-          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="ml-2 px-6 py-4 bg-gray-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center gap-2 flex-shrink-0">
-            <Plus size={16} /> Novo Lançamento
-          </button>
+          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="ml-2 px-6 py-4 bg-gray-900 text-white rounded-2xl font-bold text-xs hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center gap-2 flex-shrink-0"><Plus size={16} /> Novo Lançamento</button>
         </div>
       </div>
 
-      {/* ── Gráficos ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard title="📊 Fluxo Mensal: Realizado vs Projetado" subtitle="Barras sólidas (Realizado) | Opacas (Provisionado)">
-          <Chart
-            type="bar"
-            data={{
-              labels: MESES,
-              datasets: [
-                { label: 'Receita Real', data: recReal, backgroundColor: '#10b981', borderRadius: 4, stack: 'Stack 0' },
-                { label: 'Receita Prov.', data: recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: 'Stack 0' },
-                { label: 'Despesa Real', data: despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: 'Stack 1' },
-                { label: 'Despesa Prov.', data: despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: 'Stack 1' },
-                { type: 'line', label: 'Projeção Saldo', data: resultMensalProjetado, borderColor: '#6366f1', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }
-              ]
-            }}
-            options={{
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } },
-              scales: {
-                y: { grid: { color: '#f8fafc' }, ticks: { callback: (v) => 'R$ ' + v } },
-                x: { grid: { display: false } }
-              }
-            }}
-          />
+          <Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Receita Real', data: recReal, backgroundColor: '#10b981', borderRadius: 4, stack: 'Stack 0' }, { label: 'Receita Prov.', data: recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: 'Stack 0' }, { label: 'Despesa Real', data: despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: 'Stack 1' }, { label: 'Despesa Prov.', data: despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: 'Stack 1' }, { type: 'line', label: 'Projeção Saldo', data: resultMensalProjetado, borderColor: '#6366f1', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { y: { grid: { color: '#f8fafc' }, ticks: { callback: (v) => 'R$ ' + v } }, x: { grid: { display: false } } } }} />
         </ChartCard>
-
         <ChartCard title="📈 Acumulado Projetado" subtitle="Evolução do caixa considerando provisões">
-          <Line
-            data={{
-              labels: MESES,
-              datasets: [
-                { label: 'Saldo Acumulado (R$)', data: resultAcumReal, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 },
-                { label: 'Margem %', data: margens, borderColor: '#f59e0b', borderDash: [5, 5], yAxisID: 'y2', tension: 0.4 }
-              ]
-            }}
-            options={{
-              responsive: true, maintainAspectRatio: false,
-              scales: {
-                y: { grid: { color: '#f8fafc' } },
-                y2: { position: 'right', max: 100, min: 0, ticks: { callback: (v) => v + '%' } }
-              }
-            }}
-          />
+          <Line data={{ labels: MESES, datasets: [{ label: 'Saldo Acumulado (R$)', data: resultAcumReal, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }, { label: 'Margem %', data: margens, borderColor: '#f59e0b', borderDash: [5, 5], yAxisID: 'y2', tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#f8fafc' } }, y2: { position: 'right', max: 100, min: 0, ticks: { callback: (v) => v + '%' } } } }} />
         </ChartCard>
       </div>
 
-      {/* ── Filtros ── */}
       <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[300px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-          <input 
-            type="text" placeholder="Buscar lançamentos..." 
-            className="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl text-sm border-none focus:ring-2 ring-indigo-100 transition-all font-medium"
-            value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
-          <option value="todos">Todos Status</option>
-          <option value="pago">Pago</option>
-          <option value="aberto">Provisionado</option>
-          <option value="atrasado">Atrasado</option>
-        </select>
-        <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
-          {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-        <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
-          <option value="todos">Todas Contas</option>
-          {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-        </select>
-        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
-          <option value="todos">Todos Tipos</option>
-          <option value="receita">Apenas Receitas</option>
-          <option value="despesa">Apenas Despesas</option>
-        </select>
-        <select value={filterPagamento} onChange={e => setFilterPagamento(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
-          <option value="todos">Todos Pagamentos</option>
-          <option value="PIX">PIX</option>
-          <option value="Boleto">Boleto</option>
-          <option value="Cartão">Cartão</option>
-          <option value="Dinheiro">Dinheiro</option>
-          <option value="Transferência">Transferência</option>
-        </select>
-        {associadosSemPagamento.length > 0 && (
-          <button onClick={() => setIsSyncModalOpen(true)} className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-bold hover:bg-indigo-100 transition-all">
-            Sincronizar Novos ({associadosSemPagamento.length})
-          </button>
-        )}
+        <div className="relative flex-1 min-w-[300px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} /><input type="text" placeholder="Buscar lançamentos..." className="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl text-sm border-none focus:ring-2 ring-indigo-100 transition-all font-medium" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value="todos">Todos Status</option><option value="pago">Pago</option><option value="aberto">Provisionado</option><option value="atrasado">Atrasado</option></select>
+        <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+        <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todas Contas</option>{contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
+        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Tipos</option><option value="receita">Apenas Receitas</option><option value="despesa">Apenas Despesas</option></select>
+        <select value={filterPagamento} onChange={e => setFilterPagamento(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Pagamentos</option><option value="PIX">PIX</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option><option value="Transferência">Transferência</option></select>
+        {associadosSemPagamento.length > 0 && <button onClick={() => setIsSyncModalOpen(true)} className="px-4 py-3 bg-indigo-50 text-indigo-600 rounded-2xl text-xs font-bold hover:bg-indigo-100 transition-all">Sincronizar Novos ({associadosSemPagamento.length})</button>}
       </div>
 
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-        <DataTable columns={columns as any} data={filteredLancamentos} loading={loading} />
-      </div>
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
 
-      <CrudModal
-        isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}
-        title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'}
-        initialData={editingItem} onSubmit={handleSalvar}
-        fields={[
-          { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },
-          { name: 'descricao', label: 'Descrição', type: 'text', required: true },
-          { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
-          { name: 'data', label: 'Data', type: 'date', required: true },
-          { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'pago', label: 'Pago' }, { value: 'aberto', label: 'Provisionado' }, { value: 'atrasado', label: 'Atrasado' }] },
-          { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
-          { name: 'categoria', label: 'Categoria', type: 'text', required: true },
-          { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
-          { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
-          { name: 'recorrencia_meses', label: 'Meses', type: 'number', showIf: (f) => f.recorrencia_ativa },
-          { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f) => f.tipo === 'receita' && !f.is_lote, options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
-          { name: 'is_lote', label: '🚀 Lançar em Lote?', type: 'checkbox', showIf: (f) => f.tipo === 'receita' && !editingItem },
-          { 
-            name: 'batch_selection', 
-            label: 'Selecionar Associados (Lote)', 
-            type: 'info', 
-            showIf: (f) => f.is_lote,
-            render: (formData, handleChange) => {
-              const selected = formData.selected_associados || []
-              const filteredList = associados.filter(a => 
-                a.nome.toLowerCase().includes(batchSearch.toLowerCase())
-              ).slice(0, 10)
-
-              return (
-                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} />
-                    <input 
-                      type="text" placeholder="Pesquisar nome..." 
-                      className="w-full pl-9 pr-3 py-2 bg-white rounded-xl text-xs border border-gray-100 outline-none focus:ring-2 ring-indigo-50"
-                      value={batchSearch} onChange={e => setBatchSearch(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 gap-1 max-h-[160px] overflow-y-auto pr-2">
-                    {filteredList.map(a => {
-                      const isSel = selected.includes(a.id)
-                      return (
-                        <button 
-                          key={a.id} type="button"
-                          onClick={() => {
-                            const next = isSel ? selected.filter((sid: string) => sid !== a.id) : [...selected, a.id]
-                            handleChange('selected_associados', next)
-                          }}
-                          className={`flex items-center justify-between p-2 rounded-xl text-left transition-all ${isSel ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-100'}`}
-                        >
-                          <span className="text-xs font-bold truncate">{a.nome}</span>
-                          {isSel ? <Check size={14} /> : <Plus size={14} className="text-gray-300" />}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {selected.length > 0 && (
-                    <div className="mt-1 pt-2 border-t border-gray-200 flex flex-wrap gap-1">
-                      <p className="w-full text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">{selected.length} Selecionados</p>
-                      {selected.map((sid: string) => {
-                        const a = associados.find(ass => ass.id === sid)
-                        return (
-                          <span key={sid} className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">
-                            {a?.nome.split(' ')[0]}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
-            }
-          }
-        ]}
-        onChange={(name, value, setFormData) => {
-          // This allows us to intercept changes
-          if (name === 'batch_selection_toggle') {
-            // Not really needed if we use checkboxes correctly
-          }
-        }}
-      />
-
-      <CrudModal 
-        isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)}
-        title="Sincronizar Novos Associados" onSubmit={handleGerarRecorrenciaParaNovos}
-        fields={[
-          { name: 'descricao_padrao', label: 'Descrição', type: 'text', defaultValue: 'MENSALIDADE' },
-          { name: 'mes_inicio', label: 'Mês Início', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) },
-          { name: 'ano_inicio', label: 'Ano Início', type: 'number', defaultValue: new Date().getFullYear().toString() },
-          { name: 'dia', label: 'Dia Vencimento', type: 'number', defaultValue: '10' },
-          { name: 'meses', label: 'Quantidade Meses', type: 'select', defaultValue: '12', options: [{ value: '12', label: '12 Meses' }, { value: '24', label: '24 Meses' }] },
-          { name: 'conta_id', label: 'Conta Débito', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) },
-        ]}
-      />
+      <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} />
+      <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Sincronizar Novos Associados" onSubmit={handleGerarRecorrenciaParaNovos} fields={[{ name: 'descricao_padrao', label: 'Descrição', type: 'text', defaultValue: 'MENSALIDADE' }, { name: 'mes_inicio', label: 'Mês Início', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) }, { name: 'ano_inicio', label: 'Ano Início', type: 'number', defaultValue: new Date().getFullYear().toString() }, { name: 'dia', label: 'Dia Vencimento', type: 'number', defaultValue: '10' }, { name: 'meses', label: 'Quantidade Meses', type: 'select', defaultValue: '12', options: [{ value: '12', label: '12 Meses' }, { value: '24', label: '24 Meses' }] }, { name: 'conta_id', label: 'Conta Débito', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) }]} />
     </div>
   )
 }
