@@ -106,11 +106,12 @@ export default function DashboardPage() {
       if (mesIdx < 0 || mesIdx > 11) return
       
       const valor = l.valor || 0
+      const tipo = (l.tipo || '').toLowerCase()
       
-      if (l.tipo === 'receita') {
+      if (tipo === 'receita') {
         rec[mesIdx] += valor
         if (mesIdx === mesAtualIndex) rAtual += valor
-      } else {
+      } else if (tipo === 'despesa') {
         desp[mesIdx] += valor
       }
     })

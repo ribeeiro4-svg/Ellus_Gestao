@@ -38,7 +38,7 @@ export default function DespesasPage() {
   const { fornecedores } = useFornecedores()
   const { diretoria } = useDiretoria()
   
-  const despesas = useMemo(() => lancamentos.filter(l => l.tipo === 'despesa'), [lancamentos])
+  const despesas = useMemo(() => lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'despesa'), [lancamentos])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)

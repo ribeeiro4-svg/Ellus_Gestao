@@ -39,7 +39,7 @@ export default function ReceitasPage() {
   const { contas } = useContas()
   const { associados } = useAssociados()
   
-  const receitas = useMemo(() => lancamentos.filter(l => l.tipo === 'receita'), [lancamentos])
+  const receitas = useMemo(() => lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita'), [lancamentos])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
