@@ -14,7 +14,9 @@ import {
   Plus,
   Trash2,
   Users,
-  Activity
+  Activity,
+  ArrowUpCircle,
+  ArrowDownCircle
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -334,10 +336,12 @@ export default function PlanejamentoPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+        <KpiCard title="Receitas Projetadas" value={fmtR(totals.planejadoReceita)} icon={<ArrowUpCircle size={20} />} category="success" />
+        <KpiCard title="Despesas Projetadas" value={fmtR(totals.planejadoDespesa)} icon={<ArrowDownCircle size={20} />} category="error" />
         <KpiCard title="Balanço Planejado" value={fmtR(totals.planejadoReceita - totals.planejadoDespesa)} icon={<Calendar size={20} />} category="info" />
         <KpiCard title="Balanço Realizado" value={fmtR(comparativo.reduce((s, c) => s + (c.tipo === 'receita' ? c.realizado : -c.realizado), 0))} icon={<TrendingUp size={20} />} category="success" />
-        <KpiCard title="Pró-labore (Auto)" value={fmtR(totalProLabore)} icon={<Users size={20} />} category="purple" subtitle="Total apurado na Diretoria" />
+        <KpiCard title="Pró-labore (Auto)" value={fmtR(totalProLabore)} icon={<Users size={20} />} category="purple" subtitle="Apurado na Diretoria" />
         <KpiCard 
           title="Reserva Ideal" 
           value={fmtR(totals.planejadoDespesa * reservaMeses)} 
@@ -350,13 +354,13 @@ export default function PlanejamentoPage() {
                 type="number" 
                 value={reservaMeses} 
                 onChange={(e) => setReservaMeses(Number(e.target.value))}
-                className="w-10 bg-indigo-50 border-none rounded px-1 py-0.5 text-indigo-700 font-bold outline-none"
+                className="w-8 bg-indigo-50 border-none rounded px-1 py-0.5 text-indigo-700 font-extrabold outline-none text-[10px]"
               />
               <span className="text-[10px] text-gray-500">meses</span>
             </div>
           )}
         />
-        <KpiCard title="Diferença Final" value={fmtR(comparativo.reduce((s, c) => s + (c.tipo === 'receita' ? (c.realizado - c.planejado) : (c.planejado - c.realizado)), 0))} icon={<TrendingDown size={20} />} category="purple" />
+        <KpiCard title="Diferença Final" value={fmtR(comparativo.reduce((s, c) => s + (c.tipo === 'receita' ? (c.realizado - c.planejado) : (c.planejado - c.realizado)), 0))} icon={<TrendingDown size={20} />} category={comparativo.reduce((s, c) => s + (c.tipo === 'receita' ? (c.realizado - c.planejado) : (c.planejado - c.realizado)), 0) < 0 ? 'danger' : 'purple'} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
