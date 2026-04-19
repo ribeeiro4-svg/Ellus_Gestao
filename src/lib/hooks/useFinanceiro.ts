@@ -224,6 +224,47 @@ export function useFinanceiro() {
     return { error }
   }
 
+  const remanejar = async (idOriginal: string, targetAssociadoId: string, valorParaMover: number, novaDescricao: string) => {
+    const original = lancamentos.find(l => l.id === idOriginal)
+    if (!original) return { error: 'Lançamento original não encontrado.' }
+    if (isPeriodoBloqueado(original.data)) return { error: 'O período deste lançamento está fechado.' }
+
+    const targetVal = Number(valorParaMover)
+    if (targetVal >= Number(original.valor)) {
+      return { error: 'O valor a remanejar deve ser menor que o valor atual do lançamento.' }
+    }
+
+    // 1. Atualizar o original (diminuir valor)
+    const novoValorOriginal = Number(original.valor) - targetVal
+    const { error: err1 } = await sb.from('lancamentos')
+      .update({ valor: novoValorOriginal })
+      .eq('id', idOriginal)
+    
+    if (err1) return { error: err1.message }
+
+    // 2. Criar o novo lançamento (split)
+    const { id: _id, created_at: _ca, updated_at: _ua, ...clonedData } = original as any
+    const novoLancamento = {
+      ...clonedData,
+      valor: targetVal,
+      associado_id: targetAssociadoId,
+      descricao: `[ENCONTRO DE CONTAS] ${novaDescricao}`,
+      // Armazena quem pagou originalmente na descrição para o popup
+      descricao_detalhada: `PIX Original por: ${original.descricao.split('-')[1]?.trim() || original.descricao}`
+    }
+
+    const { error: err2 } = await sb.from('lancamentos').insert(novoLancamento)
+    
+    if (err2) {
+      // Rollback parcial (opcional, mas bom ter)
+      await sb.from('lancamentos').update({ valor: original.valor }).eq('id', idOriginal)
+      return { error: err2.message }
+    }
+
+    await fetch()
+    return { error: null }
+  }
+
   const atualizarBulk = async (ids: string[], input: Partial<LancamentoInput>) => {
     if (!ids.length) return { error: null }
     const hasLocked = lancamentos.some(l => ids.includes(l.id) && isPeriodoBloqueado(l.data))
@@ -293,6 +334,7 @@ export function useFinanceiro() {
     inserirBulk, 
     limparTudo, 
     conciliar, 
+    remanejar,
     refresh: fetch 
   }
 }

@@ -31,7 +31,7 @@ const axisDefaults = {
 }
 
 export default function ReceitasPage() {
-  const { lancamentos, loading: loadFin, inserir, atualizar, remover, inserirBulk, atualizarBulk, removerBulk, refresh: refetch } = useFinanceiro()
+  const { lancamentos, loading: loadFin, inserir, atualizar, remover, inserirBulk, atualizarBulk, removerBulk, conciliar, remanejar, refresh: refetch } = useFinanceiro()
   const { contas } = useContas()
   const { associados } = useAssociados()
   
@@ -284,7 +284,17 @@ export default function ReceitasPage() {
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         <DataTable data={filteredData} loading={loadFin} selectedIds={selectedIds} onSelectChange={setSelectedIds} onRowClick={handleDetail} showFilterInputs={true} columns={[
           { header: 'Data', key: 'data', render: (l: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(l.data)}</span> },
-          { header: 'Descrição', key: 'descricao', render: (l: any) => <div className="flex flex-col"><span className="text-sm font-bold text-slate-800">{l.descricao}</span><span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{l.categoria}</span></div> },
+          { header: 'Descrição', key: 'descricao', render: (l: any) => (
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-800">{l.descricao.replace('[ENCONTRO DE CONTAS]', '').trim()}</span>
+                {l.descricao.includes('[ENCONTRO DE CONTAS]') && (
+                  <span className="px-1.5 py-0.5 bg-indigo-100 text-[9px] font-black text-indigo-600 rounded-md border border-indigo-200">EC</span>
+                )}
+              </div>
+              <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{l.categoria}</span>
+            </div>
+          ) },
           { header: 'Valor', key: 'valor', render: (l: any) => <span className="text-sm font-black text-emerald-600">+{fmtR(l.valor)}</span> },
           { header: 'Status', key: 'status', render: (l: any) => <StatusBadge status={l.status as any} type="lancamento" /> },
           { header: 'Pagamento', key: 'forma_pagamento', render: (l: any) => <PaymentBadge method={l.forma_pagamento} /> },
@@ -294,7 +304,15 @@ export default function ReceitasPage() {
 
       <BatchActionBar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])} onDelete={handleBatchDelete} onStatusChange={handleBatchStatus} />
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Receita" initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} />
-      <LaunchDetailsModal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} launch={selectedForDetail} />
+      <LaunchDetailsModal 
+        isOpen={isDetailModalOpen} 
+        onClose={() => setIsDetailModalOpen(false)} 
+        launch={selectedForDetail} 
+        associados={associados}
+        onRemanejar={remanejar}
+        linkedName={associados.find(a => a.id === selectedForDetail?.associado_id)?.nome}
+        linkedType="associado"
+      />
     </div>
   )
 }
