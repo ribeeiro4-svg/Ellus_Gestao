@@ -240,7 +240,7 @@ export default function DashboardPage() {
         { label: 'Inadimplentes', value: inadimplentes, color: 'var(--red)', sub: 'necessitam ação' },
       ],
       chartData: {
-        labels: ['Ativos', 'Inadimplentes', 'Inativos'],
+        labels: [`Ativos (${ativos})`, `Inadimplentes (${inadimplentes})`, `Inativos (${inativos})`],
         datasets: [{
           data: [ativos, inadimplentes, inativos],
           backgroundColor: ['#10b981', '#ef4444', '#9ca3af'],
