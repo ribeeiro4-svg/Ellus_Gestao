@@ -141,7 +141,29 @@ export default function PlanejamentoPage() {
         <KpiCard title="Receitas Projetadas" value={fmtR(totals.planejadoReceita)} icon={<ArrowUpCircle size={20} />} category="success" />
         <KpiCard title="Despesas Projetadas" value={fmtR(totals.planejadoDespesa)} icon={<ArrowDownCircle size={20} />} category="error" />
         <KpiCard title="Balanço Final" value={fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100)} icon={<Calendar size={20} />} category="info" />
-        <button onClick={() => { const d = diretoria.find(x => x.status === 'ativo'); if(d) { setPeriodosMember(d); setTempPeriodos(d.periodos || []) } }} className="text-left active:scale-95 transition-all"><KpiCard title="Pró-labore (Ajustar)" value={fmtR(totalProLabore)} icon={<Users size={20} />} category="purple" subtitle="Clique para gerenciar períodos" /></button>
+        <button onClick={() => { const d = diretoria.find(x => x.status === 'ativo'); if(d) { setPeriodosMember(d); setTempPeriodos(d.periodos || []) } }} className="text-left active:scale-95 transition-all">
+          <KpiCard 
+            title="Pró-labore (Ajustar)" 
+            value={fmtR(totalProLabore)} 
+            icon={<Users size={20} />} 
+            category="purple" 
+            subtitle={
+              <div className="flex flex-col gap-0.5 mt-1 border-t border-purple-50 pt-1">
+                {diretoria.filter(d => d.status === 'ativo' && (d.pro_labore_base > 0 || (d.periodos?.length || 0) > 0)).map(d => {
+                  const targetSerial = selectedAno * 12 + selectedMes
+                  const activePeriod = (d.periodos || []).find((p: any) => {
+                    const start = p.ano_inicio * 12 + p.mes_inicio
+                    const end = p.ano_fim !== undefined ? (p.ano_fim * 12 + (p.mes_fim ?? 11)) : 999999
+                    return targetSerial >= start && targetSerial <= end
+                  })
+                  const v = activePeriod?.valor || d.pro_labore_base || 0
+                  if (v <= 0) return null
+                  return <span key={d.id} className="text-[7px] font-black text-purple-400 uppercase truncate">{d.nome}: {fmtR(v)}</span>
+                })}
+              </div>
+            } 
+          />
+        </button>
         <KpiCard title="Reserva Ideal" value={fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100)} icon={<Activity size={20} />} category="indigo" subtitle={<div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-slate-400">Meta: <input type="number" value={reservaMeses} onChange={e => setReservaMeses(Number(e.target.value))} className="w-8 bg-indigo-50 border-none rounded px-1 text-indigo-700 outline-none" /> meses</div>} />
         <KpiCard title="Saldo Real" value={fmtR(comparativo.reduce((s, c) => Math.round((s + (c.tipo === 'receita' ? c.realizado : -c.realizado)) * 100) / 100, 0))} icon={<TrendingUp size={20} />} category="success" />
       </div>

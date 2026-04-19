@@ -67,7 +67,7 @@ export default function DiretoriaPage() {
   }, [diretoria, searchQ])
 
   const totalAtivos = diretoria.filter(d => d.status === 'ativo').length
-  const totalCusto = diretoria.reduce((s, d) => s + (d.pro_labore_base || 0), 0)
+  const totalCusto = diretoria.filter(d => d.status === 'ativo').reduce((s, d) => s + (d.pro_labore_base || 0), 0)
 
   const columns = [
     {
