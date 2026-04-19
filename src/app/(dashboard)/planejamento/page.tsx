@@ -137,7 +137,7 @@ export default function PlanejamentoPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 relative z-[60] overflow-visible">
         <KpiCard 
           title="Receitas Projetadas" 
           value={fmtR(totals.planejadoReceita)} 

@@ -171,7 +171,7 @@ export default function ReceitasPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 relative z-[60] overflow-visible">
           <KpiCard 
             title="Realizado" 
             value={fmtR(totalReceitas)} 
