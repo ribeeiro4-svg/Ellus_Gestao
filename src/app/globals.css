@@ -134,6 +134,7 @@ body::before {
   border-radius: var(--radius-lg);
   position: relative;
   overflow: visible !important;
+  z-index: 10;
   transition: var(--trans-med);
   animation: fadeInUp .35s ease both;
 }
@@ -236,6 +237,9 @@ body::before {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 20px;
   margin-bottom: 24px;
+  overflow: visible !important;
+  position: relative;
+  z-index: 20;
 }
 
 .charts-grid {
