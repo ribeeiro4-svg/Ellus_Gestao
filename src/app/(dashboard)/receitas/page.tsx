@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { 
   Plus, Search, TrendingUp,
-  Pencil, XCircle, RefreshCw, Target, ArrowUpCircle
+  Pencil, XCircle, RefreshCw, Target, ArrowUpCircle, Activity
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
@@ -160,30 +160,71 @@ export default function ReceitasPage() {
   return (
     <div className="flex flex-col gap-6">
 
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm"><TrendingUp size={24} /></div>
-          <div><h1 className="text-xl font-black text-slate-800">Receitas</h1><p className="text-xs text-slate-500 font-medium">Fluxo de Entradas — ACPROBEC</p></div>
+      <div className="flex items-center justify-between flex-wrap gap-6 bg-white/40 backdrop-blur-sm p-6 rounded-[32px] border border-white/60 shadow-sm">
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-200 animate-pulse-slow">
+            <TrendingUp size={28} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Receitas</h1>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest opacity-70">Fluxo de Entradas — ACPROBEC</p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-4">
           <KpiCard 
-            title="Faturamento Realizado" 
+            title="Realizado" 
             value={fmtR(totalReceitas)} 
-            trend={12} 
-            trendLabel="no período" 
             icon={<TrendingUp size={20} />} 
             category="success" 
             explanation={{
-              description: "Total bruto faturado no período. O sistema varre as descrições em busca de taxas bancárias e as reintegra ao valor líquido.",
+              description: "Soma de todas as receitas pagas no período, reintegrando taxas bancárias detectadas automaticamente.",
               formula: "Σ(Receitas Pagas + Taxas Estornadas)",
-              example: "Um PIX de R$ 97,00 com taxa de R$ 3,00 é contabilizado como faturamento de R$ 100,00."
+              example: "Um PIX de R$ 97,00 com taxa de R$ 3,00 é contabilizado como R$ 100,00."
             }}
           />
-          <div className="bg-white border border-slate-100 px-5 py-2 rounded-2xl text-center shadow-sm flex flex-col items-center">
-            <span className="flex items-center gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest"><Target size={10} className="text-blue-500" /> Planejado</span>
-            <span className="text-lg font-black text-blue-600">{fmtR(receitaPlanejada)}</span>
-          </div>
-          <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-100 transition-all active:scale-95"><Plus size={20} /> Nova Receita</button>
+          <KpiCard 
+            title="Planejado" 
+            value={fmtR(receitaPlanejada)} 
+            icon={<Target size={20} />} 
+            category="info" 
+            explanation={{
+              description: "Meta de faturamento definida para este mês conforme o planejamento orçamentário.",
+              formula: "Σ(Metas de Receita configuradas)",
+              example: "Valor alvo definido na aba de Planejamento Financeiro."
+            }}
+          />
+          <KpiCard 
+            title="Diferença" 
+            value={fmtR(totalReceitas - receitaPlanejada)} 
+            trend={Math.round((totalReceitas / (receitaPlanejada || 1) - 1) * 100)}
+            trendLabel={totalReceitas >= receitaPlanejada ? "Superávit" : "Déficit"}
+            icon={<Activity size={20} />} 
+            category={totalReceitas >= receitaPlanejada ? "success" : "error"} 
+            explanation={{
+              description: "Comparativo entre o faturamento real e a meta.",
+              formula: "Faturamento Realizado - Planejado",
+              example: "Mostra se a associação está acima ou abaixo do esperado."
+            }}
+          />
+          <KpiCard 
+            title="Taxas" 
+            value={fmtR(totalTaxas)} 
+            icon={<RefreshCw size={20} />} 
+            category="indigo" 
+            explanation={{
+              description: "Total de descontos bancários (tarifas) que foram 'devolvidos' ao faturamento para auditoria bruta.",
+              formula: "Σ(Taxas detectadas nas descrições)",
+              example: "Recuperação visual de tarifas de manutenção e emissão."
+            }}
+          />
+          <button 
+            onClick={() => { setEditingItem(null); setIsModalOpen(true) }} 
+            className="h-14 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black flex items-center gap-3 shadow-xl shadow-emerald-100 transition-all active:scale-95 group"
+          >
+            <Plus size={24} className="group-hover:rotate-90 transition-transform" /> 
+            NOVA RECEITA
+          </button>
         </div>
       </div>
 

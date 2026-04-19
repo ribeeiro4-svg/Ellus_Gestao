@@ -133,7 +133,7 @@ body::before {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   position: relative;
-  overflow: hidden;
+  overflow: visible !important;
   transition: var(--trans-med);
   animation: fadeInUp .35s ease both;
 }

@@ -92,55 +92,71 @@ export default function DashboardPage() {
 
   const loading = loadingFin || loadingAssoc
 
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
+
   // ── CÁLCULOS DINÂMICOS ──
   
-  // 1. Financeiro por mês
-  const { receitaData, despesaData, resultadoData, receitaTotal, despesaTotal, taxasTotal } = useMemo(() => {
-    const rec = Array(12).fill(0)
-    const desp = Array(12).fill(0)
-    const agora = new Date()
-    const anoAtual = agora.getFullYear()
+  // 1. Financeiro (KPIS e Gráficos Consolidados)
+  const { 
+    receitaData, 
+    despesaData, 
+    resultadoData, 
+    receitaTotal, 
+    despesaTotal, 
+    taxaRecuperada,
+    saldoTotal 
+  } = useMemo(() => {
+    const recArr = Array(12).fill(0)
+    const despArr = Array(12).fill(0)
     
-    let rTotal = 0
-    let tTotal = 0
+    let kpiRec = 0
+    let kpiDes = 0
+    let kpiTax = 0
 
     lancamentos.forEach(l => {
-      const dataStr = l.data || ''
-      const mesIdx = getMesIdx(dataStr)
-      const anoIdx = getAnoIdx(dataStr)
+      const mesIdx = getMesIdx(l.data)
+      const anoIdx = getAnoIdx(l.data)
+      const valor = l.valor || 0
+      const tipo = (l.tipo || '').toLowerCase()
       
-      const bruto = getBruto(l)
+      // Recuperação de Taxas
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
       const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
-      const tipo = (l.tipo || '').toLowerCase()
 
-      if (tipo === 'receita') {
-        rTotal = Math.round((rTotal + bruto) * 100) / 100
-        tTotal = Math.round((tTotal + taxaVal) * 100) / 100
+      // Dados para o Gráfico (Ano Selecionado)
+      if (anoIdx === selectedYear && mesIdx >= 0 && mesIdx <= 11) {
+        if (tipo === 'receita') {
+          recArr[mesIdx] = Math.round((recArr[mesIdx] + valor + taxaVal) * 100) / 100
+        } else {
+          despArr[mesIdx] = Math.round((despArr[mesIdx] + valor) * 100) / 100
+        }
       }
 
-      // Gráficos apenas do ano atual
-      if (anoIdx === anoAtual && mesIdx >= 0 && mesIdx <= 11) {
+      // Dados para os KPIs (Mês e Ano Selecionados)
+      if (anoIdx === selectedYear && mesIdx === selectedMonth) {
         if (tipo === 'receita') {
-          rec[mesIdx] = Math.round((rec[mesIdx] + bruto) * 100) / 100
-        } else if (tipo === 'despesa') {
-          desp[mesIdx] = Math.round((desp[mesIdx] + (l.valor || 0)) * 100) / 100
+          kpiRec += valor
+          kpiTax += taxaVal
+        } else {
+          kpiDes += valor
         }
       }
     })
 
-    const res = rec.map((v, i) => Math.round((v - desp[i]) * 100) / 100)
-    const dTotal = desp.reduce((s, v) => Math.round((s + v) * 100) / 100, 0)
+    const resArr = recArr.map((v, i) => Math.round((v - despArr[i]) * 100) / 100)
+    const totalRecBruta = Math.round((kpiRec + kpiTax) * 100) / 100
 
     return { 
-      receitaData: rec, 
-      despesaData: desp, 
-      resultadoData: res, 
-      receitaTotal: rTotal, 
-      despesaTotal: dTotal,
-      taxasTotal: tTotal 
+      receitaData: recArr, 
+      despesaData: despArr, 
+      resultadoData: resArr, 
+      receitaTotal: totalRecBruta, 
+      despesaTotal: Math.round(kpiDes * 100) / 100,
+      taxaRecuperada: Math.round(kpiTax * 100) / 100,
+      saldoTotal: Math.round((totalRecBruta - kpiDes) * 100) / 100
     }
-  }, [lancamentos])
+  }, [lancamentos, selectedMonth, selectedYear])
 
   // 2. Associados
   const { ativos, inadimplentes, inativos, pctInadimp } = useMemo(() => {
@@ -249,20 +265,32 @@ export default function DashboardPage() {
       {loading && <SplashScreen />}
       
       <div className={`animate-in fade-in duration-500 flex flex-col flex-1 h-full ${loading ? 'opacity-0' : 'opacity-100'}`}>
-      <div className="page-header flex justify-between items-center mb-6">
-        <div>
-          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Dashboard Executivo</h1>
-          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Análise em tempo real do desempenho da ACPROBEC.</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Dashboard Executivo</h1>
+            <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic underline decoration-emerald-200/50">Clique nos ícones de informação para auditar os cálculos.</p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-white border border-slate-100 p-1 rounded-2xl gap-1 shadow-sm">
+              <button onClick={() => setSelectedMonth(m => m === 0 ? 11 : m - 1)} className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"><ChevronRight size={16} className="rotate-180" /></button>
+              <div className="flex items-center gap-2 px-4 min-w-[140px] justify-center">
+                <Calendar size={14} className="text-emerald-500" />
+                <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{MESES[selectedMonth]} {selectedYear}</span>
+              </div>
+              <button onClick={() => setSelectedMonth(m => m === 11 ? 0 : m + 1)} className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"><ChevronRight size={16} /></button>
+            </div>
+
+            <button 
+              onClick={handleClearAll}
+              className="flex items-center gap-2 px-4 py-3 text-[10px] font-black text-rose-600 border border-rose-100 bg-rose-50/30 hover:bg-rose-50 rounded-2xl transition-all uppercase tracking-widest group"
+              title="Apagar todos os dados registrados"
+            >
+              <Trash2 size={14} className="group-hover:rotate-12 transition-transform" />
+              <span>Resetar Base</span>
+            </button>
+          </div>
         </div>
-        <button 
-          onClick={handleClearAll}
-          className="flex items-center gap-2 px-4 py-2 text-[11px] font-bold text-rose-600 border border-rose-200 bg-rose-50/50 hover:bg-rose-50 rounded-xl transition-all uppercase tracking-widest"
-          title="Apagar todos os dados registrados"
-        >
-          <Trash2 size={14} />
-          <span>Apagar Tudo</span>
-        </button>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <KpiCard 
