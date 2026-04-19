@@ -125,19 +125,48 @@ export default function PlanejamentoPage() {
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm"><Target size={22} /></div>
-          <div><h1 className="text-xl font-black text-slate-800 tracking-tight">Planejamento Orçamentário</h1><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Metas e Gastos — ACPROBEC</p></div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white/60 backdrop-blur-md p-6 rounded-[32px] border border-white shadow-xl shadow-slate-200/50">
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100 animate-pulse-slow">
+            <Target size={28} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Planejamento Orçamentário</h1>
+            <p className="text-xs text-slate-400 font-black uppercase tracking-[2px]">Gestão de Metas — ACPROBEC</p>
+          </div>
         </div>
-        <div className="flex items-center bg-white border border-slate-100 p-1 rounded-2xl gap-1 shadow-sm">
-          <button onClick={() => setSelectedMes(m => m === 0 ? 11 : m - 1)} className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"><ChevronLeft size={16} /></button>
-          <div className="flex items-center gap-2 px-4 min-w-[140px] justify-center"><Calendar size={14} className="text-emerald-500" /><span className="text-xs font-black text-slate-700 uppercase tracking-widest">{MESES[selectedMes]} {selectedAno}</span></div>
-          <button onClick={() => setSelectedMes(m => m === 11 ? 0 : m + 1)} className="p-2 hover:bg-slate-50 rounded-lg transition-colors text-slate-400"><ChevronRight size={16} /></button>
+
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Novo Local para Meses de Reserva - Ampliado */}
+          <div className="flex items-center gap-3 bg-indigo-50/50 border border-indigo-100 p-2 rounded-2xl">
+            <div className="pl-3 py-1 flex flex-col">
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider">Meta de Reserva</span>
+              <span className="text-[9px] font-bold text-slate-400">Meses de segurança</span>
+            </div>
+            <div className="flex items-center bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden">
+               <button onClick={() => setReservaMeses(Math.max(1, reservaMeses - 1))} className="p-3 hover:bg-slate-50 text-indigo-600 transition-colors">－</button>
+               <input 
+                 type="number" 
+                 value={reservaMeses} 
+                 onChange={e => setReservaMeses(Number(e.target.value))} 
+                 className="w-12 text-center font-black text-indigo-700 bg-transparent outline-none"
+               />
+               <button onClick={() => setReservaMeses(reservaMeses + 1)} className="p-3 hover:bg-slate-50 text-indigo-600 transition-colors">＋</button>
+            </div>
+          </div>
+
+          <div className="flex items-center bg-white border border-slate-200 p-1 rounded-2xl gap-1 shadow-sm h-14">
+            <button onClick={() => setSelectedMes(m => m === 0 ? 11 : m - 1)} className="p-3 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"><ChevronLeft size={20} /></button>
+            <div className="flex items-center gap-3 px-6 min-w-[180px] justify-center border-x border-slate-100">
+              <Calendar size={18} className="text-indigo-500" />
+              <span className="text-sm font-black text-slate-700 uppercase tracking-widest">{MESES[selectedMes]} {selectedAno}</span>
+            </div>
+            <button onClick={() => setSelectedMes(m => m === 11 ? 0 : m + 1)} className="p-3 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"><ChevronRight size={20} /></button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 relative z-[60] overflow-visible">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 relative z-[60] overflow-visible">
         <KpiCard 
           title="Receitas Projetadas" 
           value={fmtR(totals.planejadoReceita)} 
@@ -161,9 +190,9 @@ export default function PlanejamentoPage() {
           }}
         />
         <KpiCard 
-          title="Balanço Final" 
+          title="Superávit Alvo" 
           value={fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100)} 
-          icon={<Calendar size={20} />} 
+          icon={<CheckCircle2 size={20} />} 
           category="info" 
           explanation={{
             description: "O superávit ou déficit planejado para o fechamento do mês (Meta de Lucro).",
@@ -171,34 +200,17 @@ export default function PlanejamentoPage() {
             example: "Planejando 10k e gastando 8k, o balanço final alvo é 2k positivo."
           }}
         />
-        <button onClick={() => { const d = diretoria.find(x => x.status === 'ativo'); if(d) { setPeriodosMember(d); setTempPeriodos(d.periodos || []) } }} className="text-left active:scale-95 transition-all">
-          <KpiCard 
-            title="Pró-labore (Ajustar)" 
-            value={fmtR(totalProLabore)} 
-            icon={<Users size={20} />} 
-            category="purple" 
-            explanation={{
-              description: "Soma dos custos de pró-labore dos diretores ativos, respeitando períodos e valores base.",
-              formula: "Σ(Valor do Período Ativo || Valor Base)",
-              example: "Um diretor com período de R$ 1.500 no mês atual anula o seu valor base padrão."
-            }}
-            subtitle={
-              <div className="flex flex-col gap-0.5 mt-1 border-t border-purple-50 pt-1">
-                {diretoria.filter(d => d.status === 'ativo' && (d.pro_labore_base > 0 || (d.periodos?.length || 0) > 0)).map(d => {
-                  const targetSerial = selectedAno * 12 + selectedMes
-                  const activePeriod = (d.periodos || []).find((p: any) => {
-                    const start = p.ano_inicio * 12 + p.mes_inicio
-                    const end = p.ano_fim !== undefined ? (p.ano_fim * 12 + (p.mes_fim ?? 11)) : 999999
-                    return targetSerial >= start && targetSerial <= end
-                  })
-                  const v = activePeriod?.valor || d.pro_labore_base || 0
-                  if (v <= 0) return null
-                  return <span key={d.id} className="text-[7px] font-black text-purple-400 uppercase truncate">{d.nome}: {fmtR(v)}</span>
-                })}
-              </div>
-            } 
-          />
-        </button>
+        <KpiCard 
+          title="Pró-labore" 
+          value={fmtR(totalProLabore)} 
+          icon={<Users size={20} />} 
+          category="purple" 
+          explanation={{
+            description: "Soma dos custos de pró-labore dos diretores ativos, respeitando períodos e valores base.",
+            formula: "Σ(Valor do Período Ativo || Valor Base)",
+            example: "Um diretor com período de R$ 1.500 no mês atual anula o seu valor base padrão."
+          }}
+        />
         <KpiCard 
           title="Reserva Ideal" 
           value={fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100)} 
@@ -209,7 +221,6 @@ export default function PlanejamentoPage() {
             formula: "Despesas Projetadas × Meses de Meta",
             example: "Se o gasto é 3k e a meta são 6 meses, a reserva ideal é de 18k."
           }}
-          subtitle={<div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-slate-400">Meta: <input type="number" value={reservaMeses} onChange={e => setReservaMeses(Number(e.target.value))} className="w-8 bg-indigo-50 border-none rounded px-1 text-indigo-700 outline-none" /> meses</div>} 
         />
         <KpiCard 
           title="Saldo Real" 
