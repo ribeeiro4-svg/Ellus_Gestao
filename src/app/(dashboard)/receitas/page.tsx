@@ -30,12 +30,17 @@ const axisDefaults = {
 }
 
 export default function ReceitasPage() {
-  const { lancamentos, loading: loadFin, inserir, atualizar, remover, inserirBulk, atualizarBulk, removerBulk } = useFinanceiro()
+  const { lancamentos, loading: loadFin, inserir, atualizar, remover, inserirBulk, atualizarBulk, removerBulk, refresh: refetch } = useFinanceiro()
   const { contas } = useContas()
   const { associados } = useAssociados()
   
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth()) // 0-based
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
+
+  // Sincroniza busca ao mudar de ano
+  React.useEffect(() => {
+    refetch(filterYear)
+  }, [filterYear, refetch])
   
   const { orcamentos, loading: loadOrc } = useOrcamentos(filterMonth, filterYear)
 

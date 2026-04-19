@@ -12,14 +12,20 @@ export function useFinanceiro() {
   const { isPeriodoBloqueado } = useFechamento()
   const sb = createClient()
 
-  const fetch = useCallback(async () => {
+  const fetch = useCallback(async (ano?: number) => {
     if (!tenantId) return
     setLoading(true)
     try {
+      const targetYear = ano || new Date().getFullYear()
+      const start = `${targetYear}-01-01`
+      const end = `${targetYear}-12-31`
+
       const { data, error } = await sb.from('lancamentos')
-        .select('*').eq('tenant_id', tenantId)
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .gte('data', start)
+        .lte('data', end)
         .order('data', { ascending: false })
-        .range(0, 4999)
       
       if (error) throw error
       setLancamentos(data || [])
