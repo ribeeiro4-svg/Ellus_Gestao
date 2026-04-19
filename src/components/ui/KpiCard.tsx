@@ -55,32 +55,36 @@ export default function KpiCard({
     >
       {explanation && (
         <div 
-          className={`absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-72 p-5 rounded-3xl bg-white border border-slate-200 shadow-2xl z-[9999] pointer-events-none transition-all duration-200 origin-bottom ${showAudit ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-2'}`}
+          className={`absolute top-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-72 p-4 rounded-3xl bg-white border border-slate-200 shadow-[0_20px_40px_rgba(0,0,0,0.12)] z-[9999] pointer-events-none transition-all duration-200 origin-top ${showAudit ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2'}`}
         >
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
-              <div className={`w-7 h-7 rounded-xl flex items-center justify-center shadow-sm ${colors[category]}`}>
-                 <Info size={14} strokeWidth={3} />
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-50">
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center shadow-sm ${colors[category]}`}>
+                 <Info size={12} strokeWidth={3} />
               </div>
-              <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest Ital">Cálculo Auditado</span>
+              <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest Ital">Cálculo Auditado</span>
             </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[1px] mb-1">Fonte da Lógica</p>
-                <p className="text-[11px] font-bold text-slate-600 leading-relaxed">{explanation.description}</p>
+            
+            <div className="space-y-2.5">
+              <div className="px-1">
+                <p className="text-[8px] font-black text-slate-300 uppercase tracking-[1px] mb-0.5">Lógica</p>
+                <p className="text-[10px] font-bold text-slate-600 leading-tight">{explanation.description}</p>
               </div>
-              <div className="bg-slate-50/80 p-3 rounded-2xl border border-dashed border-slate-200 font-mono">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[1px] mb-1">Fórmula de Cálculo</p>
-                <code className="text-[11px] font-black text-indigo-600 block mt-1">{explanation.formula}</code>
+              
+              <div className="bg-slate-50/80 p-2.5 rounded-xl border border-dashed border-slate-200 font-mono">
+                <p className="text-[8px] font-black text-slate-300 uppercase tracking-[1px] mb-0.5">Fórmula</p>
+                <code className="text-[10px] font-black text-indigo-600 block truncate">{explanation.formula}</code>
               </div>
-              <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[1px] mb-1">Exemplo</p>
-                <p className="text-[11px] font-bold text-slate-500 italic bg-white p-2 rounded-xl border border-slate-100">"{explanation.example}"</p>
+
+              <div className="px-1 border-t border-slate-50 pt-2">
+                <p className="text-[8px] font-black text-slate-300 uppercase tracking-[1px] mb-0.5">Exemplo</p>
+                <p className="text-[10px] text-slate-500 italic leading-snug">"{explanation.example}"</p>
               </div>
             </div>
           </div>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[8px] border-transparent border-t-white" />
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[9px] border-transparent border-t-slate-200 -z-10 translate-y-[1px]" />
+          {/* Seta agora no topo apontando para cima */}
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-[8px] border-transparent border-b-white" />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-[9px] border-transparent border-b-slate-200 -z-10 -translate-y-[1px]" />
         </div>
       )}
 
