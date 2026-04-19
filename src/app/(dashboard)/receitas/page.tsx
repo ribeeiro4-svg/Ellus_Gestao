@@ -122,7 +122,16 @@ export default function ReceitasPage() {
     return Object.keys(m).length ? m : { 'Sem dados': 1 }
   }, [filteredData])
 
-  const totalReceitas = filteredData.reduce((s, r) => s + (r.valor || 0), 0)
+  const { totalReceitas, totalTaxas } = useMemo(() => {
+    let sumVal = 0
+    let sumTax = 0
+    filteredData.forEach(r => {
+      sumVal = Math.round((sumVal + (r.valor || 0)) * 100) / 100
+      sumTax = Math.round((sumTax + (r.taxaCalculada || 0)) * 100) / 100
+    })
+    return { totalReceitas: sumVal, totalTaxas: sumTax }
+  }, [filteredData])
+
   const receitaPlanejada = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => s + o.valor_planejado, 0)
 
   const handleSalvar = async (data: any) => {
@@ -170,8 +179,8 @@ export default function ReceitasPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="bg-white border border-slate-100 px-5 py-2 rounded-2xl text-center shadow-sm flex flex-col items-center">
-            <span className="flex items-center gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest"><ArrowUpCircle size={10} className="text-emerald-500" /> Realizado</span>
-            <span className="text-lg font-black text-emerald-600">{fmtR(totalReceitas)}</span>
+            <span className="flex items-center gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest"><ArrowUpCircle size={10} className="text-emerald-500" /> Realizado (Bruto)</span>
+            <span className="text-lg font-black text-emerald-600">{fmtR(totalReceitas + totalTaxas)}</span>
           </div>
           <div className="bg-white border border-slate-100 px-5 py-2 rounded-2xl text-center shadow-sm flex flex-col items-center">
             <span className="flex items-center gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest"><Target size={10} className="text-blue-500" /> Planejado</span>
