@@ -158,19 +158,6 @@ export default function ReceitasPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="bg-slate-900 text-slate-400 p-2 text-[8px] rounded-lg font-mono flex flex-col gap-1">
-        <div className="flex gap-4">
-          <span>LEN: {lancamentos.length}</span>
-          <span>FILT: {filteredData.length}</span>
-          <span>Y/M: {filterYear}/{filterMonth} (IDX)</span>
-          <span>DNA_JAN: {getMesIdx('2026-01-11')} | DNA_FEV: {getMesIdx('2026-02-11')}</span>
-          <span>JAN_FOUND: {lancamentos.filter(l => String(l.data).includes('-01-') || String(l.data).includes('/01/')).length}</span>
-        </div>
-        {lancamentos.length > 0 && (() => {
-          const rec = lancamentos.find(l => (l.tipo || '').toLowerCase() === 'receita') || lancamentos[0]
-          return <div className="text-[7px] text-blue-300">EX: {getAnoIdx(rec.data)}/{getMesIdx(rec.data) + 1} | {JSON.stringify(rec.data)}</div>
-        })()}
-      </div>
 
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
