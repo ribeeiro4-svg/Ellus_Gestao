@@ -309,7 +309,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-[60] overflow-visible">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-[60] overflow-visible">
         <KpiCard 
           title="Receita Realizada" 
           value={fmtR(receitaTotal)} 
@@ -364,7 +364,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="charts-grid grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+      <div className="charts-grid grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div className="lg:col-span-2">
           <ChartCard 
             title="Evolução Financeira" 
