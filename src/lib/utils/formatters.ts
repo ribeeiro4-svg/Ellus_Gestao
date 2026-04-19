@@ -99,6 +99,7 @@ export function getMesIdx(dataStr: any): number {
     const cleanStr = str.split('T')[0].split(' ')[0]
     const parts = cleanStr.split('-')
     if (parts.length >= 2) {
+      // Formato ISO: YYYY-MM-DD
       const mes = parts[0].length === 4 ? parts[1] : parts[1]
       return (parseInt(mes, 10) || 0) - 1
     }
@@ -107,6 +108,7 @@ export function getMesIdx(dataStr: any): number {
   if (str.includes('/')) {
     const parts = str.split('/')
     if (parts.length >= 2) {
+      // Formato BR: DD/MM/YYYY
       const mes = parts[1]
       return (parseInt(mes, 10) || 0) - 1
     }
