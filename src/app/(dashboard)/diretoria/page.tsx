@@ -197,6 +197,9 @@ export default function DiretoriaPage() {
           { name: 'pro_labore_base', label: 'Pró-labore Base (R$)', type: 'number' },
           { name: 'email', label: 'E-mail', type: 'text' },
           { name: 'telefone', label: 'Telefone/WhatsApp', type: 'text' },
+          { name: 'endereco', label: 'Endereço Residencial', type: 'text' },
+          { name: 'chave_pix', label: 'Chave PIX', type: 'text' },
+          { name: 'banco_info', label: 'Dados Bancários (Banco/Ag/Conta)', type: 'text' },
           { name: 'status', label: 'Status', type: 'select', required: true, options: [
             { value: 'ativo', label: 'Ativo' },
             { value: 'inativo', label: 'Inativo' },

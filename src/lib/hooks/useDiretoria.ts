@@ -20,6 +20,9 @@ export interface Diretor {
   telefone: string | null
   pro_labore_base: number
   status: 'ativo' | 'inativo'
+  endereco?: string | null
+  chave_pix?: string | null
+  banco_info?: string | null
   created_at: string
   periodos?: DiretorPeriodo[]
 }
