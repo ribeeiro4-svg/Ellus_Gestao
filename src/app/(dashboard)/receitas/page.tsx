@@ -148,7 +148,8 @@ export default function ReceitasPage() {
         <div className="flex gap-4">
           <span>LEN: {lancamentos.length}</span>
           <span>FILT: {filteredData.length}</span>
-          <span>Y/M: {filterYear}/{filterMonth + 1}</span>
+          <span>Y/M: {filterYear}/{filterMonth} (IDX)</span>
+          <span>DNA_JAN: {getMesIdx('2026-01-11')} | DNA_FEV: {getMesIdx('2026-02-11')}</span>
           <span>JAN_FOUND: {lancamentos.filter(l => String(l.data).includes('-01-') || String(l.data).includes('/01/')).length}</span>
         </div>
         {lancamentos.length > 0 && (() => {
