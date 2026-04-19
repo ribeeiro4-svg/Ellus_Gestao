@@ -107,7 +107,8 @@ export default function DashboardPage() {
     receitaTotal, 
     despesaTotal, 
     taxaRecuperada,
-    saldoTotal 
+    saldoTotal,
+    trends
   } = useMemo(() => {
     const recRealArr = Array(12).fill(0)
     const recProvArr = Array(12).fill(0)
@@ -118,6 +119,13 @@ export default function DashboardPage() {
     let kpiDes = 0
     let kpiTax = 0
 
+    let kpiRecPrev = 0
+    let kpiDesPrev = 0
+    let kpiTaxPrev = 0
+
+    const prevMonthIdx = selectedMonth === 0 ? 11 : selectedMonth - 1
+    const prevYearIdx = selectedMonth === 0 ? selectedYear - 1 : selectedYear
+
     lancamentos.forEach(l => {
       const mesIdx = getMesIdx(l.data)
       const anoIdx = getAnoIdx(l.data)
@@ -125,28 +133,19 @@ export default function DashboardPage() {
       const tipo = (l.tipo || '').toLowerCase()
       const status = (l.status || '').toLowerCase()
       
-      // Recuperação de Taxas
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
       const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
 
-      // Dados para o Gráfico (Ano Selecionado)
       if (anoIdx === selectedYear && mesIdx >= 0 && mesIdx <= 11) {
         if (tipo === 'receita') {
-          if (status === 'pago') {
-            recRealArr[mesIdx] = Math.round((recRealArr[mesIdx] + valor + taxaVal) * 100) / 100
-          } else {
-            recProvArr[mesIdx] = Math.round((recProvArr[mesIdx] + valor + taxaVal) * 100) / 100
-          }
+          if (status === 'pago') recRealArr[mesIdx] = Math.round((recRealArr[mesIdx] + valor + taxaVal) * 100) / 100
+          else recProvArr[mesIdx] = Math.round((recProvArr[mesIdx] + valor + taxaVal) * 100) / 100
         } else {
-          if (status === 'pago') {
-            despRealArr[mesIdx] = Math.round((despRealArr[mesIdx] + valor) * 100) / 100
-          } else {
-            despProvArr[mesIdx] = Math.round((despProvArr[mesIdx] + valor) * 100) / 100
-          }
+          if (status === 'pago') despRealArr[mesIdx] = Math.round((despRealArr[mesIdx] + valor) * 100) / 100
+          else despProvArr[mesIdx] = Math.round((despProvArr[mesIdx] + valor) * 100) / 100
         }
       }
 
-      // Dados para os KPIs (Mês e Ano Selecionados) - Apenas Pagos para KPI de Receita Realizada
       if (anoIdx === selectedYear && mesIdx === selectedMonth) {
         if (tipo === 'receita' && status === 'pago') {
           kpiRec += valor
@@ -155,10 +154,29 @@ export default function DashboardPage() {
           kpiDes += valor
         }
       }
+
+      if (anoIdx === prevYearIdx && mesIdx === prevMonthIdx) {
+        if (tipo === 'receita' && status === 'pago') {
+          kpiRecPrev += valor
+          kpiTaxPrev += taxaVal
+        } else if (tipo === 'despesa' && status === 'pago') {
+          kpiDesPrev += valor
+        }
+      }
     })
 
     const resArr = recRealArr.map((v, i) => Math.round((v + recProvArr[i] - despRealArr[i] - despProvArr[i]) * 100) / 100)
-    const totalRecBruta = Math.round((kpiRec + kpiTax) * 100) / 100
+    
+    const kpiRecTotal = Math.round((kpiRec + kpiTax) * 100) / 100
+    const kpiRecPrevTotal = Math.round((kpiRecPrev + kpiTaxPrev) * 100) / 100
+    
+    const resCurr = kpiRecTotal - kpiDes
+    const resPrev = kpiRecPrevTotal - kpiDesPrev
+
+    const calcTrend = (curr: number, prev: number) => {
+      if (prev === 0) return 0
+      return Math.round(((curr - prev) / Math.abs(prev)) * 100)
+    }
 
     return { 
       recReal: recRealArr,
@@ -166,10 +184,15 @@ export default function DashboardPage() {
       despReal: despRealArr,
       despProv: despProvArr,
       resultadoData: resArr, 
-      receitaTotal: totalRecBruta, 
+      receitaTotal: kpiRecTotal, 
       despesaTotal: Math.round(kpiDes * 100) / 100,
       taxaRecuperada: Math.round(kpiTax * 100) / 100,
-      saldoTotal: Math.round((totalRecBruta - kpiDes) * 100) / 100
+      saldoTotal: Math.round((kpiRecTotal - kpiDes) * 100) / 100,
+      trends: {
+        receita: calcTrend(kpiRecTotal, kpiRecPrevTotal),
+        despesa: calcTrend(kpiDes, kpiDesPrev),
+        resultado: calcTrend(resCurr, resPrev)
+      }
     }
   }, [lancamentos, selectedMonth, selectedYear])
 
@@ -313,7 +336,7 @@ export default function DashboardPage() {
         <KpiCard 
           title="Receita Realizada" 
           value={fmtR(receitaTotal)} 
-          trend={12} 
+          trend={trends.receita} 
           trendLabel="vs mês anterior" 
           icon={<TrendingUp size={20} />} 
           category="success" 
@@ -326,7 +349,7 @@ export default function DashboardPage() {
         <KpiCard 
           title="Despesas Pagas" 
           value={fmtR(despesaTotal)} 
-          trend={-5} 
+          trend={trends.despesa} 
           trendLabel="vs mês anterior" 
           icon={<TrendingDown size={20} />} 
           category="error"
@@ -339,7 +362,7 @@ export default function DashboardPage() {
         <KpiCard 
           title="Resultado Líquido" 
           value={fmtR(receitaTotal - despesaTotal)} 
-          trend={8} 
+          trend={trends.resultado} 
           trendLabel="vs mês anterior" 
           icon={<DollarSign size={20} />} 
           category="info" 
@@ -352,7 +375,7 @@ export default function DashboardPage() {
         <KpiCard 
           title="Índice Inadimplência" 
           value={fmtPct(pctInadimp)} 
-          trend={-2} 
+          trend={0} 
           trendLabel="vs mês anterior" 
           icon={<AlertCircle size={20} />} 
           category="danger"
