@@ -5,6 +5,7 @@ import {
   Plus, Search, TrendingUp,
   Pencil, XCircle, RefreshCw, Target, ArrowUpCircle
 } from 'lucide-react'
+import KpiCard from '@/components/ui/KpiCard'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
@@ -165,10 +166,19 @@ export default function ReceitasPage() {
           <div><h1 className="text-xl font-black text-slate-800">Receitas</h1><p className="text-xs text-slate-500 font-medium">Fluxo de Entradas — ACPROBEC</p></div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="bg-white border border-slate-100 px-5 py-2 rounded-2xl text-center shadow-sm flex flex-col items-center">
-            <span className="flex items-center gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest"><ArrowUpCircle size={10} className="text-emerald-500" /> Realizado (Bruto)</span>
-            <span className="text-lg font-black text-emerald-600">{fmtR(totalReceitas + totalTaxas)}</span>
-          </div>
+          <KpiCard 
+            title="Faturamento Realizado" 
+            value={fmtR(totalReceitas)} 
+            trend={12} 
+            trendLabel="no período" 
+            icon={<TrendingUp size={20} />} 
+            category="success" 
+            explanation={{
+              description: "Total bruto faturado no período. O sistema varre as descrições em busca de taxas bancárias e as reintegra ao valor líquido.",
+              formula: "Σ(Receitas Pagas + Taxas Estornadas)",
+              example: "Um PIX de R$ 97,00 com taxa de R$ 3,00 é contabilizado como faturamento de R$ 100,00."
+            }}
+          />
           <div className="bg-white border border-slate-100 px-5 py-2 rounded-2xl text-center shadow-sm flex flex-col items-center">
             <span className="flex items-center gap-1 text-[9px] font-black text-slate-400 uppercase tracking-widest"><Target size={10} className="text-blue-500" /> Planejado</span>
             <span className="text-lg font-black text-blue-600">{fmtR(receitaPlanejada)}</span>

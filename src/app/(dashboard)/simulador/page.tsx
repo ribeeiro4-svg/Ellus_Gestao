@@ -265,16 +265,54 @@ export default function SimuladorPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title={`Receita ${visao === 'mensal' ? 'Mensal' : 'Anual'}`} value={fmtR(calculos.totalReceita)} icon={<TrendingUp size={20} />} category="success" trendLabel={`Base: ${cenario.num_associados} Assoc.`} />
-        <KpiCard title={`Total Folha (${visao === 'mensal' ? 'Mês' : 'Ano'})`} value={fmtR(calculos.totalFolha)} icon={<Users size={20} />} category="error" trendLabel={visao === 'mensal' ? `Ref: ${MESES[cenario.mes_referencia]}` : 'Acumulado 12 meses'} />
+        <KpiCard 
+          title={`Receita ${visao === 'mensal' ? 'Mensal' : 'Anual'}`} 
+          value={fmtR(calculos.totalReceita)} 
+          icon={<TrendingUp size={20} />} 
+          category="success" 
+          trendLabel={`Base: ${cenario.num_associados} Assoc.`} 
+          explanation={{
+            description: "Projeção baseada na quantidade de associados multiplicada pelo valor da mensalidade.",
+            formula: "Associados × Mensalidade (+/- Meses do Período)",
+            example: "100 associados a R$ 50,00 = Projeção de R$ 5k/mês."
+          }}
+        />
+        <KpiCard 
+          title={`Total Folha (${visao === 'mensal' ? 'Mês' : 'Ano'})`} 
+          value={fmtR(calculos.totalFolha)} 
+          icon={<Users size={20} />} 
+          category="error" 
+          trendLabel={visao === 'mensal' ? `Ref: ${MESES[cenario.mes_referencia]}` : 'Acumulado 12 meses'} 
+          explanation={{
+            description: "Soma da Folha Base organizacional mais os Pró-labores individuais configurados.",
+            formula: "Folha Base + Σ(Pró-labores)",
+            example: "R$ 10k de CLT + R$ 2k de Diretoria = R$ 12k de Folha."
+          }}
+        />
         <KpiCard 
           title={`Resultado ${visao === 'mensal' ? 'Líquido' : 'Anual'}`} 
           value={fmtR(calculos.resultado)} 
           icon={<DollarSign size={20} />} 
           category={calculos.resultado >= 0 ? 'success' : 'error'} 
           trendLabel={`Margem de ${fmtPct(calculos.margem)}`}
+          explanation={{
+            description: "O que sobra livre para a reserva após pagar custos fixos, variáveis e folha de pagamento.",
+            formula: "Receita - (Fixas + Variáveis + Folha)",
+            example: "Visão consolidada para verificar se o cenário é sustentável a longo prazo."
+          }}
         />
-        <KpiCard title="Meta de Reserva" value={fmtR(calculos.reservaAlvo)} icon={<PiggyBank size={20} />} category="info" trendLabel={visao === 'mensal' ? `Cobre ${cenario.reserva_meses_alvo} meses` : 'Base anual'} />
+        <KpiCard 
+          title="Meta de Reserva" 
+          value={fmtR(calculos.reservaAlvo)} 
+          icon={<PiggyBank size={20} />} 
+          category="info" 
+          trendLabel={visao === 'mensal' ? `Cobre ${cenario.reserva_meses_alvo} meses` : 'Base anual'} 
+          explanation={{
+            description: "Valor alvo de caixa acumulado para manter a associação operante sem novas receitas.",
+            formula: "Média de Despesas Mensais × Meses Alvo",
+            example: "Se gasta R$ 5k e quer 6 meses de segurança, a meta é de R$ 30k."
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">

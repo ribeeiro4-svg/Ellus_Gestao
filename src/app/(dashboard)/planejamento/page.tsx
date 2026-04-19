@@ -138,15 +138,50 @@ export default function PlanejamentoPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        <KpiCard title="Receitas Projetadas" value={fmtR(totals.planejadoReceita)} icon={<ArrowUpCircle size={20} />} category="success" />
-        <KpiCard title="Despesas Projetadas" value={fmtR(totals.planejadoDespesa)} icon={<ArrowDownCircle size={20} />} category="error" />
-        <KpiCard title="Balanço Final" value={fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100)} icon={<Calendar size={20} />} category="info" />
+        <KpiCard 
+          title="Receitas Projetadas" 
+          value={fmtR(totals.planejadoReceita)} 
+          icon={<ArrowUpCircle size={20} />} 
+          category="success" 
+          explanation={{
+            description: "Soma de todas as metas de faturamento e mensalidades definidas para este mês.",
+            formula: "Σ(Metas de Receita configuradas)",
+            example: "Se a meta de mensalidades é 9k e a de adesões é 1k, a projeção total é de 10k."
+          }}
+        />
+        <KpiCard 
+          title="Despesas Projetadas" 
+          value={fmtR(totals.planejadoDespesa)} 
+          icon={<ArrowDownCircle size={20} />} 
+          category="error" 
+          explanation={{
+            description: "Limite máximo de gastos planejado para todas as categorias de despesa no mês.",
+            formula: "Σ(Metas de Despesa configuradas)",
+            example: "Inclui teto para suprimentos, infraestrutura e custos operacionais."
+          }}
+        />
+        <KpiCard 
+          title="Balanço Final" 
+          value={fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100)} 
+          icon={<Calendar size={20} />} 
+          category="info" 
+          explanation={{
+            description: "O superávit ou déficit planejado para o fechamento do mês (Meta de Lucro).",
+            formula: "Receita Projetada - Despesa Projetada",
+            example: "Planejando 10k e gastando 8k, o balanço final alvo é 2k positivo."
+          }}
+        />
         <button onClick={() => { const d = diretoria.find(x => x.status === 'ativo'); if(d) { setPeriodosMember(d); setTempPeriodos(d.periodos || []) } }} className="text-left active:scale-95 transition-all">
           <KpiCard 
             title="Pró-labore (Ajustar)" 
             value={fmtR(totalProLabore)} 
             icon={<Users size={20} />} 
             category="purple" 
+            explanation={{
+              description: "Soma dos custos de pró-labore dos diretores ativos, respeitando períodos e valores base.",
+              formula: "Σ(Valor do Período Ativo || Valor Base)",
+              example: "Um diretor com período de R$ 1.500 no mês atual anula o seu valor base padrão."
+            }}
             subtitle={
               <div className="flex flex-col gap-0.5 mt-1 border-t border-purple-50 pt-1">
                 {diretoria.filter(d => d.status === 'ativo' && (d.pro_labore_base > 0 || (d.periodos?.length || 0) > 0)).map(d => {
@@ -164,8 +199,29 @@ export default function PlanejamentoPage() {
             } 
           />
         </button>
-        <KpiCard title="Reserva Ideal" value={fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100)} icon={<Activity size={20} />} category="indigo" subtitle={<div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-slate-400">Meta: <input type="number" value={reservaMeses} onChange={e => setReservaMeses(Number(e.target.value))} className="w-8 bg-indigo-50 border-none rounded px-1 text-indigo-700 outline-none" /> meses</div>} />
-        <KpiCard title="Saldo Real" value={fmtR(comparativo.reduce((s, c) => Math.round((s + (c.tipo === 'receita' ? c.realizado : -c.realizado)) * 100) / 100, 0))} icon={<TrendingUp size={20} />} category="success" />
+        <KpiCard 
+          title="Reserva Ideal" 
+          value={fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100)} 
+          icon={<Activity size={20} />} 
+          category="indigo" 
+          explanation={{
+            description: "Montante necessário em caixa para cobrir a operação em caso de faturamento zerado.",
+            formula: "Despesas Projetadas × Meses de Meta",
+            example: "Se o gasto é 3k e a meta são 6 meses, a reserva ideal é de 18k."
+          }}
+          subtitle={<div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-slate-400">Meta: <input type="number" value={reservaMeses} onChange={e => setReservaMeses(Number(e.target.value))} className="w-8 bg-indigo-50 border-none rounded px-1 text-indigo-700 outline-none" /> meses</div>} 
+        />
+        <KpiCard 
+          title="Saldo Real" 
+          value={fmtR(comparativo.reduce((s, c) => Math.round((s + (c.tipo === 'receita' ? c.realizado : -c.realizado)) * 100) / 100, 0))} 
+          icon={<TrendingUp size={20} />} 
+          category="success" 
+          explanation={{
+            description: "O resultado financeiro de fato ocorrido (entradas - saídas brutas).",
+            formula: "Receitas Reais - Despesas Reais",
+            example: "Bate com o valor do Dashboard, filtrado para o mês específico selecionado."
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

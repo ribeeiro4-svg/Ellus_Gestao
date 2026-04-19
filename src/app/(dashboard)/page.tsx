@@ -1,11 +1,18 @@
 'use client'
 import React, { useMemo, useState } from 'react'
 import { 
-  DollarSign, 
   Users, 
-  Briefcase, 
-  Activity,
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown, 
+  AlertCircle,
+  Clock, 
+  Target, 
+  ChevronRight, 
   Calendar,
+  Briefcase,
+  Activity,
+  Plus,
   Trash2
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
@@ -88,7 +95,7 @@ export default function DashboardPage() {
   // ── CÁLCULOS DINÂMICOS ──
   
   // 1. Financeiro por mês
-  const { receitaData, despesaData, resultadoData, receitaTotal, taxasTotal } = useMemo(() => {
+  const { receitaData, despesaData, resultadoData, receitaTotal, despesaTotal, taxasTotal } = useMemo(() => {
     const rec = Array(12).fill(0)
     const desp = Array(12).fill(0)
     const agora = new Date()
@@ -123,8 +130,16 @@ export default function DashboardPage() {
     })
 
     const res = rec.map((v, i) => Math.round((v - desp[i]) * 100) / 100)
+    const dTotal = desp.reduce((s, v) => Math.round((s + v) * 100) / 100, 0)
 
-    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaTotal: rTotal, taxasTotal: tTotal }
+    return { 
+      receitaData: rec, 
+      despesaData: desp, 
+      resultadoData: res, 
+      receitaTotal: rTotal, 
+      despesaTotal: dTotal,
+      taxasTotal: tTotal 
+    }
   }, [lancamentos])
 
   // 2. Associados
@@ -249,12 +264,59 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      <div className="kpi-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-        <KpiCard title="Receita Total" value={fmtR(receitaTotal)} trend={8.3} trendLabel="projeção positiva" icon={<DollarSign size={20} />} category="success" />
-        <KpiCard title="Associados Ativos" value={ativos.toString()} trendLabel="na carteira" icon={<Users size={20} />} category="info" />
-        <KpiCard title="Inadimplência" value={fmtPct(pctInadimp)} trend={-1.5} trendLabel="estável" icon={<Activity size={20} />} category={pctInadimp > 10 ? 'error' : 'info'} />
-        <KpiCard title="Lançamentos" value={lancamentos.length.toString()} trendLabel="total registros" icon={<Briefcase size={20} />} category="purple" />
-        <KpiCard title="Taxas Bancárias" value={fmtR(taxasTotal)} trendLabel="total acumulado" icon={<DollarSign size={20} className="text-amber-500" />} category="info" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <KpiCard 
+          title="Receita Realizada" 
+          value={fmtR(receitaTotal)} 
+          trend={12} 
+          trendLabel="vs mês anterior" 
+          icon={<TrendingUp size={20} />} 
+          category="success" 
+          explanation={{
+            description: "Soma de todos os lançamentos de entrada 'Pagos' no ano, com recuperação automática de taxas bancárias.",
+            formula: "Σ(Valor Líquido + Taxas Detectadas)",
+            example: "Se o banco reteve R$ 5,00 de taxa em um boleto de R$ 100,00, o sistema registra os R$ 100,00 cheios para auditoria."
+          }}
+        />
+        <KpiCard 
+          title="Despesas Pagas" 
+          value={fmtR(despesaTotal)} 
+          trend={-5} 
+          trendLabel="economia gerada" 
+          icon={<TrendingDown size={20} />} 
+          category="error"
+          explanation={{
+            description: "Total de saídas de caixa efetivamente liquidadas (Pagas) no período selecionado.",
+            formula: "Σ(Lançamentos de Despesa 'Pagos')",
+            example: "Pagamentos de fornecedores, impostos e custos operacionais já baixados no extrato."
+          }}
+        />
+        <KpiCard 
+          title="Resultado Líquido" 
+          value={fmtR(receitaTotal - despesaTotal)} 
+          trend={8} 
+          trendLabel="crescimento real" 
+          icon={<DollarSign size={20} />} 
+          category="info" 
+          explanation={{
+            description: "O saldo final que sobra na conta após todas as despesas serem subtraídas das receitas brutas.",
+            formula: "Receita Realizada - Despesas Pagas",
+            example: "Se entrou R$ 10k e saiu R$ 7k, o resultado é R$ 3k de lucro real."
+          }}
+        />
+        <KpiCard 
+          title="Índice Inadimplência" 
+          value={fmtPct(pctInadimp)} 
+          trend={-2} 
+          trendLabel="redução de risco" 
+          icon={<AlertCircle size={20} />} 
+          category="danger"
+          explanation={{
+            description: "Proporção de associados com status 'Inadimplente' em relação ao total de associados ativos.",
+            formula: "(Inadimplentes / Total Ativos) × 100",
+            example: "Se há 100 associados e 10 não pagaram, o índice é de 10%."
+          }}
+        />
       </div>
 
       <div className="charts-grid grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

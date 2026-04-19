@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { Info } from 'lucide-react'
 
 interface KpiCardProps {
   title: string
@@ -8,6 +9,11 @@ interface KpiCardProps {
   subtitle?: React.ReactNode
   icon: React.ReactNode
   category?: 'success' | 'info' | 'error' | 'purple' | 'indigo' | 'danger'
+  explanation?: {
+    description: string
+    formula: string
+    example: string
+  }
 }
 
 export default function KpiCard({ 
@@ -17,8 +23,10 @@ export default function KpiCard({
   trendLabel, 
   subtitle,
   icon, 
-  category = 'info' 
+  category = 'info',
+  explanation
 }: KpiCardProps) {
+  const [showAudit, setShowAudit] = useState(false)
   
   const colors = {
     success: 'from-emerald-500 to-emerald-600 shadow-emerald-500/20 text-emerald-600 bg-emerald-50',
@@ -39,10 +47,46 @@ export default function KpiCard({
   }
 
   return (
-    <div className={`kpi-card bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 relative overflow-hidden group border-t-4 ${borderColors[category]}`}>
+    <div 
+      className={`kpi-card bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 relative overflow-visible group border-t-4 ${borderColors[category]}`}
+      onMouseEnter={() => setShowAudit(true)}
+      onMouseLeave={() => setShowAudit(false)}
+      onClick={() => setShowAudit(!showAudit)}
+    >
+      {explanation && showAudit && (
+        <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 w-64 p-4 rounded-3xl bg-white/95 backdrop-blur-xl border border-slate-100 shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200 pointer-events-none">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-50">
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${colors[category]}`}>
+                 <Info size={12} strokeWidth={3} />
+              </div>
+              <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Auditoria de Dados</span>
+            </div>
+            <div className="space-y-2.5">
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[1px] mb-1">Fonte & Lógica</p>
+                <p className="text-[10px] font-bold text-slate-600 leading-relaxed">{explanation.description}</p>
+              </div>
+              <div className="bg-slate-50 p-2 rounded-xl border border-slate-100 font-mono">
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[1px] mb-1">Fórmula</p>
+                <p className="text-[9px] font-black text-slate-800">{explanation.formula}</p>
+              </div>
+              <div>
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-[1px] mb-1">Exemplo Prático</p>
+                <p className="text-[10px] font-medium text-slate-500 italic">{explanation.example}</p>
+              </div>
+            </div>
+          </div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[6px] border-transparent border-t-white/95" />
+        </div>
+      )}
+
       <div className="flex justify-between items-start relative z-10">
         <div className="flex-1">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[1.5px] mb-1.5">{title}</p>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[1.5px]">{title}</p>
+            {explanation && <Info size={10} className="text-slate-300 group-hover:text-slate-500 transition-colors" />}
+          </div>
           <h3 className="text-2xl font-black text-gray-900 tracking-tight">{value}</h3>
           {subtitle && <div className="mt-1 leading-none">{subtitle}</div>}
         </div>
