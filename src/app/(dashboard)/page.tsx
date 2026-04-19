@@ -99,16 +99,20 @@ export default function DashboardPage() {
   
   // 1. Financeiro (KPIS e Gráficos Consolidados)
   const { 
-    receitaData, 
-    despesaData, 
+    recReal, 
+    recProv, 
+    despReal, 
+    despProv, 
     resultadoData, 
     receitaTotal, 
     despesaTotal, 
     taxaRecuperada,
     saldoTotal 
   } = useMemo(() => {
-    const recArr = Array(12).fill(0)
-    const despArr = Array(12).fill(0)
+    const recRealArr = Array(12).fill(0)
+    const recProvArr = Array(12).fill(0)
+    const despRealArr = Array(12).fill(0)
+    const despProvArr = Array(12).fill(0)
     
     let kpiRec = 0
     let kpiDes = 0
@@ -119,6 +123,7 @@ export default function DashboardPage() {
       const anoIdx = getAnoIdx(l.data)
       const valor = l.valor || 0
       const tipo = (l.tipo || '').toLowerCase()
+      const status = (l.status || '').toLowerCase()
       
       // Recuperação de Taxas
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
@@ -127,29 +132,39 @@ export default function DashboardPage() {
       // Dados para o Gráfico (Ano Selecionado)
       if (anoIdx === selectedYear && mesIdx >= 0 && mesIdx <= 11) {
         if (tipo === 'receita') {
-          recArr[mesIdx] = Math.round((recArr[mesIdx] + valor + taxaVal) * 100) / 100
+          if (status === 'pago') {
+            recRealArr[mesIdx] = Math.round((recRealArr[mesIdx] + valor + taxaVal) * 100) / 100
+          } else {
+            recProvArr[mesIdx] = Math.round((recProvArr[mesIdx] + valor + taxaVal) * 100) / 100
+          }
         } else {
-          despArr[mesIdx] = Math.round((despArr[mesIdx] + valor) * 100) / 100
+          if (status === 'pago') {
+            despRealArr[mesIdx] = Math.round((despRealArr[mesIdx] + valor) * 100) / 100
+          } else {
+            despProvArr[mesIdx] = Math.round((despProvArr[mesIdx] + valor) * 100) / 100
+          }
         }
       }
 
-      // Dados para os KPIs (Mês e Ano Selecionados)
+      // Dados para os KPIs (Mês e Ano Selecionados) - Apenas Pagos para KPI de Receita Realizada
       if (anoIdx === selectedYear && mesIdx === selectedMonth) {
-        if (tipo === 'receita') {
+        if (tipo === 'receita' && status === 'pago') {
           kpiRec += valor
           kpiTax += taxaVal
-        } else {
+        } else if (tipo === 'despesa' && status === 'pago') {
           kpiDes += valor
         }
       }
     })
 
-    const resArr = recArr.map((v, i) => Math.round((v - despArr[i]) * 100) / 100)
+    const resArr = recRealArr.map((v, i) => Math.round((v + recProvArr[i] - despRealArr[i] - despProvArr[i]) * 100) / 100)
     const totalRecBruta = Math.round((kpiRec + kpiTax) * 100) / 100
 
     return { 
-      receitaData: recArr, 
-      despesaData: despArr, 
+      recReal: recRealArr,
+      recProv: recProvArr,
+      despReal: despRealArr,
+      despProv: despProvArr,
       resultadoData: resArr, 
       receitaTotal: totalRecBruta, 
       despesaTotal: Math.round(kpiDes * 100) / 100,
@@ -210,24 +225,26 @@ export default function DashboardPage() {
   const chartConfigs: any = {
     receita: {
       title: 'Fluxo Mensal Consolidado',
-      subtitle: 'Comparativo de Entradas e Saídas — Realizado',
+      subtitle: 'Comparativo de Entradas e Saídas — Realizado vs Projetado',
       chartType: 'bar',
       insights: [
-        { label: 'Receita Total', value: fmtR(receitaData.reduce((a, b) => a + b, 0)), color: 'var(--green)', sub: 'acumulado no ano' },
-        { label: 'Despesa Total', value: fmtR(despesaData.reduce((a, b) => a + b, 0)), color: 'var(--red)', sub: 'acumulado no ano' },
-        { label: 'Resultado Líquido', value: fmtR(resultadoData.reduce((a, b) => a + b, 0)), color: 'var(--green)', sub: 'saldo positivo' },
+        { label: 'Receita Realizada', value: fmtR(recReal.reduce((a: number, b: number) => a + b, 0)), color: 'var(--green)', sub: 'acumulado pago' },
+        { label: 'Receita Provisionada', value: fmtR(recProv.reduce((a: number, b: number) => a + b, 0)), color: 'rgba(45, 140, 111, 0.4)', sub: 'a receber' },
+        { label: 'Resultado Líquido', value: fmtR(resultadoData.reduce((a: number, b: number) => a + b, 0)), color: 'var(--green)', sub: 'saldo final' },
       ],
       chartData: {
         labels: MESES,
         datasets: [
-          { label: 'Receita', data: receitaData, backgroundColor: 'rgba(45, 140, 111, 0.75)', borderRadius: 5 },
-          { label: 'Despesa', data: despesaData, backgroundColor: 'rgba(239, 68, 68, 0.65)', borderRadius: 5 },
+          { label: 'Receita (Paga)', data: recReal, backgroundColor: 'rgba(45, 140, 111, 0.85)', borderRadius: 5, stack: 'receita' },
+          { label: 'Receita (Aberta)', data: recProv, backgroundColor: 'rgba(45, 140, 111, 0.25)', borderRadius: 5, stack: 'receita' },
+          { label: 'Despesa (Paga)', data: despReal, backgroundColor: 'rgba(239, 68, 68, 0.8)', borderRadius: 5, stack: 'despesa' },
+          { label: 'Despesa (Aberta)', data: despProv, backgroundColor: 'rgba(239, 68, 68, 0.2)', borderRadius: 5, stack: 'despesa' },
           { label: 'Resultado', data: resultadoData, type: 'line', borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true, borderWidth: 2.5, pointRadius: 4 },
         ]
       },
       tableData: {
-        headers: ['Mês', 'Receita', 'Despesa', 'Resultado'],
-        rows: MESES.map((m, i) => [m, fmtR(receitaData[i]), fmtR(despesaData[i]), fmtR(resultadoData[i])])
+        headers: ['Mês', 'Rec. Real', 'Rec. Prov', 'Desp. Real', 'Desp. Prov'],
+        rows: MESES.map((m, i) => [m, fmtR(recReal[i]), fmtR(recProv[i]), fmtR(despReal[i]), fmtR(despProv[i])])
       }
     },
     associados: {
