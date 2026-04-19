@@ -78,6 +78,36 @@ export default function AssociadosPage() {
   }, [associados])
 
   const categorias = useMemo(() => [...new Set(associados.map((a: any) => a.categoria || 'Sem categoria'))].sort(), [associados])
+  
+  const crescimentoMensal = useMemo(() => {
+    const currentYear = new Date().getFullYear()
+    const months = Array(12).fill(0)
+    
+    // Calcula o saldo inicial (quem entrou antes do ano atual)
+    const baseCount = associados.filter((a: any) => {
+      const joinDate = a.data_ingresso || a.created_at
+      if (!joinDate) return false
+      return new Date(joinDate).getFullYear() < currentYear
+    }).length
+
+    // Conta entradas mês a mês no ano atual
+    associados.forEach((a: any) => {
+      const joinDate = a.data_ingresso || a.created_at
+      if (!joinDate) return
+      const date = new Date(joinDate)
+      if (date.getFullYear() === currentYear) {
+        const month = date.getMonth()
+        months[month]++
+      }
+    })
+
+    // Torna cumulativo
+    let runningTotal = baseCount
+    return months.map(count => {
+      runningTotal += count
+      return runningTotal
+    })
+  }, [associados])
 
   const filtrados = useMemo(() => {
     let res = associados
@@ -184,7 +214,40 @@ export default function AssociadosPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <ChartCard title="Crescimento" subtitle="Evolução por status"><Bar data={{ labels: MESES, datasets: [{ label: 'Ativos', data: Array(12).fill(ativos), backgroundColor: '#10b981', borderRadius: 4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { ticks: { font: { size: 10 } } } }, plugins: { legend: { display: false } } }} /></ChartCard>
+          <ChartCard title="Crescimento" subtitle="Evolução acumulativa">
+            <Bar 
+              data={{ 
+                labels: MESES, 
+                datasets: [{ 
+                  label: 'Associados', 
+                  data: crescimentoMensal, 
+                  backgroundColor: 'rgba(16,185,129,0.8)', 
+                  hoverBackgroundColor: '#10b981',
+                  borderRadius: 6,
+                  barPercentage: 0.6
+                }] 
+              }} 
+              options={{ 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                  x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' } }, 
+                  y: { beginAtZero: true, border: { display: false }, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#94a3b8' } } 
+                }, 
+                plugins: { 
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: '#1e293b',
+                    padding: 12,
+                    titleFont: { size: 14, weight: 'bold' },
+                    bodyFont: { size: 13 },
+                    cornerRadius: 8,
+                    displayColors: false
+                  }
+                } 
+              }} 
+            />
+          </ChartCard>
         </div>
         <ChartCard title="Mix" subtitle="Por categoria"><Doughnut data={{ labels: Object.keys(catMap), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10 } } } } }} /></ChartCard>
       </div>
