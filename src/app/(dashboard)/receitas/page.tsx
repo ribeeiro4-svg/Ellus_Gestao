@@ -6,6 +6,7 @@ import {
   Pencil, XCircle, RefreshCw, Target, ArrowUpCircle, Activity, DollarSign
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
+import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
@@ -34,6 +35,7 @@ export default function ReceitasPage() {
   const { lancamentos, loading: loadFin, inserir, atualizar, remover, inserirBulk, atualizarBulk, removerBulk, conciliar, remanejar, refresh: refetch } = useFinanceiro()
   const { contas } = useContas()
   const { associados } = useAssociados()
+  const { categorias } = useCategorias()
   
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth()) // 0-based
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
@@ -169,7 +171,7 @@ export default function ReceitasPage() {
   const { totalReceitas, totalTaxas, totalCora, totalDinheiro, receitaPlanejada } = periodSummary
 
   const handleSalvar = async (data: any) => {
-    const cleanData = { ...data, valor: Number(data.valor) }
+    const cleanData = { ...data, valor: Number(data.valor), tipo: 'receita' }
     if (editingItem) await atualizar(editingItem.id, cleanData)
     else await inserirBulk([cleanData])
     setEditingItem(null); setIsModalOpen(false)
@@ -185,10 +187,15 @@ export default function ReceitasPage() {
     { name: 'data', label: 'Data', type: 'date' as const, required: true },
     { name: 'descricao', label: 'Descrição', type: 'text' as const, required: true },
     { name: 'valor', label: 'Valor (R$)', type: 'number' as const, required: true },
-    { name: 'categoria', label: 'Categoria', type: 'select' as const, required: true, options: [{ value: 'MENSALIDADE', label: 'Mensalidade' }, { value: 'ADESAO', label: 'Adesão' }, { value: 'PROJETOS', label: 'Projetos' }, { value: 'OUTROS', label: 'Outros' }] },
-    { name: 'conta_id', label: 'Conta Bancária', type: 'select' as const, required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
-    { name: 'associado_id', label: 'Associado', type: 'select' as const, options: associados.map(a => ({ value: a.id, label: a.nome })) }
-  ], [contas, associados])
+    { name: 'status', label: 'Status', type: 'select' as const, required: true, options: [{ value: 'aberto', label: 'Provisionado' }, { value: 'pago', label: 'Efetivado (Pago)' }] },
+    { name: 'conta_id', label: 'Conta', type: 'select' as const, required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
+    { name: 'categoria', label: 'Categoria', type: 'select' as const, required: true, options: categorias.map(c => ({ value: c.nome, label: c.nome })) },
+    { name: 'forma_pagamento', label: 'Forma', type: 'select' as const, options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
+    { name: 'recorrente', label: 'Ativar Recorrência?', type: 'checkbox' as const },
+    { name: 'associado_id', label: 'Associado Individual', type: 'select' as const, options: associados.map(a => ({ value: a.id, label: a.nome })) },
+    { name: 'troco_pix', label: 'Troco via PIX?', type: 'checkbox' as const },
+    { name: 'em_lote', label: 'Lançar em Lote?', type: 'checkbox' as const }
+  ], [contas, associados, categorias])
 
   return (
     <div className="flex flex-col gap-6">

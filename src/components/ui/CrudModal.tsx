@@ -24,12 +24,20 @@ interface CrudModalProps {
   onChange?: (name: string, value: any, setFormData: React.Dispatch<React.SetStateAction<any>>) => void
 }
 
-const PAGAMENTO_ICONS: Record<string, string> = {
+const FORMA_ICONS: Record<string, string> = {
   'Dinheiro': '💵',
   'PIX': '⚡',
   'Boleto': '🔖',
   'Transferência': '🏦',
   'Cartão': '💳',
+}
+
+const FORMA_LABELS: Record<string, string> = {
+  'Dinheiro': 'Dinheiro',
+  'PIX': 'PIX',
+  'Boleto': 'Boleto',
+  'Transferência': 'Transferência',
+  'Cartão': 'Cartão',
 }
 
 export default function CrudModal({ isOpen, onClose, title, fields, initialData, onSubmit, onChange }: CrudModalProps) {
@@ -46,7 +54,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
       })
       setFormData(defaults)
     }
-  }, [initialData, isOpen]) // Removed 'fields' from dependencies
+  }, [initialData, isOpen])
 
   if (!isOpen) return null
 
@@ -68,145 +76,106 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(8px)', animation: 'overlayIn .2s ease both' }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 overflow-hidden"
+      style={{ background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(12px)', animation: 'overlayIn .2s ease both' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-[520px] max-h-[88vh] overflow-y-auto relative"
+        className="w-full max-w-[580px] max-h-[90vh] flex flex-col relative"
         style={{
-          background: 'var(--surface)',
-          borderRadius: 'var(--radius-xl)',
-          boxShadow: 'var(--shadow-xl)',
-          animation: 'modalIn .28s ease both',
+          background: '#fff',
+          borderRadius: '32px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          animation: 'modalIn .3s cubic-bezier(0.165, 0.84, 0.44, 1) both',
         }}
       >
         {/* Header */}
-        <div
-          className="flex items-start justify-between sticky top-0 z-10"
-          style={{
-            padding: '22px 24px 18px',
-            borderBottom: '1px solid var(--border)',
-            background: 'var(--surface)',
-          }}
-        >
-          <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text1)', marginBottom: 2 }}>{title}</h2>
-            <p style={{ fontSize: 12, color: 'var(--text3)' }}>Preencha os campos abaixo</p>
+        <div className="px-8 pt-8 pb-6 border-b border-slate-100 sticky top-0 bg-white z-20 rounded-t-[32px]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight">Novo {title}</h2>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Preencha os campos abaixo</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-white hover:border-slate-200 transition-all active:scale-90"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="transition"
-            style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              width: 32, height: 32,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: 'var(--text2)',
-            }}
-          >
-            <X size={16} />
-          </button>
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit}>
-          <div style={{ padding: '20px 24px', display: 'grid', gap: 14 }}>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="p-8 space-y-6">
             {fields.map(field => {
               if (field.showIf && !field.showIf(formData)) return null
 
               return (
-                <div key={field.name} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {field.type !== 'info' && (
-                    <label style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text2)', display: 'block' }}>
-                      {field.label}{field.required && <span style={{ color: 'var(--red)' }}> *</span>}
+                <div key={field.name} className="space-y-2">
+                  {field.type !== 'info' && field.type !== 'checkbox' && (
+                    <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                      {field.label}
+                      {field.required && <span className="text-rose-500">*</span>}
                     </label>
                   )}
- 
+
                   {field.type === 'info' ? (
                     field.render ? field.render(formData, handleChange) : null
                   ) : field.type === 'select' ? (
                     <div>
                       {field.name === 'forma_pagamento' ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {[{ value: '', label: '— Nenhuma' }, ...(field.options || [])].map(opt => (
+                        <div className="flex flex-wrap gap-2">
+                          {[{ value: '', label: 'Nenhuma' }, ...(field.options || [])].map(opt => (
                             <button
                               key={opt.value}
                               type="button"
                               onClick={() => handleChange(field.name, opt.value)}
-                              style={{
-                                padding: '5px 12px',
-                                borderRadius: 20,
-                                fontSize: 12,
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                border: `1.5px solid ${formData[field.name] === opt.value ? 'var(--accent)' : 'var(--border)'}`,
-                                background: formData[field.name] === opt.value ? 'rgba(45,140,111,.12)' : 'var(--surface2)',
-                                color: formData[field.name] === opt.value ? 'var(--accent)' : 'var(--text2)',
-                                transition: 'var(--trans-fast)',
-                              }}
+                              className={`px-4 py-2.5 rounded-2xl text-[12px] font-bold transition-all border outline-none flex items-center gap-2 ${
+                                formData[field.name] === opt.value
+                                  ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-100'
+                                  : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200'
+                              }`}
                             >
-                              {opt.value && PAGAMENTO_ICONS[opt.value] ? `${PAGAMENTO_ICONS[opt.value]} ` : ''}{opt.label}
+                              {opt.value === '' ? '— ' : (FORMA_ICONS[opt.value] || '')}{' '}
+                              {opt.label}
                             </button>
                           ))}
                         </div>
                       ) : (
-                        <select
-                          required={field.required}
-                          value={formData[field.name] ?? ''}
-                          onChange={e => handleChange(field.name, e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '9px 12px',
-                            border: '1.5px solid var(--border)',
-                            borderRadius: 'var(--radius-sm)',
-                            fontSize: 13,
-                            fontFamily: 'inherit',
-                            color: 'var(--text1)',
-                            background: 'var(--surface)',
-                            outline: 'none',
-                            cursor: 'pointer',
-                            transition: 'var(--trans-fast)',
-                          }}
-                        >
-                          <option value="" disabled>Selecione...</option>
-                          {field.options?.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <select
+                            required={field.required}
+                            value={formData[field.name] ?? ''}
+                            onChange={e => handleChange(field.name, e.target.value)}
+                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all cursor-pointer appearance-none"
+                          >
+                            <option value="" disabled>Selecione...</option>
+                            {field.options?.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                          <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                             <Check size={14} className={formData[field.name] ? 'text-emerald-500' : 'opacity-0'} />
+                          </div>
+                        </div>
                       )}
                     </div>
-                  ) : field.type === 'textarea' ? (
-                    <textarea
-                      required={field.required}
-                      value={formData[field.name] ?? ''}
-                      placeholder={field.placeholder}
-                      onChange={e => handleChange(field.name, e.target.value)}
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: 13,
-                        fontFamily: 'inherit',
-                        color: 'var(--text1)',
-                        background: 'var(--surface)',
-                        outline: 'none',
-                        resize: 'vertical',
-                        transition: 'var(--trans-fast)',
-                      }}
-                    />
                   ) : field.type === 'checkbox' ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <input 
-                        type="checkbox"
-                        checked={!!formData[field.name]}
-                        onChange={e => handleChange(field.name, e.target.checked)}
-                        style={{ cursor: 'pointer', width: 16, height: 16 }}
-                      />
-                      <span className="text-sm font-medium text-slate-600">{field.placeholder || field.label}</span>
+                    <div 
+                      className={`flex items-center gap-3 p-4 rounded-2xl transition-all cursor-pointer border ${
+                        !!formData[field.name] ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-50 opacity-70'
+                      }`}
+                      onClick={() => handleChange(field.name, !formData[field.name])}
+                    >
+                      <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
+                        !!formData[field.name] ? 'bg-emerald-500 text-white' : 'bg-slate-200'
+                      }`}>
+                        {!!formData[field.name] && <Check size={14} strokeWidth={4} />}
+                      </div>
+                      <span className={`text-[12px] font-black uppercase tracking-tight ${!!formData[field.name] ? 'text-emerald-700' : 'text-slate-500'}`}>
+                        {field.label}
+                      </span>
                     </div>
                   ) : (
                     <input
@@ -214,19 +183,8 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                       required={field.required}
                       placeholder={field.placeholder}
                       value={formData[field.name] ?? ''}
-                      onChange={e => handleChange(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        border: '1.5px solid var(--border)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: 13,
-                        fontFamily: 'inherit',
-                        color: 'var(--text1)',
-                        background: 'var(--surface)',
-                        outline: 'none',
-                        transition: 'var(--trans-fast)',
-                      }}
+                      onChange={e => handleChange(field.name, field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
+                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all placeholder:text-slate-300"
                     />
                   )}
                 </div>
@@ -235,36 +193,42 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
           </div>
 
           {/* Footer */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 10,
-              alignItems: 'center',
-              padding: '16px 24px 20px',
-              borderTop: '1px solid var(--border)',
-            }}
-          >
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary"
-              style={{ flex: 1, justifyContent: 'center', padding: '10px 16px' }}
-            >
-              {loading ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
-              {loading ? 'Salvando...' : 'Salvar'}
-            </button>
-            <button
+          <div className="px-8 pb-8 pt-4 border-t border-slate-50 mt-4 flex items-center justify-between gap-4">
+             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="btn btn-outline"
-              style={{ padding: '10px 16px' }}
+              className="px-6 py-3.5 rounded-2xl text-sm font-black text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest"
             >
               Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl text-sm font-black shadow-xl shadow-emerald-100 transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} strokeWidth={3} />}
+              {loading ? 'SALVANDO...' : 'SALVAR'}
             </button>
           </div>
         </form>
       </div>
+
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #cbd5e1;
+        }
+      `}</style>
     </div>
   )
 }
