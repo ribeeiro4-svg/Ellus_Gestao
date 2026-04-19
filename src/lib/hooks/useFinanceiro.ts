@@ -229,36 +229,73 @@ export function useFinanceiro() {
     if (!original) return { error: 'Lançamento original não encontrado.' }
     if (isPeriodoBloqueado(original.data)) return { error: 'O período deste lançamento está fechado.' }
 
+    // Calcula a Taxa que está escondida na descrição (Regra dos R$ 50)
+    const matchTaxa = (original.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+    const valorTaxaOriginal = matchTaxa ? parseFloat(matchTaxa[1].replace(/\./g, '').replace(',', '.')) : 0
+    const valorTotalOriginal = Number(original.valor) + valorTaxaOriginal
+
     const targetVal = Number(valorParaMover)
-    if (targetVal >= Number(original.valor)) {
-      return { error: 'O valor a remanejar deve ser menor que o valor atual do lançamento.' }
+    if (targetVal > valorTotalOriginal) {
+      return { error: 'O valor a remanejar não pode ser maior que o valor bruto do lançamento.' }
     }
 
-    // 1. Atualizar o original (diminuir valor)
-    const novoValorOriginal = Number(original.valor) - targetVal
+    // 1. Calcular Novos Valores
+    // Se estou movendo R$ 50 e eu tinha R$ 50 + R$ 50 taxa, o original fica com R$ 50 e a taxa some.
+    // Se estou movendo R$ 80 e eu tinha R$ 50 + R$ 50 taxa, o original fica com R$ 20 e a taxa some.
+    let novoValorOriginal = Number(original.valor)
+    if (targetVal <= valorTaxaOriginal) {
+      // Apenas "converte" a taxa em um novo lançamento. Original mantém o valor líquido dele.
+      // Opcional: Se quiser que o original reduza sempre, mude aqui.
+      // Mas pro usuário "Keila R$ 50 + Aretha R$ 50" é o ideal se o Pix foi R$ 100.
+    } else {
+      const excesso = targetVal - valorTaxaOriginal
+      novoValorOriginal = Math.max(0, novoValorOriginal - excesso)
+    }
+
+    // Limpa a descrição do original (remove a taxa antiga)
+    const descricaoLimpa = original.descricao
+      .replace(/\(Taxa: R\$\s*[^)]+\)/, '')
+      .replace('[ENCONTRO DE CONTAS]', '')
+      .trim()
+
+    // 2. Atualizar o original
     const { error: err1 } = await sb.from('lancamentos')
-      .update({ valor: novoValorOriginal })
+      .update({ 
+        valor: novoValorOriginal, 
+        descricao: descricaoLimpa 
+      })
       .eq('id', idOriginal)
     
-    if (err1) return { error: err1.message }
+    if (err1) {
+      console.error('Erro ao atualizar original:', err1)
+      return { error: `Erro no original: ${err1.message}` }
+    }
 
-    // 2. Criar o novo lançamento (split)
-    const { id: _id, created_at: _ca, updated_at: _ua, ...clonedData } = original as any
-    const novoLancamento = {
-      ...clonedData,
+    // 3. Criar o novo lançamento (split)
+    const nomePagadorOriginal = original.descricao.split('-')[1]?.trim() || original.descricao.split('(')[0].trim()
+    
+    const novoLancamento: any = {
+      tenant_id: tenantId,
+      data: original.data,
+      tipo: original.tipo,
+      categoria: original.categoria,
+      status: original.status,
+      forma_pagamento: original.forma_pagamento,
+      conta_id: original.conta_id,
+      conciliado: original.conciliado,
+      banco_transacao_id: original.banco_transacao_id,
       valor: targetVal,
       associado_id: targetAssociadoId,
-      descricao: `[ENCONTRO DE CONTAS] ${novaDescricao}`,
-      // Armazena quem pagou originalmente na descrição para o popup
-      descricao_detalhada: `PIX Original por: ${original.descricao.split('-')[1]?.trim() || original.descricao}`
+      descricao: `[ENCONTRO DE CONTAS] ${novaDescricao} (Origem: ${nomePagadorOriginal})`
     }
 
     const { error: err2 } = await sb.from('lancamentos').insert(novoLancamento)
     
     if (err2) {
-      // Rollback parcial (opcional, mas bom ter)
-      await sb.from('lancamentos').update({ valor: original.valor }).eq('id', idOriginal)
-      return { error: err2.message }
+      console.error('Erro ao inserir novo lançamento:', err2)
+      // Rollback
+      await sb.from('lancamentos').update({ valor: original.valor, descricao: original.descricao }).eq('id', idOriginal)
+      return { error: `Erro no split: ${err2.message}` }
     }
 
     await fetch()

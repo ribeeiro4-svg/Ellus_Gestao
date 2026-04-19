@@ -287,9 +287,15 @@ export default function ReceitasPage() {
           { header: 'Descrição', key: 'descricao', render: (l: any) => (
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-800">{l.descricao.replace('[ENCONTRO DE CONTAS]', '').trim()}</span>
+                <span className="text-sm font-bold text-slate-800">
+                  {l.descricao
+                    .replace('[ENCONTRO DE CONTAS]', '')
+                    .replace(/\(Taxa: [^)]+\)/, '')
+                    .replace(/\(Origem: [^)]+\)/, '')
+                    .trim()}
+                </span>
                 {l.descricao.includes('[ENCONTRO DE CONTAS]') && (
-                  <span className="px-1.5 py-0.5 bg-indigo-100 text-[9px] font-black text-indigo-600 rounded-md border border-indigo-200">EC</span>
+                  <span className="px-1.5 py-0.5 bg-indigo-100 text-[9px] font-black text-indigo-600 rounded-md border border-indigo-200 uppercase tracking-tighter">ec</span>
                 )}
               </div>
               <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight">{l.categoria}</span>

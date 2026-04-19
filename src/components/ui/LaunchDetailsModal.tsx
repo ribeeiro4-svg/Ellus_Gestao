@@ -30,22 +30,28 @@ export default function LaunchDetailsModal({ isOpen, onClose, launch, associados
   const isReceita = launch.tipo === 'receita'
   
   // Detalhe de quem fez o PIX de fato (se for um encontro de contas)
-  const pagadorOriginal = (launch as any).descricao_detalhada || null
+  const matchOrigem = (launch.descricao || '').match(/\(Origem: ([^)]+)\)/)
+  const pagadorOriginal = matchOrigem ? matchOrigem[1] : null
 
   const handleStartRemanejo = () => {
     setIsRemanejando(true)
     setValorMover(valorTaxaNum > 0 ? valorTaxaNum : Math.floor(valorPrincipal / 2))
-    setNovaDesc(launch.descricao.replace(matchTaxa?.[0] || '', '').trim())
+    setNovaDesc(launch.descricao.replace(matchTaxa?.[0] || '', '').replace(matchOrigem?.[0] || '', '').replace('[ENCONTRO DE CONTAS]', '').trim())
   }
 
   const execRemanejo = async () => {
     if (!targetId || !valorMover || !onRemanejar) return
     setIsSubmitting(true)
     try {
-      await onRemanejar(launch.id, targetId, valorMover, novaDesc)
-      onClose()
+      const res = await onRemanejar(launch.id, targetId, valorMover, novaDesc)
+      if (res.error) {
+        alert(`Não foi possível completar o remanejo: ${res.error}`)
+      } else {
+        onClose()
+      }
     } catch (err) {
       console.error(err)
+      alert('Erro inesperado ao realizar remanejo.')
     } finally {
       setIsSubmitting(false)
     }
@@ -168,7 +174,7 @@ export default function LaunchDetailsModal({ isOpen, onClose, launch, associados
                 <input 
                   type="range" 
                   min={1} 
-                  max={valorBruto - 1} 
+                  max={valorBruto} 
                   value={valorMover} 
                   onChange={(e) => setValorMover(Number(e.target.value))}
                   className="w-full mt-4 accent-indigo-600"
