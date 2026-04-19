@@ -75,13 +75,20 @@ export default function ConciliacaoPage() {
 
   const { atualizar: atualizarAssociado } = useAssociados()
 
-  // Scanner de Documentos (CPF/CNPJ)
   const extractDocument = (memo: string) => {
     const raw = memo.replace(/\D/g, '')
     const cnpjMatch = raw.match(/\d{14}/)
     const cpfMatch = raw.match(/\d{11}/)
     return cnpjMatch ? cnpjMatch[0] : (cpfMatch ? cpfMatch[0] : null)
   }
+
+  const enhanceMemo = (name: string, originalMemo: string) => {
+    const docRegex = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})|(\d{3}\.?\d{3}\.?\d{3}-?\d{2})|(\d{14})|(\d{11})/
+    const match = originalMemo.match(docRegex)
+    if (match) return `${name.toUpperCase()} - ${match[0]}`
+    return name.toUpperCase()
+  }
+
 
   // Cérebro de Auditoria 2.1 - Precisão + Enriquecimento
   const getAuditMatch = (bankMemo: string, bankAmount: number, bankType: string) => {
@@ -285,7 +292,7 @@ export default function ConciliacaoPage() {
       // 2. Sincronização
       const rows = rowsToProcess.map((t: any) => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
-        descricao: t.bank.memo,
+        descricao: editedMemos[t.bank.fitid] || t.bank.memo,
         categoria: t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
         conta_id: selectedContaId,
         valor: Math.abs(t.bank.amount),
@@ -469,6 +476,7 @@ export default function ConciliacaoPage() {
                 {...item} 
                 isAdesao={item.isAdesao} 
                 isProcessed={processedIds.has(item.bank.fitid)} 
+                memo={editedMemos[item.bank.fitid] || item.bank.memo}
                 onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} 
                 onLinkManual={() => { setSelectedExtrato(item); setIsModalOpen(true) }} 
                 onLinkSupplier={() => { setSelectedExtrato(item); setIsSupplierModalOpen(true) }} 
@@ -495,6 +503,8 @@ export default function ConciliacaoPage() {
                 isCora 
                 isDuplicate={existingTxIds.has(item.bank.fitid)} 
                 isProcessed={processedIds.has(item.bank.fitid)}
+                memo={editedMemos[item.bank.fitid] || item.bank.memo}
+                onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))}
                 externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]}
               />
             ))
@@ -502,8 +512,30 @@ export default function ConciliacaoPage() {
         </div>
       )}
 
-      <ManualMatchModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} extrato={selectedExtrato} onSelect={(assoc: any) => { setExtrato(prev => prev.map((item: any) => item.fitid === selectedExtrato.bank.fitid ? { ...item, assocMatch: assoc, suggestedCategory: 'Mensalidades' } : item)); setIsModalOpen(false); setSelectedExtrato(null); }} />
-      <SupplierMatchModal isOpen={isSupplierModalOpen} onClose={() => setIsSupplierModalOpen(false)} extrato={selectedExtrato} onSelect={(sup: any) => { const tf = selectedExtrato.bank.fitid; setExtrato(prev => prev.map((tx: any) => { if (tx.fitid === tf) { setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: sup.nome })); return tx; } return tx; })); setIsSupplierModalOpen(false); setSelectedExtrato(null); }} />
+      <ManualMatchModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        extrato={selectedExtrato} 
+        onSelect={(assoc: any) => { 
+          const tf = selectedExtrato.bank.fitid;
+          setEditedMemos(prev => ({ ...prev, [tf]: enhanceMemo(assoc.nome, selectedExtrato.bank.memo) }));
+          setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, suggestedCategory: 'Mensalidades' } : item)); 
+          setIsModalOpen(false); 
+          setSelectedExtrato(null); 
+        }} 
+      />
+      <SupplierMatchModal 
+        isOpen={isSupplierModalOpen} 
+        onClose={() => setIsSupplierModalOpen(false)} 
+        extrato={selectedExtrato} 
+        onSelect={(sup: any) => { 
+          const tf = selectedExtrato.bank.fitid; 
+          setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: enhanceMemo(sup.nome, selectedExtrato.bank.memo) }));
+          setExtrato(prev => prev.map((tx: any) => tx.fitid === tf ? tx : tx)); 
+          setIsSupplierModalOpen(false); 
+          setSelectedExtrato(null); 
+        }} 
+      />
     </div>
   )
 }

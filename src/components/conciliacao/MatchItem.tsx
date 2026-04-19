@@ -35,6 +35,7 @@ interface MatchItemProps {
   isCora?: boolean;
   isProcessed?: boolean;
   externalAuditInvoices?: any[];
+  memo?: string;
 }
 
 export default function MatchItem({ 
@@ -51,12 +52,18 @@ export default function MatchItem({
   isCora,
   isAdesao,
   isProcessed,
-  externalAuditInvoices
+  externalAuditInvoices,
+  memo
 }: MatchItemProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [localMemo, setLocalMemo] = useState(bank.memo)
+  const [localMemo, setLocalMemo] = useState(memo || bank.memo)
   const [isAuditing, setIsAuditing] = useState(false)
   const [internalInvoices, setInternalInvoices] = useState<any[]>([])
+
+  // Sincroniza estado local se o valor externo mudar (ex: via modal de fornecedor)
+  React.useEffect(() => {
+    if (memo) setLocalMemo(memo)
+  }, [memo])
 
   const coraInvoices = externalAuditInvoices || internalInvoices
 
@@ -125,7 +132,9 @@ export default function MatchItem({
             ) : (
               <div className="flex items-start gap-2 group cursor-pointer" onClick={() => setIsEditing(true)}>
                 <h4 className="text-sm font-black text-gray-800 leading-tight uppercase whitespace-normal break-words">{localMemo}</h4>
-                <Edit2 size={12} className="text-gray-300 group-hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5" />
+                <div className="p-1 rounded-md bg-indigo-50 text-indigo-500 opacity-40 group-hover:opacity-100 transition-all shrink-0">
+                  <Edit2 size={10} />
+                </div>
               </div>
             )}
             <div className="flex items-center gap-4 mt-2">
