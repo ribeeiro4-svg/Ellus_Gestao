@@ -59,7 +59,7 @@ export default function ReceitasPage() {
   const [filterTax, setFilterTax] = useState('todos')
   const [filterValueMin, setFilterValueMin] = useState('')
   const [filterValueMax, setFilterValueMax] = useState('')
-  const [onlyUnlinked, setOnlyUnlinked] = useState(false)
+  const [filterVinculo, setFilterVinculo] = useState('todos')
 
   const filteredReceitas = useMemo(() => {
     const rawRecs = lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita')
@@ -92,21 +92,22 @@ export default function ReceitasPage() {
       const matchCategoria = String(filterCategoria).toLowerCase() === 'todos' || String(r.categoria).toLowerCase() === String(filterCategoria).toLowerCase()
       if (!matchCategoria) stats.cat++
 
-      const matchUnlinked = !onlyUnlinked || (!r.associado_id && !r.diretor_id)
+      const matchVinculo = filterVinculo === 'todos' || 
+                           (filterVinculo === 'com' ? (r.associado_id || r.diretor_id) : (!r.associado_id && !r.diretor_id))
       const hasTax = (r.descricao || '').includes('(Taxa:')
       const matchTax = filterTax === 'todos' || (filterTax === 'com_taxa' ? hasTax : !hasTax)
       const val = Number(r.valor)
       const matchMin = !filterValueMin || val >= Number(filterValueMin)
       const matchMax = !filterValueMax || val <= Number(filterValueMax)
 
-      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchConta && matchCategoria && matchUnlinked && matchTax && matchMin && matchMax
+      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchConta && matchCategoria && matchVinculo && matchTax && matchMin && matchMax
     }).map(r => {
       const match = (r.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
       return { ...r, taxaCalculada: match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0 }
     })
 
     return { data: filtered, stats }
-  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, filterTax, filterValueMin, filterValueMax, onlyUnlinked, associados, contas])
+  }, [lancamentos, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, filterTax, filterValueMin, filterValueMax, filterVinculo, associados, contas])
 
   const filteredData = filteredReceitas.data
 
@@ -298,6 +299,7 @@ export default function ReceitasPage() {
           <option value="dinheiro">Caixa (Espécie)</option>
         </select>
         <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl border-none outline-none font-bold text-xs"><option value="todos">Categorias</option><option value="MENSALIDADE">Mensalidade</option><option value="ADESAO">Adesão</option></select>
+        <select value={filterVinculo} onChange={e => setFilterVinculo(e.target.value)} className="bg-orange-50 text-orange-700 px-4 py-3 rounded-2xl border-none outline-none font-bold text-xs"><option value="todos">Todos Vínculos</option><option value="com">Com Vínculo</option><option value="sem">Sem Vínculo</option></select>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">

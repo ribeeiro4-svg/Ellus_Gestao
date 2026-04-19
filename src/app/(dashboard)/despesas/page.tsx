@@ -58,7 +58,7 @@ export default function DespesasPage() {
   const [filterTax, setFilterTax] = useState('todos')
   const [filterValueMin, setFilterValueMin] = useState('')
   const [filterValueMax, setFilterValueMax] = useState('')
-  const [onlyUnlinked, setOnlyUnlinked] = useState(false)
+  const [filterVinculo, setFilterVinculo] = useState('todos')
 
   const filteredDespesas = useMemo(() => {
     return despesas.filter(d => {
@@ -80,7 +80,8 @@ export default function DespesasPage() {
       const matchConta = filterConta === 'todos' || 
                         (filterConta === 'dinheiro' ? d.forma_pagamento === 'Dinheiro' : d.conta_id === filterConta)
       const matchCategoria = filterCategoria === 'todos' || d.categoria === filterCategoria
-      const matchUnlinked = !onlyUnlinked || (!d.fornecedor_id && !d.diretor_id)
+      const matchVinculo = filterVinculo === 'todos' || 
+                           (filterVinculo === 'com' ? (d.fornecedor_id || d.diretor_id) : (!d.fornecedor_id && !d.diretor_id))
 
       const hasTax = (d.descricao || '').includes('(Taxa:')
       const matchTax = filterTax === 'todos' || (filterTax === 'com_taxa' ? hasTax : !hasTax)
@@ -89,7 +90,7 @@ export default function DespesasPage() {
       const matchMin = !filterValueMin || val >= Number(filterValueMin)
       const matchMax = !filterValueMax || val <= Number(filterValueMax)
 
-      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchConta && matchCategoria && matchUnlinked && matchTax && matchMin && matchMax
+      return matchMonth && matchYear && matchSearch && matchStatus && matchPagamento && matchConta && matchCategoria && matchVinculo && matchTax && matchMin && matchMax
     }).map(d => {
       const match = (d.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
       return {
@@ -97,7 +98,7 @@ export default function DespesasPage() {
         taxaCalculada: match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
       }
     })
-  }, [despesas, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, filterTax, filterValueMin, filterValueMax, onlyUnlinked, fornecedores, contas])
+  }, [despesas, searchTerm, filterStatus, filterPagamento, filterConta, filterCategoria, filterMonth, filterYear, filterTax, filterValueMin, filterValueMax, filterVinculo, fornecedores, contas])
 
   /* ── Gráficos ── */
   const despesaMensal = useMemo(() => {
@@ -313,6 +314,12 @@ export default function DespesasPage() {
             <option value="todos">Taxas: Todas</option>
             <option value="com_taxa">Com Taxa</option>
             <option value="sem_taxa">Sem Taxa</option>
+          </select>
+
+          <select value={filterVinculo} onChange={(e) => setFilterVinculo(e.target.value)} className="bg-orange-50 text-orange-700 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-orange-100 transition-all">
+            <option value="todos">Todos Vínculos</option>
+            <option value="com">Com Vínculo</option>
+            <option value="sem">Sem Vínculo</option>
           </select>
 
           <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-2xl border border-transparent focus-within:border-orange-200 focus-within:bg-white transition-all">
