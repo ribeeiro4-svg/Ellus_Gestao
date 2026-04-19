@@ -327,7 +327,7 @@ export default function DashboardPage() {
           title="Despesas Pagas" 
           value={fmtR(despesaTotal)} 
           trend={-5} 
-          trendLabel="economia gerada" 
+          trendLabel="vs mês anterior" 
           icon={<TrendingDown size={20} />} 
           category="error"
           explanation={{
@@ -340,7 +340,7 @@ export default function DashboardPage() {
           title="Resultado Líquido" 
           value={fmtR(receitaTotal - despesaTotal)} 
           trend={8} 
-          trendLabel="crescimento real" 
+          trendLabel="vs mês anterior" 
           icon={<DollarSign size={20} />} 
           category="info" 
           explanation={{
@@ -353,7 +353,7 @@ export default function DashboardPage() {
           title="Índice Inadimplência" 
           value={fmtPct(pctInadimp)} 
           trend={-2} 
-          trendLabel="redução de risco" 
+          trendLabel="vs mês anterior" 
           icon={<AlertCircle size={20} />} 
           category="danger"
           explanation={{
