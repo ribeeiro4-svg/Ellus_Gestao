@@ -85,7 +85,8 @@ export default function ReceitasPage() {
       if (!matchStatus) stats.status++
 
       const matchPagamento = String(filterPagamento).toLowerCase() === 'todos' || String(r.forma_pagamento).toLowerCase() === String(filterPagamento).toLowerCase()
-      const matchConta = String(filterConta).toLowerCase() === 'todos' || String(r.conta_id).toLowerCase() === String(filterConta).toLowerCase()
+      const matchConta = String(filterConta).toLowerCase() === 'todos' || 
+                        (filterConta === 'dinheiro' ? r.forma_pagamento === 'Dinheiro' : String(r.conta_id).toLowerCase() === String(filterConta).toLowerCase())
       if (!matchConta) stats.conta++
 
       const matchCategoria = String(filterCategoria).toLowerCase() === 'todos' || String(r.categoria).toLowerCase() === String(filterCategoria).toLowerCase()
@@ -238,6 +239,11 @@ export default function ReceitasPage() {
         <select value={filterYear} onChange={e => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl border-none outline-none font-bold text-xs">{[2024,2025,2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
         <select value={filterMonth} onChange={e => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl border-none outline-none font-bold text-xs"><option value={-1}>Todos Meses</option>{MESES.map((m, i) => <option key={m} value={i}>{m}</option>)}</select>
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl border-none outline-none font-bold text-xs"><option value="todos">Status: Todos</option><option value="pago">Recebidos</option><option value="pendente">Pendentes</option></select>
+        <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl border-none outline-none font-bold text-xs">
+          <option value="todos">Todas as Contas</option>
+          {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          <option value="dinheiro">Caixa (Espécie)</option>
+        </select>
         <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl border-none outline-none font-bold text-xs"><option value="todos">Categorias</option><option value="MENSALIDADE">Mensalidade</option><option value="ADESAO">Adesão</option></select>
       </div>
 

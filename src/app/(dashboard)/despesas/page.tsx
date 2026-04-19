@@ -77,7 +77,8 @@ export default function DespesasPage() {
         d.categoria.toLowerCase().includes(searchLower)
       const matchStatus = filterStatus === 'todos' || d.status === filterStatus
       const matchPagamento = filterPagamento === 'todos' || d.forma_pagamento === filterPagamento
-      const matchConta = filterConta === 'todos' || d.conta_id === filterConta
+      const matchConta = filterConta === 'todos' || 
+                        (filterConta === 'dinheiro' ? d.forma_pagamento === 'Dinheiro' : d.conta_id === filterConta)
       const matchCategoria = filterCategoria === 'todos' || d.categoria === filterCategoria
       const matchUnlinked = !onlyUnlinked || (!d.fornecedor_id && !d.diretor_id)
 
@@ -293,8 +294,9 @@ export default function DespesasPage() {
             <option value="Transferência">Transferência</option>
           </select>
           <select value={filterConta} onChange={(e) => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
-            <option value="todos">Conta: Todas</option>
+            <option value="todos">Todas as Contas</option>
             {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            <option value="dinheiro">Caixa (Espécie)</option>
           </select>
           <select value={filterCategoria} onChange={(e) => setFilterCategoria(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">
             <option value="todos">Categoria: Todas</option>
