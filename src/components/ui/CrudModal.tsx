@@ -154,7 +154,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                       ) : (
                         <select
                           required={field.required}
-                          value={formData[field.name] || ''}
+                          value={formData[field.name] ?? ''}
                           onChange={e => handleChange(field.name, e.target.value)}
                           style={{
                             width: '100%',
@@ -180,7 +180,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                   ) : field.type === 'textarea' ? (
                     <textarea
                       required={field.required}
-                      value={formData[field.name] || ''}
+                      value={formData[field.name] ?? ''}
                       placeholder={field.placeholder}
                       onChange={e => handleChange(field.name, e.target.value)}
                       rows={3}
@@ -213,7 +213,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                       type={field.type}
                       required={field.required}
                       placeholder={field.placeholder}
-                      value={formData[field.name] || ''}
+                      value={formData[field.name] ?? ''}
                       onChange={e => handleChange(field.name, field.type === 'number' ? Number(e.target.value) : e.target.value)}
                       style={{
                         width: '100%',

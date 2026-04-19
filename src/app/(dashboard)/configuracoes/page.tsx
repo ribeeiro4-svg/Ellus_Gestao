@@ -328,7 +328,7 @@ export default function ConfigPage() {
             { value: 'poupanca', label: 'Conta Poupança' },
             { value: 'caixa_fisico', label: 'Caixa Físico' },
           ]},
-          { name: 'saldo_inicial', label: 'Saldo Inicial (R$)', type: 'number', required: true },
+          { name: 'saldo_inicial', label: 'Saldo Inicial (R$)', type: 'number', required: true, defaultValue: 0 },
         ]}
       />
 
