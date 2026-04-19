@@ -201,6 +201,7 @@ export default function ReceitasPage() {
           <span>LEN: {lancamentos.length}</span>
           <span>FILT: {filteredData.length}</span>
           <span>Y/M: {filterYear}/{filterMonth}</span>
+          <span>JAN_FOUND: {lancamentos.filter(l => String(l.data).includes('2026-01')).length}</span>
           <span className="text-rose-400">FAILED: M:{filteredReceitas.stats.month} Y:{filteredReceitas.stats.year}</span>
         </div>
         {lancamentos.length > 0 && (() => {

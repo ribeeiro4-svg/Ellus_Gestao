@@ -19,7 +19,7 @@ export function useFinanceiro() {
       const { data, error } = await sb.from('lancamentos')
         .select('*').eq('tenant_id', tenantId)
         .order('data', { ascending: false })
-        .limit(5000)
+        .range(0, 4999)
       
       if (error) throw error
       setLancamentos(data || [])
