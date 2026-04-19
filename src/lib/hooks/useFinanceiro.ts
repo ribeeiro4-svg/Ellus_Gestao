@@ -99,8 +99,36 @@ export function useFinanceiro() {
 
   const remover = async (id: string) => {
     const item = lancamentos.find(l => l.id === id)
-    if (item && isPeriodoBloqueado(item.data)) return { error: 'Este período está fechado e não permite alterações.' }
+    if (!item) return { error: 'Lançamento não encontrado.' }
+    if (isPeriodoBloqueado(item.data)) return { error: 'Este período está fechado e não permite alterações.' }
     
+    // Lógica de Estorno de Remanejo (Encontro de Contas)
+    if (item.descricao.includes('[ENCONTRO DE CONTAS]') && item.banco_transacao_id) {
+      const original = lancamentos.find(l => 
+        l.banco_transacao_id === item.banco_transacao_id && 
+        l.id !== item.id && 
+        !l.descricao.includes('[ENCONTRO DE CONTAS]')
+      )
+
+      if (original) {
+        // Devolve o valor ao original
+        const novoValorOriginal = Number(original.valor) + Number(item.valor)
+        
+        // Tenta recuperar a descrição com taxa se o valor voltar a ser > 50 e for associado
+        let novaDescOriginal = original.descricao
+        if (novoValorOriginal > 50 && (original.categoria === 'MENSALIDADE' || original.associado_id)) {
+           const valorTaxa = novoValorOriginal - 50
+           const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTaxa)
+           if (!novaDescOriginal.includes('(Taxa:')) {
+             novaDescOriginal = `${novaDescOriginal} (Taxa: ${taxaFmt})`
+           }
+           await sb.from('lancamentos').update({ valor: 50, descricao: novaDescOriginal }).eq('id', original.id)
+        } else {
+           await sb.from('lancamentos').update({ valor: novoValorOriginal }).eq('id', original.id)
+        }
+      }
+    }
+
     const { error } = await sb.from('lancamentos').delete().eq('id', id)
     if (!error) fetch()
     return { error }
