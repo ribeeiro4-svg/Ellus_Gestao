@@ -90,16 +90,26 @@ export const STATUS_LANCAMENTO = [
   { value: 'atrasado', label: 'Atrasado', color: 'bg-rose-100 text-rose-700' }
 ]
 
+export function getBruto(l: any): number {
+  if (!l) return 0
+  const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+  const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
+  const v = Number(l.valor) || 0
+  return Math.round((v + taxaVal) * 100) / 100
+}
+
 export function getMesIdx(dataStr: any): number {
   if (!dataStr) return -1
   if (dataStr instanceof Date) return dataStr.getMonth()
   const str = String(dataStr).trim()
   
+  // Detecção prioritária de formato ISO YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) return (parseInt(isoMatch[2], 10) || 0) - 1
+
   if (str.includes('-')) {
-    const cleanStr = str.split('T')[0].split(' ')[0]
-    const parts = cleanStr.split('-')
+    const parts = str.split('T')[0].split(' ')[0].split('-')
     if (parts.length >= 2) {
-      // Formato ISO: YYYY-MM-DD
       const mes = parts[0].length === 4 ? parts[1] : parts[1]
       return (parseInt(mes, 10) || 0) - 1
     }
@@ -108,8 +118,8 @@ export function getMesIdx(dataStr: any): number {
   if (str.includes('/')) {
     const parts = str.split('/')
     if (parts.length >= 2) {
-      // Formato BR: DD/MM/YYYY
-      const mes = parts[1]
+      // Formato BR: DD/MM/YYYY ou YYYY/MM/DD
+      const mes = parts[0].length === 4 ? parts[1] : parts[1]
       return (parseInt(mes, 10) || 0) - 1
     }
   }
@@ -128,8 +138,7 @@ export function getAnoIdx(dataStr: any): number {
   const str = String(dataStr).trim()
   
   if (str.includes('-')) {
-    const cleanStr = str.split('T')[0].split(' ')[0]
-    const parts = cleanStr.split('-')
+    const parts = str.split('T')[0].split(' ')[0].split('-')
     if (parts.length >= 1) {
       return parts[0].length === 4 ? parseInt(parts[0], 10) : parseInt(parts[2], 10)
     }

@@ -235,40 +235,45 @@ export function useFinanceiro() {
   }
 
   const kpis = useMemo(() => {
-    let pagoIncome = 0, pagoExpenses = 0
-    let openIncome = 0, openExpenses = 0
-    let cash = 0, bank = 0
+    let pagoIncome = 0
+    let openIncome = 0
+    let pagoExpenses = 0
+    let openExpenses = 0
+    let cash = 0
+    let bank = 0
 
     lancamentos.forEach(l => {
-      const v = l.valor || 0
-      const isPago = l.status === 'pago'
+      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+      const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
+      const v = Number(l.valor)
+      const bruto = Math.round((v + taxaVal) * 100) / 100
 
-      if (l.tipo === 'receita') {
-        if (isPago) {
-          pagoIncome = safeSum(pagoIncome, v)
-          if (l.forma_pagamento === 'Dinheiro') cash = safeSum(cash, v)
-          else bank = safeSum(bank, v)
+      if ((l.tipo || '').toLowerCase() === 'receita') {
+        if (l.status === 'pago') {
+          pagoIncome = Math.round((pagoIncome + bruto) * 100) / 100
+          if (l.forma_pagamento === 'Dinheiro') cash = Math.round((cash + v) * 100) / 100
+          else bank = Math.round((bank + v) * 100) / 100
         } else {
-          openIncome = safeSum(openIncome, v)
+          openIncome = Math.round((openIncome + bruto) * 100) / 100
         }
       } else {
-        if (isPago) {
-          pagoExpenses = safeSum(pagoExpenses, v)
-          if (l.forma_pagamento === 'Dinheiro') cash = safeDiff(cash, v)
-          else bank = safeDiff(bank, v)
+        if (l.status === 'pago') {
+          pagoExpenses = Math.round((pagoExpenses + v) * 100) / 100
+          if (l.forma_pagamento === 'Dinheiro') cash = Math.round((cash - v) * 100) / 100
+          else bank = Math.round((bank - v) * 100) / 100
         } else {
-          openExpenses = safeSum(openExpenses, v)
+          openExpenses = Math.round((openExpenses + v) * 100) / 100
         }
       }
     })
 
     return {
-      totalRec: pagoIncome,               // Realizado
-      totalDesp: pagoExpenses,           // Realizado
-      provisionedRec: openIncome,        // Provisionamento
-      provisionedDesp: openExpenses,     // Provisionamento
-      resultadoReal: safeDiff(pagoIncome, pagoExpenses),
-      resultadoProjetado: safeDiff(safeSum(pagoIncome, openIncome), safeSum(pagoExpenses, openExpenses)),
+      totalRec: pagoIncome,
+      totalDesp: pagoExpenses,
+      provisionedRec: openIncome,
+      provisionedDesp: openExpenses,
+      resultadoReal: Math.round((pagoIncome - pagoExpenses) * 100) / 100,
+      resultadoProjetado: Math.round(((pagoIncome + openIncome) - (pagoExpenses + openExpenses)) * 100) / 100,
       saldoCaixa: cash,
       saldoBanco: bank
     }

@@ -12,7 +12,7 @@ import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
 import ChartModal from '@/components/ui/ChartModal'
 import SplashScreen from '@/components/ui/SplashScreen'
-import { fmtR, MESES, fmtData, fmtPct, getMesIdx, getAnoIdx, deleteCookie } from '@/lib/utils/formatters'
+import { fmtR, MESES, fmtData, fmtPct, getMesIdx, getAnoIdx, getBruto, deleteCookie } from '@/lib/utils/formatters'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
@@ -93,44 +93,38 @@ export default function DashboardPage() {
     const desp = Array(12).fill(0)
     const agora = new Date()
     const anoAtual = agora.getFullYear()
-    const mesAtualIndex = agora.getMonth()
-    let rAtual = 0
+    
+    let rTotal = 0
+    let tTotal = 0
 
     lancamentos.forEach(l => {
       const dataStr = l.data || ''
       const mesIdx = getMesIdx(dataStr)
       const anoIdx = getAnoIdx(dataStr)
       
-      // Filtrar apenas o ano atual para o dashboard principal
-      if (anoIdx !== anoAtual) return
-      if (mesIdx < 0 || mesIdx > 11) return
-      
-      const valor = l.valor || 0
-      const tipo = (l.tipo || '').toLowerCase()
-      
-      if (tipo === 'receita') {
-        rec[mesIdx] += valor
-        if (mesIdx === mesAtualIndex) rAtual += valor
-      } else if (tipo === 'despesa') {
-        desp[mesIdx] += valor
-      }
-    })
-
-    const res = rec.map((v, i) => v - desp[i])
-
-    // Cálculo acumulado de taxas e receitas totais
-    let taxasTotal = 0
-    let rTotal = 0
-    lancamentos.forEach(l => {
-      if (l.tipo === 'receita') rTotal += (l.valor || 0)
-      
+      const bruto = getBruto(l)
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
-      if (match) {
-        taxasTotal += parseFloat(match[1].replace(/\./g, '').replace(',', '.'))
+      const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
+      const tipo = (l.tipo || '').toLowerCase()
+
+      if (tipo === 'receita') {
+        rTotal = Math.round((rTotal + bruto) * 100) / 100
+        tTotal = Math.round((tTotal + taxaVal) * 100) / 100
+      }
+
+      // Gráficos apenas do ano atual
+      if (anoIdx === anoAtual && mesIdx >= 0 && mesIdx <= 11) {
+        if (tipo === 'receita') {
+          rec[mesIdx] = Math.round((rec[mesIdx] + bruto) * 100) / 100
+        } else if (tipo === 'despesa') {
+          desp[mesIdx] = Math.round((desp[mesIdx] + (l.valor || 0)) * 100) / 100
+        }
       }
     })
 
-    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaTotal: rTotal, taxasTotal }
+    const res = rec.map((v, i) => Math.round((v - desp[i]) * 100) / 100)
+
+    return { receitaData: rec, despesaData: desp, resultadoData: res, receitaTotal: rTotal, taxasTotal: tTotal }
   }, [lancamentos])
 
   // 2. Associados
