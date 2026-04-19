@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, Calendar, DollarSign, Tag, Info, CheckCircle2, CreditCard, User, Building2, TrendingUp, ArrowUpRight, ArrowDownLeft, MoveRight, HelpCircle, Check } from 'lucide-react'
+import { X, Calendar, DollarSign, Tag, Info, CheckCircle2, CreditCard, User, Building2, TrendingUp, ArrowUpRight, ArrowDownLeft, MoveRight, HelpCircle, Check, Loader2 } from 'lucide-react'
 import { Lancamento, Associado } from '@/lib/types'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 
@@ -167,67 +167,101 @@ export default function LaunchDetailsModal({ isOpen, onClose, launch, associados
               </div>
             </div>
           ) : (
-            <div className="space-y-6 animate-in slide-in-from-right duration-300">
-              <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100 text-center">
-                <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1 block">Valor a ser Reatribuído</span>
-                <div className="text-3xl font-black text-indigo-700">{fmtR(valorMover)}</div>
-                <input 
-                  type="range" 
-                  min={1} 
-                  max={valorBruto} 
-                  value={valorMover} 
-                  onChange={(e) => setValorMover(Number(e.target.value))}
-                  className="w-full mt-4 accent-indigo-600"
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Selecionar Beneficiário (Associado)</label>
-                  <select 
-                    value={targetId} 
-                    onChange={(e) => {
-                      const id = e.target.value
-                      setTargetId(id)
-                      const assoc = associados.find(a => a.id === id)
-                      if (assoc) {
-                        setNovaDesc(`Mensalidade - ${assoc.nome}`)
-                      }
-                    }}
-                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 ring-indigo-200 text-sm font-bold transition-all"
-                  >
-                    <option value="">Selecione...</option>
-                    {associados.filter(a => a.id !== launch.associado_id).map(a => (
-                      <option key={a.id} value={a.id}>{a.nome}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Descrição do Lançamento</label>
-                  <textarea 
-                    value={novaDesc}
-                    onChange={(e) => setNovaDesc(e.target.value)}
-                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 ring-indigo-200 text-sm font-semibold transition-all italic h-20"
+            <div className="space-y-6 animate-in slide-in-from-right duration-500 ease-out">
+              <div className="p-8 bg-indigo-50/50 rounded-[32px] border border-indigo-100/50 text-center relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-indigo-400 to-transparent opacity-30"></div>
+                <span className="text-[11px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2 block">Valor a ser Reatribuído</span>
+                <div className="text-4xl font-black text-indigo-700 tracking-tight drop-shadow-sm">{fmtR(valorMover)}</div>
+                
+                <div className="mt-8 relative px-2">
+                  <input 
+                    type="range" 
+                    min={1} 
+                    max={valorBruto} 
+                    value={valorMover} 
+                    onChange={(e) => setValorMover(Number(e.target.value))}
+                    className="remanejo-slider w-full h-1.5 bg-indigo-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
+              <div className="space-y-5 px-1">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-3 block tracking-[0.15em] ml-1">Selecionar Beneficiário (Associado)</label>
+                  <div className="relative group/select">
+                    <select 
+                      value={targetId} 
+                      onChange={(e) => {
+                        const id = e.target.value
+                        setTargetId(id)
+                        const assoc = associados.find(a => a.id === id)
+                        if (assoc) {
+                          setNovaDesc(`Mensalidade - ${assoc.nome}`)
+                        }
+                      }}
+                      className="w-full h-14 px-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 ring-indigo-50 focus:bg-white focus:border-indigo-400 text-sm font-bold transition-all appearance-none cursor-pointer text-slate-700"
+                    >
+                      <option value="">Selecione...</option>
+                      {associados.filter(a => a.id !== launch.associado_id).map(a => (
+                        <option key={a.id} value={a.id}>{a.nome}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300">
+                      <User size={16} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative group/text">
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-3 block tracking-[0.15em] ml-1">Descrição do Lançamento</label>
+                  <textarea 
+                    value={novaDesc}
+                    onChange={(e) => setNovaDesc(e.target.value)}
+                    placeholder="Descreva o motivo do remanejo..."
+                    className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 ring-indigo-50 focus:bg-white focus:border-indigo-400 text-sm font-semibold transition-all italic h-24 resize-none text-slate-600 shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-4">
                 <button 
                   onClick={execRemanejo}
                   disabled={!targetId || isSubmitting}
-                  className="flex-1 h-12 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-2xl font-black flex items-center justify-center gap-2 transition-all shadow-xl shadow-indigo-100"
+                  className="flex-1 h-14 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white rounded-2xl font-black flex items-center justify-center gap-3 transition-all shadow-xl shadow-indigo-200 active:scale-[0.98] group"
                 >
-                  {isSubmitting ? <span className="animate-spin text-lg">◌</span> : <Check size={18} />} CONFIRMAR REMANEJO
+                  {isSubmitting ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Check size={18} strokeWidth={3} className="group-hover:rotate-12 transition-transform" />
+                  )} 
+                  CONFIRMAR REMANEJO
                 </button>
                 <button 
                   onClick={() => setIsRemanejando(false)}
-                  className="px-6 h-12 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black transition-all"
+                  className="px-8 h-14 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-2xl font-black transition-all hover:text-slate-700 uppercase tracking-widest text-[11px] active:scale-[0.98]"
                 >
                   CANCELAR
                 </button>
               </div>
+
+              <style jsx>{`
+                .remanejo-slider::-webkit-slider-thumb {
+                  -webkit-appearance: none;
+                  appearance: none;
+                  width: 24px;
+                  height: 24px;
+                  background: #4f46e5;
+                  border: 4px solid #fff;
+                  border-radius: 50%;
+                  cursor: pointer;
+                  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
+                  transition: all 0.2s ease;
+                }
+                .remanejo-slider::-webkit-slider-thumb:hover {
+                  transform: scale(1.1);
+                  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.5);
+                }
+              `}</style>
             </div>
           )}
         </div>
