@@ -174,7 +174,7 @@ export default function ReceitasPage() {
   }
 
   const handleBatchStatus = async (status: string) => {
-    await atualizarBulk(selectedIds, { status })
+    await atualizarBulk(selectedIds, { status: status as any })
     setSelectedIds([])
   }
 
