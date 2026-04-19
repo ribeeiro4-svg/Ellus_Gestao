@@ -14,7 +14,7 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useOrcamentos } from '@/lib/hooks/useOrcamentos'
 import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
-import { fmtR, MESES, fmtPct, getMesIdx, getAnoIdx } from '@/lib/utils/formatters'
+import { fmtR, MESES, fmtPct, getMesIdx, getAnoIdx, getBruto } from '@/lib/utils/formatters'
 import { Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController
@@ -26,7 +26,7 @@ export default function PlanejamentoPage() {
   const [selectedMes, setSelectedMes] = useState(new Date().getMonth())
   const [selectedAno] = useState(new Date().getFullYear())
   
-  const { lancamentos, loading: loadFin } = useFinanceiro()
+  const { lancamentos, loading: loadFin, refresh: refetchFin } = useFinanceiro()
   const { orcamentos, loading: loadOrc, inserir, atualizar, remover, refresh } = useOrcamentos(selectedMes, selectedAno)
   const { categorias } = useCategorias()
   const { diretoria, atualizar: atualizarDiretor } = useDiretoria()
@@ -40,6 +40,11 @@ export default function PlanejamentoPage() {
   const [periodosMember, setPeriodosMember] = useState<any | null>(null)
   const [tempPeriodos, setTempPeriodos] = useState<any[]>([])
 
+  // Sincroniza busca de lançamentos para o ano selecionado
+  React.useEffect(() => {
+    refetchFin(selectedAno)
+  }, [selectedAno, refetchFin])
+
   const totalProLabore = useMemo(() => {
     return diretoria.filter(d => d.status === 'ativo').reduce((s, d) => {
       const targetSerial = selectedAno * 12 + selectedMes
@@ -48,13 +53,14 @@ export default function PlanejamentoPage() {
         const end = p.ano_fim !== undefined ? (p.ano_fim * 12 + (p.mes_fim ?? 11)) : 999999
         return targetSerial >= start && targetSerial <= end
       })
-      return s + (activePeriod?.valor || d.pro_labore_base || 0)
+      const v = activePeriod?.valor || d.pro_labore_base || 0
+      return Math.round((s + v) * 100) / 100
     }, 0)
   }, [diretoria, selectedMes, selectedAno])
 
   const totals = useMemo(() => {
-    const planejadoReceita = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => s + o.valor_planejado, 0)
-    const planejadoDespesa = orcamentos.filter(o => o.tipo === 'despesa').reduce((s, o) => s + o.valor_planejado, 0)
+    const planejadoReceita = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => Math.round((s + o.valor_planejado) * 100) / 100, 0)
+    const planejadoDespesa = orcamentos.filter(o => o.tipo === 'despesa').reduce((s, o) => Math.round((s + o.valor_planejado) * 100) / 100, 0)
     return { planejadoReceita, planejadoDespesa }
   }, [orcamentos])
 
@@ -65,13 +71,13 @@ export default function PlanejamentoPage() {
 
     return todasMes.map(cat => {
       const lancMes = lancamentos.filter(l => l.categoria === cat && getMesIdx(l.data) === selectedMes && getAnoIdx(l.data) === selectedAno)
-      const realizado = lancMes.reduce((sum, l) => sum + l.valor, 0)
+      const realizado = lancMes.reduce((sum, l) => Math.round((sum + getBruto(l)) * 100) / 100, 0)
       const orc = orcamentos.find(o => o.categoria === cat)
       const planejado = editValues[cat] !== undefined ? editValues[cat] : (orc?.valor_planejado || 0)
       const catConfig = categorias.find(c => c.nome === cat)
       const tipo = catConfig?.tipo || lancMes[0]?.tipo || (cat.toLowerCase().includes('receita') || cat.toLowerCase().includes('adesão') ? 'receita' : 'despesa')
 
-      return { id: orc?.id || cat, categoria: cat, tipo, planejado, realizado, diferenca: realizado - planejado, isDirty: editValues[cat] !== undefined }
+      return { id: orc?.id || cat, categoria: cat, tipo, planejado, realizado, diferenca: Math.round((realizado - planejado) * 100) / 100, isDirty: editValues[cat] !== undefined }
     })
   }, [lancamentos, orcamentos, selectedMes, selectedAno, editValues, categorias])
 
@@ -109,7 +115,7 @@ export default function PlanejamentoPage() {
       key: 'desvio', 
       render: (i: any) => {
         const diff = i.tipo === 'receita' ? (i.realizado - i.planejado) : (i.planejado - i.realizado)
-        return <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{diff > 0 ? '+' : ''}{fmtR(diff)}</span>
+        return <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{diff > 0 ? '+' : ''}{fmtR(Math.round(diff * 100) / 100)}</span>
       }
     }
   ]
@@ -134,10 +140,10 @@ export default function PlanejamentoPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         <KpiCard title="Receitas Projetadas" value={fmtR(totals.planejadoReceita)} icon={<ArrowUpCircle size={20} />} category="success" />
         <KpiCard title="Despesas Projetadas" value={fmtR(totals.planejadoDespesa)} icon={<ArrowDownCircle size={20} />} category="error" />
-        <KpiCard title="Balanço Final" value={fmtR(totals.planejadoReceita - totals.planejadoDespesa)} icon={<Calendar size={20} />} category="info" />
+        <KpiCard title="Balanço Final" value={fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100)} icon={<Calendar size={20} />} category="info" />
         <button onClick={() => { const d = diretoria.find(x => x.status === 'ativo'); if(d) { setPeriodosMember(d); setTempPeriodos(d.periodos || []) } }} className="text-left active:scale-95 transition-all"><KpiCard title="Pró-labore (Ajustar)" value={fmtR(totalProLabore)} icon={<Users size={20} />} category="purple" subtitle="Clique para gerenciar períodos" /></button>
-        <KpiCard title="Reserva Ideal" value={fmtR(totals.planejadoDespesa * reservaMeses)} icon={<Activity size={20} />} category="indigo" subtitle={<div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-slate-400">Meta: <input type="number" value={reservaMeses} onChange={e => setReservaMeses(Number(e.target.value))} className="w-8 bg-indigo-50 border-none rounded px-1 text-indigo-700 outline-none" /> meses</div>} />
-        <KpiCard title="Saldo Real" value={fmtR(comparativo.reduce((s, c) => s + (c.tipo === 'receita' ? c.realizado : -c.realizado), 0))} icon={<TrendingUp size={20} />} category="success" />
+        <KpiCard title="Reserva Ideal" value={fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100)} icon={<Activity size={20} />} category="indigo" subtitle={<div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-slate-400">Meta: <input type="number" value={reservaMeses} onChange={e => setReservaMeses(Number(e.target.value))} className="w-8 bg-indigo-50 border-none rounded px-1 text-indigo-700 outline-none" /> meses</div>} />
+        <KpiCard title="Saldo Real" value={fmtR(comparativo.reduce((s, c) => Math.round((s + (c.tipo === 'receita' ? c.realizado : -c.realizado)) * 100) / 100, 0))} icon={<TrendingUp size={20} />} category="success" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
