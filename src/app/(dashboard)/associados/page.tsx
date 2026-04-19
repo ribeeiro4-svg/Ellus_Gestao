@@ -4,8 +4,9 @@ import {
   Chart as ChartJS,
   CategoryScale, LinearScale, BarElement,
   ArcElement, Title, Tooltip, Legend,
+  LineElement, PointElement,
 } from 'chart.js'
-import { Bar, Doughnut } from 'react-chartjs-2'
+import { Line, Doughnut } from 'react-chartjs-2'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -14,7 +15,7 @@ import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, MESES } from '@/lib/utils/formatters'
 import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, RefreshCw, Pencil, XCircle, Search } from 'lucide-react'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend, LineElement, PointElement)
 
 export default function AssociadosPage() {
   const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign, refresh } = useAssociados()
@@ -215,16 +216,21 @@ export default function AssociadosPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ChartCard title="Crescimento" subtitle="Evolução acumulativa">
-            <Bar 
+            <Line 
               data={{ 
                 labels: MESES, 
                 datasets: [{ 
                   label: 'Associados', 
                   data: crescimentoMensal, 
-                  backgroundColor: 'rgba(16,185,129,0.8)', 
-                  hoverBackgroundColor: '#10b981',
-                  borderRadius: 6,
-                  barPercentage: 0.6
+                  borderColor: '#10b981',
+                  backgroundColor: 'rgba(16,185,129,0.08)',
+                  fill: true,
+                  tension: 0.4,
+                  pointBackgroundColor: '#fff',
+                  pointBorderColor: '#10b981',
+                  pointBorderWidth: 2,
+                  pointRadius: 4,
+                  pointHoverRadius: 6,
                 }] 
               }} 
               options={{ 
@@ -232,7 +238,7 @@ export default function AssociadosPage() {
                 maintainAspectRatio: false, 
                 scales: { 
                   x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' } }, 
-                  y: { beginAtZero: true, border: { display: false }, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#94a3b8' } } 
+                  y: { beginAtZero: false, border: { display: false }, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#94a3b8' } } 
                 }, 
                 plugins: { 
                   legend: { display: false },
