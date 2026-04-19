@@ -54,6 +54,7 @@ export default function ConciliacaoPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState<'ALL' | 'CREDIT' | 'DEBIT'>('ALL')
   const [filterMatch, setFilterMatch] = useState<'ALL' | 'FOUND' | 'NOT_FOUND'>('ALL')
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'NEW' | 'DUPLICATE'>('ALL')
   const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
   const [editedMemos, setEditedMemos] = useState<Record<string, string>>({})
   const [editedCategories, setEditedCategories] = useState<Record<string, string>>({})
@@ -196,9 +197,13 @@ export default function ConciliacaoPage() {
       const matchesType = filterType === 'ALL' || item.bank.type === filterType
       const hasMatch = !!(item.assocMatch || item.forMatch)
       const matchesMatch = filterMatch === 'ALL' || (filterMatch === 'FOUND' ? hasMatch : !hasMatch)
-      return matchesSearch && matchesType && matchesMatch
+      
+      const isDuplicate = existingTxIds.has(item.bank.fitid) || processedIds.has(item.bank.fitid)
+      const matchesStatus = filterStatus === 'ALL' || (filterStatus === 'DUPLICATE' ? isDuplicate : !isDuplicate)
+      
+      return matchesSearch && matchesType && matchesMatch && matchesStatus
     })
-  }, [activeTab, matchedTransactions, coraMatchedItems, searchTerm, filterType, filterMatch])
+  }, [activeTab, matchedTransactions, coraMatchedItems, searchTerm, filterType, filterMatch, filterStatus, existingTxIds, processedIds])
 
   // Auditoria de Lote: Estatísticas
   const auditStats = useMemo(() => {
@@ -480,6 +485,11 @@ export default function ConciliacaoPage() {
             <option value="ALL">Total ({activeTab === 'ofx' ? extrato.length : (coraItems || []).length})</option>
             <option value="FOUND">Com Vínculo</option>
             <option value="NOT_FOUND">Sem Vínculo</option>
+          </select>
+          <select className="bg-gray-50 text-[11px] font-bold text-gray-600 outline-none cursor-pointer border border-gray-100 p-2.5 rounded-xl hover:border-indigo-200 transition-colors" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}>
+            <option value="ALL">Todo Status</option>
+            <option value="NEW">Não Conciliados (Novos)</option>
+            <option value="DUPLICATE">Conciliados (Lançados)</option>
           </select>
         </div>
       </div>
