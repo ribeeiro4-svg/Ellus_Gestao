@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { 
   Plus, Search, TrendingUp,
-  Pencil, XCircle, RefreshCw, Target, ArrowUpCircle, Activity
+  Pencil, XCircle, RefreshCw, Target, ArrowUpCircle, Activity, DollarSign
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
@@ -124,14 +124,26 @@ export default function ReceitasPage() {
     return Object.keys(m).length ? m : { 'Sem dados': 1 }
   }, [filteredData])
 
-  const { totalReceitas, totalTaxas } = useMemo(() => {
+  const { totalReceitas, totalTaxas, totalCora, totalDinheiro } = useMemo(() => {
     let sumVal = 0
     let sumTax = 0
+    let sumCora = 0
+    let sumCash = 0
     filteredData.forEach(r => {
-      sumVal = Math.round((sumVal + (r.valor || 0)) * 100) / 100
-      sumTax = Math.round((sumTax + (r.taxaCalculada || 0)) * 100) / 100
+      const v = r.valor || 0
+      const t = r.taxaCalculada || 0
+      const bruto = Math.round((v + t) * 100) / 100
+      
+      sumVal = Math.round((sumVal + v) * 100) / 100
+      sumTax = Math.round((sumTax + t) * 100) / 100
+
+      if (r.forma_pagamento === 'Dinheiro') {
+        sumCash = Math.round((sumCash + v) * 100) / 100
+      } else {
+        sumCora = Math.round((sumCora + bruto) * 100) / 100
+      }
     })
-    return { totalReceitas: sumVal, totalTaxas: sumTax }
+    return { totalReceitas: sumVal, totalTaxas: sumTax, totalCora: sumCora, totalDinheiro: sumCash }
   }, [filteredData])
 
   const receitaPlanejada = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => s + o.valor_planejado, 0)
@@ -174,14 +186,36 @@ export default function ReceitasPage() {
 
         <div className="flex items-center gap-4 relative z-[60] overflow-visible">
           <KpiCard 
-            title="Realizado" 
-            value={fmtR(totalReceitas)} 
+            title="Conta Bancária" 
+            value={fmtR(totalCora)} 
+            icon={<ArrowUpCircle size={20} />} 
+            category="indigo" 
+            explanation={{
+              description: "Total de entradas conciliadas ou vinculadas a contas bancárias (Cora, etc).",
+              formula: "Σ(Receitas Bancárias + Taxas)",
+              example: "Um depósito de R$ 52,01 é contabilizado integralmente."
+            }}
+          />
+          <KpiCard 
+            title="Caixa (Espécie)" 
+            value={fmtR(totalDinheiro)} 
+            icon={<DollarSign size={20} className="text-emerald-500" />} 
+            category="success" 
+            explanation={{
+              description: "Total de recebimentos realizados em dinheiro físico (mãos).",
+              formula: "Σ(Receitas em Espécie)",
+              example: "Recebimento de mensalidade de R$ 50,00 em dinheiro."
+            }}
+          />
+          <KpiCard 
+            title="Receita Realizada" 
+            value={fmtR(totalReceitas + totalTaxas)} 
             icon={<TrendingUp size={20} />} 
             category="success" 
             explanation={{
-              description: "Soma de todas as receitas pagas no período, reintegrando taxas bancárias detectadas automaticamente.",
-              formula: "Σ(Receitas Pagas + Taxas Estornadas)",
-              example: "Um PIX de R$ 97,00 com taxa de R$ 3,00 é contabilizado como R$ 100,00."
+              description: "Soma total de todas as receitas (Banco + Caixa), reintegrando taxas bancárias.",
+              formula: "Σ(Banco + Caixa + Taxas)",
+              example: "Total consolidado de todas as fontes de receita."
             }}
           />
           <KpiCard 
