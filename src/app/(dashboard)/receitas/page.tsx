@@ -124,29 +124,48 @@ export default function ReceitasPage() {
     return Object.keys(m).length ? m : { 'Sem dados': 1 }
   }, [filteredData])
 
-  const { totalReceitas, totalTaxas, totalCora, totalDinheiro } = useMemo(() => {
+  const periodSummary = useMemo(() => {
+    const rawRecs = lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita')
     let sumVal = 0
     let sumTax = 0
     let sumCora = 0
     let sumCash = 0
-    filteredData.forEach(r => {
-      const v = r.valor || 0
-      const t = r.taxaCalculada || 0
-      const bruto = Math.round((v + t) * 100) / 100
-      
-      sumVal = Math.round((sumVal + v) * 100) / 100
-      sumTax = Math.round((sumTax + t) * 100) / 100
 
-      if (r.forma_pagamento === 'Dinheiro') {
-        sumCash = Math.round((sumCash + v) * 100) / 100
-      } else {
-        sumCora = Math.round((sumCora + bruto) * 100) / 100
+    rawRecs.forEach(r => {
+      const m = getMesIdx(r.data)
+      const a = getAnoIdx(r.data)
+      const matchMonth = Number(filterMonth) === -1 || Number(m) === Number(filterMonth)
+      const matchYear = Number(a) === Number(filterYear)
+
+      if (matchMonth && matchYear) {
+        const matchTaxStr = (r.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+        const t = matchTaxStr ? parseFloat(matchTaxStr[1].replace(/\./g, '').replace(',', '.')) : 0
+        const v = r.valor || 0
+        const bruto = Math.round((v + t) * 100) / 100
+
+        sumVal = Math.round((sumVal + v) * 100) / 100
+        sumTax = Math.round((sumTax + t) * 100) / 100
+
+        if (r.forma_pagamento === 'Dinheiro') {
+          sumCash = Math.round((sumCash + v) * 100) / 100
+        } else {
+          sumCora = Math.round((sumCora + bruto) * 100) / 100
+        }
       }
     })
-    return { totalReceitas: sumVal, totalTaxas: sumTax, totalCora: sumCora, totalDinheiro: sumCash }
-  }, [filteredData])
 
-  const receitaPlanejada = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => s + o.valor_planejado, 0)
+    const planejado = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => s + o.valor_planejado, 0)
+
+    return { 
+      totalReceitas: sumVal, 
+      totalTaxas: sumTax, 
+      totalCora: sumCora, 
+      totalDinheiro: sumCash,
+      receitaPlanejada: planejado
+    }
+  }, [lancamentos, filterMonth, filterYear, orcamentos])
+
+  const { totalReceitas, totalTaxas, totalCora, totalDinheiro, receitaPlanejada } = periodSummary
 
   const handleSalvar = async (data: any) => {
     const cleanData = { ...data, valor: Number(data.valor) }
