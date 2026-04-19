@@ -186,7 +186,14 @@ export default function LaunchDetailsModal({ isOpen, onClose, launch, associados
                   <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Selecionar Beneficiário (Associado)</label>
                   <select 
                     value={targetId} 
-                    onChange={(e) => setTargetId(e.target.value)}
+                    onChange={(e) => {
+                      const id = e.target.value
+                      setTargetId(id)
+                      const assoc = associados.find(a => a.id === id)
+                      if (assoc) {
+                        setNovaDesc(`Mensalidade - ${assoc.nome}`)
+                      }
+                    }}
                     className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 ring-indigo-200 text-sm font-bold transition-all"
                   >
                     <option value="">Selecione...</option>
