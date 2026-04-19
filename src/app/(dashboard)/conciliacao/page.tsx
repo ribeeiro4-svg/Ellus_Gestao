@@ -26,6 +26,7 @@ import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { useOFXParser } from '@/lib/hooks/useOFXParser'
+import { useCategorias } from '@/lib/hooks/useCategorias'
 import OFXUpload from '@/components/conciliacao/OFXUpload'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import MatchItem from '@/components/conciliacao/MatchItem'
@@ -41,6 +42,7 @@ export default function ConciliacaoPage() {
   const { associados } = useAssociados()
   const { fornecedores } = useFornecedores()
   const { diretoria } = useDiretoria()
+  const { categorias } = useCategorias()
   const { parseOFX } = useOFXParser()
 
   const [activeTab, setActiveTab] = useState<'ofx' | 'cora'>('ofx')
@@ -54,6 +56,7 @@ export default function ConciliacaoPage() {
   const [filterMatch, setFilterMatch] = useState<'ALL' | 'FOUND' | 'NOT_FOUND'>('ALL')
   const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
   const [editedMemos, setEditedMemos] = useState<Record<string, string>>({})
+  const [editedCategories, setEditedCategories] = useState<Record<string, string>>({})
 
   const [isAuditingBatch, setIsAuditingBatch] = useState(false)
   const [auditResults, setAuditResults] = useState<Record<string, any[]>>({})
@@ -246,7 +249,7 @@ export default function ConciliacaoPage() {
       const items = itemsToProcess.map((t: any) => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: editedMemos[t.bank.fitid] || t.bank.memo,
-        categoria: t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
+        categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
         conta_id: selectedContaId,
         valor: Math.abs(t.bank.amount),
         data: t.bank.date,
@@ -293,7 +296,7 @@ export default function ConciliacaoPage() {
       const rows = rowsToProcess.map((t: any) => ({
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         descricao: editedMemos[t.bank.fitid] || t.bank.memo,
-        categoria: t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
+        categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
         conta_id: selectedContaId,
         valor: Math.abs(t.bank.amount),
         data: t.bank.date,
@@ -348,6 +351,16 @@ export default function ConciliacaoPage() {
     } finally {
       setIsAuditingBatch(false)
     }
+  }
+
+  const handleBatchCategory = (categoryName: string) => {
+    const nextCategories = { ...editedCategories }
+    filteredItems.forEach((item: any) => {
+      if (!processedIds.has(item.bank.fitid) && !existingTxIds.has(item.bank.fitid)) {
+        nextCategories[item.bank.fitid] = categoryName
+      }
+    })
+    setEditedCategories(nextCategories)
   }
 
   const isLoading = loadingFinanceiro || (activeTab === 'cora' && loadingCora)
@@ -415,6 +428,20 @@ export default function ConciliacaoPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <div className="flex flex-col bg-[#163d2f] px-4 py-1.5 rounded-2xl border border-emerald-500/20">
+                <span className="text-[9px] text-emerald-200/50 font-bold uppercase tracking-wider">Mudar Filtro em Lote</span>
+                <select 
+                  onChange={(e) => handleBatchCategory(e.target.value)}
+                  className="bg-transparent border-none text-[11px] font-black text-white focus:ring-0 p-0 cursor-pointer outline-none"
+                  value=""
+                >
+                  <option value="" disabled className="text-gray-900">Definir Categoria...</option>
+                  {(categorias || []).map((cat: any) => (
+                    <option key={cat.id} value={cat.nome} className="text-gray-900">{cat.nome}</option>
+                  ))}
+                </select>
+              </div>
+
               <button 
                 onClick={handleAuditAll}
                 disabled={isAuditingBatch || filteredItems.length === 0}
@@ -477,7 +504,10 @@ export default function ConciliacaoPage() {
                 isAdesao={item.isAdesao} 
                 isProcessed={processedIds.has(item.bank.fitid)} 
                 memo={editedMemos[item.bank.fitid] || item.bank.memo}
+                category={editedCategories[item.bank.fitid] || item.suggestedCategory}
+                allCategories={categorias}
                 onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} 
+                onEditCategory={(c: string) => setEditedCategories(prev => ({ ...prev, [item.bank.fitid]: c }))}
                 onLinkManual={() => { setSelectedExtrato(item); setIsModalOpen(true) }} 
                 onLinkSupplier={() => { setSelectedExtrato(item); setIsSupplierModalOpen(true) }} 
                 onIgnore={() => setIgnoredMatches(prev => { const n = new Set(prev); if (n.has(item.bank.fitid)) n.delete(item.bank.fitid); else n.add(item.bank.fitid); return n; })} 
@@ -504,7 +534,10 @@ export default function ConciliacaoPage() {
                 isDuplicate={existingTxIds.has(item.bank.fitid)} 
                 isProcessed={processedIds.has(item.bank.fitid)}
                 memo={editedMemos[item.bank.fitid] || item.bank.memo}
+                category={editedCategories[item.bank.fitid] || item.suggestedCategory}
+                allCategories={categorias}
                 onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))}
+                onEditCategory={(c: string) => setEditedCategories(prev => ({ ...prev, [item.bank.fitid]: c }))}
                 externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]}
               />
             ))

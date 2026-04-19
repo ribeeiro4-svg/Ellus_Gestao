@@ -36,6 +36,9 @@ interface MatchItemProps {
   isProcessed?: boolean;
   externalAuditInvoices?: any[];
   memo?: string;
+  category?: string;
+  allCategories?: any[];
+  onEditCategory?: (newCat: string) => void;
 }
 
 export default function MatchItem({ 
@@ -53,7 +56,10 @@ export default function MatchItem({
   isAdesao,
   isProcessed,
   externalAuditInvoices,
-  memo
+  memo,
+  category,
+  allCategories,
+  onEditCategory
 }: MatchItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [localMemo, setLocalMemo] = useState(memo || bank.memo)
@@ -190,7 +196,23 @@ export default function MatchItem({
                 {forMatch?.isDirector && <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg">DIRETORIA</span>}
               </h4>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-600/70"><Tag size={12} /> {suggestedCategory}</span>
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100/50 rounded-lg border border-emerald-200/50">
+                  <Tag size={10} className="text-emerald-700" />
+                  <select 
+                    value={category || ''} 
+                    onChange={(e) => onEditCategory?.(e.target.value)}
+                    disabled={isProcessed}
+                    className="bg-transparent border-none p-0 text-[11px] font-bold text-emerald-800 focus:ring-0 cursor-pointer outline-none capitalize"
+                  >
+                    <option value="" disabled>Selecionar Categoria</option>
+                    {(allCategories || []).map((cat: any) => (
+                      <option key={cat.id} value={cat.nome}>{cat.nome}</option>
+                    ))}
+                    {!allCategories?.some(c => c.nome === category) && category && (
+                      <option value={category}>{category}</option>
+                    )}
+                  </select>
+                </div>
                 {isAdesao && (
                   <span className="text-[9px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
                     <Zap size={10} className="fill-white" /> 1º PAGAMENTO (ADESÃO)
@@ -237,7 +259,7 @@ export default function MatchItem({
             <span className="text-[10px] font-black text-indigo-900 uppercase tracking-widest">Cobranças Localizadas na Cora</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {coraInvoices.map((inv) => (
+            {coraInvoices.map((inv: any) => (
               <div key={inv.id} className="flex flex-col gap-2 p-3 bg-white rounded-xl border border-indigo-100 shadow-sm transition-all hover:shadow-md">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-black text-gray-400">#{inv.code}</span>
