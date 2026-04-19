@@ -20,15 +20,31 @@ export function useFinanceiro() {
       const start = `${targetYear}-01-01`
       const end = `${targetYear}-12-31`
 
-      const { data, error } = await sb.from('lancamentos')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .gte('data', start)
-        .lte('data', end)
-        .order('data', { ascending: false })
+      let allData: Lancamento[] = []
+      let from = 0
+      const step = 1000
+      let hasMore = true
+
+      while (hasMore) {
+        const { data, error } = await sb.from('lancamentos')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .gte('data', start)
+          .lte('data', end)
+          .order('data', { ascending: false })
+          .range(from, from + step - 1)
+
+        if (error) throw error
+        if (!data || data.length === 0) {
+          hasMore = false
+        } else {
+          allData = [...allData, ...data]
+          if (data.length < step) hasMore = false
+          else from += step
+        }
+      }
       
-      if (error) throw error
-      setLancamentos(data || [])
+      setLancamentos(allData)
     } catch (err) {
       console.error('Error fetching financeiro:', err)
       setLancamentos([])
