@@ -129,7 +129,7 @@ export default function FinanceiroPage() {
     { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
     { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
     { header: 'Conciliação', key: 'data_conciliacao', render: (l: any) => (l.conciliado ? (<div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-600">{fmtData(l.data_conciliacao)}</span><span className="text-[8px] text-emerald-400 font-medium uppercase tracking-tighter">Liquidado</span></div>) : (<span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Pendente</span>))},
-    { header: 'Data Lançamento', key: 'data_lancamento', render: (l: any) => <span className="text-[10px] font-bold text-slate-500">{fmtData(l.data)}</span> },
+    { header: 'Data Lançamento', key: 'data_lancamento', render: (l: any) => <span className="text-[10px] font-bold text-slate-500">{l.created_at ? fmtData(l.created_at) : '--'}</span> },
     { header: '', key: 'acoes', className: 'text-right', render: (i: any) => (<div className="flex items-center justify-end gap-2 group-hover:opacity-100 opacity-0"><button onClick={() => { setEditingItem(i); setIsModalOpen(true) }} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg"><Pencil size={14} /></button><button onClick={() => confirm('Excluir?') && remover(i.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg"><XCircle size={14} /></button></div>) }
   ]
 
