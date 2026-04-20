@@ -47,22 +47,24 @@ export function useCategorias() {
       .eq('id', id)
       .single()
     
-    const oldName = current?.nome
+    const oldName = current?.nome?.trim()
+    const newName = input.nome?.trim()
 
     // 2. Atualiza a categoria mestre
     const { data, error } = await sb
       .from('config_categorias')
-      .update(input)
+      .update(newName ? { ...input, nome: newName } : input)
       .eq('id', id)
       .eq('tenant_id', tenantId)
       .select()
       .single()
     
     // 3. Se o nome mudou e não houve erro, atualiza os registros vinculados
-    if (!error && input.nome && oldName && oldName !== input.nome) {
+    if (!error && newName && oldName && oldName !== newName) {
+      // Dispara atualizações em lote limpando possíveis espaços do banco também
       await Promise.all([
-        sb.from('lancamentos').update({ categoria: input.nome }).eq('tenant_id', tenantId).eq('categoria', oldName),
-        sb.from('orcamentos').update({ categoria: input.nome }).eq('tenant_id', tenantId).eq('categoria', oldName)
+        sb.from('lancamentos').update({ categoria: newName }).eq('tenant_id', tenantId).eq('categoria', oldName),
+        sb.from('orcamentos').update({ categoria: newName }).eq('tenant_id', tenantId).eq('categoria', oldName)
       ])
     }
 
