@@ -40,14 +40,32 @@ export function useCategorias() {
   }
 
   const atualizar = async (id: string, input: Partial<CategoriaInput>) => {
+    // 1. Busca o nome antigo para saber o que substituir no passado
+    const { data: current } = await sb
+      .from('config_categorias')
+      .select('nome')
+      .eq('id', id)
+      .single()
+    
+    const oldName = current?.nome
+
+    // 2. Atualiza a categoria mestre
     const { data, error } = await sb
       .from('config_categorias')
       .update(input)
       .eq('id', id)
-      .eq('tenant_id', tenantId) // Segurança extra
+      .eq('tenant_id', tenantId)
       .select()
       .single()
     
+    // 3. Se o nome mudou e não houve erro, atualiza os registros vinculados
+    if (!error && input.nome && oldName && oldName !== input.nome) {
+      await Promise.all([
+        sb.from('lancamentos').update({ categoria: input.nome }).eq('tenant_id', tenantId).eq('categoria', oldName),
+        sb.from('orcamentos').update({ categoria: input.nome }).eq('tenant_id', tenantId).eq('categoria', oldName)
+      ])
+    }
+
     if (!error) fetch()
     return { data, error }
   }
