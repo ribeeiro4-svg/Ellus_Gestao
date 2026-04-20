@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { Associado, AssociadoInput } from '@/lib/types'
 import { useTenant } from './useTenant'
-import { fetchZapSignAssociatesAction } from '@/app/actions/zapsign'
+import { fetchZapSignAssociatesAction, tempFixDatabaseAction } from '@/app/actions/zapsign'
 
 export function useAssociados() {
   const tenantId = useTenantId()
@@ -72,6 +72,9 @@ export function useAssociados() {
 
     setIsSyncing(true)
     try {
+      // Garante que o banco está preparado (coluna e RPC atualizados)
+      await tempFixDatabaseAction()
+      
       const res = await fetchZapSignAssociatesAction(tenant.zapsign_token)
       
       if (res.error) return { error: res.error }

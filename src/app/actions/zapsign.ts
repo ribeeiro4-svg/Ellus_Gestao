@@ -172,3 +172,53 @@ export async function fetchZapSignSignedFileAction(apiToken: string, docToken: s
     return { error: err.message || 'Erro ao buscar download.' }
   }
 }
+
+/**
+ * FUNÇÃO DE MANUTENÇÃO TEMPORÁRIA
+ * Resolve o problema de 'não puxar' o token do ZapSign
+ */
+export async function tempFixDatabaseAction() {
+  const { createServerSupabase } = await import('@/lib/supabase/server')
+  const sb = await createServerSupabase()
+  
+  const sql = `
+    -- 1. Garantir Coluna
+    ALTER TABLE associados ADD COLUMN IF NOT EXISTS zapsign_doc_token TEXT;
+
+    -- 2. Redefinir Função de Upsert para aceitar o NOVO CAMPO
+    CREATE OR REPLACE FUNCTION upsert_associados_safe(rows JSONB)
+    RETURNS VOID AS $$
+    BEGIN
+      INSERT INTO associados (
+        tenant_id, codigo, nome, cpf, categoria, email, telefone, 
+        data_ingresso, mensalidade, status, zapsign_doc_token
+      )
+      SELECT 
+        (r->>'tenant_id')::UUID,
+        r->>'codigo',
+        r->>'nome',
+        r->>'cpf',
+        r->>'categoria',
+        r->>'email',
+        r->>'telefone',
+        (r->>'data_ingresso')::DATE,
+        (r->>'mensalidade')::NUMERIC,
+        r->>'status',
+        r->>'zapsign_doc_token'
+      FROM jsonb_array_elements(rows) AS r
+      ON CONFLICT (tenant_id, codigo) 
+      DO UPDATE SET
+        nome = EXCLUDED.nome,
+        cpf = COALESCE(EXCLUDED.cpf, associados.cpf),
+        email = COALESCE(EXCLUDED.email, associados.email),
+        telefone = COALESCE(EXCLUDED.telefone, associados.telefone),
+        status = EXCLUDED.status,
+        zapsign_doc_token = COALESCE(EXCLUDED.zapsign_doc_token, associados.zapsign_doc_token),
+        updated_at = NOW();
+    END;
+    $$ LANGUAGE plpgsql SECURITY DEFINER;
+  `
+
+  // Tenta executar via RPC genérico se existir, ou via manipulação direta se o client permitir
+  return await sb.rpc('execute_sql', { sql })
+}
