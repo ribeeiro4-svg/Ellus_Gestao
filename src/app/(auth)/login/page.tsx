@@ -1,8 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LogIn, Mail, Lock, AlertCircle, ShieldCheck } from 'lucide-react'
+import { useEffect } from 'react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -13,7 +14,15 @@ export default function LoginPage() {
   const [sucesso, setSucesso] = useState('')
   const [view, setView] = useState<'login' | 'signup' | 'reset'>('login')
   const router = useRouter()
+  const searchParams = useSearchParams()
   const sb = createClient()
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam === 'auth-failure') {
+      setErro('Falha na autenticação com o Google. Verifique se o e-mail está autorizado.')
+    }
+  }, [searchParams])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
