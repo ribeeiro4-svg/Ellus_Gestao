@@ -221,7 +221,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
                   </div>
                   <div className="p-5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
                     <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Orientação IA</p>
-                    <p className="text-[12px] leading-relaxed text-white/80 italic">"Mantenha o monitoramento de contas a pagar para garantir o superávit projetado."</p>
+                    <p className="text-[12px] leading-relaxed text-emerald-50 font-medium italic">"Mantenha o monitoramento constante dos fluxos de caixa para garantir o superávit projetado nas próximas competências."</p>
                   </div>
                 </div>
               </div>
