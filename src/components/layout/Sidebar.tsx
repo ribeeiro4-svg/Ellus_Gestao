@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { 
+  Home,
   BarChart3, 
   Wallet, 
   TrendingUp, 
@@ -27,6 +28,7 @@ const MENU = [
   { 
     section: 'Principal', 
     items: [
+      { href: '/', icon: Home, label: 'Início (Site)' },
       { href: '/resumo', icon: BarChart3, label: 'Dashboard' },
     ]
   },
