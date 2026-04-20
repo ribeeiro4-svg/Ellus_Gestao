@@ -61,13 +61,13 @@ export default function Topbar() {
         <div className="flex items-center gap-2">
            <button 
              onClick={handleClear}
-             className="btn btn-outline btn-icon w-[34px] h-[34px] p-0 flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)] transition-all"
+             className="btn btn-secondary w-[34px] h-[34px] p-0 flex items-center justify-center"
              title="Limpar Todos os Filtros"
            >
              <Trash2 size={16} />
            </button>
            <button 
-             className="btn btn-outline btn-icon w-[34px] h-[34px] p-0 flex items-center justify-center rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)] transition-all relative"
+             className="btn btn-secondary w-[34px] h-[34px] p-0 flex items-center justify-center relative"
              title="Notificações"
            >
              <Bell size={16} />
@@ -80,7 +80,7 @@ export default function Topbar() {
         <div className="flex items-center gap-2">
            <button 
              onClick={() => router.push('/importar')}
-             className="btn btn-outline h-[34px] px-4 py-0 flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] text-[var(--text2)] hover:bg-[var(--surface2)] transition-all text-[12px] font-medium"
+             className="btn btn-secondary h-[34px] px-4"
            >
              <Download size={14} />
              <span>Importar</span>
@@ -88,7 +88,7 @@ export default function Topbar() {
            
            <button 
              onClick={() => window.print()}
-             className="btn btn-primary h-[34px] px-4 py-0 flex items-center gap-2 rounded-[var(--radius-sm)] text-white text-[12px] font-medium transition-all"
+             className="btn btn-primary h-[34px] px-4"
            >
              <FileText size={14} />
              <span>Exportar PDF</span>
