@@ -1,11 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { LogIn, Mail, Lock, AlertCircle, ShieldCheck } from 'lucide-react'
-import { useEffect } from 'react'
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [loading, setLoading] = useState(false)
@@ -253,5 +252,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#071a12] flex items-center justify-center p-6 text-white font-black uppercase tracking-widest animate-pulse">
+        Carregando Segurança...
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
