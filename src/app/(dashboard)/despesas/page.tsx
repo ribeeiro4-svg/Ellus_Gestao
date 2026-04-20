@@ -267,9 +267,25 @@ export default function DespesasPage() {
         </div>
       </div>
 
-      <div className="charts-grid" style={{ gridTemplateColumns: '2fr 1fr' }}>
-        <ChartCard title="📊 Despesas por Mês" subtitle="Evolução mensal das saídas"><Bar data={{ labels: MESES, datasets: [{ label: 'Despesa', data: despesaMensal, backgroundColor: 'rgba(224,123,57,.72)', borderRadius: 5, borderSkipped: false }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: axisDefaults }} /></ChartCard>
-        <ChartCard title="🍩 Mix por Categoria" subtitle="Distribuição das despesas"><Doughnut data={{ labels: Object.keys(despesaCats), datasets: [{ data: Object.values(despesaCats), backgroundColor: CHART_COLORS, hoverOffset: 6, borderWidth: 2, borderColor: '#fff' }] }} options={{ responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 14, font: { size: 11 } } } } }} /></ChartCard>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-[320px]">
+          <Bar 
+            data={{ 
+              labels: MESES, 
+              datasets: [{ label: 'Despesa', data: despesaMensal, backgroundColor: 'rgba(224,123,57,.72)', borderRadius: 5, borderSkipped: false }] 
+            }} 
+            options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: axisDefaults }} 
+          />
+        </div>
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm h-[320px]">
+          <Doughnut 
+            data={{ 
+              labels: Object.keys(despesaCats), 
+              datasets: [{ data: Object.values(despesaCats), backgroundColor: CHART_COLORS, hoverOffset: 6, borderWidth: 2, borderColor: '#fff' }] 
+            }} 
+            options={{ responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 14, font: { size: 11 } } } } }} 
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm">
