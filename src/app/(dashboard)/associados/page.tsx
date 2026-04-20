@@ -236,7 +236,7 @@ export default function AssociadosPage() {
                 
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                   {MESES.map((mes, idx) => {
-                    const lanc = lancamentos.find((l: any) => {
+                    const matches = lancamentos.filter((l: any) => {
                       const isCorrectAssociate = l.associado_id === i.id;
                       const isMensalidade = l.categoria === 'MENSALIDADE' || l.descricao.includes('MENSALIDADE');
                       
@@ -248,6 +248,9 @@ export default function AssociadosPage() {
 
                       return compMes === idx && compAno === new Date().getFullYear();
                     })
+
+                    // Prioriza o registro PAGO se houver múltiplos no mesmo mês
+                    const lanc = matches.find((l: any) => l.status === 'pago') || matches[0];
 
                     return (
                       <div key={mes} className="flex items-center justify-between border-b border-emerald-100/30 pb-1 last:border-0">
