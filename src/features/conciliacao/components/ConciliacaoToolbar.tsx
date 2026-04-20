@@ -38,50 +38,48 @@ export default function ConciliacaoToolbar({
   hasFilteredItems
 }: ConciliacaoToolbarProps) {
   return (
-    <div className="sticky top-[20px] z-[40] flex items-center justify-between gap-6 bg-[#0e2d22] backdrop-blur-xl p-5 px-10 rounded-[32px] border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.4)] animate-in slide-in-from-top-4 mb-8">
-      <div className="flex items-center gap-12">
+    <div className="sticky top-[20px] z-[40] flex items-center justify-between gap-6 bg-[#0e2d22] backdrop-blur-xl py-2.5 px-10 rounded-[32px] border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.4)] animate-in slide-in-from-top-4 mb-8">
+      <div className="flex items-center gap-10">
         <div className="flex flex-col">
-          <span className="text-[10px] text-emerald-400 font-black uppercase tracking-[2px] mb-2 opacity-70">Conta de Destino</span>
-          <div className="flex items-center gap-2">
-            <select 
-              value={selectedContaId} 
-              onChange={(e) => onContaChange(e.target.value)} 
-              className="bg-[#0e2d22] border border-emerald-500/30 rounded-xl text-[12px] font-black text-white focus:ring-2 focus:ring-emerald-500/50 px-5 py-3 cursor-pointer outline-none transition-all hover:border-emerald-500/50 w-52 shadow-inner"
-            >
-              {contas.map((c: any) => <option key={c.id} value={c.id} className="bg-[#0e2d22] text-white py-2">{c.nome}</option>)}
-            </select>
-          </div>
+          <span className="text-[8px] text-emerald-400 font-black uppercase tracking-[2px] mb-1 opacity-60">Conta</span>
+          <select 
+            value={selectedContaId} 
+            onChange={(e) => onContaChange(e.target.value)} 
+            className="bg-transparent border border-emerald-500/30 rounded-lg text-[10px] font-black text-white px-3 py-1 cursor-pointer outline-none transition-all hover:border-emerald-500/50 w-40"
+          >
+            {contas.map((c: any) => <option key={c.id} value={c.id} className="bg-[#0e2d22] text-white py-2">{c.nome}</option>)}
+          </select>
         </div>
 
-        <div className="h-12 w-px bg-white/10" />
+        <div className="h-8 w-px bg-white/10" />
         
-        <div className="flex gap-14">
+        <div className="flex items-center gap-12">
           <div className="flex flex-col">
-            <span className="text-emerald-400 font-black uppercase tracking-[2px] text-[9px] mb-3 opacity-60">Resumo do Extrato</span>
-            <div className="grid grid-cols-3 gap-14">
-              <div className="flex flex-col whitespace-nowrap">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Total ({newItemsCount})</span>
-                <span className="text-[14px] font-black text-white tracking-tight">{fmtR(totalEntradas - totalSaidas)}</span>
+            <span className="text-emerald-400 font-black uppercase tracking-[2px] text-[8px] mb-1 opacity-60">Resumo Financeiro</span>
+            <div className="flex items-center gap-10">
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="text-[7px] font-black text-slate-500 uppercase">Total ({newItemsCount}):</span>
+                <span className="text-[12px] font-black text-white tracking-tight">{fmtR(totalEntradas - totalSaidas)}</span>
               </div>
-              <div className="flex flex-col border-l border-white/10 pl-10 whitespace-nowrap">
-                <span className="text-[8px] font-black text-emerald-500/80 uppercase tracking-widest mb-1">Entradas</span>
-                <span className="text-[14px] font-black text-emerald-400 tracking-tight">+{fmtR(totalEntradas)}</span>
+              <div className="flex items-center gap-2 border-l border-white/10 pl-10 whitespace-nowrap">
+                <span className="text-[7px] font-black text-emerald-500/80 uppercase">Entradas:</span>
+                <span className="text-[12px] font-black text-emerald-400 tracking-tight">+{fmtR(totalEntradas)}</span>
               </div>
-              <div className="flex flex-col border-l border-white/10 pl-10 whitespace-nowrap">
-                <span className="text-[8px] font-black text-rose-500/80 uppercase tracking-widest mb-1">Saídas</span>
-                <span className="text-[14px] font-black text-rose-400 tracking-tight">-{fmtR(totalSaidas)}</span>
+              <div className="flex items-center gap-2 border-l border-white/10 pl-10 whitespace-nowrap">
+                <span className="text-[7px] font-black text-rose-500/80 uppercase">Saídas:</span>
+                <span className="text-[12px] font-black text-rose-400 tracking-tight">-{fmtR(totalSaidas)}</span>
               </div>
             </div>
           </div>
 
-          <div className="h-12 w-px bg-white/10 self-center" />
+          <div className="h-8 w-px bg-white/10" />
 
-          <div className="flex flex-col min-w-[180px]">
-            <span className="text-amber-400/80 font-black uppercase tracking-[2px] text-[9px] mb-3 opacity-60">Segurança</span>
-            <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all ${duplicatesCount > 0 ? 'bg-amber-400/5 border-amber-400/20 shadow-lg' : 'bg-emerald-400/5 border-emerald-400/20'}`}>
-              <div className={`w-2 h-2 rounded-full ${duplicatesCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
-              <span className={`text-[10px] font-black uppercase tracking-widest ${duplicatesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                {duplicatesCount > 0 ? `${duplicatesCount} Duplicados` : 'Seguro'}
+          <div className="flex flex-col">
+            <span className="text-amber-400/80 font-black uppercase tracking-[2px] text-[8px] mb-1 opacity-60">Segurança</span>
+            <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border transition-all ${duplicatesCount > 0 ? 'bg-amber-400/5 border-amber-400/20' : 'bg-emerald-400/5 border-emerald-400/20'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${duplicatesCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              <span className={`text-[8px] font-black uppercase tracking-widest ${duplicatesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {duplicatesCount > 0 ? `${duplicatesCount} DUPLICADOS` : 'SEGURO'}
               </span>
             </div>
           </div>
@@ -89,11 +87,11 @@ export default function ConciliacaoToolbar({
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="flex flex-col bg-[#0e2d22]/50 px-6 py-2.5 rounded-2xl border border-white/5 min-w-[200px]">
-          <span className="text-[9px] text-emerald-400/60 font-black uppercase tracking-[2px] mb-1">Mudar Filtro em Lote</span>
+        <div className="flex flex-col bg-[#0e2d22]/50 px-5 py-1.5 rounded-xl border border-white/5 min-w-[180px]">
+          <span className="text-[8px] text-emerald-400/60 font-black uppercase tracking-[2px] mb-0.5">Filtro em Lote</span>
           <select 
             onChange={(e) => onBatchCategory(e.target.value)}
-            className="bg-transparent border-none text-[11px] font-black text-white focus:ring-0 p-0 cursor-pointer outline-none placeholder:text-gray-400 appearance-none py-1"
+            className="bg-transparent border-none text-[10px] font-black text-white focus:ring-0 p-0 cursor-pointer outline-none placeholder:text-gray-400 appearance-none py-0.5"
             value=""
           >
             <option value="" disabled className="bg-[#0e2d22] text-white">Selecionar Categoria...</option>
@@ -106,19 +104,19 @@ export default function ConciliacaoToolbar({
         <button 
           onClick={onAuditAll}
           disabled={isAuditingBatch || !hasFilteredItems}
-          className="flex items-center gap-3 px-8 py-4 bg-emerald-900/60 text-emerald-400 border border-emerald-500/20 rounded-2xl font-black text-[11px] uppercase tracking-[1px] shadow-xl hover:bg-emerald-800 transition-all active:scale-95 disabled:opacity-50"
+          className="flex items-center gap-2.5 px-6 py-3 bg-emerald-900/60 text-emerald-400 border border-emerald-500/20 rounded-xl font-black text-[10px] uppercase tracking-[1px] shadow-xl hover:bg-emerald-800 transition-all active:scale-95 disabled:opacity-50"
         >
-          {isAuditingBatch ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
-          {isAuditingBatch ? 'Auditando...' : 'Auditar em Lote'}
+          {isAuditingBatch ? <RefreshCw size={12} className="animate-spin" /> : <Search size={12} />}
+          {isAuditingBatch ? 'Auditando...' : 'Auditar'}
         </button>
 
         <button 
           onClick={onExecute} 
           disabled={isProcessingBatch} 
-          className="flex items-center gap-4 px-10 py-4 bg-white text-[#0e2d22] rounded-2xl font-black text-[11px] uppercase tracking-[1px] shadow-[0_15px_35px_rgba(255,255,255,0.2)] hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-50 group"
+          className="flex items-center gap-3 px-8 py-3 bg-white text-[#0e2d22] rounded-xl font-black text-[10px] uppercase tracking-[1px] shadow-[0_15px_35px_rgba(255,255,255,0.2)] hover:bg-emerald-50 transition-all active:scale-95 disabled:opacity-50 group"
         >
-          {isProcessingBatch ? <RefreshCw size={18} className="animate-spin" /> : <Zap size={18} className="fill-emerald-900" />} 
-          {activeTab === 'ofx' ? 'Executar Lançamento' : 'Sincronizar Cora'}
+          {isProcessingBatch ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} className="fill-emerald-900" />} 
+          {activeTab === 'ofx' ? 'Lançar' : 'Sincronizar'}
         </button>
       </div>
     </div>
