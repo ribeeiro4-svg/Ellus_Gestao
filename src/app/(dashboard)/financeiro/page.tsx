@@ -263,9 +263,12 @@ export default function FinanceiroPage() {
   const conciliacaoStats = useMemo(() => {
     let entries = 0, outings = 0, duplicates = 0;
     filteredItemsConciliacao.forEach((item: any) => {
-      const val = Number(item.bank.amount) || 0;
-      if (val > 0) entries += val;
-      else if (val < 0) outings += Math.abs(val);
+      const val = Math.abs(Number(item.bank.amount) || 0);
+      const isIncome = item.bank.type === 'CREDIT';
+      const isOuting = item.bank.type === 'DEBIT';
+
+      if (isIncome) entries += val;
+      else if (isOuting) outings += val;
       
       if (existingTxIds.has(item.bank.fitid)) duplicates++;
     });
