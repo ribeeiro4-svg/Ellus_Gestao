@@ -13,17 +13,19 @@ export function useTenantId() {
     const sb = createClient();
     async function resolveId() {
       try {
-        const { data } = await sb.from('tenant_id_mapping').select('id').limit(1).single();
+        const { data, error } = await sb.from('tenant_id_mapping').select('id').limit(1).single();
+        
         if (data?.id) {
           console.log('[TenantId] ID Resolvido via Banco:', data.id);
           setTenantId(data.id);
+        } else if (!error) {
+          // Mapping retornou vazio sem erro
+          setTenantId('971f92af-a72b-4bc4-a8e0-333d712ce6a7');
         } else {
-          // Fallback obrigatório se mapping estiver vazio ou nulo
-          console.warn('[TenantId] Mapping vazio, usando ID padrão');
+          // Tabela não existe ou outro erro (silencioso em produção para evitar poluição)
           setTenantId('971f92af-a72b-4bc4-a8e0-333d712ce6a7');
         }
       } catch (e) {
-        console.warn('[TenantId] Erro na resolução, usando ID de segurança');
         setTenantId('971f92af-a72b-4bc4-a8e0-333d712ce6a7');
       }
     }
