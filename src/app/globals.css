@@ -67,7 +67,7 @@
 /* ── BASE ── */
 body {
   font-family: var(--font-dm-sans), sans-serif;
-  background: var(--surface2);
+  background: #ffffff;
   color: var(--text1);
   font-size: 14px;
   overflow-x: hidden;
@@ -77,18 +77,6 @@ body {
 
 code, .font-mono {
   font-family: var(--font-dm-mono), monospace;
-}
-
-/* ── FUNDO HEXAGONAL DO SISTEMA ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66z' fill='none' stroke='%232d8c6f' stroke-width='0.8' stroke-opacity='0.28'/%3E%3Cpath d='M28 100L0 84V52l28-16 28 16v32L28 100z' fill='none' stroke='%232d8c6f' stroke-width='0.8' stroke-opacity='0.22'/%3E%3C/svg%3E");
-  background-size: 56px 100px;
-  opacity: 1;
 }
 
 /* ── SIDEBAR ── */
