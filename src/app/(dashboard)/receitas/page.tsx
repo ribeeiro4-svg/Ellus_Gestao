@@ -251,7 +251,10 @@ export default function ReceitasPage() {
         }
       }
 
-      if (res?.error) alert(`Erro ao salvar: ${res.error}`)
+      if (res?.error) {
+        const msg = typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error
+        alert(`Erro ao salvar: ${msg}`)
+      }
       else { setEditingItem(null); setIsModalOpen(false) }
     } catch (err: any) {
       alert(`Erro inesperado: ${err.message}`)
