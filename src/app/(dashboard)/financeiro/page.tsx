@@ -263,9 +263,10 @@ export default function FinanceiroPage() {
   const conciliacaoStats = useMemo(() => {
     let entries = 0, outings = 0, duplicates = 0;
     filteredItemsConciliacao.forEach((item: any) => {
-      const val = item.bank.amount;
+      const val = Number(item.bank.amount) || 0;
       if (val > 0) entries += val;
-      else outings += Math.abs(val);
+      else if (val < 0) outings += Math.abs(val);
+      
       if (existingTxIds.has(item.bank.fitid)) duplicates++;
     });
     return { entries, outings, duplicates };
@@ -318,6 +319,7 @@ export default function FinanceiroPage() {
                 onExecute={conciliacaoSubTab === 'ofx' ? handleProcessarLote : handleCoraBatch} 
                 isProcessingBatch={isProcessingBatch} hasFilteredItems={filteredItemsConciliacao.length > 0} 
                 newItemsCount={conciliacaoSubTab === 'ofx' ? matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length : coraMatchedItems.filter((t: any) => !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length} 
+                totalItemsCount={filteredItemsConciliacao.length}
                 totalEntradas={conciliacaoStats.entries}
                 totalSaidas={conciliacaoStats.outings}
                 duplicatesCount={conciliacaoStats.duplicates}
