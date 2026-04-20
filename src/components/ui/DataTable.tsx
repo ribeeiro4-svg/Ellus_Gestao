@@ -6,6 +6,7 @@ interface DataTableProps<T> {
     header: string
     key: keyof T | string
     render?: (item: T) => ReactNode
+    filterValue?: (item: T) => string
     className?: string
     sortable?: boolean
     filterable?: boolean
@@ -57,8 +58,11 @@ export default function DataTable<T>({
     Object.keys(columnFilters).forEach(key => {
       const val = columnFilters[key].toLowerCase()
       if (val) {
+        const col = columns.find(c => c.key === key)
         result = result.filter(item => {
-          const content = String((item as any)[key] || '').toLowerCase()
+          const content = col?.filterValue 
+            ? String(col.filterValue(item) || '').toLowerCase()
+            : String((item as any)[key] || '').toLowerCase()
           return content.includes(val)
         })
       }

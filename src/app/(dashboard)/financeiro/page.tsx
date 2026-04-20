@@ -123,13 +123,13 @@ export default function FinanceiroPage() {
   }
 
   const columns = [
-    { header: 'Data', key: 'data', render: (i: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(i.data)}</span> },
+    { header: 'Data', key: 'data', filterValue: (i: any) => fmtData(i.data), render: (i: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(i.data)}</span> },
     { header: 'Descrição', key: 'descricao', render: (i: any) => (<div className="flex flex-col"><div className="flex items-center gap-2"><span className="text-sm font-bold text-slate-800">{i.descricao}</span>{i.banco_transacao_id && <span className="text-[9px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1"><RefreshCw size={8} /> OFX</span>}</div><div className="flex gap-2"><span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{i.categoria}</span></div></div>) },
-    { header: 'Valor', key: 'valor', render: (i: any) => <span className={`text-sm font-extrabold ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-rose-600'}`}>{i.tipo === 'receita' ? '+' : '-'}{fmtR(i.valor)}</span> },
+    { header: 'Valor', key: 'valor', filterValue: (i: any) => fmtR(i.valor), render: (i: any) => <span className={`text-sm font-extrabold ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-rose-600'}`}>{i.tipo === 'receita' ? '+' : '-'}{fmtR(i.valor)}</span> },
     { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
     { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
     { header: 'Conciliação', key: 'data_conciliacao', render: (l: any) => (l.conciliado ? (<div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-600">{fmtData(l.data_conciliacao)}</span><span className="text-[8px] text-emerald-400 font-medium uppercase tracking-tighter">Liquidado</span></div>) : (<span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Pendente</span>))},
-    { header: 'Data Lançamento', key: 'created_at', render: (l: any) => <span className="text-[10px] font-bold text-slate-500">{l.created_at ? fmtData(l.created_at) : '--'}</span> },
+    { header: 'Data Lançamento', key: 'created_at', filterValue: (l: any) => l.created_at ? fmtData(l.created_at) : '--', render: (l: any) => <span className="text-[10px] font-bold text-slate-500">{l.created_at ? fmtData(l.created_at) : '--'}</span> },
     { header: '', key: 'acoes', className: 'text-right', render: (i: any) => (<div className="flex items-center justify-end gap-2 group-hover:opacity-100 opacity-0"><button onClick={() => { setEditingItem(i); setIsModalOpen(true) }} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg"><Pencil size={14} /></button><button onClick={() => confirm('Excluir?') && remover(i.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg"><XCircle size={14} /></button></div>) }
   ]
 
