@@ -13,7 +13,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, MESES } from '@/lib/utils/formatters'
-import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, RefreshCw, Pencil, XCircle, Search, FileText, Loader2 } from 'lucide-react'
+import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, RefreshCw, Pencil, XCircle, Search, FileText, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTenant } from '@/lib/hooks/useTenant'
 import { fetchZapSignSignedFileAction } from '@/app/actions/zapsign'
 
@@ -23,6 +23,14 @@ export default function AssociadosPage() {
   const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign, refresh } = useAssociados()
   const { tenant } = useTenant()
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null)
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  const toggleRow = (id: string) => {
+    const next = new Set(expandedRows)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setExpandedRows(next)
+  }
   
   const normalizeStr = (str: string) => {
     return (str || '')
@@ -170,17 +178,55 @@ export default function AssociadosPage() {
   const columns = [
     {
       header: 'Associado', key: 'nome', className: 'min-w-[350px] whitespace-normal',
-      render: (i: any) => (
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs uppercase shrink-0">
-            {(i.nome || 'A')[0]}
+      render: (i: any) => {
+        const isExpanded = expandedRows.has(i.id)
+        const hasHistory = i.zapsign_signers && i.zapsign_signers.length > 0
+        
+        return (
+          <div className="flex flex-col gap-2 py-1">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs uppercase shrink-0 border border-emerald-100/50">
+                {(i.nome || 'A')[0]}
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-tight">{i.nome}</span>
+                  {hasHistory && (
+                    <button 
+                      onClick={() => toggleRow(i.id)}
+                      className={`p-1 rounded-lg transition-all ${isExpanded ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-50 text-slate-400 hover:text-slate-600'}`}
+                    >
+                      {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                    </button>
+                  )}
+                </div>
+                <span className="text-[10px] text-slate-400 font-black uppercase tracking-[1px] opacity-70">#{i.codigo}</span>
+              </div>
+            </div>
+
+            {isExpanded && hasHistory && (
+              <div className="ml-12 p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col gap-2 animate-in slide-in-from-top-1 duration-200">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[1px] mb-1">Status de Assinaturas:</p>
+                {i.zapsign_signers.map((s: any, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full ${s.status === 'signed' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                      <span className="text-[10px] font-bold text-slate-600 max-w-[150px] truncate">{s.name}</span>
+                    </div>
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                      s.status === 'signed' 
+                        ? 'bg-emerald-100 text-emerald-700' 
+                        : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      {s.status === 'signed' ? '✓ Assinado' : 'Pendente'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-gray-900">{i.nome}</span>
-            <span className="text-[10px] text-gray-400 font-medium">#{i.codigo}</span>
-          </div>
-        </div>
-      )
+        )
+      }
     },
     { header: 'CPF/CNPJ', key: 'cpf', className: 'w-[140px]', render: (i: any) => <span className="text-[11px] font-medium text-gray-500">{i.cpf || 'Pendente'}</span> },
     { header: 'Mensalidade', key: 'mensalidade', className: 'w-[130px]', render: (i: any) => <span className="text-xs font-bold text-gray-900">{fmtR(i.mensalidade)}</span> },

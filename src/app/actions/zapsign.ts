@@ -132,7 +132,8 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           status: sysStatus,
           data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
           codigo: stableKey,
-          zapsign_doc_token: doc.token // Garante o vínculo para download do PDF
+          zapsign_doc_token: doc.token, // Garante o vínculo para download do PDF
+          zapsign_signers: doc.signers // NOVIDADE: Salva quem assinou e quem falta
         })
       }
     }

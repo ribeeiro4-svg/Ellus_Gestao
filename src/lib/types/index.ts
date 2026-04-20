@@ -96,6 +96,7 @@ export interface Associado {
   ultimo_pagamento?: string
   vencimento_dia?: number // 10 ou 20
   zapsign_doc_token?: string // Token do documento na ZapSign
+  zapsign_signers?: any[] // Histórico de signatários
   created_at: string
   updated_at: string
 }
