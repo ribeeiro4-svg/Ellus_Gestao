@@ -55,33 +55,33 @@ export default function ConciliacaoToolbar({
 
         <div className="h-12 w-px bg-white/10" />
         
-        <div className="flex gap-12">
+        <div className="flex gap-14">
           <div className="flex flex-col">
-            <span className="text-emerald-400 font-black uppercase tracking-[2px] text-[10px] mb-3 opacity-70">Resumo do Extrato</span>
-            <div className="flex items-center gap-10">
-              <div className="flex flex-col min-w-[100px]">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight mb-1">Total ({newItemsCount})</span>
-                <span className="text-[13px] font-black text-white">{fmtR(totalEntradas - totalSaidas)}</span>
+            <span className="text-emerald-400 font-black uppercase tracking-[2px] text-[9px] mb-3 opacity-60">Resumo do Extrato</span>
+            <div className="grid grid-cols-3 gap-14">
+              <div className="flex flex-col whitespace-nowrap">
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">Total ({newItemsCount})</span>
+                <span className="text-[14px] font-black text-white tracking-tight">{fmtR(totalEntradas - totalSaidas)}</span>
               </div>
-              <div className="flex flex-col border-l border-white/10 pl-10 min-w-[100px]">
-                <span className="text-[9px] font-black text-emerald-500 uppercase tracking-tight mb-1">Entradas</span>
-                <span className="text-[13px] font-black text-emerald-400">+{fmtR(totalEntradas)}</span>
+              <div className="flex flex-col border-l border-white/10 pl-10 whitespace-nowrap">
+                <span className="text-[8px] font-black text-emerald-500/80 uppercase tracking-widest mb-1">Entradas</span>
+                <span className="text-[14px] font-black text-emerald-400 tracking-tight">+{fmtR(totalEntradas)}</span>
               </div>
-              <div className="flex flex-col border-l border-white/10 pl-10 min-w-[100px]">
-                <span className="text-[9px] font-black text-rose-500 uppercase tracking-tight mb-1">Saídas</span>
-                <span className="text-[13px] font-black text-rose-400">-{fmtR(totalSaidas)}</span>
+              <div className="flex flex-col border-l border-white/10 pl-10 whitespace-nowrap">
+                <span className="text-[8px] font-black text-rose-500/80 uppercase tracking-widest mb-1">Saídas</span>
+                <span className="text-[14px] font-black text-rose-400 tracking-tight">-{fmtR(totalSaidas)}</span>
               </div>
             </div>
           </div>
 
           <div className="h-12 w-px bg-white/10 self-center" />
 
-          <div className="flex flex-col">
-            <span className="text-amber-400/80 font-black uppercase tracking-[2px] text-[10px] mb-3 opacity-70">Segurança</span>
-            <div className={`flex items-center gap-3 px-5 py-2.5 rounded-xl border transition-all ${duplicatesCount > 0 ? 'bg-amber-400/5 border-amber-400/20 shadow-[0_0_20px_rgba(251,191,36,0.05)]' : 'bg-emerald-400/5 border-emerald-400/20'}`}>
+          <div className="flex flex-col min-w-[180px]">
+            <span className="text-amber-400/80 font-black uppercase tracking-[2px] text-[9px] mb-3 opacity-60">Segurança</span>
+            <div className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border transition-all ${duplicatesCount > 0 ? 'bg-amber-400/5 border-amber-400/20 shadow-lg' : 'bg-emerald-400/5 border-emerald-400/20'}`}>
               <div className={`w-2 h-2 rounded-full ${duplicatesCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
               <span className={`text-[10px] font-black uppercase tracking-widest ${duplicatesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                {duplicatesCount > 0 ? `${duplicatesCount} Duplicados` : 'Nenhuma Duplicata'}
+                {duplicatesCount > 0 ? `${duplicatesCount} Duplicados` : 'Seguro'}
               </span>
             </div>
           </div>
