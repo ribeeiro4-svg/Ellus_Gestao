@@ -110,7 +110,10 @@ export default function FinanceiroPage() {
     setSaving(true)
     try {
       const res = await processFinancialSubmit(data, editingItem, associados, { inserir, atualizar, inserirBulk })
-      if (res?.error) alert(`Erro: ${res.error}`)
+      if (res?.error) {
+        const msg = typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error
+        alert(`Erro: ${msg}`)
+      }
       else { setEditingItem(null); setIsModalOpen(false) }
     } catch (err: any) { alert(`Erro: ${err.message}`) } finally { setSaving(false) }
   }
