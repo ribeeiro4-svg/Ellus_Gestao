@@ -40,9 +40,9 @@ export default function ConciliacaoToolbar({
             <select 
               value={selectedContaId} 
               onChange={(e) => onContaChange(e.target.value)} 
-              className="bg-emerald-900/40 border border-emerald-500/20 rounded-xl text-xs font-black text-white focus:ring-0 px-3 py-1.5 cursor-pointer appearance-none"
+              className="bg-[#0e2d22] border border-emerald-500/30 rounded-xl text-[11px] font-black text-white focus:ring-2 focus:ring-emerald-500/50 px-4 py-2 cursor-pointer outline-none transition-all hover:border-emerald-500/50 w-48 shadow-inner"
             >
-              {contas.map((c: any) => <option key={c.id} value={c.id} className="text-gray-900">{c.nome}</option>)}
+              {contas.map((c: any) => <option key={c.id} value={c.id} className="bg-[#0e2d22] text-white">{c.nome}</option>)}
             </select>
           </div>
         </div>
@@ -57,16 +57,16 @@ export default function ConciliacaoToolbar({
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex flex-col bg-black/20 px-5 py-2 rounded-2xl border border-white/5">
+        <div className="flex flex-col bg-[#0e2d22]/50 px-5 py-2 rounded-2xl border border-white/5">
           <span className="text-[9px] text-emerald-400/60 font-black uppercase tracking-[2px] mb-0.5">Mudar Filtro em Lote</span>
           <select 
             onChange={(e) => onBatchCategory(e.target.value)}
-            className="bg-transparent border-none text-[11px] font-black text-white focus:ring-0 p-0 cursor-pointer outline-none placeholder:text-gray-400"
+            className="bg-transparent border-none text-[11px] font-black text-white focus:ring-0 p-0 cursor-pointer outline-none placeholder:text-gray-400 appearance-none"
             value=""
           >
-            <option value="" disabled className="text-gray-900">Selecionar Categoria...</option>
+            <option value="" disabled className="bg-[#0e2d22] text-white">Selecionar Categoria...</option>
             {(categorias || []).map((cat: any) => (
-              <option key={cat.id} value={cat.nome} className="text-gray-900">{cat.nome}</option>
+              <option key={cat.id} value={cat.nome} className="bg-[#0e2d22] text-white">{cat.nome}</option>
             ))}
           </select>
         </div>
