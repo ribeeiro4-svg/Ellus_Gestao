@@ -31,11 +31,11 @@ export default function FinancialKpiGrid({ kpis, onNewReceita, onNewDespesa }: F
         ))}
       </div>
       
-      <div className="flex flex-col gap-2 self-stretch min-w-[180px]">
-        <button onClick={onNewReceita} className="flex-1 px-4 bg-emerald-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/10 active:scale-[0.98] flex items-center justify-center gap-2">
+      <div className="flex flex-col gap-2 self-stretch min-w-[140px]">
+        <button onClick={onNewReceita} className="flex-1 px-4 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[1.5px] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] flex items-center justify-center gap-2 border border-emerald-500/50">
           <Plus size={14} strokeWidth={4} /> Receita
         </button>
-        <button onClick={onNewDespesa} className="flex-1 px-4 bg-rose-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-900/10 active:scale-[0.98] flex items-center justify-center gap-2">
+        <button onClick={onNewDespesa} className="flex-1 px-4 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[1.5px] hover:bg-rose-700 transition-all shadow-lg shadow-rose-900/20 active:scale-[0.98] flex items-center justify-center gap-2 border border-rose-500/50">
           <Plus size={14} strokeWidth={4} /> Despesa
         </button>
       </div>
