@@ -28,12 +28,7 @@ export default function InadimplenciaPage() {
   const [editingItem, setEditingItem] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Associados inadimplentes (resumo)
-  const inadimpAssocs = useMemo(() => 
-    associados.filter(a => (a.status || '').toLowerCase().includes('inadimp')), 
-  [associados])
-
-  // Lançamentos atrasados (detalhado)
+  // Lançamentos atrasados (detalhado) - Base de cálculo real
   const lancamentosAtrasados = useMemo(() => {
     return lancamentos.filter(l => 
         l.status === 'atrasado' || 
@@ -47,26 +42,44 @@ export default function InadimplenciaPage() {
     })
   }, [lancamentos, searchTerm, associados])
 
-  // Cálculos
+  // Cálculos Automáticos
   const totalDevido = useMemo(() => 
     lancamentosAtrasados.reduce((acc, l) => acc + (l.valor || 0), 0),
   [lancamentosAtrasados])
 
-  const ticketMedioAtraso = inadimpAssocs.length > 0 ? totalDevido / inadimpAssocs.length : 0
-  const pctInadimpTotal = (inadimpAssocs.length / (associados.length || 1)) * 100
+  // Agrupamento de Inadimplentes baseado nos lançamentos reais da tabela
+  const mappedInadimplentes = useMemo(() => {
+    const map: Record<string, { assoc: any, meses: number, total: number }> = {}
+    
+    lancamentosAtrasados.forEach(l => {
+      const aid = l.associado_id
+      if (!aid) return
+      if (!map[aid]) {
+        const assoc = associados.find(a => a.id === aid)
+        map[aid] = { assoc, meses: 0, total: 0 }
+      }
+      map[aid].meses += 1
+      map[aid].total += (l.valor || 0)
+    })
 
-  // Curva de atraso
+    return Object.values(map).sort((a, b) => b.meses - a.meses)
+  }, [lancamentosAtrasados, associados])
+
+  const ticketMedioAtraso = mappedInadimplentes.length > 0 ? totalDevido / mappedInadimplentes.length : 0
+  const pctInadimpTotal = (mappedInadimplentes.length / (associados.length || 1)) * 100
+
+  // Curva de atraso calculada dinamicamente
   const curva = useMemo(() => {
     let m1 = 0, m2 = 0, m3 = 0, m3plus = 0
-    inadimpAssocs.forEach(a => {
-      const ms = a.meses_atraso || 0
+    mappedInadimplentes.forEach(item => {
+      const ms = item.meses
       if (ms === 1) m1++
       else if (ms === 2) m2++
       else if (ms === 3) m3++
       else if (ms > 3) m3plus++
     })
     return [m1, m2, m3, m3plus]
-  }, [inadimpAssocs])
+  }, [mappedInadimplentes])
 
   const handleEdit = (item: any) => { setEditingItem(item); setIsModalOpen(true) }
   const handleDelete = async (id: string) => { if (confirm('Excluir este lançamento?')) await remover(id) }
@@ -201,22 +214,22 @@ export default function InadimplenciaPage() {
                <ShieldAlert size={16} className="text-red-500" /> Associados em Situação Crítica
             </h4>
             <div className="flex-1 space-y-4">
-               {inadimpAssocs.sort((a,b) => (a.meses_atraso || 0) - (b.meses_atraso || 0)).slice(0, 3).map((a, idx) => (
-                 <div key={a.id} className="flex items-center justify-between p-4 bg-red-50/30 rounded-xl border border-red-100/50">
+               {mappedInadimplentes.slice(0, 3).map((item, idx) => (
+                 <div key={item.assoc?.id || idx} className="flex items-center justify-between p-4 bg-red-50/30 rounded-xl border border-red-100/50">
                     <div className="flex items-center gap-4">
                        <span className="text-xs font-black text-red-200">#{idx+1}</span>
                        <div>
-                          <p className="text-xs font-bold text-slate-900">{a.nome}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">{a.meses_atraso} meses em aberto</p>
+                          <p className="text-xs font-bold text-slate-900">{item.assoc?.nome || 'Associado não identificado'}</p>
+                          <p className="text-[10px] text-slate-400 font-medium">{item.meses} meses em aberto</p>
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-sm font-black text-red-600">{fmtR(a.mensalidade * (a.meses_atraso || 0))}</p>
+                       <p className="text-sm font-black text-red-600">{fmtR(item.total)}</p>
                        <button className="text-[9px] font-bold text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">Acionar Cobrança</button>
                     </div>
                  </div>
                ))}
-               {inadimpAssocs.length === 0 && (
+               {mappedInadimplentes.length === 0 && (
                  <div className="flex-1 flex items-center justify-center text-slate-300 italic text-sm">
                     Nenhum inadimplente encontrado. Parabéns!
                  </div>
