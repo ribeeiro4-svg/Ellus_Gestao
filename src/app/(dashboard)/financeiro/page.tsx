@@ -152,18 +152,14 @@ export default function FinanceiroPage() {
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm"><BarChart2 size={24} /></div>
           <div><h1 className="text-2xl font-black text-slate-800 tracking-tight">Fluxo de Caixa</h1><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Gestão Financeira Unificada</p></div>
         </div>
-        <div className="flex gap-3">
-           <button onClick={() => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) }} className="px-5 py-3 bg-emerald-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/10 active:scale-95">
-             <Plus size={14} strokeWidth={4} /> Receita
-           </button>
-           <button onClick={() => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) }} className="px-5 py-3 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-rose-700 transition-all shadow-lg shadow-rose-900/10 active:scale-95">
-             <Plus size={14} strokeWidth={4} /> Despesa
-           </button>
-        </div>
       </div>
 
       {/* Grid de KPIs OMNIPRESENTE (Visível em todas as abas) */}
-      <FinancialKpiGrid kpis={kpiData} onNew={() => { setEditingItem(null); setIsModalOpen(true) }} />
+      <FinancialKpiGrid 
+        kpis={kpiData} 
+        onNewReceita={() => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) }}
+        onNewDespesa={() => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) }}
+      />
 
       <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl w-fit">
         <button onClick={() => setActiveTab('geral')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'geral' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📊 Geral</button>
