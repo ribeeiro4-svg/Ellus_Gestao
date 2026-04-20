@@ -35,16 +35,16 @@ export default function FinancialKpiGrid({ kpis, onNewReceita, onNewDespesa }: F
         <button 
           onClick={onNewReceita} 
           style={{ backgroundColor: '#10b981' }}
-          className="flex-1 px-4 text-white rounded-xl font-black text-[10px] uppercase tracking-[1.5px] hover:brightness-110 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
+          className="flex-1 px-4 py-3 text-white rounded-xl font-black text-[11px] uppercase tracking-[1.5px] hover:brightness-110 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
         >
-          <Plus size={14} strokeWidth={4} /> Receita
+          <Plus size={16} strokeWidth={4} /> Receita
         </button>
         <button 
           onClick={onNewDespesa} 
           style={{ backgroundColor: '#e11d48' }}
-          className="flex-1 px-4 text-white rounded-xl font-black text-[10px] uppercase tracking-[1.5px] hover:brightness-110 transition-all shadow-lg shadow-rose-900/30 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
+          className="flex-1 px-4 py-3 text-white rounded-xl font-black text-[11px] uppercase tracking-[1.5px] hover:brightness-110 transition-all shadow-lg shadow-rose-900/30 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
         >
-          <Plus size={14} strokeWidth={4} /> Despesa
+          <Plus size={16} strokeWidth={4} /> Despesa
         </button>
       </div>
     </div>
