@@ -18,16 +18,21 @@ export default function FinancialKpiGrid({ kpis, onNew }: FinancialKpiGridProps)
   ]
 
   return (
-    <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="flex flex-col gap-4 mb-8">
+      <div className="flex items-center justify-end">
+        <button onClick={onNew} className="px-6 py-4 bg-emerald-600 text-white rounded-[20px] font-black text-xs hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200">
+          + NOVO LANÇAMENTO
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 w-full">
         {cards.map(k => (
-          <div key={k.label} className={`bg-white border border-slate-100 rounded-2xl p-3 min-w-[140px] shadow-sm flex-shrink-0 ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}>
-            <div className="text-[9px] font-black text-slate-400 uppercase mb-1">{k.label}</div>
-            <div className={`text-sm font-black ${k.color}`}>{k.value}</div>
+          <div key={k.label} className={`bg-white border border-slate-100 rounded-2xl p-4 shadow-sm transition-all hover:shadow-md ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-200 bg-indigo-50/10' : ''}`}>
+            <div className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-wider">{k.label}</div>
+            <div className={`text-base font-black ${k.color}`}>{k.value}</div>
           </div>
         ))}
       </div>
-      <button onClick={onNew} className="px-6 py-3 bg-emerald-600 text-white rounded-[20px] font-black text-xs hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100">+ NOVO LANÇAMENTO</button>
     </div>
   )
 }
