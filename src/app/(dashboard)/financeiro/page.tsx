@@ -98,22 +98,27 @@ export default function FinanceiroPage() {
     try {
       const enrichments = itemsToProcess.filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument).map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument as string }))
       if (enrichments.length > 0) await Promise.all(enrichments)
-      const items = itemsToProcess.map((t: any) => ({
-        tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
-        descricao: editedMemos[t.bank.fitid] || t.bank.memo,
-        categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
-        conta_id: selectedContaId,
-        valor: Math.abs(t.bank.amount),
-        data: t.bank.date,
-        status: 'pago',
-        forma_pagamento: t.bank.metodo_inferido || 'Transferência',
-        associado_id: t.assocMatch?.id || null,
-        fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
-        diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
-        conciliado: true,
-        data_conciliacao: new Date().toISOString(),
-        banco_transacao_id: t.bank.fitid
-      }))
+      const items = itemsToProcess.map((t: any) => {
+        const parts = t.bank.date.split('-').map(Number)
+        return {
+          tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+          descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+          categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
+          conta_id: selectedContaId,
+          valor: Math.abs(t.bank.amount),
+          data: t.bank.date,
+          status: 'pago',
+          forma_pagamento: t.bank.metodo_inferido || 'Transferência',
+          associado_id: t.assocMatch?.id || null,
+          fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
+          diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
+          conciliado: true,
+          data_conciliacao: new Date().toISOString(),
+          banco_transacao_id: t.bank.fitid,
+          competencia_mes: parts[1] - 1,
+          competencia_ano: parts[0]
+        }
+      })
       const res = await inserirBulk(items as any)
       if (res.error) alert(`Erro: ${res.error}`)
       else {
@@ -130,21 +135,26 @@ export default function FinanceiroPage() {
     try {
       const enrichments = rowsToProcess.filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument).map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument as string }))
       if (enrichments.length > 0) await Promise.all(enrichments)
-      const rows = rowsToProcess.map((t: any) => ({
-        tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
-        descricao: editedMemos[t.bank.fitid] || t.bank.memo,
-        categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
-        conta_id: selectedContaId,
-        valor: Math.abs(t.bank.amount),
-        data: t.bank.date,
-        status: 'pago',
-        forma_pagamento: t.bank.metodo_inferido || 'Transferência',
-        conciliado: true,
-        associado_id: t.assocMatch?.id || null,
-        fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
-        diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
-        banco_transacao_id: t.bank.fitid
-      }))
+      const rows = rowsToProcess.map((t: any) => {
+        const parts = t.bank.date.split('-').map(Number)
+        return {
+          tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+          descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+          categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
+          conta_id: selectedContaId,
+          valor: Math.abs(t.bank.amount),
+          data: t.bank.date,
+          status: 'pago',
+          forma_pagamento: t.bank.metodo_inferido || 'Transferência',
+          conciliado: true,
+          associado_id: t.assocMatch?.id || null,
+          fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
+          diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
+          banco_transacao_id: t.bank.fitid,
+          competencia_mes: parts[1] - 1,
+          competencia_ano: parts[0]
+        }
+      })
       const res = await inserirBulk(rows as any)
       if (!res.error) {
         if (updateStatusBulk) await updateStatusBulk(rowsToProcess.map((i: any) => i.bank.fitid), 'sincronizado')
@@ -346,8 +356,26 @@ export default function FinanceiroPage() {
         if (p.publico_alvo === 'zapsign_new') { list = list.filter(a => { const isZapSign = (a.categoria || '').toLowerCase() === 'zapsign'; const semRecorrencia = !lancamentos.some(l => l.associado_id === a.id && l.categoria === 'Mensalidade'); return isZapSign && semRecorrencia; }); }
         if (!list.length) return alert('Nenhum associado encontrado.');
         const batch: any[] = []; 
-        list.forEach(assoc => { for(let i=0; i<Number(p.meses); i++) { const d = new Date(Number(p.ano_inicio), Number(p.mes_inicio)+i, Number(p.dia)); batch.push({ tipo: 'receita', descricao: `${p.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`, categoria: 'Mensalidade', valor: assoc.mensalidade || 50, data: d.toISOString().split('T')[0], status: 'aberto', associado_id: assoc.id, conta_id: p.conta_id, forma_pagamento: p.forma_pagamento }) } })
-        const res = await inserirBulk(batch); if (!res.error) { alert(`Sucesso! ${res.count} mensalidades geradas.`); setIsSyncModalOpen(false) } else alert(res.error)
+        list.forEach(assoc => { 
+          for(let i=0; i<Number(p.meses); i++) { 
+            const d = new Date(Number(p.ano_inicio), Number(p.mes_inicio)+i, Number(p.dia)); 
+            batch.push({ 
+              tipo: 'receita', 
+              descricao: `${p.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`, 
+              categoria: 'Mensalidade', 
+              valor: assoc.mensalidade || 50, 
+              data: d.toISOString().split('T')[0], 
+              status: 'aberto', 
+              associado_id: assoc.id, 
+              conta_id: p.conta_id, 
+              forma_pagamento: p.forma_pagamento,
+              competencia_mes: d.getMonth(),
+              competencia_ano: d.getFullYear()
+            }) 
+          } 
+        })
+        const res = await inserirBulk(batch); 
+        if (!res.error) { alert(`Sucesso! ${res.count} mensalidades geradas.`); setIsSyncModalOpen(false) } else alert(res.error)
       }} fields={[{ name: 'publico_alvo', label: 'Público Alvo', type: 'select', defaultValue: 'todos', options: [{ value: 'todos', label: 'Todos os Associados Ativos' }, { value: 'zapsign_new', label: 'Apenas Novos ZapSign (Sem Recorrência)' }] }, { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' }, { name: 'mes_inicio', label: 'Partir do Mês', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) }, { name: 'ano_inicio', label: 'Ano', type: 'number', defaultValue: new Date().getFullYear().toString() }, { name: 'dia', label: 'Dia', type: 'number', defaultValue: '10' }, { name: 'meses', label: 'Meses', type: 'select', defaultValue: '12', options: [{ value: '1', label: '1 mês' }, { value: '6', label: '6 Meses' }, { value: '12', label: '12 Meses' }] }, { name: 'forma_pagamento', label: 'Forma', type: 'select', defaultValue: 'Boleto', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] }, { name: 'conta_id', label: 'Conta', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) } ]} />
       
       <ManualMatchModal isOpen={isManualLinkModalOpen} onClose={() => setIsManualLinkModalOpen(false)} extrato={selectedExtrato} onSelect={(assoc: any) => { const tf = selectedExtrato.bank.fitid; setEditedMemos(prev => ({ ...prev, [tf]: enhanceMemo(assoc.nome, selectedExtrato.bank.memo) })); setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, suggestedCategory: 'Mensalidades' } : item)); setIsManualLinkModalOpen(false); setSelectedExtrato(null); }} />
