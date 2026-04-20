@@ -18,7 +18,7 @@ import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
-import { Plus, Pencil, BarChart2, RefreshCw, Search, Filter, XCircle, AlertCircle, TrendingUp, Users, Check } from 'lucide-react'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, TrendingUp, DollarSign, ArrowUpCircle, Activity, Target } from 'lucide-react'
 import { safeSum, safeDiff } from '@/lib/utils/formatters'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
@@ -80,7 +80,7 @@ export default function FinanceiroPage() {
         batch.push({
           tipo: 'receita',
           descricao: `${params.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`,
-          categoria: 'Mensalidades',
+          categoria: 'Mensalidade',
           valor: assoc.mensalidade || 50,
           data: d.toISOString().split('T')[0],
           status: 'aberto',
@@ -196,6 +196,7 @@ export default function FinanceiroPage() {
   const handleSalvar = async (data: any) => {
     const safeData = {
       ...data,
+      valor: Number(data.valor),
       associado_id: data.associado_id || null,
       fornecedor_id: data.fornecedor_id || null,
       diretor_id: data.diretor_id || null,
@@ -226,6 +227,9 @@ export default function FinanceiroPage() {
         } else if (safeData.recorrencia_ativa) {
           const mesesAFrente = Number(safeData.recorrencia_meses || 12)
           const batch: any[] = []
+          const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null;
+          const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao.toUpperCase();
+
           for (let i = 0; i <= mesesAFrente; i++) {
             const parts = safeData.data.includes('-') 
               ? safeData.data.split('-').map(Number)
@@ -236,7 +240,7 @@ export default function FinanceiroPage() {
             const finalDay = Math.min(parts[2], lastDay);
             const d = new Date(targetYear, targetMonth, finalDay);
             const dataString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            batch.push({ ...dbData, data: dataString, status: i === 0 ? (safeData.status || 'aberto') : 'aberto' });
+            batch.push({ ...dbData, descricao: finalDesc, data: dataString, status: i === 0 ? (safeData.status || 'aberto') : 'aberto' });
           }
           res = await inserirBulk(batch);
         } else {
@@ -317,18 +321,18 @@ export default function FinanceiroPage() {
       key: 'select', className: 'w-10',
       render: (i: any) => <input type="checkbox" checked={selectedIds.has(i.id)} onChange={() => toggleSelect(i.id)} className="rounded" />
     },
-    { header: 'Data', key: 'data', render: (i: any) => <span className="text-xs font-medium text-gray-500">{fmtData(i.data)}</span> },
+    { header: 'Data', key: 'data', render: (i: any) => <span className="text-xs font-medium text-slate-500">{fmtData(i.data)}</span> },
     {
       header: 'Descrição', key: 'descricao', render: (i: any) => (
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-gray-800">{i.descricao}</span>
+            <span className="text-sm font-bold text-slate-800">{i.descricao}</span>
             {i.banco_transacao_id && (
               <span className="text-[9px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1 shadow-sm"><RefreshCw size={8} /> OFX</span>
             )}
           </div>
           <div className="flex gap-2">
-            <span className="text-[10px] text-gray-400 font-bold uppercase">{i.categoria}</span>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{i.categoria}</span>
             {i.recorrencia_ativa && <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-1 rounded uppercase tracking-tighter">RECORRENTE</span>}
           </div>
         </div>
@@ -337,7 +341,7 @@ export default function FinanceiroPage() {
     {
       header: 'Conta', key: 'conta_id', render: (i: any) => {
         const c = contas.find(ca => ca.id === i.conta_id)
-        return <span className="text-[11px] font-bold text-gray-400 uppercase">{c?.nome || '--'}</span>
+        return <span className="text-[11px] font-bold text-slate-400 uppercase">{c?.nome || '--'}</span>
       }
     },
     {
@@ -356,12 +360,8 @@ export default function FinanceiroPage() {
       header: '', key: 'acoes', className: 'w-20 text-right',
       render: (i: any) => (
         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg">
-            <Pencil size={14} />
-          </button>
-          <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg">
-            <XCircle size={14} />
-          </button>
+          <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg"><Pencil size={14} /></button>
+          <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg"><XCircle size={14} /></button>
         </div>
       )
     }
@@ -387,7 +387,7 @@ export default function FinanceiroPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm"><BarChart2 size={24} /></div>
-          <div><h1 className="text-2xl font-black text-gray-800 tracking-tight">Fluxo de Caixa</h1><p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Gestão de Realizado e Provisionamento</p></div>
+          <div><h1 className="text-2xl font-black text-slate-800 tracking-tight">Fluxo de Caixa</h1><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Gestão de Realizado e Provisionamento</p></div>
         </div>
         <div className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-hide">
           {[
@@ -399,59 +399,44 @@ export default function FinanceiroPage() {
             { label: `🏦 Em Banco (${filterYear})`, value: fmtR(filteredKpis.saldoBanco), color: 'text-indigo-600' },
             { label: `📊 Projetado (${filterYear})`, value: fmtR(filteredKpis.projetado), color: 'text-indigo-900', isMain: true },
           ].map(k => (
-            <div key={k.label} className={`bg-white border border-gray-100 rounded-2xl p-3 min-w-[150px] shadow-sm flex-shrink-0 ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}><div className="text-[9px] font-black text-gray-400 uppercase mb-1">{k.label}</div><div className={`text-sm font-black ${k.color}`}>{k.value}</div></div>
+            <div key={k.label} className={`bg-white border border-slate-100 rounded-2xl p-3 min-w-[150px] shadow-sm flex-shrink-0 ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-100' : ''}`}><div className="text-[9px] font-black text-slate-400 uppercase mb-1">{k.label}</div><div className={`text-sm font-black ${k.color}`}>{k.value}</div></div>
           ))}
           <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="ml-2 btn btn-primary" style={{ padding: '12px 24px', fontSize: 13 }}><Plus size={16} /> Novo Lançamento</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ChartCard title="📊 Fluxo Mensal: Realizado vs Projetado" subtitle="Barras sólidas (Realizado) | Opacas (Provisionado)">
+        <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado">
           <Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Receita Real', data: recReal, backgroundColor: '#10b981', borderRadius: 4, stack: 'Stack 0' }, { label: 'Receita Prov.', data: recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: 'Stack 0' }, { label: 'Despesa Real', data: despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: 'Stack 1' }, { label: 'Despesa Prov.', data: despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: 'Stack 1' }, { type: 'line', label: 'Projeção Saldo', data: resultMensalProjetado, borderColor: '#6366f1', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { y: { grid: { color: '#f8fafc' }, ticks: { callback: (v) => 'R$ ' + v } }, x: { grid: { display: false } } } }} />
         </ChartCard>
-        <ChartCard title="📈 Acumulado Projetado" subtitle="Evolução do caixa considerando provisões">
+        <ChartCard title="📈 Acumulado Projetado" subtitle="Evolução do caixa">
           <Line data={{ labels: MESES, datasets: [{ label: 'Saldo Acumulado (R$)', data: resultAcumReal, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }, { label: 'Margem %', data: margens, borderColor: '#f59e0b', borderDash: [5, 5], yAxisID: 'y2', tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#f8fafc' } }, y2: { position: 'right', max: 100, min: 0, ticks: { callback: (v) => v + '%' } } } }} />
         </ChartCard>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-gray-100 shadow-sm mb-6">
-        <div className="relative flex-1 min-w-[250px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input type="text" placeholder="Buscar no financeiro..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl text-sm outline-none focus:ring-2 ring-[#2d8c6f]/10 transition-all font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-        </div>
-        <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
-        <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
-        <div className="w-px h-8 bg-gray-100 mx-1" />
-        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Tipos</option><option value="receita">Receitas</option><option value="despesa">Despesas</option></select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Todos Status</option><option value="pago">Pago/Recebido</option><option value="pendente">Pendente</option></select>
-        <select value={filterPagamento} onChange={e => setFilterPagamento(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Pagamento: Todos</option><option value="PIX">PIX</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option><option value="Transferência">Transferência</option></select>
-        <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none hover:bg-white transition-all"><option value="todos">Conta: Todas</option>{contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
-        <button onClick={() => setIsSyncModalOpen(true)} className="px-5 py-3 bg-[#163d2f] text-white rounded-2xl text-[10px] font-black uppercase hover:bg-[#0e2d22] transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
-          <RefreshCw size={14} /> Lançamentos Recorrentes em Lote
-        </button>
+      <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm mb-6">
+        <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no financeiro..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none focus:ring-2 ring-emerald-100 transition-all font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+        <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+        <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
+        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value="todos">Todos Tipos</option><option value="receita">Receitas</option><option value="despesa">Despesas</option></select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value="todos">Todos Status</option><option value="pago">Pago/Recebido</option><option value="pendente">Pendente</option></select>
+        <select value={filterPagamento} onChange={e => setFilterPagamento(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value="todos">Pagamento</option><option value="PIX">PIX</option><option value="Boleto">Boleto</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option></select>
+        <select value={filterConta} onChange={e => setFilterConta(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value="todos">Todas Contas</option>{contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}</select>
+        <button onClick={() => setIsSyncModalOpen(true)} className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase hover:bg-black transition-all flex items-center gap-2"><RefreshCw size={14} /> Recorrência em Lote</button>
       </div>
 
-      <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
 
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} />
       <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Gerar Mensalidades em Lote" onSubmit={handleGerarRecorrenciaLote} fields={[
-        { name: 'target', label: 'Quem deve receber?', type: 'select', defaultValue: selectedIds.size > 0 ? 'selecionados' : 'novos', options: [
-          { value: 'novos', label: `Somente Novos (${associadosSemPagamento.length})` },
-          { value: 'todos', label: 'Todos os Associados Ativos' },
-          { value: 'selecionados', label: `Itens selecionados na tabela (${selectedIds.size})` }
-        ]},
+        { name: 'target', label: 'Quem?', type: 'select', defaultValue: selectedIds.size > 0 ? 'selecionados' : 'novos', options: [{ value: 'novos', label: 'Novos Associados' }, { value: 'todos', label: 'Todos Ativos' }, { value: 'selecionados', label: 'Selecionados' }] },
         { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' },
         { name: 'mes_inicio', label: 'Partir do Mês', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) },
         { name: 'ano_inicio', label: 'Ano', type: 'number', defaultValue: new Date().getFullYear().toString() },
-        { name: 'dia', label: 'Dia Vencimento', type: 'number', defaultValue: '10' },
-        { name: 'meses', label: 'Duração (Meses)', type: 'select', defaultValue: '12', options: [
-          { value: '1', label: 'Apenas 1 mês' },
-          { value: '6', label: '6 Meses' },
-          { value: '12', label: '12 Meses' },
-          { value: '24', label: '24 Meses' }
-        ]},
-        { name: 'forma_pagamento', label: 'Forma Padrão', type: 'select', defaultValue: 'Boleto', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
-        { name: 'conta_id', label: 'Conta de Destino', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) }
+        { name: 'dia', label: 'Dia', type: 'number', defaultValue: '10' },
+        { name: 'meses', label: 'Meses', type: 'select', defaultValue: '12', options: [{ value: '1', label: '1 mês' }, { value: '6', label: '6 Meses' }, { value: '12', label: '12 Meses' }] },
+        { name: 'forma_pagamento', label: 'Forma', type: 'select', defaultValue: 'Boleto', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
+        { name: 'conta_id', label: 'Conta', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) }
       ]} />
     </div>
   )
