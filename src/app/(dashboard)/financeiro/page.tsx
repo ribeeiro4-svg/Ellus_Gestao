@@ -50,8 +50,16 @@ export default function FinanceiroPage() {
     lancamentos.forEach(l => {
       const d = new Date(l.data); if (d.getFullYear() !== filterYear) return
       const m = d.getMonth(); if (isNaN(m)) return
-      if (l.tipo === 'receita') l.status === 'pago' ? rR[m] = safeSum(rR[m], l.valor) : rP[m] = safeSum(rP[m], l.valor)
-      else l.status === 'pago' ? dR[m] = safeSum(dR[m], l.valor) : dP[m] = safeSum(dP[m], l.valor)
+      
+      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+      const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
+      const valorComTaxa = safeSum(l.valor || 0, taxaVal)
+
+      if (l.tipo === 'receita') {
+        l.status === 'pago' ? rR[m] = safeSum(rR[m], valorComTaxa) : rP[m] = safeSum(rP[m], valorComTaxa)
+      } else {
+        l.status === 'pago' ? dR[m] = safeSum(dR[m], l.valor) : dP[m] = safeSum(dP[m], l.valor)
+      }
     })
     return { recReal: rR, recProv: rP, despReal: dR, despProv: dP }
   }, [lancamentos, filterYear])
@@ -60,11 +68,34 @@ export default function FinanceiroPage() {
     let pInc = 0, pExp = 0, oInc = 0, oExp = 0, fCash = 0, fBank = 0
     lancamentos.forEach(l => {
       const d = new Date(l.data); if (d.getFullYear() !== filterYear) return
-      if (l.tipo === 'receita') { if (l.status === 'pago') { pInc = safeSum(pInc, l.valor); l.forma_pagamento === 'Dinheiro' ? fCash = safeSum(fCash, l.valor) : fBank = safeSum(fBank, l.valor) } else oInc = safeSum(oInc, l.valor) }
-      else { if (l.status === 'pago') { pExp = safeSum(pExp, l.valor); l.forma_pagamento === 'Dinheiro' ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor) } else oExp = safeSum(oExp, l.valor) }
+      const m = d.getMonth()
+      
+      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+      const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
+      const valorComTaxa = safeSum(l.valor || 0, taxaVal)
+
+      // Cumulative for Balances (Cash/Bank)
+      if (m <= filterMonth) {
+        if (l.status === 'pago') {
+          if (l.tipo === 'receita') {
+            l.forma_pagamento === 'Dinheiro' ? fCash = safeSum(fCash, valorComTaxa) : fBank = safeSum(fBank, valorComTaxa)
+          } else {
+            l.forma_pagamento === 'Dinheiro' ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor)
+          }
+        }
+      }
+
+      // Specific Month for Monthly KPIs
+      if (m === filterMonth) {
+        if (l.tipo === 'receita') {
+          l.status === 'pago' ? pInc = safeSum(pInc, valorComTaxa) : oInc = safeSum(oInc, valorComTaxa)
+        } else {
+          l.status === 'pago' ? pExp = safeSum(pExp, l.valor) : oExp = safeSum(oExp, l.valor)
+        }
+      }
     })
     return { pInc, pExp, realizado: safeDiff(pInc, pExp), provisionado: safeDiff(oInc, oExp), projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), saldoCaixa: fCash, saldoBanco: fBank }
-  }, [lancamentos, filterYear])
+  }, [lancamentos, filterYear, filterMonth])
 
   const handleSalvar = async (data: any) => {
     setSaving(true)
