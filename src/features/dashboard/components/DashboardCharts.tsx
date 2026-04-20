@@ -1,6 +1,12 @@
 import React from 'react'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import ChartCard from '@/components/ui/ChartCard'
+import {
+  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement,
+} from 'chart.js'
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
+
 import { fmtR, MESES, fmtPct } from '@/lib/utils/formatters'
 
 interface DashboardChartsProps {
