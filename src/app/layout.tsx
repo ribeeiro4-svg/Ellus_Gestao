@@ -16,7 +16,7 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   title: "Dashboard — ACPROBEC · INOVACONT",
-  description: "Sistema de gestão inteligente. Especialista em gestão de associações e benefícios.",
+  description: "Sistema de gestão inteligente. Especialista em gestão de associações e benefícios. [Build v1.1.2]",
 };
 
 export default function RootLayout({
