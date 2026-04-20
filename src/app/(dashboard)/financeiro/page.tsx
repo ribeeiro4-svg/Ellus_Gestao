@@ -11,6 +11,7 @@ import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
+import { useCategorias } from '@/lib/hooks/useCategorias'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal, { Field } from '@/components/ui/CrudModal'
@@ -353,51 +354,22 @@ export default function FinanceiroPage() {
     }
   ]
 
+  const { categorias } = useCategorias()
+
   const modalFields: Field[] = useMemo(() => [
     { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },
+    { name: 'data', label: 'Data', type: 'date', required: true },
     { name: 'descricao', label: 'Descrição', type: 'text', required: true },
     { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
-    { name: 'data', label: 'Data', type: 'date', required: true },
-    { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'pago', label: 'Pago' }, { value: 'aberto', label: 'Provisionado' }, { value: 'atrasado', label: 'Atrasado' }] },
+    { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'aberto', label: 'Provisionado' }, { value: 'pago', label: 'Efetivado (Pago)' }, { value: 'atrasado', label: 'Atrasado' }] },
     { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
-    { name: 'categoria', label: 'Categoria', type: 'text', required: true },
-    { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
-    { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
-    { name: 'recorrencia_meses', label: 'Meses', type: 'number', showIf: (f: any) => f.recorrencia_ativa },
-    { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita' && !f.is_lote, options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
-    { name: 'troco_via_pix', label: '💸 Troco via PIX?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' && !f.is_lote },
-    { name: 'valor_troco', label: 'Valor do Troco (R$)', type: 'number', showIf: (f: any) => f.troco_via_pix && !f.is_lote },
-    { name: 'is_lote', label: '🚀 Lançar em Lote?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' && !editingItem },
-    { 
-      name: 'batch_selection', label: 'Selecionar Associados (Lote)', type: 'info', showIf: (f: any) => f.is_lote,
-      render: (formData: any, handleChange: any) => {
-        const selected = formData.selected_associados || []
-        const filteredList = associados.filter(a => a.nome.toLowerCase().includes(batchSearch.toLowerCase())).slice(0, 10)
-        return (
-          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100 flex flex-col gap-3" onClick={e => e.stopPropagation()}>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" size={14} /><input type="text" placeholder="Pesquisar nome..." className="w-full pl-9 pr-3 py-2 bg-white rounded-xl text-xs border border-gray-100 outline-none focus:ring-2 ring-indigo-50" value={batchSearch} onChange={e => setBatchSearch(e.target.value)} />
-            </div>
-            <div className="grid grid-cols-1 gap-1 max-h-[160px] overflow-y-auto pr-2">
-              {filteredList.map(a => {
-                const isSel = selected.includes(a.id)
-                return (
-                  <button key={a.id} type="button" onClick={() => {
-                      const next = isSel ? selected.filter((sid: string) => sid !== a.id) : [...selected, a.id]
-                      handleChange('selected_associados', next)
-                    }} className={`flex items-center justify-between p-2 rounded-xl text-left transition-all ${isSel ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-gray-800 hover:bg-gray-100'}`}>
-                    <span className="text-xs font-bold truncate">{a.nome}</span>
-                    {isSel ? <Check size={14} /> : <Plus size={14} className="text-gray-300" />}
-                  </button>
-                )
-              })}
-            </div>
-            {selected.length > 0 && <div className="mt-1 pt-2 border-t border-gray-200 flex flex-wrap gap-1"><p className="w-full text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">{selected.length} Selecionados</p>{selected.map((sid: string) => { const a = associados.find(ass => ass.id === sid); return <span key={sid} className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-bold">{a?.nome.split(' ')[0]}</span> })}</div>}
-          </div>
-        )
-      }
-    }
-  ], [contas, associados, batchSearch, editingItem])
+    { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: categorias.map(c => ({ value: c.nome, label: c.nome })) },
+    { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }, { value: 'Transferência', label: 'Transferência' }] },
+    { name: 'recorrente', label: 'Ativar Recorrência?', type: 'checkbox' },
+    { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+    { name: 'troco_pix', label: 'Troco via PIX?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' },
+    { name: 'em_lote', label: 'Lançar em Lote?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' && !editingItem },
+  ], [contas, categorias, associados, editingItem])
 
   return (
     <div className="flex flex-col gap-6">
