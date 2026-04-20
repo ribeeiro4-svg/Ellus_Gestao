@@ -197,9 +197,9 @@ body::before {
 .btn:active { transform: scale(.97); }
 
 .btn-primary {
-  background: var(--accent);
+  background: #1d4f3e;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(45, 140, 111, .2);
+  box-shadow: 0 4px 12px rgba(14, 45, 34, .2);
   border-radius: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -207,8 +207,8 @@ body::before {
 }
 
 .btn-primary:hover {
-  background: #246d56;
-  box-shadow: 0 6px 20px rgba(45, 140, 111, .3);
+  background: #24604c;
+  box-shadow: 0 6px 20px rgba(14, 45, 34, .3);
   transform: translateY(-1px);
 }
 
