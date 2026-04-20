@@ -153,7 +153,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
   const renderChartCard = (config: any) => (
     <div 
       onClick={() => setExpandedChart(config)}
-      className="group relative bg-white p-7 rounded-[32px] border border-slate-100 hover:border-emerald-500/40 transition-all cursor-pointer hover:shadow-2xl hover:shadow-emerald-900/5 active:scale-[0.99] overflow-hidden"
+      className="group relative bg-white p-7 rounded-[32px] border border-slate-100 hover:border-emerald-500/40 transition-all cursor-pointer hover:shadow-2xl hover:shadow-emerald-900/5 active:scale-[0.99]"
     >
       <div className="absolute top-5 right-5 text-slate-300 group-hover:text-emerald-500 transition-colors">
         <Maximize2 size={18} />
