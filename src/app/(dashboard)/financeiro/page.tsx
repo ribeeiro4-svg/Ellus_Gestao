@@ -1,5 +1,5 @@
 'use client'
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js'
 import { Chart, Line } from 'react-chartjs-2'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
@@ -8,30 +8,67 @@ import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { useCategorias } from '@/lib/hooks/useCategorias'
+import { useCoraStaged } from '@/lib/hooks/useCoraStaged'
+import { useOFXParser } from '@/lib/hooks/useOFXParser'
+import { useConciliacaoAudit } from '@/features/conciliacao/hooks/useConciliacaoAudit'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
+import Skeleton from '@/components/ui/Skeleton'
+import OFXUpload from '@/components/conciliacao/OFXUpload'
+import MatchItem from '@/components/conciliacao/MatchItem'
+import ManualMatchModal from '@/components/conciliacao/ManualMatchModal'
+import SupplierMatchModal from '@/components/conciliacao/SupplierMatchModal'
+import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToolbar'
 import { fmtR, fmtData, MESES, safeSum, safeDiff } from '@/lib/utils/formatters'
-import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle } from 'lucide-react'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, CloudLightning, Trash2 } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 export default function FinanceiroPage() {
+  // Ganchos Financeiros
   const { 
     lancamentos, loading, inserir, atualizar, remover, 
     removerBulk, inserirBulk, atualizarBulk, conciliar, remanejar 
   } = useFinanceiro()
   const { contas } = useContas()
-  const { associados } = useAssociados()
+  const { associados, atualizar: atualizarAssociado } = useAssociados()
   const { fornecedores } = useFornecedores()
   const { diretoria } = useDiretoria()
   const { categorias } = useCategorias()
 
-  const [activeTab, setActiveTab] = useState<'geral' | 'receitas' | 'despesas'>('geral')
+  // Ganchos e Estados de Conciliação
+  const { items: coraItems, updateStatusBulk, loading: loadingCora } = useCoraStaged()
+  const { parseOFX } = useOFXParser()
+  const [conciliacaoSubTab, setConciliacaoSubTab] = useState<'ofx' | 'cora'>('ofx')
+  const [extrato, setExtrato] = useState<any[]>([])
+  const [processedIds, setProcessedIds] = useState<Set<string>>(new Set())
+  const [isProcessingBatch, setIsProcessingBatch] = useState(false)
+  const [selectedContaId, setSelectedContaId] = useState<string>('')
+  const [ignoredMatches, setIgnoredMatches] = useState<Set<string>>(new Set())
+  const [editedMemos, setEditedMemos] = useState<Record<string, string>>({})
+  const [editedCategories, setEditedCategories] = useState<Record<string, string>>({})
+  const [isAuditingBatch, setIsAuditingBatch] = useState(false)
+  const [auditResults, setAuditResults] = useState<Record<string, any[]>>({})
+  const [isManualLinkModalOpen, setIsManualLinkModalOpen] = useState(false)
+  const [isSupplierLinkModalOpen, setIsSupplierLinkModalOpen] = useState(false)
+  const [selectedExtrato, setSelectedExtrato] = useState<any>(null)
+  
+  // Filtros de Conciliação
+  const [filterType, setFilterType] = useState<'ALL' | 'CREDIT' | 'DEBIT'>('ALL')
+  const [filterMatch, setFilterMatch] = useState<'ALL' | 'FOUND' | 'NOT_FOUND'>('ALL')
+  const [filterStatus, setFilterStatus] = useState<'ALL' | 'NEW' | 'DUPLICATE'>('ALL')
+
+  const { matchedTransactions, coraMatchedItems, existingTxIds, auditStats } = useConciliacaoAudit(
+    extrato, coraItems, conciliacaoSubTab, associados, fornecedores, diretoria, lancamentos, processedIds
+  )
+
+  // Estados Base
+  const [activeTab, setActiveTab] = useState<'geral' | 'receitas' | 'despesas' | 'conciliacao'>('geral')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [saving, setSaving] = useState(false)
@@ -40,7 +77,97 @@ export default function FinanceiroPage() {
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
 
-  // Filtros aplicados baseados na aba ativa
+  useEffect(() => {
+    if (contas.length > 0 && !selectedContaId) {
+      const coraCont = contas.find(c => c.nome.toLowerCase().includes('cora'))
+      setSelectedContaId(coraCont ? coraCont.id : contas[0].id)
+    }
+  }, [contas, selectedContaId])
+
+  // Lógica de Processamento de Conciliação
+  const enhanceMemo = (name: string, originalMemo: string) => {
+    const docRegex = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})|(\d{3}\.?\d{3}\.?\d{3}-?\d{2})|(\d{14})|(\d{11})/
+    const match = originalMemo.match(docRegex)
+    return match ? `${name.toUpperCase()} - ${match[0]}` : name.toUpperCase()
+  }
+
+  const handleProcessarLote = async () => {
+    const itemsToProcess = matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid))
+    if (itemsToProcess.length === 0) return alert('Nenhuma transação nova a processar.')
+    setIsProcessingBatch(true)
+    try {
+      const enrichments = itemsToProcess.filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument).map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument as string }))
+      if (enrichments.length > 0) await Promise.all(enrichments)
+      const items = itemsToProcess.map((t: any) => ({
+        tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+        descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+        categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
+        conta_id: selectedContaId,
+        valor: Math.abs(t.bank.amount),
+        data: t.bank.date,
+        status: 'pago',
+        forma_pagamento: t.bank.metodo_inferido || 'Transferência',
+        associado_id: t.assocMatch?.id || null,
+        fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
+        diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
+        conciliado: true,
+        data_conciliacao: new Date().toISOString(),
+        banco_transacao_id: t.bank.fitid
+      }))
+      const res = await inserirBulk(items as any)
+      if (res.error) alert(`Erro: ${res.error}`)
+      else {
+        alert(`${items.length} lançamentos processados!`)
+        setProcessedIds(prev => { const next = new Set(prev); itemsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
+      }
+    } finally { setIsProcessingBatch(false) }
+  }
+
+  const handleCoraBatch = async () => {
+    const rowsToProcess = coraMatchedItems.filter((t: any) => !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid))
+    if (rowsToProcess.length === 0) return alert('Nenhuma nova transação Cora.')
+    setIsProcessingBatch(true)
+    try {
+      const enrichments = rowsToProcess.filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument).map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument as string }))
+      if (enrichments.length > 0) await Promise.all(enrichments)
+      const rows = rowsToProcess.map((t: any) => ({
+        tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+        descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+        categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
+        conta_id: selectedContaId,
+        valor: Math.abs(t.bank.amount),
+        data: t.bank.date,
+        status: 'pago',
+        forma_pagamento: t.bank.metodo_inferido || 'Transferência',
+        conciliado: true,
+        associado_id: t.assocMatch?.id || null,
+        fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
+        diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
+        banco_transacao_id: t.bank.fitid
+      }))
+      const res = await inserirBulk(rows as any)
+      if (!res.error) {
+        if (updateStatusBulk) await updateStatusBulk(rowsToProcess.map((i: any) => i.bank.fitid), 'sincronizado')
+        alert(`${rows.length} transações Cora sincronizadas!`)
+        setProcessedIds(prev => { const next = new Set(prev); rowsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
+      } else alert(`Erro Cora: ${res.error}`)
+    } finally { setIsProcessingBatch(false) }
+  }
+
+  const filteredItemsConciliacao = useMemo(() => {
+    const list = conciliacaoSubTab === 'ofx' ? matchedTransactions : coraMatchedItems
+    return list.filter((item: any) => {
+      const matchesSearch = item.bank.memo.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesType = filterType === 'ALL' || item.bank.type === filterType
+      const hasMatch = !!(item.assocMatch || item.forMatch)
+      const matchesMatch = filterMatch === 'ALL' || (filterMatch === 'FOUND' ? hasMatch : !hasMatch)
+      const isDuplicate = existingTxIds.has(item.bank.fitid) || processedIds.has(item.bank.fitid)
+      const matchesStatus = filterStatus === 'ALL' || (filterStatus === 'DUPLICATE' ? isDuplicate : !isDuplicate)
+      return matchesSearch && matchesType && matchesMatch && matchesStatus
+    })
+  }, [conciliacaoSubTab, matchedTransactions, coraMatchedItems, searchTerm, filterType, filterMatch, filterStatus, existingTxIds, processedIds])
+
+  // Filtros aplicados baseados na aba ativa (Hub Financeiro)
   const filteredLancamentos = useMemo(() => {
     return lancamentos.filter(item => {
       const d = new Date(item.data)
@@ -55,47 +182,27 @@ export default function FinanceiroPage() {
     })
   }, [lancamentos, filterYear, filterMonth, activeTab, searchTerm])
 
-  // KPIs Inteligentes (Acompanham os filtros)
+  // KPIs Inteligentes
   const kpiData = useMemo(() => {
     let pInc = 0, pExp = 0, oInc = 0, oExp = 0, fCash = 0, fBank = 0
     lancamentos.forEach(l => {
       const d = new Date(l.data); if (d.getFullYear() !== filterYear) return
       const m = d.getMonth()
-      
-      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
-      const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
-      const valorComTaxa = safeSum(l.valor || 0, taxaVal)
-
-      // Saldos Acumulados (Até o mês selecionado ou ano todo se -1)
+      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/);
+      const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
+      const valorComTaxa = safeSum(l.valor || 0, taxaVal);
       if ((filterMonth === -1 || m <= filterMonth) && l.status === 'pago') {
-        if (l.tipo === 'receita') {
-          l.forma_pagamento === 'Dinheiro' ? fCash = safeSum(fCash, valorComTaxa) : fBank = safeSum(fBank, valorComTaxa)
-        } else {
-          l.forma_pagamento === 'Dinheiro' ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor)
-        }
+        if (l.tipo === 'receita') { l.forma_pagamento === 'Dinheiro' ? fCash = safeSum(fCash, valorComTaxa) : fBank = safeSum(fBank, valorComTaxa) }
+        else { l.forma_pagamento === 'Dinheiro' ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor) }
       }
-
-      // KPIs do Período (Mês específico ou todas as entradas do ano se -1)
       if (filterMonth === -1 || m === filterMonth) {
-        if (l.tipo === 'receita') {
-          l.status === 'pago' ? pInc = safeSum(pInc, valorComTaxa) : oInc = safeSum(oInc, valorComTaxa)
-        } else {
-          l.status === 'pago' ? pExp = safeSum(pExp, l.valor) : oExp = safeSum(oExp, l.valor)
-        }
+        if (l.tipo === 'receita') { l.status === 'pago' ? pInc = safeSum(pInc, valorComTaxa) : oInc = safeSum(oInc, valorComTaxa) }
+        else { l.status === 'pago' ? pExp = safeSum(pExp, l.valor) : oExp = safeSum(oExp, l.valor) }
       }
     })
-    return { 
-      pInc, pExp, 
-      realizado: safeDiff(pInc, pExp), 
-      provisionado: safeDiff(oInc, oExp), 
-      receitaProjetada: safeSum(pInc, oInc),
-      projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), 
-      saldoCaixa: fCash, 
-      saldoBanco: fBank 
-    }
+    return { pInc, pExp, realizado: safeDiff(pInc, pExp), provisionado: safeDiff(oInc, oExp), receitaProjetada: safeSum(pInc, oInc), projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), saldoCaixa: fCash, saldoBanco: fBank }
   }, [lancamentos, filterYear, filterMonth])
 
-  // Gráficos (Mantendo o ano atual)
   const chartData = useMemo(() => {
     const rR = Array(12).fill(0), rP = Array(12).fill(0), dR = Array(12).fill(0), dP = Array(12).fill(0)
     lancamentos.forEach(l => {
@@ -104,11 +211,8 @@ export default function FinanceiroPage() {
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/);
       const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
       const valorComTaxa = safeSum(l.valor || 0, taxaVal);
-      if (l.tipo === 'receita') {
-        l.status === 'pago' ? rR[m] = safeSum(rR[m], valorComTaxa) : rP[m] = safeSum(rP[m], valorComTaxa)
-      } else {
-        l.status === 'pago' ? dR[m] = safeSum(dR[m], l.valor) : dP[m] = safeSum(dP[m], l.valor)
-      }
+      if (l.tipo === 'receita') { l.status === 'pago' ? rR[m] = safeSum(rR[m], valorComTaxa) : rP[m] = safeSum(rP[m], valorComTaxa) }
+      else { l.status === 'pago' ? dR[m] = safeSum(dR[m], l.valor) : dP[m] = safeSum(dP[m], l.valor) }
     })
     return { recReal: rR, recProv: rP, despReal: dR, despProv: dP }
   }, [lancamentos, filterYear])
@@ -155,17 +259,13 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
-      {/* Grid de KPIs OMNIPRESENTE (Visível em todas as abas) */}
-      <FinancialKpiGrid 
-        kpis={kpiData} 
-        onNewReceita={() => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) }}
-        onNewDespesa={() => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) }}
-      />
+      <FinancialKpiGrid kpis={kpiData} onNewReceita={() => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) }} onNewDespesa={() => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) }} />
 
       <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl w-fit">
         <button onClick={() => setActiveTab('geral')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'geral' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📊 Geral</button>
         <button onClick={() => setActiveTab('receitas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'receitas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↑ Receitas</button>
         <button onClick={() => setActiveTab('despesas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'despesas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↓ Despesas</button>
+        <button onClick={() => setActiveTab('conciliacao')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'conciliacao' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📑 Conciliação</button>
       </div>
 
       {activeTab === 'geral' && (
@@ -175,36 +275,83 @@ export default function FinanceiroPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-        <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no fluxo..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-        <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
-        <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
-        <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100"><RefreshCw size={14} /> Recorrência em Lote</button>
-      </div>
+      {activeTab === 'conciliacao' ? (
+        <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-2 duration-500">
+           {(extrato.length > 0 || (conciliacaoSubTab === 'cora' && (coraItems || []).length > 0)) && (
+              <ConciliacaoToolbar 
+                contas={contas} selectedContaId={selectedContaId} onContaChange={setSelectedContaId} 
+                activeTab={conciliacaoSubTab} categorias={categorias} onBatchCategory={(c: string) => { const next = { ...editedCategories }; filteredItemsConciliacao.forEach((item: any) => { if (!processedIds.has(item.bank.fitid) && !existingTxIds.has(item.bank.fitid)) next[item.bank.fitid] = c }); setEditedCategories(next); }} 
+                onAuditAll={async () => {
+                  const cpfs = Array.from(new Set(filteredItemsConciliacao.map(i => i.assocMatch?.cpf || i.bank.documento).filter(Boolean))).map(cpf => (cpf as string).replace(/\D/g, ''))
+                  if (cpfs.length === 0) return alert('Nenhum associado com CPF identificado.')
+                  setIsAuditingBatch(true); let found = 0
+                  try {
+                    for (const cpf of cpfs) {
+                      const resp = await fetch(`/api/cora/audit/invoices?cpf=${cpf}`)
+                      const data = await resp.json()
+                      if (data.success && data.invoices.length > 0) { setAuditResults(prev => ({ ...prev, [cpf]: data.invoices })); found++ }
+                    }
+                    alert(`Auditoria finalizada! ${found} associados com pendências na Cora.`)
+                  } catch { alert('Erro na auditoria.') } finally { setIsAuditingBatch(false) }
+                }} isAuditingBatch={isAuditingBatch} 
+                onExecute={conciliacaoSubTab === 'ofx' ? handleProcessarLote : handleCoraBatch} 
+                isProcessingBatch={isProcessingBatch} hasFilteredItems={filteredItemsConciliacao.length > 0} 
+                newItemsCount={conciliacaoSubTab === 'ofx' ? matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length : coraMatchedItems.filter((t: any) => !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length} 
+              />
+            )}
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-[32px] border border-slate-100 shadow-sm relative z-10 transition-all">
+              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 text-[11px] font-bold">
+                <button onClick={() => setConciliacaoSubTab('ofx')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${conciliacaoSubTab === 'ofx' ? 'bg-white text-emerald-600 shadow-md border border-emerald-50' : 'text-slate-400'}`}><CloudLightning size={14} /> EXTRATO OFX</button>
+                <button onClick={() => setConciliacaoSubTab('cora')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${conciliacaoSubTab === 'cora' ? 'bg-white text-emerald-600 shadow-md border border-emerald-50' : 'text-slate-400'}`}><RefreshCw size={14} /> CONEXÃO CORA</button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative group min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="text" placeholder="Filtrar por texto..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-[11px] font-bold outline-none ring-1 ring-slate-100 focus:ring-emerald-500/20 transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterType} onChange={(e) => setFilterType(e.target.value as any)}><option value="ALL">Todo Tipo</option><option value="CREDIT">Entradas</option><option value="DEBIT">Saídas</option></select>
+                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterMatch} onChange={(e) => setFilterMatch(e.target.value as any)}><option value="ALL">Total ({conciliacaoSubTab === 'ofx' ? extrato.length : (coraItems || []).length})</option><option value="FOUND">Com Vínculo</option><option value="NOT_FOUND">Sem Vínculo</option></select>
+                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}><option value="ALL">Todo Status</option><option value="NEW">Não Conciliados</option><option value="DUPLICATE">Conciliados</option></select>
+              </div>
+            </div>
+
+            {(loading || (conciliacaoSubTab === 'cora' && loadingCora)) ? (<div className="grid grid-cols-1 gap-4">{[1,2,3,4].map(i => <Skeleton key={i} height={80} />)}</div>) : conciliacaoSubTab === 'ofx' ? (
+              extrato.length === 0 ? (<OFXUpload onUpload={(data: any) => setExtrato(parseOFX(data))} />) : (
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-center justify-between px-2"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lista de Lançamentos ({filteredItemsConciliacao.length})</span><button onClick={() => setExtrato([])} className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><Trash2 size={14} /> LIMPAR</button></div>
+                  {filteredItemsConciliacao.map((item: any) => (<MatchItem key={item.bank.fitid} {...item} isProcessed={processedIds.has(item.bank.fitid)} memo={editedMemos[item.bank.fitid] || item.bank.memo} category={editedCategories[item.bank.fitid] || item.suggestedCategory} allCategories={categorias} onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} onEditCategory={(c: string) => setEditedCategories(prev => ({ ...prev, [item.bank.fitid]: c }))} onLinkManual={() => { setSelectedExtrato(item); setIsManualLinkModalOpen(true) }} onLinkSupplier={() => { setSelectedExtrato(item); setIsSupplierLinkModalOpen(true) }} onIgnore={() => setIgnoredMatches(prev => { const n = new Set(prev); if (n.has(item.bank.fitid)) n.delete(item.bank.fitid); else n.add(item.bank.fitid); return n; })} isIgnored={ignoredMatches.has(item.bank.fitid)} isDuplicate={existingTxIds.has(item.bank.fitid)} externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]} />))}
+                </div>
+              )
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {(!coraItems || coraItems?.length === 0) ? (<div className="flex flex-col items-center justify-center p-20 bg-white rounded-[40px] border border-dashed border-slate-200"><RefreshCw size={48} className="text-slate-300 mb-4 animate-spin" /><p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Sincronizando com Banco Cora...</p></div>) : 
+                  filteredItemsConciliacao.map((item: any) => (<MatchItem key={item.bank.fitid} {...item} isCora isDuplicate={existingTxIds.has(item.bank.fitid)} isProcessed={processedIds.has(item.bank.fitid)} memo={editedMemos[item.bank.fitid] || item.bank.memo} category={editedCategories[item.bank.fitid] || item.suggestedCategory} allCategories={categorias} onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} onEditCategory={(c: string) => setEditedCategories(prev => ({ ...prev, [item.bank.fitid]: c }))} externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]} />))
+                }
+              </div>
+            )}
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no fluxo..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+            <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+            <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
+            <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100"><RefreshCw size={14} /> Recorrência em Lote</button>
+          </div>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
+        </>
+      )}
 
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} loading={saving} />
       <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Gerar Mensalidades em Lote" onSubmit={async (p: any) => {
         let list = associados.filter(a => a.status === 'ativo');
-        if (p.publico_alvo === 'zapsign_new') {
-          list = list.filter(a => {
-            const isZapSign = (a.categoria || '').toLowerCase() === 'zapsign';
-            const semRecorrencia = !lancamentos.some(l => l.associado_id === a.id && l.categoria === 'Mensalidade');
-            return isZapSign && semRecorrencia;
-          });
-        }
+        if (p.publico_alvo === 'zapsign_new') { list = list.filter(a => { const isZapSign = (a.categoria || '').toLowerCase() === 'zapsign'; const semRecorrencia = !lancamentos.some(l => l.associado_id === a.id && l.categoria === 'Mensalidade'); return isZapSign && semRecorrencia; }); }
         if (!list.length) return alert('Nenhum associado encontrado.');
         const batch: any[] = []; 
-        list.forEach(assoc => { 
-          for(let i=0; i<Number(p.meses); i++) { 
-            const d = new Date(Number(p.ano_inicio), Number(p.mes_inicio)+i, Number(p.dia)); 
-            batch.push({ tipo: 'receita', descricao: `${p.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`, categoria: 'Mensalidade', valor: assoc.mensalidade || 50, data: d.toISOString().split('T')[0], status: 'aberto', associado_id: assoc.id, conta_id: p.conta_id, forma_pagamento: p.forma_pagamento }) 
-          } 
-        })
-        const res = await inserirBulk(batch); 
-        if (!res.error) { alert(`Sucesso! ${res.count} mensalidades geradas.`); setIsSyncModalOpen(false) } else alert(res.error)
+        list.forEach(assoc => { for(let i=0; i<Number(p.meses); i++) { const d = new Date(Number(p.ano_inicio), Number(p.mes_inicio)+i, Number(p.dia)); batch.push({ tipo: 'receita', descricao: `${p.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`, categoria: 'Mensalidade', valor: assoc.mensalidade || 50, data: d.toISOString().split('T')[0], status: 'aberto', associado_id: assoc.id, conta_id: p.conta_id, forma_pagamento: p.forma_pagamento }) } })
+        const res = await inserirBulk(batch); if (!res.error) { alert(`Sucesso! ${res.count} mensalidades geradas.`); setIsSyncModalOpen(false) } else alert(res.error)
       }} fields={[{ name: 'publico_alvo', label: 'Público Alvo', type: 'select', defaultValue: 'todos', options: [{ value: 'todos', label: 'Todos os Associados Ativos' }, { value: 'zapsign_new', label: 'Apenas Novos ZapSign (Sem Recorrência)' }] }, { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' }, { name: 'mes_inicio', label: 'Partir do Mês', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) }, { name: 'ano_inicio', label: 'Ano', type: 'number', defaultValue: new Date().getFullYear().toString() }, { name: 'dia', label: 'Dia', type: 'number', defaultValue: '10' }, { name: 'meses', label: 'Meses', type: 'select', defaultValue: '12', options: [{ value: '1', label: '1 mês' }, { value: '6', label: '6 Meses' }, { value: '12', label: '12 Meses' }] }, { name: 'forma_pagamento', label: 'Forma', type: 'select', defaultValue: 'Boleto', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] }, { name: 'conta_id', label: 'Conta', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) } ]} />
+      
+      <ManualMatchModal isOpen={isManualLinkModalOpen} onClose={() => setIsManualLinkModalOpen(false)} extrato={selectedExtrato} onSelect={(assoc: any) => { const tf = selectedExtrato.bank.fitid; setEditedMemos(prev => ({ ...prev, [tf]: enhanceMemo(assoc.nome, selectedExtrato.bank.memo) })); setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, suggestedCategory: 'Mensalidades' } : item)); setIsManualLinkModalOpen(false); setSelectedExtrato(null); }} />
+      <SupplierMatchModal isOpen={isSupplierLinkModalOpen} onClose={() => setIsSupplierLinkModalOpen(false)} extrato={selectedExtrato} onSelect={(sup: any) => { const tf = selectedExtrato.bank.fitid; setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: enhanceMemo(sup.nome, selectedExtrato.bank.memo) })); setExtrato(prev => prev.map((tx: any) => tx.fitid === tf ? tx : tx)); setIsSupplierLinkModalOpen(false); setSelectedExtrato(null); }} />
     </div>
   )
 }

@@ -38,7 +38,6 @@ const MENU = [
       { href: '/financeiro', icon: Wallet, label: 'Financeiro' },
       { href: '/planejamento', icon: Target, label: 'Planejamento' },
       { href: '/simulador', icon: Calculator, label: 'Simulador' },
-      { href: '/conciliacao', icon: FileCheck, label: 'Conciliação OFX' },
       { href: '/fechamento', icon: Lock, label: 'Fechamento Mensal' },
     ]
   },
