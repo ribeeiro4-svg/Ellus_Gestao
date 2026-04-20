@@ -147,7 +147,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       },
       scales: config.chartType === 'bar' ? { 
         y: { 
-          grid: { color: 'rgba(0,0,0,0.03)' }, 
+          grid: { display: false }, 
           ticks: { font: { size: 9 }, callback: (v: any) => config.id === 'receita' ? 'R$ ' + Math.round(Number(v) / 1000) + 'k' : v } 
         }, 
         x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } } 
@@ -249,7 +249,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
               <div className="p-8 lg:p-12 border-b border-slate-200">
                 <div className="h-[300px] w-full">
                   {expandedChart.chartType === 'bar' 
-                    ? <Bar data={expandedChart.chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
+                    ? <Bar data={expandedChart.chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} />
                     : <Doughnut data={expandedChart.chartData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }} />
                   }
                 </div>
