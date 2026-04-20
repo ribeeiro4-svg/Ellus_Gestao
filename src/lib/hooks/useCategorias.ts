@@ -61,10 +61,10 @@ export function useCategorias() {
     
     // 3. Se o nome mudou e não houve erro, atualiza os registros vinculados
     if (!error && newName && oldName && oldName !== newName) {
-      // Dispara atualizações em lote limpando possíveis espaços do banco também
+      // Dispara atualizações em lote usando ILIKE (insensível a maiúsculas/minúsculas)
       await Promise.all([
-        sb.from('lancamentos').update({ categoria: newName }).eq('tenant_id', tenantId).eq('categoria', oldName),
-        sb.from('orcamentos').update({ categoria: newName }).eq('tenant_id', tenantId).eq('categoria', oldName)
+        sb.from('lancamentos').update({ categoria: newName }).eq('tenant_id', tenantId).ilike('categoria', oldName),
+        sb.from('orcamentos').update({ categoria: newName }).eq('tenant_id', tenantId).ilike('categoria', oldName)
       ])
     }
 
