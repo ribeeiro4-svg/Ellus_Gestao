@@ -270,7 +270,7 @@ body::before {
   box-shadow: 0 8px 32px rgba(14, 45, 34, 0.05);
   display: flex;
   flex-direction: column;
-  height: 320px !important; /* Fixed height to match Receitas page exactly */
+  height: 400px !important; /* Increased to fill the page as requested */
 }
 
 .chart-card:hover {
