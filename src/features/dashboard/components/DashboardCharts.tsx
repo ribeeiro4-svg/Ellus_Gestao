@@ -149,7 +149,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="charts-grid grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="charts-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {Object.values(chartConfigs).map((config: any) => (
           <div 
             key={config.id} 
@@ -166,7 +166,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
               </div>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">{config.subtitle}</p>
             </div>
-            <div className="h-[220px]">
+            <div className="h-[140px]">
               {renderMiniChart(config)}
             </div>
           </div>
