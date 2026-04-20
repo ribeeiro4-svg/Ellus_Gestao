@@ -238,10 +238,12 @@ export default function AssociadosPage() {
                   {MESES.map((mes, idx) => {
                     const matches = lancamentos.filter((l: any) => {
                       const isCorrectAssociate = l.associado_id === i.id;
-                      const isMensalidade = l.categoria?.toUpperCase().includes('MENSALIDADE') || 
-                                          l.descricao?.toUpperCase().includes('MENSALIDADE');
+                      const isTargetCategory = l.categoria?.toUpperCase().includes('MENSALIDADE') || 
+                                             l.descricao?.toUpperCase().includes('MENSALIDADE') ||
+                                             l.categoria?.toUpperCase().includes('ADESÃO') ||
+                                             l.descricao?.toUpperCase().includes('ADESÃO');
                       
-                      if (!isCorrectAssociate || !isMensalidade) return false;
+                      if (!isCorrectAssociate || !isTargetCategory) return false;
 
                       const d = new Date(l.data);
                       const compMes = l.competencia_mes !== undefined && l.competencia_mes !== null ? l.competencia_mes : d.getMonth();
@@ -252,20 +254,27 @@ export default function AssociadosPage() {
 
                     // Prioriza o registro PAGO se houver múltiplos no mesmo mês
                     const lanc = matches.find((l: any) => l.status === 'pago') || matches[0];
+                    const isAdesao = lanc?.categoria?.toUpperCase().includes('ADESÃO') || lanc?.descricao?.toUpperCase().includes('ADESÃO');
 
                     return (
                       <div key={mes} className="flex items-center justify-between border-b border-emerald-100/30 pb-1 last:border-0">
                         <span className="text-[10px] font-bold text-slate-500 uppercase">{mes.substring(0,3)}</span>
                         {lanc ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[9px] font-bold text-slate-700">{fmtR(lanc.valor)}</span>
-                            <span className={`w-2 h-2 rounded-full ${
-                              lanc.status === 'pago' ? 'bg-emerald-500' : 
-                              lanc.status === 'atrasado' ? 'bg-rose-500' : 'bg-slate-300'
-                            }`} title={lanc.status} />
+                            {isAdesao ? (
+                              <span className="text-[8px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded-[4px] uppercase tracking-tighter">ADESÃO</span>
+                            ) : (
+                              <>
+                                <span className="text-[9px] font-bold text-slate-700">{fmtR(lanc.valor)}</span>
+                                <span className={`w-2 h-2 rounded-full ${
+                                  lanc.status === 'pago' ? 'bg-emerald-500' : 
+                                  lanc.status === 'atrasado' ? 'bg-rose-500' : 'bg-slate-300'
+                                }`} title={lanc.status} />
+                              </>
+                            )}
                           </div>
                         ) : (
-                          <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">--</span>
+                          <span className="text-[10px] font-bold text-slate-300">--</span>
                         )}
                       </div>
                     )
