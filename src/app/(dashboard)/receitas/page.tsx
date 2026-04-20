@@ -11,7 +11,7 @@ import { fmtR, fmtData, MESES, getMesIdx, getAnoIdx } from '@/lib/utils/formatte
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import PaymentBadge from '@/components/ui/PaymentBadge'
-import CrudModal from '@/components/ui/CrudModal'
+import CrudModal, { Field } from '@/components/ui/CrudModal'
 import LaunchDetailsModal from '@/components/ui/LaunchDetailsModal'
 import BatchActionBar from '@/components/ui/BatchActionBar'
 import { Bar, Doughnut } from 'react-chartjs-2'
@@ -135,17 +135,84 @@ export default function ReceitasPage() {
   const { totalReceitas, totalTaxas, totalCora, totalDinheiro, receitaPlanejada } = periodSummary
 
   const handleSalvar = async (data: any) => {
-    const cleanData = { ...data, valor: Number(data.valor), tipo: 'receita' }
+    const safeData = { 
+      ...data, 
+      valor: Number(data.valor), 
+      tipo: 'receita',
+      associado_id: data.associado_id || null,
+      conta_id: data.conta_id || null
+    }
     setLoading(true)
     try {
-      const dbData = { ...cleanData }
-      const assoc = dbData.associado_id ? associados.find(a => a.id === dbData.associado_id) : null
-      const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao.toUpperCase()
-      dbData.descricao = finalDesc
-
       let res
-      if (editingItem) res = await atualizar(editingItem.id, dbData)
-      else res = await inserirBulk([dbData])
+      if (editingItem) {
+        const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null
+        const finalDesc = assoc ? `${safeData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : safeData.descricao.toUpperCase()
+        res = await atualizar(editingItem.id, { ...safeData, descricao: finalDesc })
+      } else {
+        const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, ...dbData } = safeData;
+        
+        if (is_lote && selected_associados?.length > 0) {
+          const batch: any[] = []
+          selected_associados.forEach((assocId: string) => {
+            const assoc = associados.find(a => a.id === assocId)
+            batch.push({ 
+              ...dbData, 
+              descricao: `${dbData.descricao.toUpperCase()} - ${assoc?.nome.toUpperCase() || 'LOTE'}`,
+              associado_id: assocId, 
+              status: safeData.status || 'aberto' 
+            })
+          })
+          res = await inserirBulk(batch)
+        } else if (recorrencia_ativa) {
+          const mesesAFrente = Number(recorrencia_meses || 12)
+          const batch: any[] = []
+          const assoc = dbData.associado_id ? associados.find(a => a.id === dbData.associado_id) : null;
+          const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao.toUpperCase();
+
+          for (let i = 0; i <= mesesAFrente; i++) {
+            const parts = dbData.data.includes('-') 
+              ? dbData.data.split('-').map(Number)
+              : dbData.data.split('/').reverse().map(Number);
+            const targetMonth = parts[1] - 1 + i;
+            const targetYear = parts[0];
+            const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+            const finalDay = Math.min(parts[2], lastDay);
+            const d = new Date(targetYear, targetMonth, finalDay);
+            const dataString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            batch.push({ ...dbData, descricao: finalDesc, data: dataString, status: i === 0 ? (dbData.status || 'aberto') : 'aberto' });
+          }
+          res = await inserirBulk(batch);
+        } else {
+          const assoc = dbData.associado_id ? associados.find(a => a.id === dbData.associado_id) : null;
+          const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao.toUpperCase();
+          
+          const itemsToInsert = [];
+          
+          // Prepara a receita principal
+          itemsToInsert.push({ 
+            ...dbData, 
+            descricao: finalDesc, 
+            status: dbData.status || 'aberto' 
+          });
+
+          // Se houver troco em PIX, prepara a despesa automática
+          if (data.troco_via_pix && Number(data.valor_troco) > 0) {
+              itemsToInsert.push({
+                  tipo: 'despesa' as const,
+                  descricao: `TROCO EM PIX - ${assoc?.nome.toUpperCase() || 'CLIENTE'}`,
+                  valor: Number(data.valor_troco),
+                  data: dbData.data,
+                  status: 'pago' as const,
+                  conta_id: dbData.conta_id,
+                  categoria: 'TROCO',
+                  forma_pagamento: 'PIX'
+              });
+          }
+          
+          res = await inserirBulk(itemsToInsert);
+        }
+      }
 
       if (res?.error) alert(`Erro ao salvar: ${res.error}`)
       else { setEditingItem(null); setIsModalOpen(false) }
@@ -162,16 +229,35 @@ export default function ReceitasPage() {
   const handleBatchDelete = async () => { if (confirm(`Excluir ${selectedIds.length}?`)) { await removerBulk(selectedIds); setSelectedIds([]) } }
   const handleBatchStatus = async (status: string) => { await atualizarBulk(selectedIds, { status: status as any }); setSelectedIds([]) }
 
-  const modalFields = useMemo(() => [
-    { name: 'data', label: 'Data', type: 'date' as const, required: true },
-    { name: 'descricao', label: 'Descrição', type: 'text' as const, required: true },
-    { name: 'valor', label: 'Valor (R$)', type: 'number' as const, required: true },
-    { name: 'status', label: 'Status', type: 'select' as const, required: true, options: [{ value: 'aberto', label: 'Provisionado' }, { value: 'pago', label: 'Efetivado (Pago)' }] },
-    { name: 'conta_id', label: 'Conta', type: 'select' as const, required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
-    { name: 'categoria', label: 'Categoria', type: 'select' as const, required: true, options: categorias.map(c => ({ value: c.nome, label: c.nome })) },
-    { name: 'forma_pagamento', label: 'Forma', type: 'select' as const, options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
-    { name: 'associado_id', label: 'Associado Individual', type: 'select' as const, options: associados.map(a => ({ value: a.id, label: a.nome })) },
-  ], [contas, associados, categorias])
+  const modalFields: Field[] = useMemo(() => [
+    { name: 'data', label: 'Data', type: 'date', required: true },
+    { name: 'descricao', label: 'Descrição', type: 'text', required: true },
+    { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
+    { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'aberto', label: 'Provisionado' }, { value: 'pago', label: 'Efetivado (Pago)' }] },
+    { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
+    { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: categorias.map(c => ({ value: c.nome, label: c.nome })) },
+    { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] },
+    { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => !f.is_lote, options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+    { name: 'is_lote', label: 'Lançar em Lote?', type: 'checkbox', showIf: (f: any) => !editingItem },
+    { name: 'selected_associados', label: 'Selecionar Associados', type: 'info', showIf: (f: any) => f.is_lote, render: (formData, handleChange) => (
+      <div className="grid grid-cols-2 gap-2 mt-2 max-h-[150px] overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-100">
+        {associados.filter(a => a.status === 'ativo').map(a => (
+          <label key={a.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer transition-colors text-[10px] font-bold">
+            <input type="checkbox" checked={(formData.selected_associados || []).includes(a.id)} onChange={e => {
+              const prev = formData.selected_associados || []
+              const next = e.target.checked ? [...prev, a.id] : prev.filter((id: string) => id !== a.id)
+              handleChange('selected_associados', next)
+            }} className="rounded" />
+            <span className="truncate">{a.nome}</span>
+          </label>
+        ))}
+      </div>
+    )},
+    { name: 'troco_via_pix', label: 'Houve Troco em PIX?', type: 'checkbox' },
+    { name: 'valor_troco', label: 'Valor do Troco', type: 'number', showIf: (f: any) => f.troco_via_pix },
+    { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
+    { name: 'recorrencia_meses', label: 'Meses à frente', type: 'select', showIf: (f: any) => f.recorrencia_ativa, options: [{ value: '1', label: '1 mês' }, { value: '3', label: '3 meses' }, { value: '6', label: '6 meses' }, { value: '12', label: '12 meses' }] },
+  ], [contas, associados, categorias, editingItem])
 
   return (
     <div className="flex flex-col gap-6">
@@ -220,7 +306,7 @@ export default function ReceitasPage() {
       </div>
 
       <BatchActionBar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])} onDelete={handleBatchDelete} onStatusChange={handleBatchStatus} />
-      <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Receita" initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} loading={loading} />
+      <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Receita' : 'Nova Receita'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} loading={loading} />
       <LaunchDetailsModal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} launch={selectedForDetail} associados={associados} onRemanejar={remanejar} />
     </div>
   )

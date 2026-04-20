@@ -376,10 +376,26 @@ export default function FinanceiroPage() {
     { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
     { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: categorias.map(c => ({ value: c.nome, label: c.nome })) },
     { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }, { value: 'Transferência', label: 'Transferência' }] },
-    { name: 'recorrente', label: 'Ativar Recorrência?', type: 'checkbox' },
-    { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
-    { name: 'troco_pix', label: 'Troco via PIX?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' },
-    { name: 'em_lote', label: 'Lançar em Lote?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' && !editingItem },
+    { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita' && !f.is_lote, options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+    { name: 'is_lote', label: 'Lançar em Lote?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' && !editingItem },
+    { name: 'selected_associados', label: 'Selecionar Associados', type: 'info', showIf: (f: any) => f.is_lote, render: (formData, handleChange) => (
+      <div className="grid grid-cols-2 gap-2 mt-2 max-h-[150px] overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-100">
+        {associados.filter(a => a.status === 'ativo').map(a => (
+          <label key={a.id} className="flex items-center gap-2 p-1 hover:bg-white rounded cursor-pointer transition-colors text-[10px] font-bold">
+            <input type="checkbox" checked={(formData.selected_associados || []).includes(a.id)} onChange={e => {
+              const prev = formData.selected_associados || []
+              const next = e.target.checked ? [...prev, a.id] : prev.filter((id: string) => id !== a.id)
+              handleChange('selected_associados', next)
+            }} className="rounded" />
+            <span className="truncate">{a.nome}</span>
+          </label>
+        ))}
+      </div>
+    )},
+    { name: 'troco_via_pix', label: 'Houve Troco em PIX?', type: 'checkbox', showIf: (f: any) => f.tipo === 'receita' },
+    { name: 'valor_troco', label: 'Valor do Troco', type: 'number', showIf: (f: any) => f.troco_via_pix },
+    { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
+    { name: 'recorrencia_meses', label: 'Meses à frente', type: 'select', showIf: (f: any) => f.recorrencia_ativa, options: [{ value: '1', label: '1 mês' }, { value: '3', label: '3 meses' }, { value: '6', label: '6 meses' }, { value: '12', label: '12 meses' }] },
   ], [contas, categorias, associados, editingItem])
 
   return (
