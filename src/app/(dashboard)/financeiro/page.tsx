@@ -55,7 +55,47 @@ export default function FinanceiroPage() {
     })
   }, [lancamentos, filterYear, filterMonth, activeTab, searchTerm])
 
-  // KPIs e Gráficos (Mantendo design premium)
+  // KPIs Inteligentes (Acompanham os filtros)
+  const kpiData = useMemo(() => {
+    let pInc = 0, pExp = 0, oInc = 0, oExp = 0, fCash = 0, fBank = 0
+    lancamentos.forEach(l => {
+      const d = new Date(l.data); if (d.getFullYear() !== filterYear) return
+      const m = d.getMonth()
+      
+      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+      const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
+      const valorComTaxa = safeSum(l.valor || 0, taxaVal)
+
+      // Saldos Acumulados (Até o mês selecionado ou ano todo se -1)
+      if ((filterMonth === -1 || m <= filterMonth) && l.status === 'pago') {
+        if (l.tipo === 'receita') {
+          l.forma_pagamento === 'Dinheiro' ? fCash = safeSum(fCash, valorComTaxa) : fBank = safeSum(fBank, valorComTaxa)
+        } else {
+          l.forma_pagamento === 'Dinheiro' ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor)
+        }
+      }
+
+      // KPIs do Período (Mês específico ou todas as entradas do ano se -1)
+      if (filterMonth === -1 || m === filterMonth) {
+        if (l.tipo === 'receita') {
+          l.status === 'pago' ? pInc = safeSum(pInc, valorComTaxa) : oInc = safeSum(oInc, valorComTaxa)
+        } else {
+          l.status === 'pago' ? pExp = safeSum(pExp, l.valor) : oExp = safeSum(oExp, l.valor)
+        }
+      }
+    })
+    return { 
+      pInc, pExp, 
+      realizado: safeDiff(pInc, pExp), 
+      provisionado: safeDiff(oInc, oExp), 
+      receitaProjetada: safeSum(pInc, oInc),
+      projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), 
+      saldoCaixa: fCash, 
+      saldoBanco: fBank 
+    }
+  }, [lancamentos, filterYear, filterMonth])
+
+  // Gráficos (Mantendo o ano atual)
   const chartData = useMemo(() => {
     const rR = Array(12).fill(0), rP = Array(12).fill(0), dR = Array(12).fill(0), dP = Array(12).fill(0)
     lancamentos.forEach(l => {
@@ -72,26 +112,6 @@ export default function FinanceiroPage() {
     })
     return { recReal: rR, recProv: rP, despReal: dR, despProv: dP }
   }, [lancamentos, filterYear])
-
-  const kpiData = useMemo(() => {
-    let pInc = 0, pExp = 0, oInc = 0, oExp = 0, fCash = 0, fBank = 0
-    lancamentos.forEach(l => {
-      const d = new Date(l.data); if (d.getFullYear() !== filterYear) return
-      const m = d.getMonth()
-      const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
-      const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
-      const valorComTaxa = safeSum(l.valor || 0, taxaVal)
-      if (m <= filterMonth && l.status === 'pago') {
-        if (l.tipo === 'receita') l.forma_pagamento === 'Dinheiro' ? fCash = safeSum(fCash, valorComTaxa) : fBank = safeSum(fBank, valorComTaxa)
-        else l.forma_pagamento === 'Dinheiro' ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor)
-      }
-      if (m === filterMonth) {
-        if (l.tipo === 'receita') l.status === 'pago' ? pInc = safeSum(pInc, valorComTaxa) : oInc = safeSum(oInc, valorComTaxa)
-        else l.status === 'pago' ? pExp = safeSum(pExp, l.valor) : oExp = safeSum(oExp, l.valor)
-      }
-    })
-    return { pInc, pExp, realizado: safeDiff(pInc, pExp), provisionado: safeDiff(oInc, oExp), receitaProjetada: safeSum(pInc, oInc), projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), saldoCaixa: fCash, saldoBanco: fBank }
-  }, [lancamentos, filterYear, filterMonth])
 
   const handleSalvar = async (data: any) => {
     setSaving(true)
@@ -142,6 +162,9 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
+      {/* Grid de KPIs OMNIPRESENTE (Visível em todas as abas) */}
+      <FinancialKpiGrid kpis={kpiData} onNew={() => { setEditingItem(null); setIsModalOpen(true) }} />
+
       <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl w-fit">
         <button onClick={() => setActiveTab('geral')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'geral' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📊 Geral</button>
         <button onClick={() => setActiveTab('receitas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'receitas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↑ Receitas</button>
@@ -149,13 +172,10 @@ export default function FinanceiroPage() {
       </div>
 
       {activeTab === 'geral' && (
-        <>
-          <FinancialKpiGrid kpis={kpiData} onNew={() => { setEditingItem(null); setIsModalOpen(true) }} />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Receita Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Receita Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Desp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Desp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
-            <ChartCard title="📈 Saldo Acumulado" subtitle="Evolução do caixa"><Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
-          </div>
-        </>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Receita Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Receita Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Desp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Desp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+          <ChartCard title="📈 Saldo Acumulado" subtitle="Evolução do caixa"><Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+        </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
