@@ -163,19 +163,21 @@ export default function ConciliacaoPage() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex flex-col gap-6">
-        <div className="page-header flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shadow-sm"><FileCheck size={26} /></div>
-            <div>
-              <h1 className="page-title text-2xl font-bold tracking-tight">Conciliador Bancário</h1>
-              <p className="page-subtitle text-xs text-gray-500 font-medium tracking-tight">Auditoria e sincronização inteligente de fluxos.</p>
+        <div className="bg-gradient-to-br from-[#0e2d22] to-[#163d2f] p-8 rounded-[32px] text-white shadow-2xl border border-emerald-500/10 mb-2">
+          <div className="page-header flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-sm"><FileCheck size={26} /></div>
+              <div>
+                <h1 className="page-title text-2xl font-bold tracking-tight text-white">Conciliador Bancário</h1>
+                <p className="page-subtitle text-xs text-emerald-400/80 font-medium tracking-tight uppercase tracking-[2px]">Auditoria e sincronização inteligente de fluxos.</p>
+              </div>
             </div>
-          </div>
-          <div className="hidden lg:flex items-center gap-6 bg-white p-3 px-6 rounded-2xl border border-gray-100 shadow-sm">
-            <div className="flex flex-col"><span className="text-[9px] font-black text-emerald-500 uppercase tracking-wider">Entradas (+)</span><span className="text-sm font-black text-emerald-700">{fmtR(auditStats.credits)}</span></div>
-            <div className="w-px h-8 bg-gray-100" /><div className="flex flex-col"><span className="text-[9px] font-black text-red-400 uppercase tracking-wider">Saídas (-)</span><span className="text-sm font-black text-red-600">{fmtR(auditStats.debits)}</span></div>
-            <div className="w-px h-8 bg-gray-100" /><div className="flex flex-col"><span className="text-[9px] font-black text-gray-400 uppercase tracking-wider">Saldo Líquido</span><span className={`text-sm font-black ${auditStats.balance >= 0 ? 'text-indigo-900' : 'text-red-600'}`}>{fmtR(auditStats.balance)}</span></div>
-            <div className="w-px h-8 bg-gray-100" /><div className="flex flex-col"><span className="text-[9px] font-black text-amber-500 uppercase tracking-wider">Duplicados</span><span className="text-sm font-black text-amber-600">{auditStats.duplicates}</span></div>
+            <div className="hidden lg:flex items-center gap-6 bg-white/5 p-3 px-6 rounded-2xl border border-white/10 backdrop-blur-md">
+              <div className="flex flex-col"><span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Entradas (+)</span><span className="text-sm font-black text-emerald-400">{fmtR(auditStats.credits)}</span></div>
+              <div className="w-px h-8 bg-white/10" /><div className="flex flex-col"><span className="text-[9px] font-black text-red-400 uppercase tracking-wider">Saídas (-)</span><span className="text-sm font-black text-red-500">{fmtR(auditStats.debits)}</span></div>
+              <div className="w-px h-8 bg-white/10" /><div className="flex flex-col"><span className="text-[9px] font-black text-blue-300 uppercase tracking-wider">Saldo Líquido</span><span className={`text-sm font-black ${auditStats.balance >= 0 ? 'text-white' : 'text-red-400'}`}>{fmtR(auditStats.balance)}</span></div>
+              <div className="w-px h-8 bg-white/10" /><div className="flex flex-col"><span className="text-[9px] font-black text-amber-400 uppercase tracking-wider">Duplicados</span><span className="text-sm font-black text-amber-500">{auditStats.duplicates}</span></div>
+            </div>
           </div>
         </div>
 
