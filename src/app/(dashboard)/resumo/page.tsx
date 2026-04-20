@@ -1,18 +1,23 @@
 'use client'
 import React from 'react'
 import { Calendar, Filter, RefreshCw } from 'lucide-react'
+import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
+import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useDashboardMetrics } from '@/features/dashboard/hooks/useDashboardMetrics'
 import DashboardKpis from '@/features/dashboard/components/DashboardKpis'
 import DashboardCharts from '@/features/dashboard/components/DashboardCharts'
 import { MESES } from '@/lib/utils/formatters'
 
 export default function DashboardPage() {
+  const { lancamentos, loading: loadFin } = useFinanceiro()
+  const { associados, loading: loadAssoc } = useAssociados()
+  
   const [filterMonth, setFilterMonth] = React.useState(new Date().getMonth())
   const [filterYear, setFilterYear] = React.useState(new Date().getFullYear())
 
-  const metrics = useDashboardMetrics(filterMonth, filterYear)
+  const metrics = useDashboardMetrics(lancamentos, associados, filterMonth, filterYear)
 
-  if (metrics.loading) {
+  if (loadFin || loadAssoc) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 animate-spin">
@@ -65,7 +70,7 @@ export default function DashboardPage() {
       <DashboardKpis metrics={metrics} />
 
       {/* Charts Section */}
-      <DashboardCharts metrics={metrics} />
+      <DashboardCharts metrics={metrics} onChartClick={() => {}} />
     </div>
   )
 }
