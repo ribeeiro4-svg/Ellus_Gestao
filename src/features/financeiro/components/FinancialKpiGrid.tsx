@@ -9,6 +9,7 @@ interface FinancialKpiGridProps {
 export default function FinancialKpiGrid({ kpis, onNew }: FinancialKpiGridProps) {
   const cards = [
     { label: `📥 Receitas`, value: fmtR(kpis.pInc), color: 'text-emerald-600' },
+    { label: `📈 Rec. Projetada`, value: fmtR(kpis.receitaProjetada), color: 'text-emerald-400' },
     { label: `📤 Despesas`, value: fmtR(kpis.pExp), color: 'text-rose-600' },
     { label: `📅 Provisionado`, value: fmtR(kpis.provisionado), color: 'text-amber-500' },
     { label: `💰 Resultado`, value: fmtR(kpis.realizado), color: kpis.realizado >= 0 ? 'text-indigo-600' : 'text-red-600' },

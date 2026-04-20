@@ -94,7 +94,16 @@ export default function FinanceiroPage() {
         }
       }
     })
-    return { pInc, pExp, realizado: safeDiff(pInc, pExp), provisionado: safeDiff(oInc, oExp), projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), saldoCaixa: fCash, saldoBanco: fBank }
+    return { 
+      pInc, 
+      pExp, 
+      realizado: safeDiff(pInc, pExp), 
+      provisionado: safeDiff(oInc, oExp), 
+      receitaProjetada: safeSum(pInc, oInc),
+      projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), 
+      saldoCaixa: fCash, 
+      saldoBanco: fBank 
+    }
   }, [lancamentos, filterYear, filterMonth])
 
   const handleSalvar = async (data: any) => {
