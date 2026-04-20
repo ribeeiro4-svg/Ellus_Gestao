@@ -61,17 +61,17 @@ export default function Topbar() {
         <div className="flex items-center gap-2">
            <button 
              onClick={handleClear}
-             className="btn btn-secondary w-[34px] h-[34px] p-0 flex items-center justify-center"
+             className="btn btn-secondary w-[34px] h-[34px] p-0 flex items-center justify-center shadow-lg shadow-emerald-900/20"
              title="Limpar Todos os Filtros"
            >
-             <Trash2 size={16} />
+             <Trash2 size={20} className="text-white" />
            </button>
            <button 
-             className="btn btn-secondary w-[34px] h-[34px] p-0 flex items-center justify-center relative"
+             className="btn btn-secondary w-[34px] h-[34px] p-0 flex items-center justify-center relative shadow-lg shadow-emerald-900/20"
              title="Notificações"
            >
-             <Bell size={16} />
-             <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full border border-white"></span>
+             <Bell size={20} className="text-white" />
+             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#ff4d4d] rounded-full border-2 border-[#1d4f3e]"></span>
            </button>
         </div>
 
@@ -80,17 +80,17 @@ export default function Topbar() {
         <div className="flex items-center gap-2">
            <button 
              onClick={() => router.push('/importar')}
-             className="btn btn-secondary h-[34px] px-4"
+             className="btn btn-secondary h-[34px] px-4 shadow-lg shadow-emerald-900/20"
            >
-             <Download size={14} />
+             <Download size={18} className="text-white" />
              <span>Importar</span>
            </button>
            
            <button 
              onClick={() => window.print()}
-             className="btn btn-primary h-[34px] px-4"
+             className="btn btn-primary h-[34px] px-4 shadow-lg shadow-emerald-900/20"
            >
-             <FileText size={14} />
+             <FileText size={18} className="text-white" />
              <span>Exportar PDF</span>
            </button>
         </div>
