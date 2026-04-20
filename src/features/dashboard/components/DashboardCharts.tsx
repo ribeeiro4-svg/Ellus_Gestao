@@ -153,19 +153,25 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
   const renderChartCard = (config: any) => (
     <div 
       onClick={() => setExpandedChart(config)}
-      className="group relative bg-white p-7 rounded-[32px] border border-slate-100 hover:border-emerald-500/40 transition-all cursor-pointer hover:shadow-2xl hover:shadow-emerald-900/5 active:scale-[0.99]"
+      className="chart-card !bg-white group relative !p-6 cursor-pointer"
     >
-      <div className="absolute top-5 right-5 text-slate-300 group-hover:text-emerald-500 transition-colors">
-        <Maximize2 size={18} />
+      <div className="absolute top-6 right-6 text-slate-300 group-hover:text-emerald-500 transition-colors z-20">
+        <Maximize2 size={16} />
       </div>
-      <div className="flex flex-col gap-1 mb-7">
-        <div className="flex items-center gap-2 text-emerald-600 mb-1">
-          <div className="p-2.5 bg-emerald-50 rounded-xl">{config.icon}</div>
-          <h3 className="text-base font-black text-slate-800 tracking-tight">{config.title}</h3>
+      
+      <div className="chart-header !mb-6 relative z-10">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 transition-colors group-hover:bg-emerald-100">
+            {config.icon}
+          </div>
+          <div>
+            <div className="chart-title !mb-0.5">{config.title}</div>
+            <div className="chart-subtitle">{config.subtitle}</div>
+          </div>
         </div>
-        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[2px] leading-none">{config.subtitle}</p>
       </div>
-      <div style={{ height: config.id === 'receita' ? '300px' : '220px' }}>
+
+      <div className="relative z-10" style={{ height: config.id === 'receita' ? '280px' : '220px' }}>
         {renderMiniChart(config)}
       </div>
     </div>
