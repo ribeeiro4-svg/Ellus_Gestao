@@ -238,7 +238,8 @@ export default function AssociadosPage() {
                   {MESES.map((mes, idx) => {
                     const matches = lancamentos.filter((l: any) => {
                       const isCorrectAssociate = l.associado_id === i.id;
-                      const isMensalidade = l.categoria === 'MENSALIDADE' || l.descricao.includes('MENSALIDADE');
+                      const isMensalidade = l.categoria?.toUpperCase().includes('MENSALIDADE') || 
+                                          l.descricao?.toUpperCase().includes('MENSALIDADE');
                       
                       if (!isCorrectAssociate || !isMensalidade) return false;
 
