@@ -137,7 +137,10 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       maintainAspectRatio: false, 
       plugins: { legend: { display: false } },
       scales: config.chartType === 'bar' ? { 
-        y: { grid: { display: false }, ticks: { display: false } }, 
+        y: { 
+          grid: { color: 'rgba(0,0,0,0.03)' }, 
+          ticks: { font: { size: 9 }, callback: (v: any) => config.id === 'receita' ? 'R$ ' + Math.round(Number(v) / 1000) + 'k' : v } 
+        }, 
         x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } } 
       } : {} 
     }
@@ -147,30 +150,43 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       : <Doughnut data={config.chartData} options={options as any} />
   }
 
+  const renderChartCard = (config: any) => (
+    <div 
+      onClick={() => setExpandedChart(config)}
+      className="group relative bg-white/70 backdrop-blur-md p-6 rounded-[32px] border border-white hover:border-emerald-500/30 transition-all cursor-pointer hover:shadow-xl hover:shadow-emerald-900/5 active:scale-[0.99]"
+    >
+      <div className="absolute top-5 right-5 text-slate-300 group-hover:text-emerald-500 transition-colors">
+        <Maximize2 size={18} />
+      </div>
+      <div className="flex flex-col gap-1 mb-6">
+        <div className="flex items-center gap-2 text-emerald-600 mb-1">
+          <div className="p-2 bg-emerald-50 rounded-xl">{config.icon}</div>
+          <h3 className="text-sm font-black text-slate-800 tracking-tight">{config.title}</h3>
+        </div>
+        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[2px] leading-none">{config.subtitle}</p>
+      </div>
+      <div style={{ height: config.id === 'receita' ? '300px' : '220px' }}>
+        {renderMiniChart(config)}
+      </div>
+    </div>
+  )
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="charts-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {Object.values(chartConfigs).map((config: any) => (
-          <div 
-            key={config.id} 
-            onClick={() => setExpandedChart(config)}
-            className="group relative bg-white/70 backdrop-blur-md p-5 rounded-[28px] border border-white hover:border-emerald-500/30 transition-all cursor-pointer hover:shadow-xl hover:shadow-emerald-900/5 active:scale-[0.98]"
-          >
-            <div className="absolute top-4 right-4 text-slate-300 group-hover:text-emerald-500 transition-colors">
-              <Maximize2 size={16} />
-            </div>
-            <div className="flex flex-col gap-1 mb-4">
-              <div className="flex items-center gap-2 text-emerald-600 mb-1">
-                <div className="p-1.5 bg-emerald-50 rounded-lg">{config.icon}</div>
-                <h3 className="text-[13px] font-black text-slate-800 tracking-tight">{config.title}</h3>
-              </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">{config.subtitle}</p>
-            </div>
-            <div className="h-[140px]">
-              {renderMiniChart(config)}
-            </div>
-          </div>
-        ))}
+    <div className="flex flex-col gap-8">
+      {/* Primeira Linha: Financeiro (Largo) e Associados (Compacto) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          {renderChartCard(chartConfigs.receita)}
+        </div>
+        <div>
+          {renderChartCard(chartConfigs.associados)}
+        </div>
+      </div>
+
+      {/* Segunda Linha: Planejamento e ZapSign (Equilibrados) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {renderChartCard(chartConfigs.planejamento)}
+        {renderChartCard(chartConfigs.zapsign)}
       </div>
 
       {/* Professional Zoom Modal */}
