@@ -20,7 +20,7 @@ export default function ChartCard({ title, subtitle, children, actions, onClick 
         {actions && <div className="chart-actions flex items-center gap-2">{actions}</div>}
       </div>
       
-      <div className="chart-wrap min-h-[220px] w-full relative">
+      <div className="chart-wrap min-h-[320px] w-full relative">
         {children}
       </div>
     </div>
