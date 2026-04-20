@@ -191,8 +191,8 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
 
       {/* Segunda Linha: Planejamento e ZapSign (Equilibrados) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {renderChartCard(chartConfigs.planejamento)}
         {renderChartCard(chartConfigs.zapsign)}
+        {renderChartCard(chartConfigs.planejamento)}
       </div>
 
       {/* Professional Zoom Modal */}
