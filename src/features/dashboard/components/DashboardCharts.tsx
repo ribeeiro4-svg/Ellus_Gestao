@@ -93,7 +93,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       chartData: {
         labels: ['Pendentes ZS', 'Regularizados'],
         datasets: [{
-          data: [zapsignPendentes, ativos + inativos + inadimplentes - zapsignPendentes],
+          data: [zapsignPendentes, ativos + inativos + inadimplentes],
           backgroundColor: ['#ef4444', '#10b981'],
           borderWidth: 0,
         }]
@@ -102,7 +102,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
         headers: ['Status ZapSign', 'Quantidade', 'Prioridade'],
         rows: [
           ['Pendente Assinatura', zapsignPendentes, 'ALTA'],
-          ['Assinado/OK', ativos + inativos + inadimplentes - zapsignPendentes, 'BAIXA'],
+          ['Assinado/OK', ativos + inativos + inadimplentes, 'BAIXA'],
         ]
       }
     },
