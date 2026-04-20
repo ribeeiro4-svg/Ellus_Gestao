@@ -34,7 +34,7 @@ export default function LandingPage() {
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-4">
             <Link 
-              href="/financeiro" 
+              href="/resumo" 
               className="group relative px-10 py-5 bg-emerald-500 text-white rounded-[24px] font-black text-sm tracking-widest uppercase hover:bg-emerald-400 transition-all shadow-[0_0_40px_rgba(16,185,129,0.3)] hover:shadow-[0_0_60px_rgba(16,185,129,0.5)] flex items-center gap-3 overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
