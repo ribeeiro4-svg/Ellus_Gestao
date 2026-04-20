@@ -237,11 +237,16 @@ export default function AssociadosPage() {
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                   {MESES.map((mes, idx) => {
                     const lanc = lancamentos.find((l: any) => {
-                      const d = new Date(l.data)
-                      return l.associado_id === i.id && 
-                             d.getMonth() === idx && 
-                             d.getFullYear() === new Date().getFullYear() &&
-                             (l.categoria === 'MENSALIDADE' || l.descricao.includes('MENSALIDADE'))
+                      const isCorrectAssociate = l.associado_id === i.id;
+                      const isMensalidade = l.categoria === 'MENSALIDADE' || l.descricao.includes('MENSALIDADE');
+                      
+                      if (!isCorrectAssociate || !isMensalidade) return false;
+
+                      const d = new Date(l.data);
+                      const compMes = l.competencia_mes !== undefined && l.competencia_mes !== null ? l.competencia_mes : d.getMonth();
+                      const compAno = l.competencia_ano !== undefined && l.competencia_ano !== null ? l.competencia_ano : d.getFullYear();
+
+                      return compMes === idx && compAno === new Date().getFullYear();
                     })
 
                     return (

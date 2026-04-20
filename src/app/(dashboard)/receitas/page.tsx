@@ -13,6 +13,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import CrudModal, { Field } from '@/components/ui/CrudModal'
 import LaunchDetailsModal from '@/components/ui/LaunchDetailsModal'
+import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import BatchActionBar from '@/components/ui/BatchActionBar'
 import { Bar, Doughnut } from 'react-chartjs-2'
 import {
@@ -48,6 +49,8 @@ export default function ReceitasPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectedForDetail, setSelectedForDetail] = useState<any | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [isCompModalOpen, setIsCompModalOpen] = useState(false)
+  const [compItem, setCompItem] = useState<any>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('todos')
@@ -325,7 +328,14 @@ export default function ReceitasPage() {
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         <DataTable data={filteredData} loading={loadFin} selectedIds={selectedIds} onSelectChange={setSelectedIds} onRowClick={handleDetail} showFilterInputs={true} columns={[
-          { header: 'Data', key: 'data', render: (l: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(l.data)}</span> },
+          { header: 'Recebimento', key: 'data', render: (l: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(l.data)}</span> },
+          { header: 'Competência', key: 'competencia_mes', render: (l: any) => {
+            if (l.competencia_mes === undefined || l.competencia_mes === null) {
+              const d = new Date(l.data)
+              return <span className="text-[10px] font-bold text-slate-400 opacity-60 italic">{MESES[d.getMonth()]}/{d.getFullYear()}</span>
+            }
+            return <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tight bg-emerald-50 px-2 py-1 rounded-md">{MESES[l.competencia_mes]}/{l.competencia_ano}</span>
+          }},
           { header: 'Descrição', key: 'descricao', render: (l: any) => (
             <div className="flex flex-col">
               <span className="text-sm font-bold text-slate-800">{l.descricao.replace(/\(Taxa: [^)]+\)/, '').trim()}</span>
@@ -335,13 +345,34 @@ export default function ReceitasPage() {
           { header: 'Valor', key: 'valor', render: (l: any) => <span className="text-sm font-black text-emerald-600">+{fmtR(l.valor)}</span> },
           { header: 'Status', key: 'status', render: (l: any) => <StatusBadge status={l.status as any} type="lancamento" /> },
           { header: 'Pagamento', key: 'forma_pagamento', render: (l: any) => <PaymentBadge method={l.forma_pagamento} /> },
-          { header: '', key: 'id', render: (l: any) => (<div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity"><button onClick={() => handleEdit(l)} className="p-2 text-blue-600 bg-blue-50 rounded-lg"><Pencil size={14}/></button><button onClick={() => handleDelete(l)} className="p-2 text-red-600 bg-red-50 rounded-lg"><XCircle size={14}/></button></div>) }
+          { header: '', key: 'id', render: (l: any) => (
+            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                onClick={(e) => { e.stopPropagation(); setCompItem(l); setIsCompModalOpen(true) }} 
+                className="p-2 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100"
+                title="Indicar Competência"
+              >
+                <Target size={14}/>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleEdit(l) }} className="p-2 text-blue-600 bg-blue-50 rounded-lg"><Pencil size={14}/></button>
+              <button onClick={(e) => { e.stopPropagation(); handleDelete(l) }} className="p-2 text-red-600 bg-red-50 rounded-lg"><XCircle size={14}/></button>
+            </div>
+          ) }
         ]} />
       </div>
 
       <BatchActionBar selectedCount={selectedIds.length} onClear={() => setSelectedIds([])} onDelete={handleBatchDelete} onStatusChange={handleBatchStatus} />
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Receita' : 'Nova Receita'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} loading={loading} />
       <LaunchDetailsModal isOpen={isDetailModalOpen} onClose={() => setIsDetailModalOpen(false)} launch={selectedForDetail} associados={associados} onRemanejar={remanejar} />
+      <IndicarCompetenciaModal 
+        isOpen={isCompModalOpen} 
+        onClose={() => setIsCompModalOpen(false)} 
+        launch={compItem} 
+        lancamentos={lancamentos}
+        onSave={async (id, mes, ano) => {
+          await atualizar(id, { competencia_mes: mes, competencia_ano: ano })
+        }} 
+      />
     </div>
   )
 }

@@ -60,6 +60,8 @@ export interface Lancamento {
   associado_id?: string // ID do associado vinculado (opcional)
   fornecedor_id?: string // ID do fornecedor vinculado (opcional)
   diretor_id?: string // ID do diretor vinculado (opcional)
+  competencia_mes?: number // Mês de competência (0-11)
+  competencia_ano?: number // Ano de competência
   created_at: string
   updated_at: string
 }
