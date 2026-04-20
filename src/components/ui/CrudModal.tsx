@@ -77,6 +77,8 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
     if (onChange) onChange(name, value, setFormData)
   }
 
+  const isDespesa = formData.tipo === 'despesa'
+
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center p-4 overflow-hidden"
@@ -94,11 +96,11 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
         }}
       >
         {/* Header */}
-        <div className="px-8 pt-8 pb-7 bg-[#0e2d22] relative z-20 rounded-t-[28px] border-b border-white/10">
+        <div className={`px-8 pt-8 pb-7 ${isDespesa ? 'bg-[#be123c]' : 'bg-[#0e2d22]'} relative z-20 rounded-t-[28px] border-b border-white/10 transition-colors duration-500`}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-black text-white tracking-tight uppercase">{title}</h2>
-              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[2px] mt-1 opacity-80 italic">Gestão Inteligente — ACPROBEC</p>
+              <p className={`text-[10px] font-black ${isDespesa ? 'text-[#0e2d22]' : 'text-emerald-400'} uppercase tracking-[2px] mt-1 opacity-80 italic transition-colors duration-500`}>Gestão Inteligente — ACPROBEC</p>
             </div>
             <button
               onClick={onClose}
@@ -137,7 +139,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                               onClick={() => handleChange(field.name, opt.value)}
                               className={`px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all border outline-none flex items-center gap-2 ${
                                 formData[field.name] === opt.value
-                                  ? 'bg-[#0e2d22] border-emerald-500 text-white shadow-lg shadow-emerald-500/10'
+                                  ? `${isDespesa ? 'bg-[#be123c]' : 'bg-[#0e2d22]'} border-white/20 text-white shadow-lg`
                                   : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200'
                               }`}
                             >
@@ -152,7 +154,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                             required={field.required}
                             value={formData[field.name] ?? ''}
                             onChange={e => handleChange(field.name, e.target.value)}
-                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all cursor-pointer appearance-none"
+                            className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-${isDespesa ? 'rose-500' : 'emerald-500'} focus:ring-4 focus:ring-${isDespesa ? 'rose-50' : 'emerald-50'} transition-all cursor-pointer appearance-none`}
                           >
                             <option value="" disabled>Selecione...</option>
                             {field.options?.map(opt => (
@@ -160,7 +162,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                             ))}
                           </select>
                           <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                             <Check size={14} className={formData[field.name] ? 'text-emerald-500' : 'opacity-0'} />
+                             <Check size={14} className={formData[field.name] ? `text-${isDespesa ? 'rose-500' : 'emerald-500'}` : 'opacity-0'} />
                           </div>
                         </div>
                       )}
@@ -168,16 +170,16 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                   ) : field.type === 'checkbox' ? (
                     <div 
                       className={`flex items-center gap-3 p-4 rounded-2xl transition-all cursor-pointer border ${
-                        !!formData[field.name] ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-50 opacity-70'
+                        !!formData[field.name] ? `${isDespesa ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'}` : 'bg-slate-50 border-slate-50 opacity-70'
                       }`}
                       onClick={() => handleChange(field.name, !formData[field.name])}
                     >
                       <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
-                        !!formData[field.name] ? 'bg-emerald-500 text-white' : 'bg-slate-200'
+                        !!formData[field.name] ? `${isDespesa ? 'bg-rose-500' : 'bg-emerald-500'} text-white` : 'bg-slate-200'
                       }`}>
                         {!!formData[field.name] && <Check size={14} strokeWidth={4} />}
                       </div>
-                      <span className={`text-[12px] font-black uppercase tracking-tight ${!!formData[field.name] ? 'text-emerald-700' : 'text-slate-500'}`}>
+                      <span className={`text-[12px] font-black uppercase tracking-tight ${!!formData[field.name] ? `${isDespesa ? 'text-rose-700' : 'text-emerald-700'}` : 'text-slate-500'}`}>
                         {field.label}
                       </span>
                     </div>
@@ -188,7 +190,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                       placeholder={field.placeholder}
                       value={formData[field.name] ?? ''}
                       onChange={e => handleChange(field.name, field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50 transition-all placeholder:text-slate-300"
+                      className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-${isDespesa ? 'rose-500' : 'emerald-500'} focus:ring-4 focus:ring-${isDespesa ? 'rose-50' : 'emerald-50'} transition-all placeholder:text-slate-300`}
                     />
                   )}
                 </div>
@@ -209,7 +211,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 flex items-center justify-center gap-4 bg-[#0e2d22] hover:bg-[#163d2f] text-white px-8 py-5 rounded-[20px] text-xs font-black tracking-[2px] shadow-2xl shadow-indigo-500/10 border border-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+              className={`flex-1 flex items-center justify-center gap-4 ${isDespesa ? 'bg-[#be123c] hover:bg-[#9f1239]' : 'bg-[#0e2d22] hover:bg-[#163d2f]'} text-white px-8 py-5 rounded-[20px] text-xs font-black tracking-[2px] shadow-2xl transition-all active:scale-[0.98] disabled:opacity-50`}
             >
               {loading ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} strokeWidth={4} />}
               {loading ? 'PROCESSANDO...' : 'SALVAR ALTERAÇÕES'}
