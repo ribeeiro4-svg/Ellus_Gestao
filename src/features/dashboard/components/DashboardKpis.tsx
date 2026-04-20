@@ -8,10 +8,10 @@ interface DashboardKpisProps {
 }
 
 export default function DashboardKpis({ metrics }: DashboardKpisProps) {
-  const { receitaTotal, despesaTotal, trends, associadosStats } = metrics
+  const { receitaTotal, despesaTotal, taxaRecuperada, trends, associadosStats } = metrics
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 relative z-[60] overflow-visible">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12 relative z-[60] overflow-visible">
       <KpiCard 
         title="Receita Realizada" 
         value={fmtR(receitaTotal)} 
@@ -49,6 +49,19 @@ export default function DashboardKpis({ metrics }: DashboardKpisProps) {
           description: "O saldo final que sobra na conta após todas as despesas serem subtraídas das receitas brutas.",
           formula: "Receita Realizada - Despesas Pagas",
           example: "Se entrou R$ 10k e saiu R$ 7k, o resultado é R$ 3k de lucro real."
+        }}
+      />
+      <KpiCard 
+        title="Superávit (Taxas)" 
+        value={fmtR(taxaRecuperada)} 
+        trend={0} 
+        trendLabel="vs mês anterior" 
+        icon={<TrendingUp size={20} />} 
+        category="success" 
+        explanation={{
+          description: "Valor total de taxas bancárias e de intermediação que foram identificadas e recuperadas na auditoria.",
+          formula: "Σ(Taxas Bancárias Detectadas)",
+          example: "Este valor representa uma economia real que o sistema identificou oculto nos recebimentos líquidos."
         }}
       />
       <KpiCard 
