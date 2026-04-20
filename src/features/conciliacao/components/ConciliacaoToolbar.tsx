@@ -32,7 +32,7 @@ export default function ConciliacaoToolbar({
   hasFilteredItems
 }: ConciliacaoToolbarProps) {
   return (
-    <div className="sticky top-[20px] z-[40] flex items-center justify-between gap-3 bg-gradient-to-r from-[#0e2d22] to-[#1d4f3e] backdrop-blur-xl p-4 px-8 rounded-[32px] border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.3)] animate-in slide-in-from-top-4 mb-6">
+    <div className="sticky top-[20px] z-[40] flex items-center justify-between gap-3 bg-[#0e2d22] backdrop-blur-xl p-4 px-8 rounded-[32px] border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.4)] animate-in slide-in-from-top-4 mb-6">
       <div className="flex items-center gap-6">
         <div className="flex flex-col">
           <span className="text-[10px] text-emerald-400 font-black uppercase tracking-[2px] mb-1">Conta de Destino</span>

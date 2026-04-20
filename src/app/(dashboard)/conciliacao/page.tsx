@@ -163,7 +163,7 @@ export default function ConciliacaoPage() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex flex-col gap-6">
-        <div className="bg-gradient-to-br from-[#0e2d22] to-[#163d2f] p-8 rounded-[32px] text-white shadow-2xl border border-emerald-500/10 mb-2">
+        <div className="bg-[#0e2d22] p-8 rounded-[32px] text-white shadow-2xl border border-emerald-500/10 mb-2">
           <div className="page-header flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/20 shadow-sm"><FileCheck size={26} /></div>
