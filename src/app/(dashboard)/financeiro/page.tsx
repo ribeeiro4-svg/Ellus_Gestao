@@ -427,7 +427,7 @@ export default function FinanceiroPage() {
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
 
-      <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} />
+      <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} loading={saving} />
       <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Gerar Mensalidades em Lote" onSubmit={handleGerarRecorrenciaLote} fields={[
         { name: 'target', label: 'Quem?', type: 'select', defaultValue: selectedIds.size > 0 ? 'selecionados' : 'novos', options: [{ value: 'novos', label: 'Novos Associados' }, { value: 'todos', label: 'Todos Ativos' }, { value: 'selecionados', label: 'Selecionados' }] },
         { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' },
