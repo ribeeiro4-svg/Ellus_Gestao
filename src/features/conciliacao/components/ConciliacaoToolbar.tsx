@@ -8,6 +8,9 @@ interface ConciliacaoToolbarProps {
   onContaChange: (id: string) => void
   activeTab: 'ofx' | 'cora'
   newItemsCount: number
+  totalEntradas: number
+  totalSaidas: number
+  duplicatesCount: number
   categorias: any[]
   onBatchCategory: (cat: string) => void
   onAuditAll: () => void
@@ -23,6 +26,9 @@ export default function ConciliacaoToolbar({
   onContaChange,
   activeTab,
   newItemsCount,
+  totalEntradas,
+  totalSaidas,
+  duplicatesCount,
   categorias,
   onBatchCategory,
   onAuditAll,
@@ -47,12 +53,44 @@ export default function ConciliacaoToolbar({
           </div>
         </div>
         <div className="h-12 w-px bg-white/10" />
-        <div className="flex flex-col text-white">
-          <span className="text-emerald-400 font-black uppercase tracking-[2px] text-[10px] mb-2">Itens Novos</span>
-          <span className="text-sm font-black flex items-center gap-3">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            {newItemsCount} Transações Extraídas
-          </span>
+        
+        <div className="flex gap-10">
+          <div className="flex flex-col">
+            <span className="text-emerald-400 font-black uppercase tracking-[2px] text-[10px] mb-2">Resumo do Extrato</span>
+            <div className="flex items-center gap-6">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Total ({newItemsCount})</span>
+                <span className="text-sm font-black text-white">{fmtR(totalEntradas - totalSaidas)}</span>
+              </div>
+              <div className="flex flex-col border-l border-white/5 pl-6">
+                <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">Entradas</span>
+                <span className="text-sm font-black text-emerald-400">+{fmtR(totalEntradas)}</span>
+              </div>
+              <div className="flex flex-col border-l border-white/5 pl-6">
+                <span className="text-[9px] font-bold text-rose-500 uppercase tracking-tighter">Saídas</span>
+                <span className="text-sm font-black text-rose-400">-{fmtR(totalSaidas)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-12 w-px bg-white/10 self-center" />
+
+          <div className="flex flex-col">
+            <span className="text-amber-400 font-black uppercase tracking-[2px] text-[10px] mb-2">Segurança</span>
+            <div className="flex items-center gap-3 bg-amber-400/10 px-4 py-2 rounded-xl border border-amber-400/20">
+              {duplicatesCount > 0 ? (
+                <>
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-[11px] font-black text-amber-400 uppercase tracking-tight">{duplicatesCount} Duplicados Identificados</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="text-[11px] font-black text-emerald-400 uppercase tracking-tight">Nenhuma Duplicata</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

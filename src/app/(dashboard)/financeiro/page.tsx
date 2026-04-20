@@ -260,6 +260,17 @@ export default function FinanceiroPage() {
     { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
   ], [contas, categorias, associados])
 
+  const conciliacaoStats = useMemo(() => {
+    let entries = 0, outings = 0, duplicates = 0;
+    filteredItemsConciliacao.forEach((item: any) => {
+      const val = item.bank.amount;
+      if (val > 0) entries += val;
+      else outings += Math.abs(val);
+      if (existingTxIds.has(item.bank.fitid)) duplicates++;
+    });
+    return { entries, outings, duplicates };
+  }, [filteredItemsConciliacao, existingTxIds]);
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <div className="flex items-center justify-between mb-2">
@@ -307,6 +318,9 @@ export default function FinanceiroPage() {
                 onExecute={conciliacaoSubTab === 'ofx' ? handleProcessarLote : handleCoraBatch} 
                 isProcessingBatch={isProcessingBatch} hasFilteredItems={filteredItemsConciliacao.length > 0} 
                 newItemsCount={conciliacaoSubTab === 'ofx' ? matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length : coraMatchedItems.filter((t: any) => !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length} 
+                totalEntradas={conciliacaoStats.entries}
+                totalSaidas={conciliacaoStats.outings}
+                duplicatesCount={conciliacaoStats.duplicates}
               />
             )}
 
