@@ -7,12 +7,11 @@ export default function LandingPage() {
     <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#0a1a14]">
       {/* Background Image with Overlay */}
       <div 
-        className="absolute inset-0 z-0 opacity-40 scale-110 animate-pulse duration-[10000ms]"
+        className="absolute inset-0 z-0 opacity-80"
         style={{ 
-          backgroundImage: 'url("/landing_hero_bg_1776648401526.png")', 
+          backgroundImage: 'url("/geometric_bg.png")', 
           backgroundSize: 'cover', 
-          backgroundPosition: 'center',
-          filter: 'blur(4px)'
+          backgroundPosition: 'center'
         }}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-[#0a1a14]/60 via-transparent to-[#0a1a14] z-10" />
