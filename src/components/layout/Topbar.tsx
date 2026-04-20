@@ -4,7 +4,8 @@ import { Download, FileText, Bell, Search, User, Trash2, ChevronRight } from 'lu
 import { useSearch } from '@/lib/contexts/SearchContext'
 
 const TITLES: Record<string, string> = {
-  '/':              'Dashboard',
+  '/':              'Apresentação',
+  '/resumo':         'Dashboard',
   '/financeiro':    'Financeiro',
   '/receitas':      'Receitas',
   '/despesas':      'Despesas',

@@ -27,7 +27,7 @@ const MENU = [
   { 
     section: 'Principal', 
     items: [
-      { href: '/', icon: BarChart3, label: 'Dashboard' },
+      { href: '/resumo', icon: BarChart3, label: 'Dashboard' },
     ]
   },
   { 
