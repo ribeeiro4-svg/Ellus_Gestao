@@ -59,8 +59,8 @@ export function useAssociados() {
       ...it,
       tenant_id: tenantId
     }))
-    // Usamos RPC para garantir merge inteligente e proteção de dados
-    const { error } = await sb.rpc('upsert_associados_safe', { rows })
+    // Usamos UPSERT direto para garantir flexibilidade com novos campos como zapsign_doc_token
+    const { error } = await sb.from('associados').upsert(rows, { onConflict: 'tenant_id,codigo' })
     if (!error) fetch()
     return { error }
   }
@@ -72,9 +72,6 @@ export function useAssociados() {
 
     setIsSyncing(true)
     try {
-      // Garante que o banco está preparado (coluna e RPC atualizados)
-      await tempFixDatabaseAction()
-      
       const res = await fetchZapSignAssociatesAction(tenant.zapsign_token)
       
       if (res.error) return { error: res.error }
