@@ -31,11 +31,11 @@ export default function FinancialKpiGrid({ kpis, onNewReceita, onNewDespesa }: F
         ))}
       </div>
       
-      <div className="flex flex-col gap-2 self-stretch min-w-[140px]">
-        <button onClick={onNewReceita} className="flex-1 px-4 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[1.5px] hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] flex items-center justify-center gap-2 border border-emerald-500/50">
+      <div className="flex flex-col gap-2 self-stretch min-w-[130px]">
+        <button onClick={onNewReceita} className="flex-1 px-4 bg-[#10b981] text-white rounded-xl font-black text-[10px] uppercase tracking-[1.5px] hover:brightness-110 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10">
           <Plus size={14} strokeWidth={4} /> Receita
         </button>
-        <button onClick={onNewDespesa} className="flex-1 px-4 bg-rose-600 text-white rounded-xl font-black text-[10px] uppercase tracking-[1.5px] hover:bg-rose-700 transition-all shadow-lg shadow-rose-900/20 active:scale-[0.98] flex items-center justify-center gap-2 border border-rose-500/50">
+        <button onClick={onNewDespesa} className="flex-1 px-4 bg-[#e11d48] text-white rounded-xl font-black text-[10px] uppercase tracking-[1.5px] hover:brightness-110 transition-all shadow-lg shadow-rose-900/30 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10">
           <Plus size={14} strokeWidth={4} /> Despesa
         </button>
       </div>
