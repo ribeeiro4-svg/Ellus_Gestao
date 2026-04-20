@@ -96,6 +96,7 @@ export default function ConciliacaoPage() {
         fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
         diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
         conciliado: true,
+        data_conciliacao: new Date().toISOString(),
         banco_transacao_id: t.bank.fitid
       }))
       const res = await inserirBulk(items as any)

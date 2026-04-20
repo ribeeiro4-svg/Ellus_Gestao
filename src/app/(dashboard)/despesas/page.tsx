@@ -358,6 +358,16 @@ export default function DespesasPage() {
         )},
         { header: 'Status', key: 'status', className: 'w-[120px]', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
         { header: 'Pagamento', key: 'forma_pagamento', className: 'w-[140px]', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
+        { header: 'Conciliação', key: 'data_conciliacao', className: 'w-[110px]', render: (l: any) => (
+          l.conciliado ? (
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-orange-600">{fmtData(l.data_conciliacao)}</span>
+              <span className="text-[8px] text-orange-400 font-medium uppercase tracking-tighter">Liquidado</span>
+            </div>
+          ) : (
+            <span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Pendente</span>
+          )
+        )},
         { header: '', key: 'acoes', className: 'w-[80px] text-right', render: (i: any) => (
           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button onClick={() => handleEdit(i)} title="Editar" className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">

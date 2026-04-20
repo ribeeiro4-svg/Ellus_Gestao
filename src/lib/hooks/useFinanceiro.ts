@@ -246,7 +246,11 @@ export function useFinanceiro() {
     if (item && isPeriodoBloqueado(item.data)) return { error: 'O período deste lançamento está fechado.' }
 
     const { error } = await sb.from('lancamentos')
-      .update({ conciliado: true, banco_transacao_id: bancoId })
+      .update({ 
+        conciliado: true, 
+        banco_transacao_id: bancoId,
+        data_conciliacao: new Date().toISOString() 
+      })
       .eq('id', id)
     if (!error) fetch()
     return { error }

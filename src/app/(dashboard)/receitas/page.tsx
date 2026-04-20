@@ -349,6 +349,16 @@ export default function ReceitasPage() {
           { header: 'Valor', key: 'valor', render: (l: any) => <span className="text-sm font-black text-emerald-600">+{fmtR(l.valor)}</span> },
           { header: 'Status', key: 'status', render: (l: any) => <StatusBadge status={l.status as any} type="lancamento" /> },
           { header: 'Pagamento', key: 'forma_pagamento', render: (l: any) => <PaymentBadge method={l.forma_pagamento} /> },
+          { header: 'Conciliação', key: 'data_conciliacao', render: (l: any) => (
+            l.conciliado ? (
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-emerald-600">{fmtData(l.data_conciliacao)}</span>
+                <span className="text-[8px] text-emerald-400 font-medium uppercase tracking-tighter">Liquidado</span>
+              </div>
+            ) : (
+              <span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Pendente</span>
+            )
+          )},
           { header: '', key: 'id', render: (l: any) => (
             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 

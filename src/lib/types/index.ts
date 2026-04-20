@@ -56,6 +56,7 @@ export interface Lancamento {
   recorrencia_id?: string // ID comum para o grupo de lançamentos recorrentes
   conta_id?: string
   conciliado?: boolean
+  data_conciliacao?: string
   banco_transacao_id?: string
   associado_id?: string // ID do associado vinculado (opcional)
   fornecedor_id?: string // ID do fornecedor vinculado (opcional)
