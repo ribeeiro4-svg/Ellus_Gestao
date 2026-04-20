@@ -96,7 +96,7 @@ export default function RecrutamentoDashboard() {
           title="Banco de Talentos" 
           value={noBanco.toString()} 
           icon={<Database size={20} />} 
-          category="warning" 
+          category="purple" 
           explanation={{
             description: "Candidatos que não foram contratados mas possuem perfil para futuras vagas.",
             formula: "COUNT(candidatos WHERE status = 'banco_talentos')",
