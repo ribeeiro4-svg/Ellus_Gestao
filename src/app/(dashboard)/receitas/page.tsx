@@ -185,7 +185,8 @@ export default function ReceitasPage() {
       if (editingItem) {
         const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null
         const finalDesc = assoc ? `${safeData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : safeData.descricao.toUpperCase()
-        res = await atualizar(editingItem.id, { ...safeData, descricao: finalDesc })
+        const { taxaCalculada, ...dbUpdateData }: any = safeData
+        res = await atualizar(editingItem.id, { ...dbUpdateData, descricao: finalDesc })
       } else {
         const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, ...dbData } = safeData;
         
