@@ -7,7 +7,7 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useOrcamentos } from '@/lib/hooks/useOrcamentos'
-import { fmtR, fmtData, MESES, getMesIdx, getAnoIdx } from '@/lib/utils/formatters'
+import { fmtR, fmtData, MESES, getMesIdx, getAnoIdx, safeSum, safeDiff } from '@/lib/utils/formatters'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import PaymentBadge from '@/components/ui/PaymentBadge'
@@ -112,27 +112,61 @@ export default function ReceitasPage() {
   }, [filteredData])
 
   const periodSummary = useMemo(() => {
-    const rawRecs = lancamentos.filter(l => (l.tipo || '').toLowerCase() === 'receita')
-    let sumVal = 0, sumTax = 0, sumCora = 0, sumCash = 0
+    let sumVal = 0, sumTax = 0, sumCora = 0, sumCash = 0, sumDesp = 0
+    let prevVal = 0, prevTax = 0, prevCora = 0, prevCash = 0, prevDesp = 0
 
-    rawRecs.forEach(r => {
+    const prevMonth = filterMonth === 0 ? 11 : filterMonth - 1
+    const prevYear = filterMonth === 0 ? filterYear - 1 : filterYear
+
+    lancamentos.forEach(r => {
       const m = getMesIdx(r.data), a = getAnoIdx(r.data)
-      if ((Number(filterMonth) === -1 || Number(m) === Number(filterMonth)) && Number(a) === Number(filterYear)) {
-        const matchTaxStr = (r.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
-        const t = matchTaxStr ? parseFloat(matchTaxStr[1].replace(/\./g, '').replace(',', '.')) : 0
-        const v = r.valor || 0
-        const bruto = Math.round((v + t) * 100) / 100
-        sumVal = Math.round((sumVal + v) * 100) / 100
-        sumTax = Math.round((sumTax + t) * 100) / 100
-        if (r.forma_pagamento === 'Dinheiro') sumCash = Math.round((sumCash + v) * 100) / 100
-        else sumCora = Math.round((sumCora + bruto) * 100) / 100
+      const matchTaxStr = (r.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+      const t = matchTaxStr ? parseFloat(matchTaxStr[1].replace(/\./g, '').replace(',', '.')) : 0
+      const v = r.valor || 0
+      const bruto = Math.round((v + t) * 100) / 100
+      const isRec = (r.tipo || '').toLowerCase() === 'receita'
+
+      if (a === filterYear && (filterMonth === -1 || m === filterMonth)) {
+        if (isRec) {
+          sumVal = safeSum(sumVal, v)
+          sumTax = safeSum(sumTax, t)
+          if (r.forma_pagamento === 'Dinheiro') sumCash = safeSum(sumCash, v)
+          else sumCora = safeSum(sumCora, bruto)
+        } else {
+          sumDesp = safeSum(sumDesp, v)
+        }
+      }
+
+      if (a === prevYear && m === prevMonth) {
+        if (isRec) {
+          prevVal = safeSum(prevVal, v)
+          prevTax = safeSum(prevTax, t)
+          if (r.forma_pagamento === 'Dinheiro') prevCash = safeSum(prevCash, v)
+          else prevCora = safeSum(prevCora, bruto)
+        } else {
+          prevDesp = safeSum(prevDesp, v)
+        }
       }
     })
-    const planejado = orcamentos.filter(o => o.tipo === 'receita').reduce((s, o) => s + o.valor_planejado, 0)
-    return { totalReceitas: sumVal, totalTaxas: sumTax, totalCora: sumCora, totalDinheiro: sumCash, receitaPlanejada: planejado }
-  }, [lancamentos, filterMonth, filterYear, orcamentos])
 
-  const { totalReceitas, totalTaxas, totalCora, totalDinheiro, receitaPlanejada } = periodSummary
+    const calcVs = (curr: number, prev: number) => {
+      if (prev <= 0) return 100
+      return Math.round(((curr - prev) / prev) * 100)
+    }
+
+    return { 
+      totalRec: sumVal + sumTax, 
+      totalCora: sumCora, 
+      totalDinheiro: sumCash, 
+      superavit: safeDiff(sumVal + sumTax, sumDesp),
+      vsCora: calcVs(sumCora, prevCora),
+      vsDinheiro: calcVs(sumCash, prevCash),
+      vsRec: calcVs(sumVal + sumTax, prevVal + prevTax),
+      vsSuperavit: calcVs(safeDiff(sumVal + sumTax, sumDesp), safeDiff(prevVal + prevTax, prevDesp))
+    }
+  }, [lancamentos, filterMonth, filterYear])
+
+  const { totalRec, totalCora, totalDinheiro, superavit, vsCora, vsDinheiro, vsRec, vsSuperavit } = periodSummary
 
   const handleSalvar = async (data: any) => {
     const safeData = { 
@@ -267,10 +301,10 @@ export default function ReceitasPage() {
           <div><h1 className="text-2xl font-black text-slate-800 tracking-tight">Receitas</h1><p className="text-sm text-slate-500 font-bold uppercase tracking-widest opacity-70">Fluxo de Entradas</p></div>
         </div>
         <div className="flex items-center gap-4 relative z-[60]">
-          <KpiCard title="Conta Bancária" value={fmtR(totalCora)} icon={<ArrowUpCircle size={20} />} category="indigo" />
-          <KpiCard title="Caixa (Espécie)" value={fmtR(totalDinheiro)} icon={<DollarSign size={20} className="text-emerald-500" />} category="success" />
-          <KpiCard title="Receita Realizada" value={fmtR(totalReceitas + totalTaxas)} icon={<TrendingUp size={20} />} category="success" />
-          <KpiCard title="Diferença" value={fmtR(totalReceitas - receitaPlanejada)} icon={<Activity size={20} />} category={totalReceitas >= receitaPlanejada ? "success" : "error"} />
+          <KpiCard title="Conta Bancária" value={fmtR(totalCora)} icon={<ArrowUpCircle size={20} />} category="indigo" trend={vsCora} trendLabel="vs mês anterior" />
+          <KpiCard title="Caixa (Espécie)" value={fmtR(totalDinheiro)} icon={<DollarSign size={20} className="text-emerald-500" />} category="success" trend={vsDinheiro} trendLabel="vs mês anterior" />
+          <KpiCard title="Receita Realizada" value={fmtR(totalRec)} icon={<TrendingUp size={20} />} category="success" trend={vsRec} trendLabel="vs mês anterior" />
+          <KpiCard title="Superávit" value={fmtR(superavit)} icon={<Activity size={20} />} category={superavit >= 0 ? "success" : "error"} trend={vsSuperavit} trendLabel="vs mês anterior" />
           <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="h-14 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black flex items-center gap-3 shadow-xl shadow-emerald-100 transition-all active:scale-95 group"><Plus size={24} className="group-hover:rotate-90 transition-transform" /> NOVA RECEITA</button>
         </div>
       </div>
