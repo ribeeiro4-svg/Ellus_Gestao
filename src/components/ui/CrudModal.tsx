@@ -22,6 +22,7 @@ interface CrudModalProps {
   initialData?: any
   onSubmit: (data: any) => Promise<void>
   onChange?: (name: string, value: any, setFormData: React.Dispatch<React.SetStateAction<any>>) => void
+  loading?: boolean
 }
 
 const FORMA_ICONS: Record<string, string> = {
@@ -40,9 +41,11 @@ const FORMA_LABELS: Record<string, string> = {
   'Cartão': 'Cartão',
 }
 
-export default function CrudModal({ isOpen, onClose, title, fields, initialData, onSubmit, onChange }: CrudModalProps) {
+export default function CrudModal({ isOpen, onClose, title, fields, initialData, onSubmit, onChange, loading: externalLoading }: CrudModalProps) {
   const [formData, setFormData] = useState<any>({})
-  const [loading, setLoading] = useState(false)
+  const [internalLoading, setInternalLoading] = useState(false)
+  
+  const loading = externalLoading || internalLoading
 
   useEffect(() => {
     if (initialData && isOpen) {
@@ -60,12 +63,12 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setInternalLoading(true)
     try {
       await onSubmit(formData)
       onClose()
     } finally {
-      setLoading(false)
+      setInternalLoading(false)
     }
   }
 
@@ -93,7 +96,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
         <div className="px-8 pt-8 pb-6 border-b border-slate-100 sticky top-0 bg-white z-20 rounded-t-[32px]">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-black text-slate-800 tracking-tight">Novo {title}</h2>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight">{title}</h2>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Preencha os campos abaixo</p>
             </div>
             <button
