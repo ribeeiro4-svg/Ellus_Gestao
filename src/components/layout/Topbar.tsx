@@ -61,37 +61,37 @@ export default function Topbar() {
         <div className="flex items-center gap-2">
            <button 
              onClick={handleClear}
-             className="btn btn-secondary w-[34px] h-[34px] p-0 flex items-center justify-center shadow-lg shadow-emerald-900/20"
+             className="btn btn-secondary w-[38px] h-[38px] p-0 flex items-center justify-center shadow-lg shadow-emerald-900/40"
              title="Limpar Todos os Filtros"
            >
-             <Trash2 size={20} className="text-white" />
+             <Trash2 strokeWidth={2.5} className="w-5 h-5 min-w-[20px] min-h-[20px] flex-shrink-0 text-white" />
            </button>
            <button 
-             className="btn btn-secondary w-[34px] h-[34px] p-0 flex items-center justify-center relative shadow-lg shadow-emerald-900/20"
+             className="btn btn-secondary w-[38px] h-[38px] p-0 flex items-center justify-center relative shadow-lg shadow-emerald-900/40"
              title="Notificações"
            >
-             <Bell size={20} className="text-white" />
-             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#ff4d4d] rounded-full border-2 border-[#1d4f3e]"></span>
+             <Bell strokeWidth={2.5} className="w-5 h-5 min-w-[20px] min-h-[20px] flex-shrink-0 text-white" />
+             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#ff3333] rounded-full border-2 border-[#1d4f3e]"></span>
            </button>
         </div>
 
-        <div className="h-6 w-[1px] bg-slate-200 mx-1"></div>
+        <div className="h-6 w-[1px] bg-slate-200 mx-2"></div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
            <button 
              onClick={() => router.push('/importar')}
-             className="btn btn-secondary h-[34px] px-4 shadow-lg shadow-emerald-900/20"
+             className="btn btn-secondary h-[38px] px-5 shadow-lg shadow-emerald-900/40"
            >
-             <Download size={18} className="text-white" />
-             <span>Importar</span>
+             <Download strokeWidth={2.5} className="w-4.5 h-4.5 min-w-[18px] min-h-[18px] flex-shrink-0 text-white" />
+             <span className="font-black">Importar</span>
            </button>
            
            <button 
              onClick={() => window.print()}
-             className="btn btn-primary h-[34px] px-4 shadow-lg shadow-emerald-900/20"
+             className="btn btn-primary h-[38px] px-5 shadow-lg shadow-emerald-900/40"
            >
-             <FileText size={18} className="text-white" />
-             <span>Exportar PDF</span>
+             <FileText strokeWidth={2.5} className="w-4.5 h-4.5 min-w-[18px] min-h-[18px] flex-shrink-0 text-white" />
+             <span className="font-black">Exportar PDF</span>
            </button>
         </div>
       </div>
