@@ -13,8 +13,7 @@ export async function GET(
     console.log(`[CoraPDF] Buscando PDF para invoice: ${invoiceId}`);
     
     const sb = await createServerSupabase();
-    const { data: mapping } = await sb.from('tenant_id_mapping').select('id').limit(1).single();
-    const tenantId = mapping?.id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7';
+    const tenantId = '971f92af-a72b-4bc4-a8e0-333d712ce6a7';
 
     const { data: tenant } = await sb.from('tenants')
       .select('cora_id, cora_cert, cora_key')

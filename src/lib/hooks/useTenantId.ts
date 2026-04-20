@@ -11,25 +11,12 @@ export function useTenantId() {
   
   useEffect(() => {
     const sb = createClient();
-    async function resolveId() {
-      try {
-        const { data, error } = await sb.from('tenant_id_mapping').select('id').limit(1).single();
-        
-        if (data?.id) {
-          console.log('[TenantId] ID Resolvido via Banco:', data.id);
-          setTenantId(data.id);
-        } else if (!error) {
-          // Mapping retornou vazio sem erro
-          setTenantId('971f92af-a72b-4bc4-a8e0-333d712ce6a7');
-        } else {
-          // Tabela não existe ou outro erro (silencioso em produção para evitar poluição)
-          setTenantId('971f92af-a72b-4bc4-a8e0-333d712ce6a7');
-        }
-      } catch (e) {
-        setTenantId('971f92af-a72b-4bc4-a8e0-333d712ce6a7');
-      }
-    }
-    resolveId();
+    /** 
+     * Resolução de ID Simplificada:
+     * Como o ambiente ACPROBEC possui um ID fixo e a tabela de mapeamento opcional não está presente,
+     * consolidamos o ID aqui para evitar requisições de rede que poluem o console com erros 404.
+     */
+    setTenantId('971f92af-a72b-4bc4-a8e0-333d712ce6a7');
   }, [])
 
   return tenantId
