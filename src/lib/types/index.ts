@@ -229,6 +229,94 @@ export interface CenarioInput extends Omit<CenarioSimulacao, 'id' | 'tenant_id' 
 }
 
 
+// ─── Recrutamento ────────────────────────────────────────────────────────
+export type ModeloTrabalho = 'presencial' | 'hibrido' | 'remoto'
+export type StatusVaga = 'aberta' | 'analise' | 'encerrada'
+export type StatusCandidato = 
+  | 'inscrito' 
+  | 'escolaridade_validada' 
+  | 'entrevista_adm' 
+  | 'entrevista_dir' 
+  | 'contratacao' 
+  | 'banco_talentos' 
+  | 'reprovado'
+
+export interface Vaga {
+  id: string
+  tenant_id: string
+  titulo: string
+  area: string
+  quantidade: number
+  modelo: ModeloTrabalho
+  carga_horaria: string
+  bolsa: number
+  beneficios: string
+  requisitos_obrigatorios: string
+  requisitos_desejaveis: string
+  conhecimentos_sistemas: string
+  prazo_inscricao: string
+  responsavel: string
+  status: StatusVaga
+  created_at: string
+}
+
+export interface Candidato {
+  id: string
+  tenant_id: string
+  vaga_id: string
+  
+  // Pessoais
+  nome: string
+  cpf?: string
+  rg?: string
+  data_nascimento?: string
+  endereco?: string
+  cidade_estado?: string
+  email: string
+  telefone?: string
+  whatsapp?: string
+  linkedin?: string
+  curriculo_url?: string
+  foto_url?: string
+  
+  // Acadêmicos
+  instituicao?: string
+  curso?: string
+  semestre?: number
+  turno?: string
+  previsao_conclusao?: string
+  situacao_matricula?: string
+  cra?: number
+  disponibilidade?: string
+  experiencia_anterior?: string
+  cursos_complementares?: string
+  
+  documentos: any[]
+  status: StatusCandidato
+  
+  // Avaliações
+  nota_adm?: number
+  nota_dir?: number
+  nota_final?: number
+  parecer_adm?: string
+  parecer_dir?: string
+  obs_escolaridade?: string
+  
+  checklist_contratacao: Record<string, boolean>
+  
+  created_at: string
+  updated_at: string
+}
+
+export interface RecrutamentoKPIs {
+  vagasAbertas: number
+  totalCandidatos: number
+  taxaAprovacao: number
+  tempoMedioContratacao: number
+  bancoTalentos: number
+  conversaoFinal: number // Currículos recebidos vs Fila de Contratação
+}
+
 // ─── API Response ──────────────────────────────────────────────────────────
 export interface ApiResponse<T> {
   data?: T
