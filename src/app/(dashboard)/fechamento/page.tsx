@@ -27,7 +27,7 @@ const MESES = [
 export default function FechamentoPage() {
   const { lancamentos, inserir } = useFinanceiro()
   const { contas, loading: contasLoading } = useContas()
-  const { fechamentos, fecharPeriodo, isPeriodoBloqueado } = useFechamento()
+  const { fechamentos, fecharPeriodo, isPeriodoBloqueado, reabrirPeriodo } = useFechamento()
 
   const [selectedMes, setSelectedMes] = useState(new Date().getMonth())
   const [selectedAno, setSelectedAno] = useState(new Date().getFullYear())
@@ -164,8 +164,18 @@ export default function FechamentoPage() {
           </div>
           <h2 className="text-3xl font-black mb-4">Mês Encerrado</h2>
           <p className="text-white/70 max-w-md mx-auto mb-8 font-medium">Os dados de {MESES[selectedMes]} de {selectedAno} foram consolidados e estão protegidos contra edições ou exclusões.</p>
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 rounded-2xl text-xs font-bold border border-white/10 backdrop-blur-sm">
-            <CheckCircle2 size={16} /> GOVERNANÇA ATIVA
+          
+          <div className="flex flex-col items-center gap-4">
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 rounded-2xl text-[10px] font-black border border-white/10 backdrop-blur-sm uppercase tracking-widest">
+              <CheckCircle2 size={16} /> Governança de Dados Ativa
+            </div>
+            
+            <button 
+              onClick={() => confirm('Tem certeza que deseja reabrir este período? Isso permitirá edições e exclusões retroativas.') && reabrirPeriodo(selectedMes, selectedAno)}
+              className="px-8 py-4 bg-white text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-rose-50 transition-all flex items-center gap-2"
+            >
+              <Unlock size={16} /> Reabrir Período Agora
+            </button>
           </div>
         </div>
       ) : (

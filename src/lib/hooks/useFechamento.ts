@@ -73,11 +73,25 @@ export function useFechamento() {
     return { error: errDetalhe?.message || null }
   }
 
+  const reabrirPeriodo = async (mes: number, ano: number) => {
+    if (!tenantId) return { error: 'Tenant não encontrado' }
+
+    const { error } = await sb.from('fechamentos_periodo')
+      .delete()
+      .eq('tenant_id', tenantId)
+      .eq('mes', mes)
+      .eq('ano', ano)
+
+    if (!error) await fetchFechamentos()
+    return { error: error?.message || null }
+  }
+
   return { 
     fechamentos, 
     loading, 
     isPeriodoBloqueado, 
     fecharPeriodo,
+    reabrirPeriodo,
     refresh: fetchFechamentos 
   }
 }
