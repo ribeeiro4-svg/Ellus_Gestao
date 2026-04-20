@@ -164,17 +164,55 @@ export default function FinanceiroPage() {
         <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no financeiro..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
         <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
         <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
-        <button onClick={() => setIsSyncModalOpen(true)} className="px-5 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase flex items-center gap-2"><RefreshCw size={14} /> Recorrência em Lote</button>
+        <button 
+          onClick={() => setIsSyncModalOpen(true)} 
+          className="px-6 py-4 bg-[#0e2d22] text-white rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-[#163d2f] active:scale-95 shadow-xl shadow-[#0e2d22]/10 border border-emerald-500/20"
+        >
+          <RefreshCw size={14} /> Recorrência em Lote
+        </button>
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
 
       <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} loading={saving} />
       <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Gerar Mensalidades em Lote" onSubmit={async (p: any) => {
-        const list = associados.filter(a => a.status === 'ativo'); if (!list.length) return alert('Nenhum associado ativo.')
-        const batch: any[] = []; list.forEach(assoc => { for(let i=0; i<Number(p.meses); i++) { const d = new Date(Number(p.ano_inicio), Number(p.mes_inicio)+i, Number(p.dia)); batch.push({ tipo: 'receita', descricao: `${p.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`, categoria: 'Mensalidade', valor: assoc.mensalidade || 50, data: d.toISOString().split('T')[0], status: 'aberto', associado_id: assoc.id, conta_id: p.conta_id, forma_pagamento: p.forma_pagamento }) } })
-        const res = await inserirBulk(batch); if (!res.error) { alert('Sucesso!'); setIsSyncModalOpen(false) } else alert(res.error)
+        let list = associados.filter(a => a.status === 'ativo');
+        
+        // Lógica Inteligente solicitada pelo Usuário
+        if (p.publico_alvo === 'zapsign_new') {
+          list = list.filter(a => {
+            const isZapSign = (a.categoria || '').toLowerCase() === 'zapsign';
+            const semRecorrencia = !lancamentos.some(l => l.associado_id === a.id && l.categoria === 'Mensalidade');
+            return isZapSign && semRecorrencia;
+          });
+        }
+
+        if (!list.length) return alert('Nenhum associado encontrado para este critério.')
+        
+        const batch: any[] = []; 
+        list.forEach(assoc => { 
+          for(let i=0; i<Number(p.meses); i++) { 
+            const d = new Date(Number(p.ano_inicio), Number(p.mes_inicio)+i, Number(p.dia)); 
+            batch.push({ 
+              tipo: 'receita', 
+              descricao: `${p.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`, 
+              categoria: 'Mensalidade', 
+              valor: assoc.mensalidade || 50, 
+              data: d.toISOString().split('T')[0], 
+              status: 'aberto', 
+              associado_id: assoc.id, 
+              conta_id: p.conta_id, 
+              forma_pagamento: p.forma_pagamento 
+            }) 
+          } 
+        })
+        const res = await inserirBulk(batch); 
+        if (!res.error) { 
+          alert(`Sucesso! ${res.count} mensalidades geradas para ${list.length} associados.`); 
+          setIsSyncModalOpen(false) 
+        } else alert(res.error)
       }} fields={[
+        { name: 'publico_alvo', label: 'Público Alvo', type: 'select', defaultValue: 'todos', options: [{ value: 'todos', label: 'Todos os Associados Ativos' }, { value: 'zapsign_new', label: 'Apenas Novos ZapSign (Sem Recorrência)' }] },
         { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' },
         { name: 'mes_inicio', label: 'Partir do Mês', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) },
         { name: 'ano_inicio', label: 'Ano', type: 'number', defaultValue: new Date().getFullYear().toString() },

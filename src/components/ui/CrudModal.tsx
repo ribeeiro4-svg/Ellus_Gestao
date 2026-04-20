@@ -87,21 +87,22 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
         className="w-full max-w-[580px] max-h-[90vh] flex flex-col relative"
         style={{
           background: '#fff',
-          borderRadius: '32px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          borderRadius: '28px',
+          boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.4)',
           animation: 'modalIn .3s cubic-bezier(0.165, 0.84, 0.44, 1) both',
+          border: '1px solid rgba(255,255,255,0.1)'
         }}
       >
         {/* Header */}
-        <div className="px-8 pt-8 pb-6 border-b border-slate-100 sticky top-0 bg-white z-20 rounded-t-[32px]">
+        <div className="px-8 pt-8 pb-7 bg-[#0e2d22] relative z-20 rounded-t-[28px] border-b border-white/10">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-black text-slate-800 tracking-tight">{title}</h2>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Preencha os campos abaixo</p>
+              <h2 className="text-xl font-black text-white tracking-tight uppercase">{title}</h2>
+              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[2px] mt-1 opacity-80 italic">Gestão Inteligente — ACPROBEC</p>
             </div>
             <button
               onClick={onClose}
-              className="w-10 h-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-white hover:border-slate-200 transition-all active:scale-90"
+              className="w-11 h-11 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-90"
             >
               <X size={20} />
             </button>
@@ -134,9 +135,9 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                               key={opt.value}
                               type="button"
                               onClick={() => handleChange(field.name, opt.value)}
-                              className={`px-4 py-2.5 rounded-2xl text-[12px] font-bold transition-all border outline-none flex items-center gap-2 ${
+                              className={`px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-wider transition-all border outline-none flex items-center gap-2 ${
                                 formData[field.name] === opt.value
-                                  ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-100'
+                                  ? 'bg-[#0e2d22] border-emerald-500 text-white shadow-lg shadow-emerald-500/10'
                                   : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200'
                               }`}
                             >
@@ -196,22 +197,22 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
           </div>
 
           {/* Footer */}
-          <div className="px-8 pb-8 pt-4 border-t border-slate-50 mt-4 flex items-center justify-between gap-4">
+          <div className="px-8 pb-8 pt-6 border-t border-slate-100 mt-4 flex items-center justify-between gap-6">
              <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-6 py-3.5 rounded-2xl text-sm font-black text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest"
+              className="px-6 py-4 rounded-2xl text-xs font-black text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-[2px]"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl text-sm font-black shadow-xl shadow-emerald-100 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-4 bg-[#0e2d22] hover:bg-[#163d2f] text-white px-8 py-5 rounded-[20px] text-xs font-black tracking-[2px] shadow-2xl shadow-indigo-500/10 border border-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              {loading ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} strokeWidth={3} />}
-              {loading ? 'SALVANDO...' : 'SALVAR'}
+              {loading ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} strokeWidth={4} />}
+              {loading ? 'PROCESSANDO...' : 'SALVAR ALTERAÇÕES'}
             </button>
           </div>
         </form>
