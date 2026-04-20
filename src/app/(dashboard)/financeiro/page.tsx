@@ -22,7 +22,11 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointEleme
 
 export default function FinanceiroPage() {
   const { lancamentos, loading, inserir, atualizar, remover, removerBulk, inserirBulk, atualizarBulk } = useFinanceiro()
-  const { contas }; const { associados }; const { fornecedores }; const { diretoria }; const { categorias } = { contas: useContas().contas, associados: useAssociados().associados, fornecedores: useFornecedores().fornecedores, diretoria: useDiretoria().diretoria, categorias: useCategorias().categorias }
+  const { contas } = useContas()
+  const { associados } = useAssociados()
+  const { fornecedores } = useFornecedores()
+  const { diretoria } = useDiretoria()
+  const { categorias } = useCategorias()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
