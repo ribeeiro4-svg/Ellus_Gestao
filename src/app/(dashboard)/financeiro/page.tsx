@@ -24,15 +24,17 @@ import { safeSum, safeDiff } from '@/lib/utils/formatters'
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 export default function FinanceiroPage() {
-  const { lancamentos, loading, kpis, inserir, atualizar, remover, removerBulk, inserirBulk } = useFinanceiro()
+  const { lancamentos, loading, kpis, inserir, atualizar, remover, removerBulk, inserirBulk, atualizarBulk } = useFinanceiro()
   const { contas } = useContas()
   const { associados } = useAssociados()
   const { fornecedores } = useFornecedores()
   const { diretoria } = useDiretoria()
+  const { categorias } = useCategorias()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [saving, setSaving] = useState(false)
 
   /* ── Filtros ── */
   const [searchTerm, setSearchTerm] = useState('')
@@ -43,8 +45,6 @@ export default function FinanceiroPage() {
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
-  const [onlyUnlinked, setOnlyUnlinked] = useState(false)
-  const [batchSearch, setBatchSearch] = useState('')
 
   // Identifica associados que nunca tiveram nenhuma receita lançada
   const associadosSemPagamento = useMemo(() => {
@@ -202,72 +202,85 @@ export default function FinanceiroPage() {
       conta_id: data.conta_id || null
     }
 
-    if (editingItem) { 
-      await atualizar(editingItem.id, safeData) 
-    } 
-    else { 
-      const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, ...dbData } = safeData;
-      
-      if (is_lote && selected_associados?.length > 0) {
-        const batch: any[] = []
-        selected_associados.forEach((assocId: string) => {
-          const assoc = associados.find(a => a.id === assocId)
-          batch.push({ 
-            ...dbData, 
-            descricao: `${dbData.descricao.toUpperCase()} - ${assoc?.nome.toUpperCase() || 'LOTE'}`,
-            associado_id: assocId, 
-            status: safeData.status || 'aberto' 
+    setSaving(true)
+    try {
+      let res
+      if (editingItem) { 
+        res = await atualizar(editingItem.id, safeData) 
+      } 
+      else { 
+        const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, ...dbData } = safeData;
+        
+        if (is_lote && selected_associados?.length > 0) {
+          const batch: any[] = []
+          selected_associados.forEach((assocId: string) => {
+            const assoc = associados.find(a => a.id === assocId)
+            batch.push({ 
+              ...dbData, 
+              descricao: `${dbData.descricao.toUpperCase()} - ${assoc?.nome.toUpperCase() || 'LOTE'}`,
+              associado_id: assocId, 
+              status: safeData.status || 'aberto' 
+            })
           })
-        })
-        await inserirBulk(batch)
-      } else if (safeData.recorrencia_ativa) {
-        const mesesAFrente = Number(safeData.recorrencia_meses || 12)
-        const batch: any[] = []
-        for (let i = 0; i <= mesesAFrente; i++) {
-          const parts = safeData.data.includes('-') 
-            ? safeData.data.split('-').map(Number)
-            : safeData.data.split('/').reverse().map(Number);
-          const targetMonth = parts[1] - 1 + i;
-          const targetYear = parts[0];
-          const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
-          const finalDay = Math.min(parts[2], lastDay);
-          const d = new Date(targetYear, targetMonth, finalDay);
-          const dataString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-          batch.push({ ...dbData, data: dataString, status: i === 0 ? (safeData.status || 'aberto') : 'aberto' });
-        }
-        await inserirBulk(batch);
-      } else {
-        const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null;
-        const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao.toUpperCase();
-        
-        const itemsToInsert = [];
-        
-        // Prepara a receita principal
-        itemsToInsert.push({ 
-          ...dbData, 
-          descricao: finalDesc, 
-          status: safeData.status || 'aberto' 
-        });
+          res = await inserirBulk(batch)
+        } else if (safeData.recorrencia_ativa) {
+          const mesesAFrente = Number(safeData.recorrencia_meses || 12)
+          const batch: any[] = []
+          for (let i = 0; i <= mesesAFrente; i++) {
+            const parts = safeData.data.includes('-') 
+              ? safeData.data.split('-').map(Number)
+              : safeData.data.split('/').reverse().map(Number);
+            const targetMonth = parts[1] - 1 + i;
+            const targetYear = parts[0];
+            const lastDay = new Date(targetYear, targetMonth + 1, 0).getDate();
+            const finalDay = Math.min(parts[2], lastDay);
+            const d = new Date(targetYear, targetMonth, finalDay);
+            const dataString = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            batch.push({ ...dbData, data: dataString, status: i === 0 ? (safeData.status || 'aberto') : 'aberto' });
+          }
+          res = await inserirBulk(batch);
+        } else {
+          const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null;
+          const finalDesc = assoc ? `${dbData.descricao.toUpperCase()} - ${assoc.nome.toUpperCase()}` : dbData.descricao.toUpperCase();
+          
+          const itemsToInsert = [];
+          
+          // Prepara a receita principal
+          itemsToInsert.push({ 
+            ...dbData, 
+            descricao: finalDesc, 
+            status: safeData.status || 'aberto' 
+          });
 
-        // Se houver troco em PIX, prepara a despesa automática
-        if (safeData.troco_via_pix && Number(safeData.valor_troco) > 0) {
-            itemsToInsert.push({
-                tipo: 'despesa' as const,
-                descricao: `TROCO EM PIX - ${assoc?.nome.toUpperCase() || 'CLIENTE'}`,
-                valor: Number(safeData.valor_troco),
-                data: dbData.data,
-                status: 'pago' as const,
-                conta_id: dbData.conta_id,
-                categoria: 'TROCO',
-                forma_pagamento: 'PIX'
-            });
+          // Se houver troco em PIX, prepara a despesa automática
+          if (safeData.troco_via_pix && Number(safeData.valor_troco) > 0) {
+              itemsToInsert.push({
+                  tipo: 'despesa' as const,
+                  descricao: `TROCO EM PIX - ${assoc?.nome.toUpperCase() || 'CLIENTE'}`,
+                  valor: Number(safeData.valor_troco),
+                  data: dbData.data,
+                  status: 'pago' as const,
+                  conta_id: dbData.conta_id,
+                  categoria: 'TROCO',
+                  forma_pagamento: 'PIX'
+              });
+          }
+          
+          res = await inserirBulk(itemsToInsert);
         }
-        
-        await inserirBulk(itemsToInsert);
       }
+
+      if (res?.error) {
+        alert(`Erro ao salvar: ${res.error}`)
+      } else {
+        setEditingItem(null)
+        setIsModalOpen(false)
+      }
+    } catch (err: any) {
+      alert(`Erro inesperado: ${err.message}`)
+    } finally {
+      setSaving(false)
     }
-    setEditingItem(null);
-    setIsModalOpen(false);
   }
 
   const handleDelete = async (id: string) => {
@@ -353,8 +366,6 @@ export default function FinanceiroPage() {
       )
     }
   ]
-
-  const { categorias } = useCategorias()
 
   const modalFields: Field[] = useMemo(() => [
     { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },

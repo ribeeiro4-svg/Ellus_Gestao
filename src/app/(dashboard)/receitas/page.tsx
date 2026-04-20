@@ -52,6 +52,7 @@ export default function ReceitasPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectedForDetail, setSelectedForDetail] = useState<any | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('todos')
@@ -172,9 +173,26 @@ export default function ReceitasPage() {
 
   const handleSalvar = async (data: any) => {
     const cleanData = { ...data, valor: Number(data.valor), tipo: 'receita' }
-    if (editingItem) await atualizar(editingItem.id, cleanData)
-    else await inserirBulk([cleanData])
-    setEditingItem(null); setIsModalOpen(false)
+    setLoading(true)
+    try {
+      let res
+      if (editingItem) {
+        res = await atualizar(editingItem.id, cleanData)
+      } else {
+        res = await inserirBulk([cleanData])
+      }
+
+      if (res?.error) {
+        alert(`Erro ao salvar: ${res.error}`)
+      } else {
+        setEditingItem(null)
+        setIsModalOpen(false)
+      }
+    } catch (err: any) {
+      alert(`Erro inesperado: ${err.message}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDetail = (item: any) => { setSelectedForDetail(item); setIsDetailModalOpen(true) }

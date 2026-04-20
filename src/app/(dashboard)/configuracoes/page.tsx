@@ -270,45 +270,51 @@ export default function ConfigPage() {
           </div>
 
           {/* Categorias Padronizadas */}
-          <div className="table-card p-6 border-amber-100 bg-amber-50/10">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
-                <Plus className="text-amber-500 w-4 h-4" />
+          <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-amber-200 to-transparent"></div>
+            
+            <div className="flex justify-between items-center mb-10">
+              <h2 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-3">
+                <Plus className="text-amber-500 w-5 h-5" strokeWidth={3} />
                 Categorias Padronizadas
               </h2>
               <button 
                 onClick={() => { setEditingCat(null); setIsCatModalOpen(true) }}
-                className="px-4 py-2 bg-amber-500 text-white text-[10px] font-bold rounded-xl hover:bg-amber-600 transition-all uppercase shadow-sm"
+                className="px-8 py-4 bg-[#f39c12] hover:bg-[#e67e22] text-white text-[11px] font-black rounded-2xl transition-all uppercase tracking-widest shadow-lg shadow-orange-100 active:scale-95"
               >
                 + Nova Categoria
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {categorias.map(cat => (
-                <div key={cat.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-gray-100 group hover:border-amber-200 transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${cat.tipo === 'receita' ? 'bg-emerald-400' : 'bg-rose-400'}`}></div>
-                    <span className="text-xs font-bold text-gray-700">{cat.nome}</span>
+                <div 
+                  key={cat.id} 
+                  className="flex items-center justify-between p-6 bg-slate-50/50 rounded-[24px] border border-slate-100 group hover:bg-white hover:border-amber-200 hover:shadow-md transition-all cursor-pointer"
+                  onClick={() => { setEditingCat(cat); setIsCatModalOpen(true) }}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-3 h-3 rounded-full shadow-sm ${cat.tipo === 'receita' ? 'bg-[#2ecc71] ring-4 ring-emerald-50' : 'bg-[#e91e63] ring-4 ring-rose-50'}`}></div>
+                    <span className="text-[12px] font-black text-slate-700 uppercase tracking-tighter">{cat.nome}</span>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); setEditingCat(cat); setIsCatModalOpen(true) }} 
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
-                    >
-                      <Pencil size={12} />
-                    </button>
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 
                       onClick={(e) => { e.stopPropagation(); confirm('Excluir esta categoria?') && removerCat(cat.id) }} 
-                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg"
+                      className="w-10 h-10 flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
               ))}
+              
               {categorias.length === 0 && !loadingCats && (
-                <div className="col-span-2 text-center py-8 text-gray-400 text-[10px] uppercase font-bold italic">Nenhuma categoria padronizada.</div>
+                <div className="col-span-2 py-16 text-center">
+                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                      <Plus size={32} />
+                   </div>
+                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Nenhuma categoria cadastrada</p>
+                </div>
               )}
             </div>
           </div>
