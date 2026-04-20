@@ -52,16 +52,16 @@ export default function DashboardKpis({ metrics }: DashboardKpisProps) {
         }}
       />
       <KpiCard 
-        title="Superávit (Taxas)" 
-        value={fmtR(taxaRecuperada)} 
-        trend={0} 
+        title="Superávit" 
+        value={fmtR(receitaTotal - despesaTotal)} 
+        trend={trends.resultado} 
         trendLabel="vs mês anterior" 
         icon={<TrendingUp size={20} />} 
         category="success" 
         explanation={{
-          description: "Valor total de taxas bancárias e de intermediação que foram identificadas e recuperadas na auditoria.",
-          formula: "Σ(Taxas Bancárias Detectadas)",
-          example: "Este valor representa uma economia real que o sistema identificou oculto nos recebimentos líquidos."
+          description: "Saldo positivo remanescente após a quitação de todas as obrigações financeiras do período.",
+          formula: "Receita Realizada - Despesas Pagas",
+          example: "O superávit é o indicativo de saúde financeira e capacidade de investimento da associação."
         }}
       />
       <KpiCard 
