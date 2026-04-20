@@ -91,7 +91,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       icon: <ZapIcon size={16} />,
       chartType: 'doughnut',
       chartData: {
-        labels: ['Pendentes ZS', 'Regularizados'],
+        labels: [`Pendentes ZS (${zapsignPendentes})`, `Regularizados (${ativos + inativos + inadimplentes})`],
         datasets: [{
           data: [zapsignPendentes, ativos + inativos + inadimplentes],
           backgroundColor: ['#ef4444', '#10b981'],
@@ -113,7 +113,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       icon: <UsersIcon size={16} />,
       chartType: 'doughnut',
       chartData: {
-        labels: [`Ativos`, `Inadimplentes`, `Inativos`],
+        labels: [`Ativos (${ativos})`, `Inadimplentes (${inadimplentes})`, `Inativos (${inativos})`],
         datasets: [{
           data: [ativos, inadimplentes, inativos],
           backgroundColor: ['#10b981', '#ef4444', '#9ca3af'],
@@ -135,7 +135,16 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
     const options = { 
       responsive: true, 
       maintainAspectRatio: false, 
-      plugins: { legend: { display: false } },
+      plugins: { 
+        legend: { 
+          display: config.chartType === 'doughnut',
+          position: 'right' as const,
+          labels: {
+            boxWidth: 8,
+            font: { size: 10, weight: 'bold' }
+          }
+        } 
+      },
       scales: config.chartType === 'bar' ? { 
         y: { 
           grid: { color: 'rgba(0,0,0,0.03)' }, 
