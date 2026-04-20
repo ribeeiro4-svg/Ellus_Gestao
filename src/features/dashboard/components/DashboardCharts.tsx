@@ -220,8 +220,8 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
                     <p className="text-sm font-medium">Análise consolidada baseada em lançamentos efetivados e provisões.</p>
                   </div>
                   <div className="p-5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Orientação IA</p>
-                    <p className="text-[12px] leading-relaxed text-emerald-50 font-medium italic">"Mantenha o monitoramento constante dos fluxos de caixa para garantir o superávit projetado nas próximas competências."</p>
+                    <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Orientação IA</p>
+                    <p className="text-[12px] leading-relaxed text-emerald-900 font-bold italic">"Mantenha o monitoramento de contas a pagar para garantir o superávit projetado."</p>
                   </div>
                 </div>
               </div>
