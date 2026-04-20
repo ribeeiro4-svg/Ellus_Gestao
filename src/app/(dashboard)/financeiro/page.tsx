@@ -26,6 +26,8 @@ import { fmtR, fmtData, MESES, safeSum, safeDiff } from '@/lib/utils/formatters'
 import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, CloudLightning, Trash2 } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
+import BatchActionBar from '@/components/ui/BatchActionBar'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -63,7 +65,7 @@ export default function FinanceiroPage() {
   const [filterMatch, setFilterMatch] = useState<'ALL' | 'FOUND' | 'NOT_FOUND'>('ALL')
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'NEW' | 'DUPLICATE'>('ALL')
 
-  const { matchedTransactions, coraMatchedItems, existingTxIds, auditStats } = useConciliacaoAudit(
+  const { matchedTransactions, coraMatchedItems, existingTxIds } = useConciliacaoAudit(
     extrato, coraItems, conciliacaoSubTab, associados, fornecedores, diretoria, lancamentos, processedIds
   )
 
@@ -77,12 +79,21 @@ export default function FinanceiroPage() {
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
 
+  // Novos Estados para Ações em Lote
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
+
   useEffect(() => {
     if (contas.length > 0 && !selectedContaId) {
       const coraCont = contas.find(c => c.nome.toLowerCase().includes('cora'))
       setSelectedContaId(coraCont ? coraCont.id : contas[0].id)
     }
   }, [contas, selectedContaId])
+
+  // Limpar seleção ao trocar de aba
+  useEffect(() => {
+    setSelectedIds([])
+  }, [activeTab])
 
   // Lógica de Processamento de Conciliação
   const enhanceMemo = (name: string, originalMemo: string) => {
@@ -162,6 +173,31 @@ export default function FinanceiroPage() {
         setProcessedIds(prev => { const next = new Set(prev); rowsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
       } else alert(`Erro Cora: ${res.error}`)
     } finally { setIsProcessingBatch(false) }
+  }
+
+  const handleBulkDelete = async () => {
+    const res = await removerBulk(selectedIds)
+    if (!res.error) {
+      setSelectedIds([])
+      setIsConfirmDeleteOpen(false)
+    } else {
+      alert(res.error)
+    }
+  }
+
+  const handleBulkUpdate = async (data: any) => {
+    let finalInput = { ...data }
+    // Regra Automática: Se marcar como PAGO em lote, define a data de hoje como data de pagamento
+    if (finalInput.status === 'pago') {
+      finalInput.data = new Date().toISOString().split('T')[0]
+    }
+
+    const res = await atualizarBulk(selectedIds, finalInput)
+    if (!res.error) {
+      setSelectedIds([])
+    } else {
+      alert(res.error)
+    }
   }
 
   const filteredItemsConciliacao = useMemo(() => {
@@ -365,7 +401,15 @@ export default function FinanceiroPage() {
             <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
             <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100"><RefreshCw size={14} /> Recorrência em Lote</button>
           </div>
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"><DataTable columns={columns as any} data={filteredLancamentos} loading={loading} /></div>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+            <DataTable 
+              columns={columns as any} 
+              data={filteredLancamentos} 
+              loading={loading} 
+              selectedIds={selectedIds}
+              onSelectChange={setSelectedIds}
+            />
+          </div>
         </>
       )}
 
@@ -399,6 +443,24 @@ export default function FinanceiroPage() {
       
       <ManualMatchModal isOpen={isManualLinkModalOpen} onClose={() => setIsManualLinkModalOpen(false)} extrato={selectedExtrato} onSelect={(assoc: any) => { const tf = selectedExtrato.bank.fitid; setEditedMemos(prev => ({ ...prev, [tf]: enhanceMemo(assoc.nome, selectedExtrato.bank.memo) })); setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, suggestedCategory: 'Mensalidades' } : item)); setIsManualLinkModalOpen(false); setSelectedExtrato(null); }} />
       <SupplierMatchModal isOpen={isSupplierLinkModalOpen} onClose={() => setIsSupplierLinkModalOpen(false)} extrato={selectedExtrato} onSelect={(sup: any) => { const tf = selectedExtrato.bank.fitid; setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: enhanceMemo(sup.nome, selectedExtrato.bank.memo) })); setExtrato(prev => prev.map((tx: any) => tx.fitid === tf ? tx : tx)); setIsSupplierLinkModalOpen(false); setSelectedExtrato(null); }} />
+
+      <BatchActionBar 
+        selectedCount={selectedIds.length} 
+        onDelete={() => setIsConfirmDeleteOpen(true)}
+        onUpdate={handleBulkUpdate}
+        onClear={() => setSelectedIds([])}
+        categories={categorias}
+      />
+
+      <ConfirmModal 
+        isOpen={isConfirmDeleteOpen}
+        onClose={() => setIsConfirmDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+        title="Excluir Lançamentos"
+        message={`Você tem certeza que deseja excluir permanentemente ${selectedIds.length} lançamentos? Esta ação não poderá ser desfeita.`}
+        confirmText="Sim, Excluir Tudo"
+        type="danger"
+      />
     </div>
   )
 }
