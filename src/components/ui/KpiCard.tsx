@@ -48,7 +48,7 @@ export default function KpiCard({
 
   return (
     <div 
-      className={`kpi-card bg-white/80 backdrop-blur-md border border-white/60 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 relative overflow-visible group border-t-4 ${borderColors[category]}`}
+      className={`kpi-card bg-white border border-slate-100 rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 relative overflow-visible group border-t-4 ${borderColors[category]}`}
       onMouseEnter={() => setShowAudit(true)}
       onMouseLeave={() => setShowAudit(false)}
       onClick={() => setShowAudit(!showAudit)}
