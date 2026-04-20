@@ -15,11 +15,12 @@ export default function IndicarCompetenciaModal({ isOpen, onClose, launch, lanca
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [saving, setSaving] = useState(false)
 
-  if (!isOpen || !launch) return null
-
   const assocLancamentos = useMemo(() => {
+    if (!launch) return []
     return lancamentos.filter(l => l.associado_id === launch.associado_id && l.tipo === 'receita')
-  }, [lancamentos, launch.associado_id])
+  }, [lancamentos, launch?.associado_id])
+
+  if (!isOpen || !launch) return null
 
   const handleSelect = async (mes: number) => {
     setSaving(true)
