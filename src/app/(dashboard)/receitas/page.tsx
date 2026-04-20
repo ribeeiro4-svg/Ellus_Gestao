@@ -352,7 +352,9 @@ export default function ReceitasPage() {
           { header: 'Conciliação', key: 'data_conciliacao', render: (l: any) => (
             l.conciliado ? (
               <div className="flex flex-col">
-                <span className="text-[10px] font-bold text-emerald-600">{fmtData(l.data_conciliacao)}</span>
+                {l.data_conciliacao && (
+                  <span className="text-[10px] font-bold text-emerald-600">{fmtData(l.data_conciliacao)}</span>
+                )}
                 <span className="text-[8px] text-emerald-400 font-medium uppercase tracking-tighter">Liquidado</span>
               </div>
             ) : (
