@@ -232,7 +232,7 @@ body::before {
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  background-color: var(--surface2);
+  background-color: transparent;
 }
 
 .main-content {
