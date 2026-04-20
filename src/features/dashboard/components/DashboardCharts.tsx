@@ -200,9 +200,9 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-12 animate-in fade-in duration-300">
           <div className="absolute inset-0 bg-[#071a12]/95 backdrop-blur-xl" onClick={() => setExpandedChart(null)} />
           
-          <div className="relative w-full max-w-6xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col lg:flex-row animate-in zoom-in-95 duration-500 border border-white/20">
-            {/* Modal Header/Sidebar (Green Side) */}
-            <div className="lg:w-[380px] bg-gradient-to-br from-[#0e2d22] to-[#163d2f] p-10 text-white flex flex-col justify-between">
+          <div className="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col lg:flex-row animate-in zoom-in-95 duration-500 border border-white/20">
+            {/* Modal Sidebar (Executive Summary) */}
+            <div className="lg:w-[320px] bg-gradient-to-br from-[#0e2d22] to-[#163d2f] p-8 text-white flex flex-col justify-between flex-shrink-0">
               <div>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
@@ -214,62 +214,68 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-4">Detalhamento Técnico</p>
-                      <table className="w-full">
-                        <thead>
-                          <tr className="text-left border-b border-white/10">
-                            {expandedChart.tableData.headers.map((h: string) => (
-                              <th key={h} className="pb-3 text-[10px] font-black text-white/30 uppercase">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {expandedChart.tableData.rows.slice(0, 6).map((row: any, i: number) => (
-                            <tr key={i} className="border-b border-white/5 last:border-0">
-                              {row.map((cell: any, ci: number) => (
-                                <td key={ci} className={`py-3 text-[11px] font-medium ${ci === 0 ? 'text-white' : 'text-emerald-400'}`}>
-                                  {cell}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                   </div>
+                <div className="space-y-4">
+                  <div className="p-5 bg-white/5 rounded-2xl border border-white/5">
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">Status Global</p>
+                    <p className="text-sm font-medium">Análise consolidada baseada em lançamentos efetivados e provisões.</p>
+                  </div>
+                  <div className="p-5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                    <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Orientação IA</p>
+                    <p className="text-[12px] leading-relaxed text-white/80 italic">"Mantenha o monitoramento de contas a pagar para garantir o superávit projetado."</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-8">
-                <button 
-                  onClick={() => setExpandedChart(null)}
-                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition-all flex items-center justify-center gap-2"
-                >
-                  <X size={16} /> Fechar Detalhes
-                </button>
-              </div>
+              <button 
+                onClick={() => setExpandedChart(null)}
+                className="mt-8 py-4 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition-all flex items-center justify-center gap-2"
+              >
+                <X size={16} /> Fechar Detalhes
+              </button>
             </div>
 
-            {/* Modal Content (Chart Side) */}
-            <div className="flex-1 p-10 lg:p-16 bg-slate-50 flex flex-col">
-               <div className="flex-1 min-h-[400px]">
+            {/* Modal Content (Chart & Audit Table) */}
+            <div className="flex-1 bg-slate-50 flex flex-col min-h-0 overflow-y-auto">
+              {/* Top Chart Section */}
+              <div className="p-8 lg:p-12 border-b border-slate-200">
+                <div className="h-[300px] w-full">
                   {expandedChart.chartType === 'bar' 
                     ? <Bar data={expandedChart.chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
                     : <Doughnut data={expandedChart.chartData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }} />
                   }
-               </div>
-               <div className="mt-12 p-6 bg-emerald-600 rounded-3xl text-white shadow-xl shadow-emerald-600/20 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                      <ZapIcon size={20} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Insight Inteligente</p>
-                      <p className="text-sm font-bold">Dados processados com IA para suporte à decisão estratégica.</p>
-                    </div>
-                  </div>
-               </div>
+                </div>
+              </div>
+
+              {/* Data Table Section */}
+              <div className="p-8 lg:p-12">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Auditando Dados do Período</h3>
+                  <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black uppercase tracking-widest">Confidencial</div>
+                </div>
+
+                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        {expandedChart.tableData.headers.map((h: string) => (
+                          <th key={h} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {expandedChart.tableData.rows.map((row: any, i: number) => (
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          {row.map((cell: any, ci: number) => (
+                            <td key={ci} className={`px-6 py-4 text-xs ${ci === 0 ? 'font-bold text-slate-800' : 'font-black text-emerald-600'}`}>
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>
