@@ -14,20 +14,38 @@ interface DashboardChartsProps {
   onChartClick: (config: any) => void
 }
 
+import { 
+  X, 
+  Maximize2, 
+  FileText, 
+  Users as UsersIcon, 
+  Target, 
+  Zap as ZapIcon 
+} from 'lucide-react'
+
+interface DashboardChartsProps {
+  metrics: any
+  onChartClick: (config: any) => void
+}
+
 export default function DashboardCharts({ metrics, onChartClick }: DashboardChartsProps) {
-  const { recReal, recProv, despReal, despProv, resultadoData, associadosStats } = metrics
-  const { ativos, inadimplentes, inativos } = associadosStats
+  const { 
+    recReal, recProv, despReal, despProv, resultadoData, 
+    associadosStats, planejamentoStats 
+  } = metrics
+  
+  const { ativos, inadimplentes, inativos, zapsignPendentes } = associadosStats
+  const { planejado, realizado, percentual } = planejamentoStats
+
+  const [expandedChart, setExpandedChart] = React.useState<any>(null)
 
   const chartConfigs: any = {
     receita: {
+      id: 'receita',
       title: 'Fluxo Mensal Consolidado',
-      subtitle: 'Comparativo de Entradas e Saídas — Realizado vs Projetado',
+      subtitle: 'Realizado vs Projetado',
+      icon: <FileText size={16} />,
       chartType: 'bar',
-      insights: [
-        { label: 'Receita Realizada', value: fmtR(recReal.reduce((a: number, b: number) => a + b, 0)), color: 'var(--green)', sub: 'acumulado pago' },
-        { label: 'Receita Provisionada', value: fmtR(recProv.reduce((a: number, b: number) => a + b, 0)), color: 'rgba(45, 140, 111, 0.4)', sub: 'a receber' },
-        { label: 'Resultado Líquido', value: fmtR(resultadoData.reduce((a: number, b: number) => a + b, 0)), color: 'var(--green)', sub: 'saldo final' },
-      ],
       chartData: {
         labels: MESES,
         datasets: [
@@ -43,27 +61,67 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
         rows: MESES.map((m: any, i: any) => [m, fmtR(recReal[i]), fmtR(recProv[i]), fmtR(despReal[i]), fmtR(despProv[i])])
       }
     },
-    associados: {
-      title: 'Composição da Carteira',
-      subtitle: 'Distribuição proporcional por status',
-      chartType: 'doughnut',
-      insights: [
-        { label: 'Total', value: ativos + inadimplentes + inativos, color: 'var(--accent)', sub: 'associados' },
-        { label: 'Ativos', value: ativos, color: 'var(--green)', sub: 'adimplentes' },
-        { label: 'Inadimplentes', value: inadimplentes, color: 'var(--red)', sub: 'necessitam ação' },
-      ],
+    planejamento: {
+      id: 'planejamento',
+      title: 'Atingimento de Metas',
+      subtitle: 'Planejado vs Realizado (Mês Atual)',
+      icon: <Target size={16} />,
+      chartType: 'bar',
       chartData: {
-        labels: [`Ativos (${ativos})`, `Inadimplentes (${inadimplentes})`, `Inativos (${inativos})`],
+        labels: ['Planejado (Orçamento)', 'Realizado (Receita)'],
         datasets: [{
-          data: [ativos, inadimplentes, inativos],
-          backgroundColor: ['#10b981', '#ef4444', '#9ca3af'],
-          hoverOffset: 10,
-          borderWidth: 3,
-          borderColor: '#fff'
+          label: 'Valor Financeiro',
+          data: [planejado, realizado],
+          backgroundColor: ['#f59e0b', '#10b981'],
+          borderRadius: 12,
         }]
       },
       tableData: {
-        headers: ['Status', 'Qtd', '%'],
+        headers: ['Tipo', 'Valor', '% Atingido'],
+        rows: [
+          ['Meta Planejada', fmtR(planejado), '100%'],
+          ['Valor Realizado', fmtR(realizado), fmtPct(percentual)],
+        ]
+      }
+    },
+    zapsign: {
+      id: 'zapsign',
+      title: 'Pendências ZapSign',
+      subtitle: 'Contratos aguardando assinatura',
+      icon: <ZapIcon size={16} />,
+      chartType: 'doughnut',
+      chartData: {
+        labels: ['Pendentes ZS', 'Regularizados'],
+        datasets: [{
+          data: [zapsignPendentes, ativos + inativos + inadimplentes - zapsignPendentes],
+          backgroundColor: ['#ef4444', '#10b981'],
+          borderWidth: 0,
+        }]
+      },
+      tableData: {
+        headers: ['Status ZapSign', 'Quantidade', 'Prioridade'],
+        rows: [
+          ['Pendente Assinatura', zapsignPendentes, 'ALTA'],
+          ['Assinado/OK', ativos + inativos + inadimplentes - zapsignPendentes, 'BAIXA'],
+        ]
+      }
+    },
+    associados: {
+      id: 'associados',
+      title: 'Mix da Carteira',
+      subtitle: 'Associados por Status',
+      icon: <UsersIcon size={16} />,
+      chartType: 'doughnut',
+      chartData: {
+        labels: [`Ativos`, `Inadimplentes`, `Inativos`],
+        datasets: [{
+          data: [ativos, inadimplentes, inativos],
+          backgroundColor: ['#10b981', '#ef4444', '#9ca3af'],
+          borderWidth: 0,
+        }]
+      },
+      tableData: {
+        headers: ['Status', 'Total', 'Representação'],
         rows: [
           ['Ativo', ativos, fmtPct((ativos / ((ativos + inadimplentes + inativos) || 1)) * 100)],
           ['Inadimplente', inadimplentes, fmtPct((inadimplentes / ((ativos + inadimplentes + inativos) || 1)) * 100)],
@@ -73,22 +131,127 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
     }
   }
 
+  const renderMiniChart = (config: any) => {
+    const options = { 
+      responsive: true, 
+      maintainAspectRatio: false, 
+      plugins: { legend: { display: false } },
+      scales: config.chartType === 'bar' ? { 
+        y: { grid: { display: false }, ticks: { display: false } }, 
+        x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' } } } 
+      } : {} 
+    }
+    
+    return config.chartType === 'bar' 
+      ? <Bar data={config.chartData} options={options as any} />
+      : <Doughnut data={config.chartData} options={options as any} />
+  }
+
   return (
-    <div className="charts-grid grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-      <div className="lg:col-span-2">
-        <ChartCard title="Evolução Financeira" subtitle="Receita vs Despesa" onClick={() => onChartClick(chartConfigs.receita)}>
-          <div className="h-[300px] mt-4">
-            <Bar data={chartConfigs.receita.chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 10 }, callback: (v) => 'R$ ' + Math.round(Number(v) / 1000) + 'k' } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } } }} />
+    <div className="flex flex-col gap-6">
+      <div className="charts-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {Object.values(chartConfigs).map((config: any) => (
+          <div 
+            key={config.id} 
+            onClick={() => setExpandedChart(config)}
+            className="group relative bg-white/70 backdrop-blur-md p-5 rounded-[28px] border border-white hover:border-emerald-500/30 transition-all cursor-pointer hover:shadow-xl hover:shadow-emerald-900/5 active:scale-[0.98]"
+          >
+            <div className="absolute top-4 right-4 text-slate-300 group-hover:text-emerald-500 transition-colors">
+              <Maximize2 size={16} />
+            </div>
+            <div className="flex flex-col gap-1 mb-4">
+              <div className="flex items-center gap-2 text-emerald-600 mb-1">
+                <div className="p-1.5 bg-emerald-50 rounded-lg">{config.icon}</div>
+                <h3 className="text-[13px] font-black text-slate-800 tracking-tight">{config.title}</h3>
+              </div>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">{config.subtitle}</p>
+            </div>
+            <div className="h-[140px]">
+              {renderMiniChart(config)}
+            </div>
           </div>
-        </ChartCard>
+        ))}
       </div>
-      <div>
-        <ChartCard title="Status Carteira" subtitle="Associados" onClick={() => onChartClick(chartConfigs.associados)}>
-          <div className="h-[300px] mt-4">
-            <Doughnut data={chartConfigs.associados.chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, padding: 20 } } }, cutout: '70%' }} />
+
+      {/* Professional Zoom Modal */}
+      {expandedChart && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 lg:p-12 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-[#071a12]/95 backdrop-blur-xl" onClick={() => setExpandedChart(null)} />
+          
+          <div className="relative w-full max-w-6xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col lg:flex-row animate-in zoom-in-95 duration-500 border border-white/20">
+            {/* Modal Header/Sidebar (Green Side) */}
+            <div className="lg:w-[380px] bg-gradient-to-br from-[#0e2d22] to-[#163d2f] p-10 text-white flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+                    {expandedChart.icon}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black tracking-tight">{expandedChart.title}</h2>
+                    <p className="text-[10px] font-black uppercase tracking-[2px] text-emerald-400 opacity-80">{expandedChart.subtitle}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
+                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-4">Detalhamento Técnico</p>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="text-left border-b border-white/10">
+                            {expandedChart.tableData.headers.map((h: string) => (
+                              <th key={h} className="pb-3 text-[10px] font-black text-white/30 uppercase">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {expandedChart.tableData.rows.slice(0, 6).map((row: any, i: number) => (
+                            <tr key={i} className="border-b border-white/5 last:border-0">
+                              {row.map((cell: any, ci: number) => (
+                                <td key={ci} className={`py-3 text-[11px] font-medium ${ci === 0 ? 'text-white' : 'text-emerald-400'}`}>
+                                  {cell}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                   </div>
+                </div>
+              </div>
+
+              <div className="mt-8">
+                <button 
+                  onClick={() => setExpandedChart(null)}
+                  className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-400 transition-all flex items-center justify-center gap-2"
+                >
+                  <X size={16} /> Fechar Detalhes
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content (Chart Side) */}
+            <div className="flex-1 p-10 lg:p-16 bg-slate-50 flex flex-col">
+               <div className="flex-1 min-h-[400px]">
+                  {expandedChart.chartType === 'bar' 
+                    ? <Bar data={expandedChart.chartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }} />
+                    : <Doughnut data={expandedChart.chartData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }} />
+                  }
+               </div>
+               <div className="mt-12 p-6 bg-emerald-600 rounded-3xl text-white shadow-xl shadow-emerald-600/20 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                      <ZapIcon size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Insight Inteligente</p>
+                      <p className="text-sm font-bold">Dados processados com IA para suporte à decisão estratégica.</p>
+                    </div>
+                  </div>
+               </div>
+            </div>
           </div>
-        </ChartCard>
-      </div>
+        </div>
+      )}
     </div>
   )
 }

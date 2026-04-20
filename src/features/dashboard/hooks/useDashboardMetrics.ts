@@ -1,7 +1,13 @@
 import { useMemo } from 'react'
 import { getMesIdx, getAnoIdx } from '@/lib/utils/formatters'
 
-export function useDashboardMetrics(lancamentos: any[], associados: any[], selectedMonth: number, selectedYear: number) {
+export function useDashboardMetrics(
+  lancamentos: any[], 
+  associados: any[], 
+  orcamentos: any[], 
+  selectedMonth: number, 
+  selectedYear: number
+) {
   const metrics = useMemo(() => {
     const recRealArr = Array(12).fill(0)
     const recProvArr = Array(12).fill(0)
@@ -75,7 +81,12 @@ export function useDashboardMetrics(lancamentos: any[], associados: any[], selec
     const a = associados.filter(item => (item.status || '').toLowerCase().includes('ativ')).length
     const i = associados.filter(item => (item.status || '').toLowerCase().includes('inadimp')).length
     const inat = associados.filter(item => (item.status || '').toLowerCase().includes('inat')).length
+    const pend = associados.filter(item => (item.status || '').toLowerCase() === 'pendente').length
     const total = associados.length || 1
+
+    // Planejamento (Planejado vs Realizado)
+    const orcMes = orcamentos.filter(o => (o.mes === selectedMonth + 1 || o.mes === selectedMonth) && o.ano === selectedYear)
+    const planejadoTotal = orcMes.reduce((sum, o) => sum + (o.valor_planejado || 0), 0)
 
     return { 
       recReal: recRealArr,
@@ -96,10 +107,16 @@ export function useDashboardMetrics(lancamentos: any[], associados: any[], selec
         ativos: a,
         inadimplentes: i,
         inativos: inat,
+        zapsignPendentes: pend,
         pctInadimp: (i / total) * 100
+      },
+      planejamentoStats: {
+        planejado: planejadoTotal,
+        realizado: kpiRecTotal,
+        percentual: planejadoTotal > 0 ? Math.round((kpiRecTotal / planejadoTotal) * 100) : 0
       }
     }
-  }, [lancamentos, associados, selectedMonth, selectedYear])
+  }, [lancamentos, associados, orcamentos, selectedMonth, selectedYear])
 
   return metrics
 }
