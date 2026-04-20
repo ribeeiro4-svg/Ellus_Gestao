@@ -131,7 +131,8 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           mensalidade: 50,
           status: sysStatus,
           data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
-          codigo: stableKey
+          codigo: stableKey,
+          zapsign_doc_token: doc.token // Garante o vínculo para download do PDF
         })
       }
     }
@@ -149,5 +150,25 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
   } catch (error: any) {
     console.error('[ZapSignAction] Fatal Error:', error)
     return { error: error.message || 'Falha na conexão com a ZapSign' }
+  }
+}
+
+/**
+ * Recupera o link temporário do PDF assinado na ZapSign
+ */
+export async function fetchZapSignSignedFileAction(apiToken: string, docToken: string) {
+  if (!docToken) return { error: 'Token do documento não encontrado.' }
+  try {
+    const res = await fetch(`${ZAPSIGN_API_BASE}/docs/${docToken}/`, {
+      headers: { 'Authorization': `Bearer ${apiToken}` },
+      next: { revalidate: 0 }
+    })
+    
+    if (!res.ok) throw new Error('Falha ao comunicar com ZapSign')
+    
+    const data = await res.json()
+    return { url: data.signed_file }
+  } catch (err: any) {
+    return { error: err.message || 'Erro ao buscar download.' }
   }
 }

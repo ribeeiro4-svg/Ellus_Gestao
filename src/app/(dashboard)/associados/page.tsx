@@ -13,12 +13,16 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, MESES } from '@/lib/utils/formatters'
-import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, RefreshCw, Pencil, XCircle, Search } from 'lucide-react'
+import { Plus, Users, Mail, Phone, Copy, AlertCircle, Trash2, CheckSquare, RefreshCw, Pencil, XCircle, Search, FileText, Loader2 } from 'lucide-react'
+import { useTenant } from '@/lib/hooks/useTenant'
+import { fetchZapSignSignedFileAction } from '@/app/actions/zapsign'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend, LineElement, PointElement)
 
 export default function AssociadosPage() {
   const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign, refresh } = useAssociados()
+  const { tenant } = useTenant()
+  const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null)
   
   const normalizeStr = (str: string) => {
     return (str || '')
@@ -151,6 +155,18 @@ export default function AssociadosPage() {
     } finally { setIsUpdatingBulk(false) }
   }
 
+  const handleDownloadTermo = async (item: any) => {
+    if (!tenant?.zapsign_token || !item.zapsign_doc_token) return
+    setDownloadingDoc(item.id)
+    try {
+      const res = await fetchZapSignSignedFileAction(tenant.zapsign_token, item.zapsign_doc_token)
+      if (res.error) alert(res.error)
+      else if (res.url) window.open(res.url, '_blank')
+    } finally {
+      setDownloadingDoc(null)
+    }
+  }
+
   const columns = [
     {
       header: 'Associado', key: 'nome', className: 'min-w-[350px] whitespace-normal',
@@ -170,11 +186,21 @@ export default function AssociadosPage() {
     { header: 'Mensalidade', key: 'mensalidade', className: 'w-[130px]', render: (i: any) => <span className="text-xs font-bold text-gray-900">{fmtR(i.mensalidade)}</span> },
     { header: 'Status', key: 'status', className: 'w-[120px]', render: (i: any) => <StatusBadge status={i.status} type="associado" /> },
     {
-      header: 'Contato', key: 'telefone', className: 'w-[100px]',
+      header: 'Contato', key: 'telefone', className: 'w-[140px]',
       render: (i: any) => (
         <div className="flex items-center gap-2">
           {i.email && <a href={`mailto:${i.email}`} className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white transition-all"><Mail size={12} /></a>}
           {i.telefone && <a href={`https://wa.me/${i.telefone.replace(/\D/g, '')}`} target="_blank" className="p-1.5 bg-emerald-50 text-emerald-600 rounded-md hover:bg-emerald-600 hover:text-white transition-all"><Phone size={12} /></a>}
+          {i.zapsign_doc_token && (
+            <button 
+              onClick={() => handleDownloadTermo(i)} 
+              disabled={downloadingDoc === i.id}
+              className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md hover:bg-indigo-600 hover:text-white transition-all disabled:opacity-50"
+              title="Baixar Termo Assinado"
+            >
+              {downloadingDoc === i.id ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+            </button>
+          )}
         </div>
       )
     },
