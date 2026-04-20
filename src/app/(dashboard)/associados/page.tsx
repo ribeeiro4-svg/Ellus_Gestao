@@ -8,6 +8,7 @@ import {
 } from 'chart.js'
 import { Line, Doughnut } from 'react-chartjs-2'
 import { useAssociados } from '@/lib/hooks/useAssociados'
+import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
@@ -21,6 +22,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 
 export default function AssociadosPage() {
   const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign, refresh } = useAssociados()
+  const { lancamentos } = useFinanceiro()
   const { tenant } = useTenant()
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -205,7 +207,7 @@ export default function AssociadosPage() {
             </div>
 
             {isExpanded && hasHistory && (
-              <div className="ml-12 p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col gap-2 animate-in slide-in-from-top-1 duration-200">
+              <div className="ml-12 p-3 bg-slate-50/50 rounded-2xl border border-slate-100 flex flex-col gap-2 animate-in slide-in-from-top-1 duration-200 mb-2">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-[1px] mb-1">Status de Assinaturas:</p>
                 {i.zapsign_signers.map((s: any, idx: number) => (
                   <div key={idx} className="flex items-center justify-between gap-4">
@@ -222,6 +224,44 @@ export default function AssociadosPage() {
                     </span>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {isExpanded && (
+              <div className="ml-12 p-3 bg-emerald-50/30 rounded-2xl border border-emerald-100/50 flex flex-col gap-3 animate-in slide-in-from-top-1 duration-300">
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] font-black text-emerald-700/60 uppercase tracking-[1px]">Extrato Financeiro {new Date().getFullYear()}:</p>
+                  <span className="text-[8px] font-black bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded uppercase">Mensalidades</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  {MESES.map((mes, idx) => {
+                    const lanc = lancamentos.find((l: any) => {
+                      const d = new Date(l.data)
+                      return l.associado_id === i.id && 
+                             d.getMonth() === idx && 
+                             d.getFullYear() === new Date().getFullYear() &&
+                             (l.categoria === 'MENSALIDADE' || l.descricao.includes('MENSALIDADE'))
+                    })
+
+                    return (
+                      <div key={mes} className="flex items-center justify-between border-b border-emerald-100/30 pb-1 last:border-0">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">{mes.substring(0,3)}</span>
+                        {lanc ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-bold text-slate-700">{fmtR(lanc.valor)}</span>
+                            <span className={`w-2 h-2 rounded-full ${
+                              lanc.status === 'pago' ? 'bg-emerald-500' : 
+                              lanc.status === 'atrasado' ? 'bg-rose-500' : 'bg-slate-300'
+                            }`} title={lanc.status} />
+                          </div>
+                        ) : (
+                          <span className="text-[8px] font-black text-slate-300 uppercase tracking-tighter">--</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </div>
