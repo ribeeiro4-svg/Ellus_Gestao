@@ -235,7 +235,7 @@ function buildPlanejamentoSection(comparativo: any[], metrics: any) {
         ${expItems.slice(0, 8).map(item => {
           const pct = ((item.planejado / totalRevenue) * 100).toFixed(1);
           return `
-            <div style="background: #f8fafc; padding: 15px; border-radius: 12px;">
+            <div class="report-card" style="padding: 15px; margin-bottom: 0;">
               <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; margin-bottom: 8px;">
                 <span style="color: #1e293b;">${item.categoria}</span>
                 <span style="color: #64748b;">${pct}% da Receita</span>
@@ -287,7 +287,7 @@ function buildProjectionsSection(metrics: any) {
       </tbody>
     </table>
 
-    <div style="margin-top: 30px; background: #0e2d22; padding: 25px; border-radius: 20px; color: white;">
+    <div class="report-card" style="margin-top: 30px; background: #0e2d22; color: white; border: none;">
       <h4 style="margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #10b981;">Análise de Projeção</h4>
       <p style="margin: 0; font-size: 11px; line-height: 1.6; opacity: 0.8;">
         As projeções acima refletem todos os lançamentos em status 'aberto' cadastrados no sistema. 

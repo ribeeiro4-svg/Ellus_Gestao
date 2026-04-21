@@ -195,7 +195,38 @@ export const reportStyles = `
   @media print {
     @page {
       size: A4;
-      margin: 0;
+      margin: 20mm 15mm;
     }
+    
+    .cover {
+      height: 100vh;
+      page-break-after: always;
+    }
+
+    tr, .kpi-box, .chart-container, .report-card {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    h2.section-title, h3 {
+      break-after: avoid !important;
+      page-break-after: avoid !important;
+    }
+
+    .container {
+      padding: 0;
+      max-width: 100%;
+    }
+  }
+
+  /* Classes auxiliares para evitar quebras */
+  .report-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: var(--slate-50);
+    border: 1px solid var(--slate-100);
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 20px;
   }
 `;
