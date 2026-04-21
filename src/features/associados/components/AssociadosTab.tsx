@@ -315,7 +315,7 @@ export default function AssociadosTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ChartCard title="Crescimento" subtitle="Evolução acumulativa">
-            <div className="h-[300px]">
+            <div className="w-[calc(100%+48px)] mx-[-24px] mb-[-24px] h-[350px]">
               <Line 
                 data={{ 
                   labels: MESES, 
@@ -336,6 +336,14 @@ export default function AssociadosTab() {
                 options={{ 
                   responsive: true, 
                   maintainAspectRatio: false, 
+                  layout: {
+                    padding: {
+                      top: 10,
+                      bottom: 30,
+                      left: 20,
+                      right: 20
+                    }
+                  },
                   scales: { 
                     x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' } }, 
                     y: { beginAtZero: false, border: { display: false }, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size: 10 }, color: '#94a3b8' } } 
@@ -357,8 +365,33 @@ export default function AssociadosTab() {
           </ChartCard>
         </div>
         <ChartCard title="Mix" subtitle="Por categoria">
-          <div className="h-[300px]">
-             <Doughnut data={{ labels: Object.keys(catMap).map(k => `${k} (${catMap[k]})`), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' as const }, padding: 15 } } } }} />
+          <div className="w-[calc(100%+48px)] mx-[-24px] mb-[-24px] h-[350px]">
+             <Doughnut 
+               data={{ labels: Object.keys(catMap).map(k => `${k} (${catMap[k]})`), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }} 
+               options={{ 
+                 responsive: true, 
+                 maintainAspectRatio: false, 
+                 cutout: '65%', 
+                 layout: {
+                   padding: {
+                     top: 10,
+                     bottom: 30,
+                     left: 30,
+                     right: 30
+                   }
+                 },
+                 plugins: { 
+                   legend: { 
+                     position: 'bottom', 
+                     labels: { 
+                       boxWidth: 8, 
+                       font: { size: 9, weight: 'bold' as const }, 
+                       padding: 15 
+                     } 
+                   } 
+                 } 
+               }} 
+             />
           </div>
         </ChartCard>
       </div>
