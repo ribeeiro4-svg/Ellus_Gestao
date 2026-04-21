@@ -102,10 +102,12 @@ export async function processFinancialSubmit(
         });
     }
 
-    if (editingItem) {
-      const targetId = editingItem.id || data.id
+    const isUpdate = !!(editingItem?.id || data?.id)
+
+    if (isUpdate) {
+      const targetId = editingItem?.id || data?.id
       if (!targetId || String(targetId) === 'undefined') {
-        return { error: 'ID do lançamento não encontrado. Tente atualizar a página.' }
+        return { error: 'ID do lançamento não encontrado para atualização.' }
       }
 
       const r1 = await actions.atualizar(targetId, batch[0])
@@ -121,10 +123,12 @@ export async function processFinancialSubmit(
   }
 
   // 3. Processamento Individual ou Edição Simples
-  if (editingItem) {
-    const targetId = editingItem.id || data.id
+  const isUpdate = !!(editingItem?.id || data?.id)
+  
+  if (isUpdate) {
+    const targetId = editingItem?.id || data?.id
     if (!targetId || String(targetId) === 'undefined') {
-      return { error: 'ID do lançamento não encontrado. Tente atualizar a página.' }
+      return { error: 'ID do lançamento não encontrado para atualização.' }
     }
     return await atualizar(targetId, dbData)
   }
