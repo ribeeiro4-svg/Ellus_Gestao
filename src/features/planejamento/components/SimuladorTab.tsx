@@ -4,7 +4,6 @@ import {
   Users, 
   DollarSign, 
   TrendingUp, 
-  TrendingDown, 
   PiggyBank, 
   Plus, 
   Trash2, 
@@ -34,7 +33,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineEleme
 
 const ANOS = [2024, 2025, 2026, 2027, 2028]
 
-export default function SimuladorPage() {
+export default function SimuladorTab() {
   const { cenario, setCenario, visao, setVisao, salvarCenario, limparTudo, carregarDadosReais, loading, syncing, calculos, projecaoAnual } = useProjecao()
   const { diretoria } = useDiretoria()
   const [isSaving, setIsSaving] = useState(false)
@@ -46,7 +45,7 @@ export default function SimuladorPage() {
     if (res.error) {
       alert(`Erro ao salvar simulação: ${(res.error as any).message || res.error}`)
     } else {
-      alert('Simulação salva com sucesso! Agora você pode atualizar a página sem perder nada.')
+      alert('Simulação salva com sucesso!')
     }
   }
 
@@ -92,7 +91,7 @@ export default function SimuladorPage() {
       pro_labores: cenario.pro_labores.map(d => d.id === id ? { 
         ...d, 
         nome: `${member.nome} (${member.cargo})`,
-        periodos: d.periodos.map((p, idx) => idx === 0 ? { ...p, valor: member.pro_labore_base || 0 } : p)
+        periodos: d.periodos.map((p: any, idx: number) => idx === 0 ? { ...p, valor: member.pro_labore_base || 0 } : p)
       } : d)
     })
   }
@@ -191,19 +190,20 @@ export default function SimuladorPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20">
-      <div className="page-header flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-            <Calculator className="text-[#2d8c6f]" />
-            Simulador Estratégico
-          </h1>
-          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
-            Alterne entre visão mensal ou anual para analisar o impacto do tempo.
-          </p>
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Sub-header de controles do Simulador */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/40 p-4 rounded-3xl border border-white shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-[#2d8c6f]">
+            <Calculator size={20} />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 tracking-tight">Simulador Estratégico</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Controles de Projeção</p>
+          </div>
         </div>
         
-        <div className="flex items-center gap-3 bg-white/80 backdrop-blur-md border border-white/60 p-2 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3">
            {/* Seletor Visão */}
            <div className="flex items-center bg-slate-100 p-1 rounded-xl mr-2">
               <button 
@@ -264,7 +264,7 @@ export default function SimuladorPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative z-[60] overflow-visible">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
           title={`Receita ${visao === 'mensal' ? 'Mensal' : 'Anual'}`} 
           value={fmtR(calculos.totalReceita)} 

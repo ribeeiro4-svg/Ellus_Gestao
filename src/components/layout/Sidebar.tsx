@@ -37,7 +37,6 @@ const MENU = [
     items: [
       { href: '/financeiro', icon: Wallet, label: 'Financeiro' },
       { href: '/planejamento', icon: Target, label: 'Planejamento' },
-      { href: '/simulador', icon: Calculator, label: 'Simulador' },
       { href: '/fechamento', icon: Lock, label: 'Fechamento Mensal' },
     ]
   },

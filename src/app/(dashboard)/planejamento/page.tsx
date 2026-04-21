@@ -25,6 +25,7 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController,
   ArcElement
 } from 'chart.js'
+import SimuladorTab from '@/features/planejamento/components/SimuladorTab'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController, ArcElement)
 
@@ -44,6 +45,7 @@ export default function PlanejamentoPage() {
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [reservaMeses, setReservaMeses] = useState(6)
+  const [activeTab, setActiveTab] = useState<'metas' | 'simulador'>('metas')
   
   // Estados para Lançamento em Lote
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -268,8 +270,22 @@ export default function PlanejamentoPage() {
             <Target size={28} />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Planejamento Orçamentário</h1>
-            <p className="text-xs text-slate-400 font-black uppercase tracking-[2px]">Gestão de Metas — ACPROBEC</p>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Planejamento Estratégico</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <button 
+                onClick={() => setActiveTab('metas')}
+                className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all tracking-widest ${activeTab === 'metas' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-400 hover:text-slate-600 bg-slate-50'}`}
+              >
+                METAS
+              </button>
+              <span className="text-slate-200 text-[10px]">/</span>
+              <button 
+                onClick={() => setActiveTab('simulador')}
+                className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all tracking-widest ${activeTab === 'simulador' ? 'bg-[#2d8c6f] text-white shadow-lg shadow-emerald-100' : 'text-slate-400 hover:text-slate-600 bg-slate-50'}`}
+              >
+                SIMULADOR
+              </button>
+            </div>
           </div>
         </div>
 
@@ -307,121 +323,127 @@ export default function PlanejamentoPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 relative z-[60] overflow-visible">
-        <KpiCard 
-          title="Receitas Projetadas" 
-          value={fmtR(totals.planejadoReceita)} 
-          icon={<ArrowUpCircle size={20} />} 
-          category="success" 
-          explanation={{
-            description: "Soma de todas as metas de faturamento e mensalidades definidas para este mês.",
-            formula: "Σ(Metas de Receita configuradas)",
-            example: "Se a meta de mensalidades é 9k e a de adesões é 1k, a projeção total é de 10k."
-          }}
-        />
-        <KpiCard 
-          title="Despesas Projetadas" 
-          value={fmtR(totals.planejadoDespesa)} 
-          icon={<ArrowDownCircle size={20} />} 
-          category="error" 
-          explanation={{
-            description: "Limite máximo de gastos planejado para todas as categorias de despesa no mês.",
-            formula: "Σ(Metas de Despesa configuradas)",
-            example: "Inclui teto para suprimentos, infraestrutura e custos operacionais."
-          }}
-        />
-        <KpiCard 
-          title="Superávit Alvo" 
-          value={fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100)} 
-          icon={<CheckCircle2 size={20} />} 
-          category="info" 
-          explanation={{
-            description: "O superávit ou déficit planejado para o fechamento do mês (Meta de Lucro).",
-            formula: "Receita Projetada - Despesa Projetada",
-            example: "Planejando 10k e gastando 8k, o balanço final alvo é 2k positivo."
-          }}
-        />
-        <KpiCard 
-          title="Pró-labore" 
-          value={fmtR(totalProLabore)} 
-          icon={<Users size={20} />} 
-          category="purple" 
-          explanation={{
-            description: "Soma dos custos de pró-labore dos diretores ativos, respeitando períodos e valores base.",
-            formula: "Σ(Valor do Período Ativo || Valor Base)",
-            example: "Um diretor com período de R$ 1.500 no mês atual anula o seu valor base padrão."
-          }}
-        />
-        <KpiCard 
-          title="Reserva Ideal" 
-          value={fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100)} 
-          icon={<Activity size={20} />} 
-          category="indigo" 
-          explanation={{
-            description: "Montante necessário em caixa para cobrir a operação em caso de faturamento zerado.",
-            formula: "Despesas Projetadas × Meses de Meta",
-            example: "Se o gasto é 3k e a meta são 6 meses, a reserva ideal é de 18k."
-          }}
-        />
-        <KpiCard 
-          title="Saldo Real" 
-          value={fmtR(comparativo.reduce((s, c) => Math.round((s + (c.tipo === 'receita' ? c.realizado : -c.realizado)) * 100) / 100, 0))} 
-          icon={<TrendingUp size={20} />} 
-          category="success" 
-          explanation={{
-            description: "O resultado financeiro de fato ocorrido (entradas - saídas brutas).",
-            formula: "Receitas Reais - Despesas Reais",
-            example: "Bate com o valor do Dashboard, filtrado para o mês específico selecionado."
-          }}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="flex flex-col gap-6">
-          <ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado">
-            <div className="h-[210px] mt-4">
-              <Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} />
-            </div>
-          </ChartCard>
-          
-          <ChartCard title="📉 Impacto nas Receitas" subtitle="Consumo do Faturamento por Categoria">
-            <div className="h-[260px] mt-4">
-              {totals.planejadoDespesa > 0 ? (
-                <Doughnut data={expenseImpactData} options={expenseImpactOptions} />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
-                  <Activity size={32} className="opacity-20" />
-                  <span className="text-xs font-bold uppercase tracking-widest">Nenhuma despesa planejada</span>
-                </div>
-              )}
-            </div>
-          </ChartCard>
-        </div>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3>
-              {selectedCategories.length > 0 && (
-                <button 
-                  onClick={() => setIsConfirmLancarOpen(true)}
-                  className="flex items-center gap-2 text-[9px] font-black text-white bg-emerald-500 px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 animate-in zoom-in-95"
-                >
-                  <TrendingUp size={14} /> LANÇAR PLANEJAMENTO ({selectedCategories.length})
-                </button>
-              )}
-            </div>
-            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button>
+      {activeTab === 'metas' ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 relative z-[60] overflow-visible">
+            <KpiCard 
+              title="Receitas Projetadas" 
+              value={fmtR(totals.planejadoReceita)} 
+              icon={<ArrowUpCircle size={20} />} 
+              category="success" 
+              explanation={{
+                description: "Soma de todas as metas de faturamento e mensalidades definidas para este mês.",
+                formula: "Σ(Metas de Receita configuradas)",
+                example: "Se a meta de mensalidades é 9k e a de adesões é 1k, a projeção total é de 10k."
+              }}
+            />
+            <KpiCard 
+              title="Despesas Projetadas" 
+              value={fmtR(totals.planejadoDespesa)} 
+              icon={<ArrowDownCircle size={20} />} 
+              category="error" 
+              explanation={{
+                description: "Limite máximo de gastos planejado para todas as categorias de despesa no mês.",
+                formula: "Σ(Metas de Despesa configuradas)",
+                example: "Inclui teto para suprimentos, infraestrutura e custos operacionais."
+              }}
+            />
+            <KpiCard 
+              title="Superávit Alvo" 
+              value={fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100)} 
+              icon={<CheckCircle2 size={20} />} 
+              category="info" 
+              explanation={{
+                description: "O superávit ou déficit planejado para o fechamento do mês (Meta de Lucro).",
+                formula: "Receita Projetada - Despesa Projetada",
+                example: "Planejando 10k e gastando 8k, o balanço final alvo é 2k positivo."
+              }}
+            />
+            <KpiCard 
+              title="Pró-labore" 
+              value={fmtR(totalProLabore)} 
+              icon={<Users size={20} />} 
+              category="purple" 
+              explanation={{
+                description: "Soma dos custos de pró-labore dos diretores ativos, respeitando períodos e valores base.",
+                formula: "Σ(Valor do Período Ativo || Valor Base)",
+                example: "Um diretor com período de R$ 1.500 no mês atual anula o seu valor base padrão."
+              }}
+            />
+            <KpiCard 
+              title="Reserva Ideal" 
+              value={fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100)} 
+              icon={<Activity size={20} />} 
+              category="indigo" 
+              explanation={{
+                description: "Montante necessário em caixa para cobrir a operação em caso de faturamento zerado.",
+                formula: "Despesas Projetadas × Meses de Meta",
+                example: "Se o gasto é 3k e a meta são 6 meses, a reserva ideal é de 18k."
+              }}
+            />
+            <KpiCard 
+              title="Saldo Real" 
+              value={fmtR(comparativo.reduce((s, c) => Math.round((s + (c.tipo === 'receita' ? c.realizado : -c.realizado)) * 100) / 100, 0))} 
+              icon={<TrendingUp size={20} />} 
+              category="success" 
+              explanation={{
+                description: "O resultado financeiro de fato ocorrido (entradas - saídas brutas).",
+                formula: "Receitas Reais - Despesas Reais",
+                example: "Bate com o valor do Dashboard, filtrado para o mês específico selecionado."
+              }}
+            />
           </div>
-          <DataTable 
-            columns={columns} 
-            data={comparativo} 
-            loading={loadFin || loadOrc} 
-            selectedIds={selectedCategories}
-            onSelectChange={setSelectedCategories}
-            idKey="categoria"
-          />
-        </div>
-      </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="flex flex-col gap-6">
+              <ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado">
+                <div className="h-[210px] mt-4">
+                  <Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} />
+                </div>
+              </ChartCard>
+              
+              <ChartCard title="📉 Impacto nas Receitas" subtitle="Consumo do Faturamento por Categoria">
+                <div className="h-[260px] mt-4">
+                  {totals.planejadoDespesa > 0 ? (
+                    <Doughnut data={expenseImpactData} options={expenseImpactOptions} />
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
+                      <Activity size={32} className="opacity-20" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Nenhuma despesa planejada</span>
+                    </div>
+                  )}
+                </div>
+              </ChartCard>
+            </div>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3>
+                  {selectedCategories.length > 0 && (
+                    <button 
+                      onClick={() => setIsConfirmLancarOpen(true)}
+                      className="flex items-center gap-2 text-[9px] font-black text-white bg-emerald-500 px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 animate-in zoom-in-95"
+                    >
+                      <TrendingUp size={14} /> LANÇAR PLANEJAMENTO ({selectedCategories.length})
+                    </button>
+                  )}
+                </div>
+                <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button>
+              </div>
+              <DataTable 
+                columns={columns} 
+                data={comparativo} 
+                loading={loadFin || loadOrc} 
+                selectedIds={selectedCategories}
+                onSelectChange={setSelectedCategories}
+                idKey="categoria"
+              />
+            </div>
+          </div>
+        </>
+      ) : (
+        <SimuladorTab />
+      )}
 
       {periodosMember && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
