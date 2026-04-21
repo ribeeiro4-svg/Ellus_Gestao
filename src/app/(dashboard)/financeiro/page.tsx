@@ -22,7 +22,8 @@ import MatchItem from '@/components/conciliacao/MatchItem'
 import ManualMatchModal from '@/components/conciliacao/ManualMatchModal'
 import SupplierMatchModal from '@/components/conciliacao/SupplierMatchModal'
 import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToolbar'
-import { fmtR, fmtData, MESES, safeSum, safeDiff } from '@/lib/utils/formatters'
+import { useFechamento } from '@/lib/hooks/useFechamento'
+import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
 import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, CloudLightning, Trash2 } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
@@ -216,9 +217,10 @@ export default function FinanceiroPage() {
   // Filtros aplicados baseados na aba ativa (Hub Financeiro)
   const filteredLancamentos = useMemo(() => {
     return lancamentos.filter(item => {
-      const d = new Date(item.data)
-      const matchPeriod = (filterMonth === -1 || d.getMonth() === filterMonth) && d.getFullYear() === filterYear
-      const matchSearch = (item.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || item.categoria.toLowerCase().includes(searchTerm.toLowerCase()))
+      const m = getMesIdx(item.data)
+      const y = getAnoIdx(item.data)
+      const matchPeriod = (filterMonth === -1 || m === filterMonth) && y === filterYear
+      const matchSearch = (item.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || (item.categoria || '').toLowerCase().includes(searchTerm.toLowerCase()))
       
       let matchType = true
       if (activeTab === 'receitas') matchType = item.tipo === 'receita'
@@ -232,8 +234,8 @@ export default function FinanceiroPage() {
   const kpiData = useMemo(() => {
     let pInc = 0, pExp = 0, oInc = 0, oExp = 0, fCash = 0, fBank = 0
     lancamentos.forEach(l => {
-      const d = new Date(l.data); if (d.getFullYear() !== filterYear) return
-      const m = d.getMonth()
+      const y = getAnoIdx(l.data); if (y !== filterYear) return
+      const m = getMesIdx(l.data)
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/);
       const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
       const valorComTaxa = safeSum(l.valor || 0, taxaVal);
@@ -252,8 +254,8 @@ export default function FinanceiroPage() {
   const chartData = useMemo(() => {
     const rR = Array(12).fill(0), rP = Array(12).fill(0), dR = Array(12).fill(0), dP = Array(12).fill(0)
     lancamentos.forEach(l => {
-      const d = new Date(l.data); if (d.getFullYear() !== filterYear) return
-      const m = d.getMonth(); if (isNaN(m)) return
+      const y = getAnoIdx(l.data); if (y !== filterYear) return
+      const m = getMesIdx(l.data); if (m === -1) return
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/);
       const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
       const valorComTaxa = safeSum(l.valor || 0, taxaVal);
