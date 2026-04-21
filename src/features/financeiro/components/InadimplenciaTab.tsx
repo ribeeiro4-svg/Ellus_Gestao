@@ -156,13 +156,15 @@ export default function InadimplenciaTab() {
           { label: 'Ticket Médio', value: fmtR(ticketMedioAtraso), sub: 'por inadimplente', icon: Users, color: 'var(--text2)' },
           { label: 'Críticos (3+ Meses)', value: curva[3], sub: 'casos de alta inadimplência', icon: AlertTriangle, color: 'var(--red)' },
         ].map(k => (
-          <div key={k.label} className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-sm relative overflow-hidden group transition-all hover:shadow-md hover:border-red-100">
+          <div key={k.label} className="kpi-card bg-white rounded-[28px] p-6 border border-slate-100 shadow-sm relative group transition-all hover:shadow-md hover:border-red-100">
             <div className="relative z-10">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{k.label}</p>
               <h3 className="text-2xl font-black text-slate-900 tracking-tight" style={{ color: k.color }}>{k.value}</h3>
               <p className="text-[10px] text-slate-400 mt-1 font-bold">{k.sub}</p>
             </div>
-            <k.icon size={48} className="absolute right-4 bottom-4 opacity-[0.03] group-hover:scale-110 group-hover:opacity-[0.06] transition-all duration-500" />
+            <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-[0.05] group-hover:scale-110 group-hover:opacity-[0.1] transition-all duration-500">
+               <k.icon size={40} />
+            </div>
           </div>
         ))}
       </div>
