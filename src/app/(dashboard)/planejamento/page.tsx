@@ -181,9 +181,10 @@ export default function PlanejamentoPage() {
   const despesasChartData = { labels: comparativo.filter(c => c.tipo === 'despesa').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'despesa').map(c => c.planejado), backgroundColor: 'rgba(99, 102, 241, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'despesa').map(c => c.realizado), backgroundColor: '#6366f1', borderRadius: 4 }] }
 
   const expenseImpactData = useMemo(() => {
+    const totalRevenue = totals.planejadoReceita || 1
     const expItems = comparativo.filter(c => c.tipo === 'despesa' && c.planejado > 0)
     return {
-      labels: expItems.map(c => c.categoria),
+      labels: expItems.map(c => `${c.categoria} (${((c.planejado / totalRevenue) * 100).toFixed(1)}%)`),
       datasets: [{
         data: expItems.map(c => c.planejado),
         backgroundColor: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#ef4444', '#3b82f6', '#06b6d4', '#14b8a6', '#f97316'],
@@ -191,7 +192,7 @@ export default function PlanejamentoPage() {
         hoverOffset: 15
       }]
     }
-  }, [comparativo])
+  }, [comparativo, totals.planejadoReceita])
 
   const expenseImpactOptions = useMemo(() => ({
     responsive: true,
