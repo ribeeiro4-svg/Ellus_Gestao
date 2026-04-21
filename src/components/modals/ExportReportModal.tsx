@@ -41,12 +41,14 @@ export default function ExportReportModal({ isOpen, onClose, data }: ExportRepor
 
       // Capturar gráficos da página se selecionado
       const charts: Record<string, string> = {}
-      if (sections.includes('graficos')) {
+      const shouldCaptureCharts = sections.includes('graficos') || sections.includes('dashboard') || sections.includes('planejamento')
+      
+      if (shouldCaptureCharts) {
         const canvases = document.querySelectorAll('canvas')
         canvases.forEach((canvas, idx) => {
           const card = canvas.closest('.chart-card')
           const chartTitle = card?.querySelector('.chart-title')?.textContent || `Gráfico ${idx + 1}`
-          charts[chartTitle] = canvas.toDataURL('image/png')
+          charts[chartTitle.trim()] = canvas.toDataURL('image/png')
         })
       }
 

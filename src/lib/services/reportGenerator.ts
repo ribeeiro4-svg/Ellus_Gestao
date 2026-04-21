@@ -6,7 +6,7 @@ interface ReportOptions {
   period: string;
   treasurer: string;
   sections: string[];
-  charts: Record<string, string>; // Base64 images
+  charts: Record<string, string>;
   data: {
     metrics: any;
     financeiro: any[];
@@ -15,18 +15,16 @@ interface ReportOptions {
   }
 }
 
-export function generateReportHtml(options: ReportOptions) {
-  const { title, period, treasurer, sections, charts, data } = options;
-
+export function generateReportHtml({ title, period, treasurer, sections, charts, data }: ReportOptions) {
   const sectionsHtml = sections.map(section => {
     switch (section) {
-      case 'dashboard': return buildDashboardSection(data.metrics);
+      case 'dashboard': return buildDashboardSection(data.metrics, charts);
       case 'financeiro': return buildFinanceiroSection(data.financeiro);
       case 'associados': return buildAssociadosSection(data.associados);
       case 'planejamento': return buildPlanejamentoSection(data.comparativo || [], data.metrics);
       case 'projecoes': return buildProjectionsSection(data.metrics);
       case 'projetos': return `<div class="page-divider"></div><h2 class="section-title">Projetos</h2><p>Módulo de projetos em desenvolvimento no relatório.</p>`;
-      case 'graficos': return buildChartsSection(charts);
+      case 'graficos': return buildChartsSection(charts, true);
       default: return '';
     }
   }).join('');
@@ -62,36 +60,41 @@ export function generateReportHtml(options: ReportOptions) {
   `;
 }
 
-function buildDashboardSection(metrics: any) {
+function buildDashboardSection(metrics: any, charts?: Record<string, string>) {
+  const kpis = [
+    { label: 'Receita Total', value: fmtR(metrics.receitaTotal), color: 'var(--emerald)' },
+    { label: 'Despesa Total', value: fmtR(metrics.despesasTotais), color: '#ef4444' },
+    { label: 'Resultado Líquido', value: fmtR(metrics.resultadoPeriodo), color: 'var(--slate-800)' },
+    { label: 'Associados Ativos', value: metrics.associadosAtivos, color: 'var(--slate-800)' },
+    { label: 'Taxa Recuperada', value: fmtR(metrics.taxasRecuperadas), color: 'var(--emerald)' },
+    { label: 'Planejado vs Realizado', value: (metrics.planejamentoStats?.percentual || 0).toFixed(0) + '%', color: 'var(--slate-800)' },
+  ];
+
+  const dashboardChartTitles = ['Fluxo Mensal Consolidado', 'Mix da Carteira', 'Pendências ZapSign', 'Atingimento de Metas'];
+  const dashboardCharts = charts ? Object.entries(charts).filter(([title]) => dashboardChartTitles.includes(title)) : [];
+
   return `
     <div class="page-divider"></div>
     <h2 class="section-title">Dashboard Executivo</h2>
     <div class="kpi-grid">
-      <div class="kpi-box">
-        <div class="kpi-label">Receita Total</div>
-        <div class="kpi-value text-emerald">${fmtR(metrics.receitaTotal)}</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Despesa Total</div>
-        <div class="kpi-value" style="color: #ef4444">${fmtR(metrics.despesaTotal)}</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Resultado Líquido</div>
-        <div class="kpi-value">${fmtR(metrics.saldoTotal)}</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Associados Ativos</div>
-        <div class="kpi-value">${metrics.associadosStats.ativos}</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Taxa Recuperada</div>
-        <div class="kpi-value text-emerald">${fmtR(metrics.taxaRecuperada)}</div>
-      </div>
-      <div class="kpi-box">
-        <div class="kpi-label">Planejado vs Realizado</div>
-        <div class="kpi-value">${metrics.planejamentoStats.percentual}%</div>
-      </div>
+      ${kpis.map(k => `
+        <div class="kpi-box">
+          <div class="kpi-label">${k.label}</div>
+          <div class="kpi-value" style="color: ${k.color}">${k.value}</div>
+        </div>
+      `).join('')}
     </div>
+
+    ${dashboardCharts.length > 0 ? `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+        ${dashboardCharts.map(([title, dataUrl]) => `
+          <div class="chart-container" style="margin-bottom: 0;">
+            <div style="font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px;">${title}</div>
+            <img src="${dataUrl}" class="chart-img" />
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
   `;
 }
 
@@ -176,12 +179,19 @@ function buildAssociadosSection(associados: any[]) {
   `;
 }
 
-function buildChartsSection(charts: Record<string, string>) {
+function buildChartsSection(charts: Record<string, string>, skipDashboard = false) {
+  const dashboardChartTitles = ['Fluxo Mensal Consolidado', 'Mix da Carteira', 'Pendências ZapSign', 'Atingimento de Metas'];
+  const filteredCharts = skipDashboard 
+    ? Object.entries(charts).filter(([title]) => !dashboardChartTitles.includes(title))
+    : Object.entries(charts);
+
+  if (filteredCharts.length === 0) return '';
+
   return `
     <div class="page-divider"></div>
-    <h2 class="section-title">Análise Gráfica</h2>
+    <h2 class="section-title">Análise Gráfica Complementar</h2>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-      ${Object.entries(charts).map(([name, dataUrl]) => `
+      ${filteredCharts.map(([name, dataUrl]) => `
         <div class="chart-container">
           <div style="font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; margin-bottom: 10px;">${name}</div>
           <img src="${dataUrl}" class="chart-img" />
