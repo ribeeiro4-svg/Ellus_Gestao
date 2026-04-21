@@ -79,6 +79,7 @@ export default function FinanceiroPage() {
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
+  const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
 
   // Novos Estados para Ações em Lote
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -226,9 +227,12 @@ export default function FinanceiroPage() {
       if (activeTab === 'receitas') matchType = item.tipo === 'receita'
       if (activeTab === 'despesas') matchType = item.tipo === 'despesa'
       
-      return matchPeriod && matchSearch && matchType
+      const hasLink = !!(item.associado_id || item.fornecedor_id || item.diretor_id)
+      const matchUnlinked = filterUnlinked === 'ALL' || (filterUnlinked === 'LINKED' ? hasLink : !hasLink)
+
+      return matchPeriod && matchSearch && matchType && matchUnlinked
     })
-  }, [lancamentos, filterYear, filterMonth, activeTab, searchTerm])
+  }, [lancamentos, filterYear, filterMonth, activeTab, searchTerm, filterUnlinked])
 
   // KPIs Inteligentes
   const kpiData = useMemo(() => {
@@ -423,6 +427,11 @@ export default function FinanceiroPage() {
             <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no fluxo..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
             <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
             <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
+            <select value={filterUnlinked} onChange={(e) => setFilterUnlinked(e.target.value as any)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
+              <option value="ALL">Filtrar Vínculos</option>
+              <option value="LINKED">Com Vínculo</option>
+              <option value="UNLINKED">Sem Vínculo</option>
+            </select>
             <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100"><RefreshCw size={14} /> Recorrência em Lote</button>
           </div>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
