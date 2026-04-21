@@ -11,11 +11,12 @@ interface ExportReportModalProps {
     metrics: any;
     financeiro: any[];
     associados: any[];
+    comparativo?: any[];
   }
 }
 
 export default function ExportReportModal({ isOpen, onClose, data }: ExportReportModalProps) {
-  const [sections, setSections] = useState<string[]>(['dashboard', 'financeiro', 'associados', 'metas', 'graficos'])
+  const [sections, setSections] = useState<string[]>(['dashboard', 'financeiro', 'associados', 'planejamento', 'projecoes', 'graficos'])
   const [title, setTitle] = useState('Relatório Gerencial — ACPROBEC')
   const [period, setPeriod] = useState(`Período: ${MESES[new Date().getMonth()]} ${new Date().getFullYear()}`)
   const [treasurer, setTreasurer] = useState('Tesoureiro(a): ACPROBEC')
@@ -79,7 +80,8 @@ export default function ExportReportModal({ isOpen, onClose, data }: ExportRepor
     { id: 'dashboard', label: 'Dashboard', icon: Layout, color: 'text-blue-500' },
     { id: 'financeiro', label: 'Financeiro', icon: DollarSign, color: 'text-emerald-500' },
     { id: 'associados', label: 'Associados', icon: Users, color: 'text-purple-500' },
-    { id: 'metas', label: 'Metas', icon: Target, color: 'text-rose-500' },
+    { id: 'planejamento', label: 'Planejamento', icon: Target, color: 'text-rose-500' },
+    { id: 'projecoes', label: 'Projeções', icon: BarChart3, color: 'text-blue-600' },
     { id: 'projetos', label: 'Projetos', icon: Clipboard, color: 'text-amber-500' },
     { id: 'graficos', label: 'Gráficos', icon: BarChart3, color: 'text-indigo-500' },
   ]

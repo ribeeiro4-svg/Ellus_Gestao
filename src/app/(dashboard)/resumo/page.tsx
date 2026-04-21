@@ -4,10 +4,11 @@ import { Calendar, Filter, RefreshCw } from 'lucide-react'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useOrcamentos } from '@/lib/hooks/useOrcamentos'
+import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useDashboardMetrics } from '@/features/dashboard/hooks/useDashboardMetrics'
 import DashboardKpis from '@/features/dashboard/components/DashboardKpis'
 import DashboardCharts from '@/features/dashboard/components/DashboardCharts'
-import { MESES } from '@/lib/utils/formatters'
+import { MESES, getMesIdx, getAnoIdx, getBruto } from '@/lib/utils/formatters'
 import { FileText } from 'lucide-react'
 import ExportReportModal from '@/components/modals/ExportReportModal'
 
@@ -15,12 +16,30 @@ export default function DashboardPage() {
   const { lancamentos, loading: loadFin } = useFinanceiro()
   const { associados, loading: loadAssoc } = useAssociados()
   const { orcamentos, loading: loadOrc } = useOrcamentos()
+  const { categorias } = useCategorias()
   
   const [filterMonth, setFilterMonth] = React.useState(new Date().getMonth())
   const [filterYear, setFilterYear] = React.useState(new Date().getFullYear())
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
 
   const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, filterMonth, filterYear)
+
+  const comparativo = React.useMemo(() => {
+    const orcCats = orcamentos.map(o => o.categoria)
+    const realCats = Array.from(new Set(lancamentos.filter(l => getMesIdx(l.data) === filterMonth && getAnoIdx(l.data) === filterYear).map(l => l.categoria)))
+    const todasMes = Array.from(new Set([...orcCats, ...realCats])).sort()
+
+    return todasMes.map(cat => {
+      const lancMes = lancamentos.filter(l => l.categoria === cat && getMesIdx(l.data) === filterMonth && getAnoIdx(l.data) === filterYear)
+      const realizado = lancMes.reduce((sum, l) => Math.round((sum + getBruto(l)) * 100) / 100, 0)
+      const orc = orcamentos.find(o => o.categoria === cat)
+      const planejado = orc?.valor_planejado || 0
+      const catConfig = categorias.find(c => c.nome === cat)
+      const tipo = catConfig?.tipo || lancMes[0]?.tipo || (cat.toLowerCase().includes('receita') || cat.toLowerCase().includes('adesão') ? 'receita' : 'despesa')
+
+      return { categoria: cat, tipo, planejado, realizado }
+    })
+  }, [lancamentos, orcamentos, filterMonth, filterYear, categorias])
 
   if (loadFin || loadAssoc || loadOrc) {
     return (
@@ -86,7 +105,8 @@ export default function DashboardPage() {
         data={{
           metrics,
           financeiro: lancamentos,
-          associados
+          associados,
+          comparativo
         }}
       />
     </div>

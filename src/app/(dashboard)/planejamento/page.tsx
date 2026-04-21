@@ -11,7 +11,11 @@ import ChartCard from '@/components/ui/ChartCard'
 import DataTable from '@/components/ui/DataTable'
 import CrudModal from '@/components/ui/CrudModal'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
+import { useAssociados } from '@/lib/hooks/useAssociados'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import ExportReportModal from '@/components/modals/ExportReportModal'
+import { useDashboardMetrics } from '@/features/dashboard/hooks/useDashboardMetrics'
+import { FileText } from 'lucide-react'
 import { useOrcamentos } from '@/lib/hooks/useOrcamentos'
 import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
@@ -47,6 +51,10 @@ export default function PlanejamentoPage() {
   const [isLancing, setIsLancing] = useState(false)
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceMonths, setRecurrenceMonths] = useState(12)
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+
+  const { associados } = useAssociados()
+  const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, selectedMes, selectedAno)
 
   // Gerenciamento de Períodos ProLabore
   const [periodosMember, setPeriodosMember] = useState<any | null>(null)
@@ -292,6 +300,10 @@ export default function PlanejamentoPage() {
             </div>
             <button onClick={() => setSelectedMes(m => m === 11 ? 0 : m + 1)} className="p-3 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"><ChevronRight size={20} /></button>
           </div>
+          
+          <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-3 h-14 px-8 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 shadow-slate-200">
+            <FileText size={18} /> Exportar Relatório
+          </button>
         </div>
       </div>
 
@@ -486,6 +498,17 @@ export default function PlanejamentoPage() {
           </div>
         </div>
       )}
+
+      <ExportReportModal 
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        data={{
+          metrics,
+          financeiro: lancamentos,
+          associados,
+          comparativo
+        }}
+      />
     </div>
   )
 }

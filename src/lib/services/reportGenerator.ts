@@ -1,5 +1,5 @@
 import { reportStyles } from '../utils/reportStyles';
-import { fmtR } from '../utils/formatters';
+import { fmtR, MESES } from '../utils/formatters';
 
 interface ReportOptions {
   title: string;
@@ -11,6 +11,7 @@ interface ReportOptions {
     metrics: any;
     financeiro: any[];
     associados: any[];
+    comparativo?: any[]; // Dados detalhados de planejamento
   }
 }
 
@@ -22,6 +23,8 @@ export function generateReportHtml(options: ReportOptions) {
       case 'dashboard': return buildDashboardSection(data.metrics);
       case 'financeiro': return buildFinanceiroSection(data.financeiro);
       case 'associados': return buildAssociadosSection(data.associados);
+      case 'planejamento': return buildPlanejamentoSection(data.comparativo || [], data.metrics);
+      case 'projecoes': return buildProjectionsSection(data.metrics);
       case 'projetos': return `<div class="page-divider"></div><h2 class="section-title">Projetos</h2><p>Módulo de projetos em desenvolvimento no relatório.</p>`;
       case 'graficos': return buildChartsSection(charts);
       default: return '';
@@ -161,6 +164,112 @@ function buildChartsSection(charts: Record<string, string>) {
           <img src="${dataUrl}" class="chart-img" />
         </div>
       `).join('')}
+    </div>
+  `;
+}
+
+function buildPlanejamentoSection(comparativo: any[], metrics: any) {
+  const totalRevenue = metrics.receitaTotal || 1;
+  const expItems = comparativo.filter(c => c.tipo === 'despesa' && c.planejado > 0)
+    .sort((a,b) => b.planejado - a.planejado);
+
+  return `
+    <div class="page-divider"></div>
+    <h2 class="section-title">Planejamento e Metas</h2>
+    
+    <div style="margin-bottom: 30px;">
+      <h3 style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 15px;">Comparativo de Metas</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Categoria</th>
+            <th class="text-right">Meta (Planejado)</th>
+            <th class="text-right">Realizado</th>
+            <th class="text-right">Desvio</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${comparativo.slice(0, 15).map(c => {
+            const diff = c.tipo === 'receita' ? (c.realizado - c.planejado) : (c.planejado - c.realizado);
+            return `
+              <tr>
+                <td>${c.categoria}</td>
+                <td class="text-right">${fmtR(c.planejado)}</td>
+                <td class="text-right">${fmtR(c.realizado)}</td>
+                <td class="text-right font-bold" style="color: ${diff >= 0 ? '#10b981' : '#ef4444'}">
+                  ${diff > 0 ? '+' : ''}${fmtR(diff)}
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <h3 style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 15px;">Impacto nas Receitas (Top Despesas)</h3>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        ${expItems.slice(0, 8).map(item => {
+          const pct = ((item.planejado / totalRevenue) * 100).toFixed(1);
+          return `
+            <div style="background: #f8fafc; padding: 15px; border-radius: 12px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; margin-bottom: 8px;">
+                <span style="color: #1e293b;">${item.categoria}</span>
+                <span style="color: #64748b;">${pct}% da Receita</span>
+              </div>
+              <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                <div style="height: 100%; width: ${pct}%; background: #10b981;"></div>
+              </div>
+              <div style="font-size: 10px; font-weight: bold; color: #94a3b8; margin-top: 5px;">${fmtR(item.planejado)}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function buildProjectionsSection(metrics: any) {
+  const { recProv, despProv } = metrics;
+  
+  return `
+    <div class="page-divider"></div>
+    <h2 class="section-title">Projeções Financeiras</h2>
+    <p style="font-size: 11px; color: #64748b; margin-bottom: 20px;">Visão consolidada de receitas e despesas provisionadas para o ano corrente.</p>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Mês</th>
+          <th class="text-right">Receita Projetada</th>
+          <th class="text-right">Despesa Projetada</th>
+          <th class="text-right">Saldo Projetado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${MESES.map((m, i) => {
+          const rp = recProv[i] || 0;
+          const dp = despProv[i] || 0;
+          const saldo = Math.round((rp - dp) * 100) / 100;
+          if (rp === 0 && dp === 0) return '';
+          return `
+            <tr>
+              <td><span style="font-weight: 800; color: #1e293b;">${m}</span></td>
+              <td class="text-right text-emerald">${fmtR(rp)}</td>
+              <td class="text-right" style="color: #ef4444">${fmtR(dp)}</td>
+              <td class="text-right font-bold" style="background: ${saldo >= 0 ? '#f0fdf4' : '#fef2f2'}; border-radius: 8px;">${fmtR(saldo)}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+
+    <div style="margin-top: 30px; background: #0e2d22; padding: 25px; border-radius: 20px; color: white;">
+      <h4 style="margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #10b981;">Análise de Projeção</h4>
+      <p style="margin: 0; font-size: 11px; line-height: 1.6; opacity: 0.8;">
+        As projeções acima refletem todos os lançamentos em status 'aberto' cadastrados no sistema. 
+        Note que o saldo projetado é uma estimativa baseada na concretização integral das receitas previstas e na manutenção do teto de gastos configurado para as despesas.
+      </p>
     </div>
   `;
 }
