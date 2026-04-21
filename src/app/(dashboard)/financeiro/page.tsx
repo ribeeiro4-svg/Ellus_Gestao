@@ -267,9 +267,12 @@ export default function FinanceiroPage() {
     setSaving(true)
     try {
       const res = await processFinancialSubmit(data, editingItem, associados, { inserir, atualizar, inserirBulk })
-      if (res?.error) alert(`Erro: ${res.error}`)
+      if (res?.error) {
+        const errorMsg = typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error
+        alert(`Erro ao salvar: ${errorMsg}`)
+      }
       else { setEditingItem(null); setIsModalOpen(false) }
-    } catch (err: any) { alert(`Erro: ${err.message}`) } finally { setSaving(false) }
+    } catch (err: any) { alert(`Erro inesperado: ${err.message}`) } finally { setSaving(false) }
   }
 
   const columns = [
@@ -294,6 +297,13 @@ export default function FinanceiroPage() {
     { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }, { value: 'Transferência', label: 'Transferência' }] },
     { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
     { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
+    { name: 'recorrencia_meses', label: 'Repetir por quantos meses?', type: 'select', showIf: (f: any) => f.recorrencia_ativa, defaultValue: '12', options: [
+      { value: '1', label: '1 mês' },
+      { value: '3', label: '3 meses' },
+      { value: '6', label: '6 meses' },
+      { value: '12', label: '1 ano (12 meses)' },
+      { value: '24', label: '2 anos (24 meses)' },
+    ]},
   ], [contas, categorias, associados])
 
   const conciliacaoStats = useMemo(() => {
