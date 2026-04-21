@@ -82,6 +82,8 @@ export default function FinanceiroPage() {
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
   const [isSupplierCreateOpen, setIsSupplierCreateOpen] = useState(false)
+  const [parentSetFormData, setParentSetFormData] = useState<any>(null)
+  const [currentEditMemo, setCurrentEditMemo] = useState('')
 
   // Novos Estados para Ações em Lote
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -290,6 +292,7 @@ export default function FinanceiroPage() {
         }
         
         setEditingItem(null)
+        setCurrentEditMemo('')
         setIsModalOpen(false) 
       }
     } catch (err: any) { alert(`Erro inesperado: ${err.message}`) } finally { setSaving(false) }
@@ -337,18 +340,15 @@ export default function FinanceiroPage() {
           </div>
           <button 
             type="button"
-            onClick={() => setIsSupplierCreateOpen(true)}
+            onClick={() => {
+              setCurrentEditMemo(formData.descricao || '')
+              setIsSupplierCreateOpen(true)
+            }}
             className="px-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center shadow-sm"
             title="Cadastrar Novo Fornecedor"
           >
             <Plus size={20} />
           </button>
-          <SupplierCreateModal 
-            isOpen={isSupplierCreateOpen} 
-            onClose={() => setIsSupplierCreateOpen(false)} 
-            memo={formData.descricao}
-            onSuccess={(sup) => handleChange('fornecedor_id', sup.id)}
-          />
         </div>
       )
     },
@@ -491,7 +491,28 @@ export default function FinanceiroPage() {
         </>
       )}
 
-      <CrudModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} initialData={editingItem} onSubmit={handleSalvar} fields={modalFields} loading={saving} />
+      <CrudModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} 
+        initialData={editingItem} 
+        onSubmit={handleSalvar} 
+        onChange={(name, val, setFn) => setParentSetFormData(() => setFn)}
+        fields={modalFields} 
+        loading={saving} 
+      />
+      
+      <SupplierCreateModal 
+        isOpen={isSupplierCreateOpen} 
+        onClose={() => setIsSupplierCreateOpen(false)} 
+        memo={currentEditMemo}
+        onSuccess={(sup) => {
+          if (parentSetFormData) {
+            parentSetFormData((prev: any) => ({ ...prev, fornecedor_id: sup.id }))
+          }
+        }}
+      />
+
       <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Gerar Mensalidades em Lote" onSubmit={async (p: any) => {
         let list = associados.filter(a => a.status === 'ativo');
         if (p.publico_alvo === 'zapsign_new') { list = list.filter(a => { const isZapSign = (a.categoria || '').toLowerCase() === 'zapsign'; const semRecorrencia = !lancamentos.some(l => l.associado_id === a.id && l.categoria === 'Mensalidade'); return isZapSign && semRecorrencia; }); }
