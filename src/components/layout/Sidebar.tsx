@@ -59,12 +59,6 @@ const MENU = [
     ]
   },
   { 
-    section: 'Análise', 
-    items: [
-      { href: '/evolucao', icon: Calendar, label: 'Evolução Mensal' },
-    ]
-  },
-  { 
     section: 'Dados', 
     items: [
       { href: '/importar', icon: Download, label: 'Importar Dados' },
