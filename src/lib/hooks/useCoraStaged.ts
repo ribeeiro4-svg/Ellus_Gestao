@@ -88,6 +88,7 @@ export function useCoraStaged() {
     syncWithBank,
     updateStatus,
     updateStatusBulk,
+    setItems,
     refresh: fetchItems
   };
 }

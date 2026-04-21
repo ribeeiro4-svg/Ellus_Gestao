@@ -103,6 +103,18 @@ export function useConciliacaoAudit(
 
   const matchedTransactions = useMemo(() => {
     return extrato.map((bank: any) => {
+      // Priorizar vínculo manual se ele já existir no objeto do extrato (OFX)
+      if (bank.assocMatch !== undefined || bank.forMatch !== undefined) {
+        return { 
+          bank, 
+          assocMatch: bank.assocMatch, 
+          forMatch: bank.forMatch, 
+          suggestedCategory: bank.suggestedCategory,
+          isAdesao: bank.isAdesao || false,
+          needsUpdate: false,
+          newDocument: null
+        }
+      }
       const audit = getAuditMatch(bank.memo, bank.amount, bank.type)
       return { bank, ...audit }
     })
@@ -117,6 +129,19 @@ export function useConciliacaoAudit(
         type: bank.tipo,
         date: bank.data,
         metodo_inferido: bank.descricao.toUpperCase().includes('PIX') ? 'PIX' : bank.descricao.toUpperCase().includes('BOLETO') ? 'BOLETO' : 'Transferência'
+      }
+
+      // Priorizar vínculo manual se ele já existir no objeto (Cora)
+      if (bank.assocMatch !== undefined || bank.forMatch !== undefined) {
+        return { 
+          bank: normalizedBank, 
+          assocMatch: bank.assocMatch, 
+          forMatch: bank.forMatch, 
+          suggestedCategory: bank.suggestedCategory,
+          isAdesao: bank.isAdesao || false,
+          needsUpdate: false,
+          newDocument: null
+        }
       }
 
       const audit = getAuditMatch(bank.descricao, bank.valor, bank.tipo)

@@ -45,7 +45,7 @@ export default function FinanceiroPage() {
   const { categorias } = useCategorias()
 
   // Ganchos e Estados de Conciliação
-  const { items: coraItems, updateStatusBulk, loading: loadingCora } = useCoraStaged()
+  const { items: coraItems, updateStatusBulk, loading: loadingCora, setItems: setCoraItems } = useCoraStaged()
   const { parseOFX } = useOFXParser()
   const [conciliacaoSubTab, setConciliacaoSubTab] = useState<'ofx' | 'cora'>('ofx')
   const [extrato, setExtrato] = useState<any[]>([])
@@ -465,8 +465,38 @@ export default function FinanceiroPage() {
         if (!res.error) { alert(`Sucesso! ${res.count} mensalidades geradas.`); setIsSyncModalOpen(false) } else alert(res.error)
       }} fields={[{ name: 'publico_alvo', label: 'Público Alvo', type: 'select', defaultValue: 'todos', options: [{ value: 'todos', label: 'Todos os Associados Ativos' }, { value: 'zapsign_new', label: 'Apenas Novos ZapSign (Sem Recorrência)' }] }, { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' }, { name: 'mes_inicio', label: 'Partir do Mês', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) }, { name: 'ano_inicio', label: 'Ano', type: 'number', defaultValue: new Date().getFullYear().toString() }, { name: 'dia', label: 'Dia', type: 'number', defaultValue: '10' }, { name: 'meses', label: 'Meses', type: 'select', defaultValue: '12', options: [{ value: '1', label: '1 mês' }, { value: '6', label: '6 Meses' }, { value: '12', label: '12 Meses' }] }, { name: 'forma_pagamento', label: 'Forma', type: 'select', defaultValue: 'Boleto', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] }, { name: 'conta_id', label: 'Conta', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) } ]} />
       
-      <ManualMatchModal isOpen={isManualLinkModalOpen} onClose={() => setIsManualLinkModalOpen(false)} extrato={selectedExtrato} onSelect={(assoc: any) => { const tf = selectedExtrato.bank.fitid; setEditedMemos(prev => ({ ...prev, [tf]: enhanceMemo(assoc.nome, selectedExtrato.bank.memo) })); setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades' } : item)); setIsManualLinkModalOpen(false); setSelectedExtrato(null); }} />
-      <SupplierMatchModal isOpen={isSupplierLinkModalOpen} onClose={() => setIsSupplierLinkModalOpen(false)} extrato={selectedExtrato} onSelect={(sup: any) => { const tf = selectedExtrato.bank.fitid; setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: enhanceMemo(sup.nome, selectedExtrato.bank.memo) })); setExtrato(prev => prev.map((tx: any) => tx.fitid === tf ? { ...tx, forMatch: sup, assocMatch: null, suggestedCategory: sup.categoria_padrao || 'Outros' } : tx)); setIsSupplierLinkModalOpen(false); setSelectedExtrato(null); }} />
+      <ManualMatchModal 
+        isOpen={isManualLinkModalOpen} 
+        onClose={() => setIsManualLinkModalOpen(false)} 
+        extrato={selectedExtrato} 
+        onSelect={(assoc: any) => { 
+          const tf = selectedExtrato.bank.fitid; 
+          setEditedMemos(prev => ({ ...prev, [tf]: enhanceMemo(assoc.nome, selectedExtrato.bank.memo) })); 
+          if (conciliacaoSubTab === 'ofx') {
+            setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades' } : item)); 
+          } else {
+            setCoraItems?.(prev => prev.map((item: any) => (item.cora_id || item.id) === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades' } : item));
+          }
+          setIsManualLinkModalOpen(false); 
+          setSelectedExtrato(null); 
+        }} 
+      />
+      <SupplierMatchModal 
+        isOpen={isSupplierLinkModalOpen} 
+        onClose={() => setIsSupplierLinkModalOpen(false)} 
+        extrato={selectedExtrato} 
+        onSelect={(sup: any) => { 
+          const tf = selectedExtrato.bank.fitid; 
+          setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: enhanceMemo(sup.nome, selectedExtrato.bank.memo) })); 
+          if (conciliacaoSubTab === 'ofx') {
+            setExtrato(prev => prev.map((tx: any) => tx.fitid === tf ? { ...tx, forMatch: sup, assocMatch: null, suggestedCategory: sup.categoria_padrao || 'Outros' } : tx)); 
+          } else {
+            setCoraItems?.(prev => prev.map((item: any) => (item.cora_id || item.id) === tf ? { ...item, forMatch: sup, assocMatch: null, suggestedCategory: sup.categoria_padrao || 'Outros' } : item));
+          }
+          setIsSupplierLinkModalOpen(false); 
+          setSelectedExtrato(null); 
+        }} 
+      />
 
       <BatchActionBar 
         selectedCount={selectedIds.length} 
