@@ -16,12 +16,13 @@ import { useOrcamentos } from '@/lib/hooks/useOrcamentos'
 import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { fmtR, MESES, fmtPct, getMesIdx, getAnoIdx, getBruto } from '@/lib/utils/formatters'
-import { Bar } from 'react-chartjs-2'
+import { Bar, Doughnut } from 'react-chartjs-2'
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController
+  Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController,
+  ArcElement
 } from 'chart.js'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController)
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, BarController, ArcElement)
 
 export default function PlanejamentoPage() {
   const [selectedMes, setSelectedMes] = useState(new Date().getMonth())
@@ -179,6 +180,38 @@ export default function PlanejamentoPage() {
   const receitasChartData = { labels: comparativo.filter(c => c.tipo === 'receita').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.planejado), backgroundColor: 'rgba(59, 130, 246, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.realizado), backgroundColor: '#10b981', borderRadius: 4 }] }
   const despesasChartData = { labels: comparativo.filter(c => c.tipo === 'despesa').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'despesa').map(c => c.planejado), backgroundColor: 'rgba(99, 102, 241, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'despesa').map(c => c.realizado), backgroundColor: '#6366f1', borderRadius: 4 }] }
 
+  const revenueCompositionData = useMemo(() => {
+    const revItems = comparativo.filter(c => c.tipo === 'receita' && c.planejado > 0)
+    return {
+      labels: revItems.map(c => c.categoria),
+      datasets: [{
+        data: revItems.map(c => c.planejado),
+        backgroundColor: ['#10b981', '#3b82f6', '#6366f1', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4', '#14b8a6'],
+        borderWidth: 0,
+        hoverOffset: 15
+      }]
+    }
+  }, [comparativo])
+
+  const revenueCompositionOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' as const, labels: { boxWidth: 10, font: { size: 10, weight: 'bold' as const } } },
+      tooltip: {
+        callbacks: {
+          label: (context: any) => {
+            const val = context.raw
+            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
+            const pct = ((val / total) * 100).toFixed(1)
+            return ` ${context.label}: ${pct}% (${fmtR(val)})`
+          }
+        }
+      }
+    },
+    cutout: '70%'
+  }), [])
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white/60 backdrop-blur-md p-6 rounded-[32px] border border-white shadow-xl shadow-slate-200/50">
@@ -292,7 +325,26 @@ export default function PlanejamentoPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="flex flex-col gap-6"><ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado"><div className="h-[210px] mt-4"><Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} /></div></ChartCard></div>
+        <div className="flex flex-col gap-6">
+          <ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado">
+            <div className="h-[210px] mt-4">
+              <Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} />
+            </div>
+          </ChartCard>
+          
+          <ChartCard title="📊 Composição da Receita" subtitle="Representatividade por Categoria">
+            <div className="h-[260px] mt-4">
+              {totals.planejadoReceita > 0 ? (
+                <Doughnut data={revenueCompositionData} options={revenueCompositionOptions} />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
+                  <Activity size={32} className="opacity-20" />
+                  <span className="text-xs font-bold uppercase tracking-widest">Nenhuma receita planejada</span>
+                </div>
+              )}
+            </div>
+          </ChartCard>
+        </div>
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-3">
