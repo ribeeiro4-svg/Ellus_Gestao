@@ -8,7 +8,6 @@ import {
   Mail, 
   Phone, 
   Trash2, 
-  AlertCircle,
   Briefcase,
   ReceiptText,
   TrendingDown,
@@ -23,7 +22,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import KpiCard from '@/components/ui/KpiCard'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
 
-export default function DiretoriaPage() {
+export default function DiretoriaTab() {
   const { diretoria, loading, inserir, atualizar, remover } = useDiretoria()
   const { lancamentos } = useFinanceiro()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -128,7 +127,7 @@ export default function DiretoriaPage() {
       header: '',
       align: 'right' as const,
       render: (i: Diretor) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
            <button onClick={() => { setPeriodosMember(i); setTempPeriodos(i.periodos || []) }} className="p-2 text-emerald-400 hover:bg-emerald-50 rounded-lg transition-colors" title="Gerenciar Períodos de Pró-labore (De / A)">
             <Calendar size={14} />
           </button>
@@ -147,13 +146,13 @@ export default function DiretoriaPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-8 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 tracking-tight flex items-center gap-3">
-            <ShieldCheck className="text-indigo-600" /> Gestão da Diretoria
-          </h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">Configure os membros oficiais e seus respectivos pró-labores para simulações e termos.</p>
+          <h2 className="text-xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
+            <ShieldCheck className="text-indigo-600" size={20} /> Gestão da Diretoria
+          </h2>
+          <p className="text-xs text-gray-500 font-medium mt-1">Configure os membros oficiais e seus respectivos pró-labores para simulações e termos.</p>
         </div>
         <button 
           onClick={() => { setEditingItem(null); setIsModalOpen(true) }}
@@ -169,7 +168,7 @@ export default function DiretoriaPage() {
         <KpiCard title="Status do Conselho" value="Regular" icon={<ShieldCheck size={20} />} category="success" trendLabel="Diretoria vigente" />
       </div>
 
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden p-6">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden p-6 hover:shadow-md transition-shadow">
         <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl mb-6 border border-slate-100">
           <Search size={18} className="text-slate-400 ml-2" />
           <input 
@@ -177,11 +176,13 @@ export default function DiretoriaPage() {
             placeholder="Buscar por nome, cargo ou CPF..." 
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
-            className="bg-transparent border-none outline-none text-sm font-medium text-slate-600 w-full"
+            className="bg-transparent border-none outline-none text-sm font-medium text-slate-600 w-full placeholder:text-slate-400"
           />
         </div>
 
-        <DataTable columns={columns} data={filtrados} loading={loading} />
+        <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+          <DataTable columns={columns} data={filtrados} loading={loading} />
+        </div>
       </div>
 
       <CrudModal 
@@ -207,10 +208,8 @@ export default function DiretoriaPage() {
         ]}
       />
 
-      {/* Extrato do Membro (Conta Corrente / Ledger) */}
-      {/* Modal de Gerenciamento de Períodos */}
       {periodosMember && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] w-full max-w-xl shadow-2xl animate-in fade-in zoom-in-95 overflow-hidden">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div>
@@ -284,7 +283,7 @@ export default function DiretoriaPage() {
       )}
 
       {ledgerMember && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <div>
@@ -325,7 +324,7 @@ export default function DiretoriaPage() {
                       <div className="p-4 bg-gray-50/50 border-b border-gray-100 font-bold text-xs text-gray-500 uppercase tracking-widest">Histórico de Transações</div>
                       <ul className="divide-y divide-gray-50">
                         {myDocs.length === 0 ? (
-                          <li className="p-8 text-center text-gray-400 font-medium text-xs">Nenhuma movimentação associada a este diretor foi encontrada no financeiro.</li>
+                           <li className="p-8 text-center text-gray-400 font-medium text-xs">Nenhuma movimentação associada a este diretor foi encontrada no financeiro.</li>
                         ) : myDocs.map(l => (
                           <li key={l.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
                             <div>

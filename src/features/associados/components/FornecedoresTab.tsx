@@ -4,9 +4,10 @@ import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
-import { Plus, Mail, Phone, Trash2, Search, Filter, HardDrive, ShoppingCart } from 'lucide-react'
+import { Plus, Mail, Phone, Trash2, Search, HardDrive, ShoppingCart } from 'lucide-react'
+import { fmtR } from '@/lib/utils/formatters'
 
-export default function FornecedoresPage() {
+export default function FornecedoresTab() {
   const { fornecedores, loading, inserir, atualizar, excluir } = useFornecedores()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -44,7 +45,7 @@ export default function FornecedoresPage() {
 
       if (res?.error) {
         const errorMsg = typeof res.error === 'object' ? (res.error as any).message : String(res.error)
-        alert(`Erro ao salvar: ${errorMsg}\n\nCERTIFIQUE-SE DE QUE CRIOU A TABELA NO SUPABASE!`)
+        alert(`Erro ao salvar: ${errorMsg}`)
       } else {
         setIsModalOpen(false)
         setEditingItem(null)
@@ -112,28 +113,24 @@ export default function FornecedoresPage() {
   ]
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-700">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-            <ShoppingCart className="text-orange-500" />
-            Fornecedores e Prestadores
-          </h1>
-          <p className="text-slate-500 text-sm font-medium mt-1">Gerencie quem presta serviços para facilitar a conciliação de saídas.</p>
+          <h2 className="text-xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
+            <ShoppingCart className="text-orange-500" size={20} /> Fornecedores e Prestadores
+          </h2>
+          <p className="text-xs text-gray-500 font-medium mt-1">Gerencie quem presta serviços para facilitar a conciliação de saídas.</p>
         </div>
-        
         <button 
           onClick={() => { setEditingItem(null); setIsModalOpen(true) }}
-          className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-slate-200 active:scale-95"
+          className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-lg shadow-slate-200"
         >
           <Plus size={18} strokeWidth={3} />
           Novo Fornecedor
         </button>
       </div>
 
-      {/* Estatísticas Simples */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center font-bold">
              <HardDrive size={20} />
@@ -145,8 +142,7 @@ export default function FornecedoresPage() {
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm mb-6 flex flex-wrap items-center gap-4">
+      <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-wrap items-center gap-4">
         <div className="relative flex-1 min-w-[300px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
@@ -170,7 +166,7 @@ export default function FornecedoresPage() {
         )}
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
         <DataTable 
           columns={columns} 
           data={filtrados} 

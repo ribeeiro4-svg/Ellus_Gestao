@@ -41,10 +41,9 @@ const MENU = [
     ]
   },
   { 
-    section: 'Associados', 
+    section: 'Entidades', 
     items: [
-      { href: '/associados', icon: Users, label: 'Associados' },
-      { href: '/fornecedores', icon: ShoppingCart, label: 'Fornecedores' },
+      { href: '/associados', icon: Users, label: 'Gestão Geral' },
     ]
   },
   { 
@@ -52,7 +51,6 @@ const MENU = [
     items: [
       { href: '/metas', icon: Target, label: 'Metas' },
       { href: '/projetos', icon: Briefcase, label: 'Projetos' },
-      { href: '/diretoria', icon: ShieldCheck, label: 'Diretoria' },
     ]
   },
   { 
