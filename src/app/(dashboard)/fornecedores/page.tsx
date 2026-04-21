@@ -11,16 +11,30 @@ export default function FornecedoresPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [searchQ, setSearchQ] = useState('')
+  const [filterCategory, setFilterCategory] = useState<string>('todas')
+
+  const categorias = useMemo(() => {
+    return [...new Set(fornecedores.map(f => f.categoria_padrao || 'GERAL'))].sort()
+  }, [fornecedores])
 
   const filtrados = useMemo(() => {
-    if (!searchQ) return fornecedores
-    const q = searchQ.toLowerCase()
-    return fornecedores.filter(f => 
-      f.nome.toLowerCase().includes(q) || 
-      (f.cpf_cnpj && f.cpf_cnpj.includes(q)) ||
-      (f.email && f.email.toLowerCase().includes(q))
-    )
-  }, [fornecedores, searchQ])
+    let res = fornecedores
+    
+    if (searchQ) {
+      const q = searchQ.toLowerCase()
+      res = res.filter(f => 
+        f.nome.toLowerCase().includes(q) || 
+        (f.cpf_cnpj && f.cpf_cnpj.includes(q)) ||
+        (f.email && f.email.toLowerCase().includes(q))
+      )
+    }
+
+    if (filterCategory !== 'todas') {
+      res = res.filter(f => (f.categoria_padrao || 'GERAL') === filterCategory)
+    }
+
+    return res
+  }, [fornecedores, searchQ, filterCategory])
 
   const handleSalvar = async (data: any) => {
     try {
@@ -143,6 +157,17 @@ export default function FornecedoresPage() {
             onChange={(e) => setSearchQ(e.target.value)}
           />
         </div>
+        <select 
+          value={filterCategory} 
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none text-slate-600 focus:ring-2 focus:ring-orange-500 transition-all"
+        >
+          <option value="todas">TODAS CATEGORIAS</option>
+          {categorias.map(cat => <option key={cat} value={cat}>{cat.toUpperCase()}</option>)}
+        </select>
+        { (searchQ || filterCategory !== 'todas') && (
+          <button onClick={() => { setSearchQ(''); setFilterCategory('todas') }} className="text-[10px] font-black uppercase text-slate-400 hover:text-rose-500 transition-colors">Limpar Filtros</button>
+        )}
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">

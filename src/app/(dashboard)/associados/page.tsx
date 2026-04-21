@@ -395,6 +395,10 @@ export default function AssociadosPage() {
             <input type="text" placeholder="Busca global..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl text-sm font-medium outline-none focus:ring-2 ring-indigo-500/10" value={searchQ} onChange={e => setSearchQ(e.target.value)} />
           </div>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{['todos', 'ativo', 'inadimplente', 'inativo'].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}</select>
+          <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
+            <option value="todas">TODAS CATEGORIAS</option>
+            {categorias.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+          </select>
           {hasActiveFilters && <button onClick={clearFilters} className="text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors">Limpar Filtros</button>}
         </div>
       </div>

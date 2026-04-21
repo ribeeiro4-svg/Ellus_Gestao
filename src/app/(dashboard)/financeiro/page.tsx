@@ -81,6 +81,7 @@ export default function FinanceiroPage() {
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
+  const [filterCategory, setFilterCategory] = useState<string>('ALL')
   const [isSupplierCreateOpen, setIsSupplierCreateOpen] = useState(false)
   const [parentSetFormData, setParentSetFormData] = useState<any>(null)
   const [currentEditMemo, setCurrentEditMemo] = useState('')
@@ -233,10 +234,11 @@ export default function FinanceiroPage() {
       
       const hasLink = !!(item.associado_id || item.fornecedor_id || item.diretor_id)
       const matchUnlinked = filterUnlinked === 'ALL' || (filterUnlinked === 'LINKED' ? hasLink : !hasLink)
+      const matchCategory = filterCategory === 'ALL' || (item.categoria || '').toLowerCase() === filterCategory.toLowerCase()
 
-      return matchPeriod && matchSearch && matchType && matchUnlinked
+      return matchPeriod && matchSearch && matchType && matchUnlinked && matchCategory
     })
-  }, [lancamentos, filterYear, filterMonth, activeTab, searchTerm, filterUnlinked])
+  }, [lancamentos, filterYear, filterMonth, activeTab, searchTerm, filterUnlinked, filterCategory])
 
   // KPIs Inteligentes
   const kpiData = useMemo(() => {
@@ -503,9 +505,13 @@ export default function FinanceiroPage() {
             <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
             <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
             <select value={filterUnlinked} onChange={(e) => setFilterUnlinked(e.target.value as any)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
-              <option value="ALL">Filtrar Vínculos</option>
+              <option value="ALL">Vínculos</option>
               <option value="LINKED">Com Vínculo</option>
               <option value="UNLINKED">Sem Vínculo</option>
+            </select>
+            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
+              <option value="ALL">Todas Categorias</option>
+              {[...new Set(categorias.map(c => c.nome))].sort().map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
             <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100"><RefreshCw size={14} /> Recorrência em Lote</button>
           </div>
