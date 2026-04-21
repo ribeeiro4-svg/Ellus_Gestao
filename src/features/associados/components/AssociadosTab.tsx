@@ -315,7 +315,7 @@ export default function AssociadosTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ChartCard title="Crescimento" subtitle="Evolução acumulativa">
-            <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-80px] mb-[-60px] h-[500px]">
+            <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-40px] mb-[-24px] h-[400px]">
               <Line 
                 data={{ 
                   labels: MESES, 
@@ -323,32 +323,29 @@ export default function AssociadosTab() {
                     label: 'Associados', 
                     data: crescimentoMensal, 
                     borderColor: '#10b981',
-                    backgroundColor: 'rgba(16,185,129,0.15)',
+                    backgroundColor: 'rgba(16,185,129,0.08)',
                     fill: true,
                     tension: 0.4,
                     pointBackgroundColor: '#fff',
                     pointBorderColor: '#10b981',
-                    pointBorderWidth: 3,
-                    pointRadius: 5,
-                    pointHoverRadius: 8,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
                   }] 
                 }} 
                 options={{ 
                   responsive: true, 
                   maintainAspectRatio: false, 
                   layout: {
-                    padding: 0
+                    padding: {
+                      top: 10,
+                      bottom: 10,
+                      left: 0,
+                      right: 0
+                    }
                   },
                   scales: { 
-                    x: { 
-                      grid: { display: false }, 
-                      ticks: { 
-                        display: true,
-                        font: { size: 10, weight: 'bold' }, 
-                        color: '#94a3b8',
-                        padding: -20
-                      } 
-                    }, 
+                    x: { grid: { display: false }, ticks: { font: { size: 9, weight: 'bold' }, color: '#94a3b8' } }, 
                     y: { display: false } 
                   }, 
                   plugins: { 
@@ -368,13 +365,13 @@ export default function AssociadosTab() {
           </ChartCard>
         </div>
         <ChartCard title="Mix" subtitle="Por categoria">
-          <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-80px] mb-[-60px] h-[550px]">
+          <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-100px] mb-[-60px] h-[600px]">
              <Doughnut 
                data={{ labels: Object.keys(catMap).map(k => `${k} (${catMap[k]})`), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }} 
                options={{ 
                  responsive: true, 
                  maintainAspectRatio: false, 
-                 cutout: '80%', 
+                 cutout: '85%', 
                  layout: {
                    padding: 0
                  },
