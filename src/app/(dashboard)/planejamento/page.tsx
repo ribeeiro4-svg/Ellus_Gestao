@@ -32,7 +32,7 @@ export default function PlanejamentoPage() {
     lancamentos, loading: loadFin, refresh: refetchFin, 
     inserirBulk 
   } = useFinanceiro()
-  const { orcamentos, loading: loadOrc, inserir, atualizar, remover, refresh } = useOrcamentos(selectedMes, selectedAno)
+  const { orcamentos, loading: loadOrc, inserir, atualizar, upsertBulk, remover, refresh } = useOrcamentos(selectedMes, selectedAno)
   const { categorias } = useCategorias()
   const { diretoria, atualizar: atualizarDiretor } = useDiretoria()
   
@@ -45,6 +45,8 @@ export default function PlanejamentoPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [isConfirmLancarOpen, setIsConfirmLancarOpen] = useState(false)
   const [isLancing, setIsLancing] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceMonths, setRecurrenceMonths] = useState(12)
 
   // Gerenciamento de Períodos ProLabore
   const [periodosMember, setPeriodosMember] = useState<any | null>(null)
@@ -107,43 +109,80 @@ export default function PlanejamentoPage() {
     setIsLancing(true)
     try {
       const itemsToLanch = comparativo.filter(c => selectedCategories.includes(c.categoria))
-      const mm = String(selectedMes + 1).padStart(2, '0')
-      const targetDate = `${selectedAno}-${mm}-10`
       
-      const batch: any[] = itemsToLanch.map(item => ({
-        tipo: item.tipo,
-        descricao: `PLANEJAMENTO - ${mm}/${selectedAno} - ${item.categoria}`,
-        valor: item.planejado,
-        data: targetDate,
-        status: 'aberto',
-        categoria: item.categoria,
-        competencia_mes: selectedMes,
-        competencia_ano: selectedAno
-      }))
+      const batchFinanceiro: any[] = []
+      const batchOrcamentos: any[] = []
+      
+      const numMonths = isRecurring ? Math.max(1, recurrenceMonths) : 1
+      
+      for (let i = 0; i < numMonths; i++) {
+        const targetDate = new Date(selectedAno, selectedMes + i, 10)
+        const tMes = targetDate.getMonth()
+        const tAno = targetDate.getFullYear()
+        const mm = String(tMes + 1).padStart(2, '0')
+        const dateStr = `${tAno}-${mm}-10`
 
-      // Adiciona Reserva de Emergência
-      const reservaIdeal = Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100
-      batch.push({
-        tipo: 'despesa',
-        descricao: `PLANEJAMENTO - ${mm}/${selectedAno} - RESERVA DE EMERGÊNCIA`,
-        valor: reservaIdeal,
-        data: targetDate,
-        status: 'aberto',
-        categoria: 'RESERVA DE EMERGÊNCIA',
-        competencia_mes: selectedMes,
-        competencia_ano: selectedAno
-      })
+        // 1. Preparar Lançamentos Financeiros do mês
+        itemsToLanch.forEach(item => {
+          batchFinanceiro.push({
+            tipo: item.tipo,
+            descricao: `PLANEJAMENTO - ${mm}/${tAno} - ${item.categoria}`,
+            valor: item.planejado,
+            data: dateStr,
+            status: 'aberto',
+            categoria: item.categoria,
+            competencia_mes: tMes,
+            competencia_ano: tAno
+          })
 
-      const res = await inserirBulk(batch)
-      if (res.error) alert(`Erro ao lançar: ${res.error}`)
-      else {
-        alert(`${batch.length} planejamentos lançados com sucesso no Financeiro!`)
-        setSelectedCategories([])
-        setIsConfirmLancarOpen(false)
-        if (refetchFin) refetchFin(selectedAno)
+          // 2. Preparar Registros de Orçamento (Projeção Futura)
+          // Só adicionamos pro futuro se estivermos no laço de recorrência
+          // ou se for o mês atual para garantir que o 'planejado' esteja salvo
+          batchOrcamentos.push({
+            categoria: item.categoria,
+            tipo: item.tipo,
+            valor_planejado: item.planejado,
+            mes: tMes,
+            ano: tAno
+          })
+        })
+
+        // Adiciona Reserva de Emergência para cada mês
+        const reservaIdeal = Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100
+        batchFinanceiro.push({
+          tipo: 'despesa',
+          descricao: `PLANEJAMENTO - ${mm}/${tAno} - RESERVA DE EMERGÊNCIA`,
+          valor: reservaIdeal,
+          data: dateStr,
+          status: 'aberto',
+          categoria: 'RESERVA DE EMERGÊNCIA',
+          competencia_mes: tMes,
+          competencia_ano: tAno
+        })
+
+        batchOrcamentos.push({
+          categoria: 'RESERVA DE EMERGÊNCIA',
+          tipo: 'despesa',
+          valor_planejado: reservaIdeal,
+          mes: tMes,
+          ano: tAno
+        })
       }
+
+      // Executa as inserções/updates
+      const resFin = await inserirBulk(batchFinanceiro)
+      if (resFin.error) throw new Error(typeof resFin.error === 'string' ? resFin.error : (resFin.error as any).message)
+
+      const resOrc = await upsertBulk(batchOrcamentos)
+      if (resOrc.error) throw new Error(typeof resOrc.error === 'string' ? resOrc.error : (resOrc.error as any).message)
+
+      alert(`${batchFinanceiro.length} provisões geradas e planejamento atualizado para os próximos ${numMonths} meses!`)
+      setSelectedCategories([])
+      setIsConfirmLancarOpen(false)
+      if (refetchFin) refetchFin(selectedAno)
+      if (refresh) refresh()
     } catch (err: any) {
-      alert(`Erro inesperado: ${err.message}`)
+      alert(`Erro: ${err.message}`)
     } finally {
       setIsLancing(false)
     }
@@ -399,15 +438,54 @@ export default function PlanejamentoPage() {
 
       <CrudModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Nova Meta de Categoria" onSubmit={async (data) => { const cat = categorias.find(c => c.id === data.categoria_id); if(cat) await handleSaveOrcamento(cat.nome, 0); setIsAddModalOpen(false) }} fields={[{ name: 'categoria_id', label: 'Tipo de Categoria', type: 'select', required: true, options: categorias.map(c => ({ value: c.id, label: c.nome })) }]} />
 
-      <ConfirmModal 
-        isOpen={isConfirmLancarOpen}
-        onClose={() => setIsConfirmLancarOpen(false)}
-        onConfirm={handleLancarBulk}
-        title="Lançar Planejamento"
-        message={`Você deseja lançar os ${selectedCategories.length} orçamentos selecionados + a Reserva de Emergência para o dia 10 de ${MESES[selectedMes]}? Isso criará novos lançamentos provisionados no seu fluxo financeiro.`}
-        confirmText={isLancing ? 'Lançando...' : 'Sim, Lançar agora'}
-        type="info"
-      />
+      {isConfirmLancarOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="p-8">
+              <div className="flex justify-center mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                  <TrendingUp size={32} />
+                </div>
+              </div>
+              <h3 className="text-xl font-black text-slate-800 text-center mb-2 tracking-tight">Lançar Planejamento</h3>
+              <p className="text-slate-500 text-center text-sm font-medium leading-relaxed mb-6">
+                Você deseja lançar os {selectedCategories.length} orçamentos + Reserva de Emergência como lançamentos provisionados no financeiro?
+              </p>
+
+              <div className="space-y-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className={`w-10 h-6 rounded-full transition-all flex items-center px-1 ${isRecurring ? 'bg-emerald-500' : 'bg-slate-300'}`} onClick={() => setIsRecurring(!isRecurring)}>
+                    <div className={`w-4 h-4 bg-white rounded-full shadow-sm transition-all ${isRecurring ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </div>
+                  <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">Lançamento Recorrente?</span>
+                </label>
+
+                {isRecurring && (
+                  <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Repetir por quantos meses?</span>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="number" 
+                        value={recurrenceMonths} 
+                        onChange={e => setRecurrenceMonths(Number(e.target.value))}
+                        className="flex-1 bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:ring-2 ring-emerald-100 transition-all text-emerald-700" 
+                      />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">Meses</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
+              <button onClick={() => setIsConfirmLancarOpen(false)} disabled={isLancing} className="flex-1 px-6 py-3.5 bg-white border border-slate-200 text-slate-600 rounded-2xl text-sm font-bold hover:bg-slate-50 transition-all disabled:opacity-50">Cancelar</button>
+              <button onClick={handleLancarBulk} disabled={isLancing} className="flex-1 px-6 py-4 bg-emerald-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50">
+                {isLancing ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : 'Sim, Lançar agora'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

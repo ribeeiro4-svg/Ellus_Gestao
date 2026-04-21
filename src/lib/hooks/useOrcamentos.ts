@@ -49,5 +49,17 @@ export function useOrcamentos(mes?: number, ano?: number) {
     return { error }
   }
 
-  return { orcamentos, loading, inserir, atualizar, remover, refresh: fetch }
+  const upsertBulk = async (items: OrcamentoInput[]) => {
+    if (!tenantId) return { error: 'TenantId não identificado.' }
+    const rows = items.map(i => ({ 
+      ...i, 
+      mes: i.mes + 1,
+      tenant_id: tenantId 
+    }))
+    const { error } = await sb.from('orcamentos').upsert(rows, { onConflict: 'tenant_id,mes,ano,categoria' })
+    if (!error) fetch()
+    return { error }
+  }
+
+  return { orcamentos, loading, inserir, atualizar, upsertBulk, remover, refresh: fetch }
 }
