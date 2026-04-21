@@ -180,20 +180,20 @@ export default function PlanejamentoPage() {
   const receitasChartData = { labels: comparativo.filter(c => c.tipo === 'receita').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.planejado), backgroundColor: 'rgba(59, 130, 246, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.realizado), backgroundColor: '#10b981', borderRadius: 4 }] }
   const despesasChartData = { labels: comparativo.filter(c => c.tipo === 'despesa').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'despesa').map(c => c.planejado), backgroundColor: 'rgba(99, 102, 241, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'despesa').map(c => c.realizado), backgroundColor: '#6366f1', borderRadius: 4 }] }
 
-  const revenueCompositionData = useMemo(() => {
-    const revItems = comparativo.filter(c => c.tipo === 'receita' && c.planejado > 0)
+  const expenseImpactData = useMemo(() => {
+    const expItems = comparativo.filter(c => c.tipo === 'despesa' && c.planejado > 0)
     return {
-      labels: revItems.map(c => c.categoria),
+      labels: expItems.map(c => c.categoria),
       datasets: [{
-        data: revItems.map(c => c.planejado),
-        backgroundColor: ['#10b981', '#3b82f6', '#6366f1', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4', '#14b8a6'],
+        data: expItems.map(c => c.planejado),
+        backgroundColor: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#ef4444', '#3b82f6', '#06b6d4', '#14b8a6', '#f97316'],
         borderWidth: 0,
         hoverOffset: 15
       }]
     }
   }, [comparativo])
 
-  const revenueCompositionOptions = useMemo(() => ({
+  const expenseImpactOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -202,15 +202,15 @@ export default function PlanejamentoPage() {
         callbacks: {
           label: (context: any) => {
             const val = context.raw
-            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
-            const pct = ((val / total) * 100).toFixed(1)
-            return ` ${context.label}: ${pct}% (${fmtR(val)})`
+            const totalRevenue = totals.planejadoReceita || 1
+            const pct = ((val / totalRevenue) * 100).toFixed(1)
+            return ` ${context.label}: ${pct}% da Receita (${fmtR(val)})`
           }
         }
       }
     },
     cutout: '70%'
-  }), [])
+  }), [totals.planejadoReceita])
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
@@ -332,14 +332,14 @@ export default function PlanejamentoPage() {
             </div>
           </ChartCard>
           
-          <ChartCard title="📊 Composição da Receita" subtitle="Representatividade por Categoria">
+          <ChartCard title="📉 Impacto nas Receitas" subtitle="Consumo do Faturamento por Categoria">
             <div className="h-[260px] mt-4">
-              {totals.planejadoReceita > 0 ? (
-                <Doughnut data={revenueCompositionData} options={revenueCompositionOptions} />
+              {totals.planejadoDespesa > 0 ? (
+                <Doughnut data={expenseImpactData} options={expenseImpactOptions} />
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
                   <Activity size={32} className="opacity-20" />
-                  <span className="text-xs font-bold uppercase tracking-widest">Nenhuma receita planejada</span>
+                  <span className="text-xs font-bold uppercase tracking-widest">Nenhuma despesa planejada</span>
                 </div>
               )}
             </div>
