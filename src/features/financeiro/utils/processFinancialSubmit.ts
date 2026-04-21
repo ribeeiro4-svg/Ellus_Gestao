@@ -103,7 +103,12 @@ export async function processFinancialSubmit(
     }
 
     if (editingItem) {
-      const r1 = await actions.atualizar(editingItem.id, batch[0])
+      const targetId = editingItem.id || data.id
+      if (!targetId || String(targetId) === 'undefined') {
+        return { error: 'ID do lançamento não encontrado. Tente atualizar a página.' }
+      }
+
+      const r1 = await actions.atualizar(targetId, batch[0])
       if (r1?.error) return r1
       if (batch.length > 1) {
         const r2 = await actions.inserirBulk(batch.slice(1))
@@ -117,7 +122,11 @@ export async function processFinancialSubmit(
 
   // 3. Processamento Individual ou Edição Simples
   if (editingItem) {
-    return await atualizar(editingItem.id, dbData)
+    const targetId = editingItem.id || data.id
+    if (!targetId || String(targetId) === 'undefined') {
+      return { error: 'ID do lançamento não encontrado. Tente atualizar a página.' }
+    }
+    return await atualizar(targetId, dbData)
   }
 
   const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null

@@ -88,6 +88,7 @@ export function useFinanceiro() {
   }
 
   const atualizar = async (id: string, input: Partial<LancamentoInput>) => {
+    if (!id || String(id) === 'undefined') return { error: 'ID do lançamento não identificado para atualização.' }
     const item = lancamentos.find(l => l.id === id)
     if (item && isPeriodoBloqueado(item.data)) return { error: 'Este período está fechado e não permite alterações.' }
     if (input.data && isPeriodoBloqueado(input.data)) return { error: 'Não é possível mover lançamentos para períodos fechados.' }
@@ -98,6 +99,7 @@ export function useFinanceiro() {
   }
 
   const remover = async (id: string) => {
+    if (!id || String(id) === 'undefined') return { error: 'ID do lançamento não identificado para exclusão.' }
     const item = lancamentos.find(l => l.id === id)
     if (!item) return { error: 'Lançamento não encontrado.' }
     if (isPeriodoBloqueado(item.data)) return { error: 'Este período está fechado e não permite alterações.' }
