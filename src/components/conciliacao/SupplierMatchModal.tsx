@@ -48,7 +48,11 @@ export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect 
     ).slice(0, 10)
   }, [allItems, search])
 
-  if (!isOpen) return null
+  const extractedDoc = useMemo(() => {
+    const memo = extrato?.bank?.memo || ''
+    const match = memo.match(/(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})|(\d{3}\.?\d{3}\.?\d{3}-?\d{2})|(\d{14})|(\d{11})/)
+    return match ? match[0] : ''
+  }, [extrato])
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-indigo-950/40 backdrop-blur-sm animate-in fade-in duration-300">
@@ -138,7 +142,7 @@ export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect 
         onSubmit={handleSalvarNovo}
         fields={[
           { name: 'nome', label: 'Nome / Razão Social', type: 'text', required: true, defaultValue: search },
-          { name: 'cpf_cnpj', label: 'CPF ou CNPJ', type: 'text' },
+          { name: 'cpf_cnpj', label: 'CPF ou CNPJ', type: 'text', defaultValue: extractedDoc },
           { name: 'email', label: 'E-mail', type: 'text' },
           { name: 'telefone', label: 'Telefone / WhatsApp', type: 'text' },
           { name: 'categoria_padrao', label: 'Categoria de Despesa', type: 'text', placeholder: 'Ex: Energia, Serviços, Aluguel' },
