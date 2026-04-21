@@ -1,12 +1,13 @@
 'use client'
 import React, { useState } from 'react'
-import { BarChart3, Briefcase, FileCheck, Database } from 'lucide-react'
+import { BarChart3, Briefcase, FileCheck, Database, Users } from 'lucide-react'
 import DashboardTab from '@/features/recrutamento/components/DashboardTab'
 import VagasTab from '@/features/recrutamento/components/VagasTab'
 import KanbanTab from '@/features/recrutamento/components/KanbanTab'
 import TalentosTab from '@/features/recrutamento/components/TalentosTab'
+import CandidatosTab from '@/features/recrutamento/components/CandidatosTab'
 
-type TabID = 'dashboard' | 'vagas' | 'kanban' | 'talentos'
+type TabID = 'dashboard' | 'vagas' | 'kanban' | 'talentos' | 'candidatos'
 
 export default function RecrutamentoHubPage() {
   const [activeTab, setActiveTab] = useState<TabID>('dashboard')
@@ -15,6 +16,7 @@ export default function RecrutamentoHubPage() {
     { id: 'dashboard' as TabID, label: 'Dashboard', icon: BarChart3, color: 'emerald' },
     { id: 'vagas' as TabID, label: 'Gestão de Vagas', icon: Briefcase, color: 'emerald' },
     { id: 'kanban' as TabID, label: 'Painel Kanban', icon: FileCheck, color: 'emerald' },
+    { id: 'candidatos' as TabID, label: 'Candidatos', icon: Users, color: 'emerald' },
     { id: 'talentos' as TabID, label: 'Banco de Talentos', icon: Database, color: 'emerald' },
   ]
 
@@ -67,6 +69,7 @@ export default function RecrutamentoHubPage() {
         {activeTab === 'dashboard' && <DashboardTab />}
         {activeTab === 'vagas' && <VagasTab />}
         {activeTab === 'kanban' && <KanbanTab />}
+        {activeTab === 'candidatos' && <CandidatosTab />}
         {activeTab === 'talentos' && <TalentosTab />}
       </div>
     </div>
