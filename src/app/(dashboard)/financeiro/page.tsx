@@ -21,6 +21,7 @@ import OFXUpload from '@/components/conciliacao/OFXUpload'
 import MatchItem from '@/components/conciliacao/MatchItem'
 import ManualMatchModal from '@/components/conciliacao/ManualMatchModal'
 import SupplierMatchModal from '@/components/conciliacao/SupplierMatchModal'
+import SupplierCreateModal from '@/components/conciliacao/SupplierCreateModal'
 import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToolbar'
 import { useFechamento } from '@/lib/hooks/useFechamento'
 import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
@@ -80,6 +81,7 @@ export default function FinanceiroPage() {
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
+  const [isSupplierCreateOpen, setIsSupplierCreateOpen] = useState(false)
 
   // Novos Estados para Ações em Lote
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -314,6 +316,49 @@ export default function FinanceiroPage() {
     { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: categorias.map(c => ({ value: c.nome, label: c.nome })) },
     { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }, { value: 'Transferência', label: 'Transferência' }] },
     { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+    { 
+      name: 'fornecedor_id', 
+      label: 'Fornecedor', 
+      type: 'info', 
+      showIf: (f: any) => f.tipo === 'despesa', 
+      render: (formData, handleChange) => (
+        <div className="flex gap-2">
+          <div className="flex-1 relative">
+            <select
+              value={formData.fornecedor_id || ''}
+              onChange={e => handleChange('fornecedor_id', e.target.value)}
+              className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-rose-500 focus:ring-4 focus:ring-rose-50 transition-all cursor-pointer appearance-none"
+            >
+              <option value="">Nenhum Fornecedor</option>
+              {fornecedores.map(f => (
+                <option key={f.id} value={f.id}>{f.nome}</option>
+              ))}
+            </select>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setIsSupplierCreateOpen(true)}
+            className="px-4 bg-slate-50 border border-slate-100 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all active:scale-95 flex items-center justify-center shadow-sm"
+            title="Cadastrar Novo Fornecedor"
+          >
+            <Plus size={20} />
+          </button>
+          <SupplierCreateModal 
+            isOpen={isSupplierCreateOpen} 
+            onClose={() => setIsSupplierCreateOpen(false)} 
+            memo={formData.descricao}
+            onSuccess={(sup) => handleChange('fornecedor_id', sup.id)}
+          />
+        </div>
+      )
+    },
+    { 
+      name: 'diretor_id', 
+      label: 'Diretoria / Pessoal', 
+      type: 'select', 
+      showIf: (f: any) => f.tipo === 'despesa', 
+      options: [{ value: '', label: 'Nenhum' }, ...diretoria.map(d => ({ value: d.id, label: d.nome }))] 
+    },
     { name: 'recorrencia_ativa', label: 'Ativar Recorrência?', type: 'checkbox' },
     { name: 'recorrencia_meses', label: 'Repetir por quantos meses?', type: 'select', showIf: (f: any) => f.recorrencia_ativa, defaultValue: '12', options: [
       { value: '1', label: '1 mês' },
@@ -322,7 +367,7 @@ export default function FinanceiroPage() {
       { value: '12', label: '1 ano (12 meses)' },
       { value: '24', label: '2 anos (24 meses)' },
     ]},
-  ], [contas, categorias, associados])
+  ], [contas, categorias, associados, fornecedores, diretoria, isSupplierCreateOpen])
 
   const conciliacaoStats = useMemo(() => {
     let entries = 0, outings = 0, duplicates = 0;

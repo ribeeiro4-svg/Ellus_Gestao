@@ -3,6 +3,7 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { X, Search, Store, CheckCircle2, UserCheck, Plus } from 'lucide-react'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import CrudModal from '@/components/ui/CrudModal'
+import SupplierCreateModal from './SupplierCreateModal'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
 
 interface SupplierMatchModalProps {
@@ -17,23 +18,9 @@ export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect 
   const { diretoria } = useDiretoria()
   const [search, setSearch] = useState('')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [isFetchingCnpj, setIsFetchingCnpj] = useState(false)
-  const [apiData, setApiData] = useState<any>(null)
-
-  const handleSalvarNovo = async (data: any) => {
-    try {
-      const res = await inserir({ ...data, status: 'ativo' })
-      if (res?.data?.[0]) {
-        onSelect(res.data[0])
-        setIsCreateOpen(false)
-        onClose()
-      } else if (res?.error) {
-        const errorMsg = typeof res.error === 'string' ? res.error : (res.error as any)?.message || 'Erro desconhecido'
-        alert(`Erro ao cadastrar: ${errorMsg}`)
-      }
-    } catch (err) {
-      alert('Erro ao cadastrar fornecedor')
-    }
+  const handleSalvarNovo = (sup: any) => {
+    onSelect(sup)
+    onClose()
   }
 
   const allItems = useMemo(() => {
@@ -55,38 +42,6 @@ export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect 
     const match = memo.match(/(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})|(\d{3}\.?\d{3}\.?\d{3}-?\d{2})|(\d{14})|(\d{11})/)
     return match ? match[0] : ''
   }, [extrato])
-
-  useEffect(() => {
-    const fetchCnpjData = async (cnpj: string) => {
-      setIsFetchingCnpj(true)
-      try {
-        const res = await fetch(`https://publica.cnpj.ws/cnpj/${cnpj}`)
-        if (!res.ok) throw new Error('Falha na API')
-        const data = await res.json()
-        if (data && data.razao_social) {
-          setApiData({
-            nome: data.razao_social,
-            email: data.estabelecimento?.email || '',
-            telefone: `${data.estabelecimento?.ddd1 || ''}${data.estabelecimento?.telefone1 || ''}`,
-            cpf_cnpj: cnpj
-          })
-        }
-      } catch (err) {
-        console.warn('Erro ao buscar dados do CNPJ:', err)
-      } finally {
-        setIsFetchingCnpj(false)
-      }
-    }
-
-    if (isCreateOpen && extractedDoc) {
-      const cleanCnpj = extractedDoc.replace(/\D/g, '')
-      if (cleanCnpj.length === 14) {
-        fetchCnpjData(cleanCnpj)
-      }
-    } else if (!isCreateOpen) {
-      setApiData(null)
-    }
-  }, [isCreateOpen, extractedDoc])
 
   if (!isOpen) return null
 
@@ -171,20 +126,11 @@ export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect 
           </div>
       </div>
 
-      <CrudModal 
+      <SupplierCreateModal 
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        title={isFetchingCnpj ? 'Buscando Dados do CNPJ...' : 'Novo Fornecedor'}
-        onSubmit={handleSalvarNovo}
-        loading={isFetchingCnpj}
-        initialData={apiData}
-        fields={[
-          { name: 'nome', label: 'Nome / Razão Social', type: 'text', required: true, defaultValue: apiData?.nome || search },
-          { name: 'cpf_cnpj', label: 'CPF ou CNPJ', type: 'text', defaultValue: apiData?.cpf_cnpj || extractedDoc },
-          { name: 'email', label: 'E-mail', type: 'text', defaultValue: apiData?.email || '' },
-          { name: 'telefone', label: 'Telefone / WhatsApp', type: 'text', defaultValue: apiData?.telefone || '' },
-          { name: 'categoria_padrao', label: 'Categoria de Despesa', type: 'text', placeholder: 'Ex: Energia, Serviços, Aluguel' },
-        ]}
+        onSuccess={handleSalvarNovo}
+        memo={extrato?.bank?.memo}
       />
     </div>
   )
