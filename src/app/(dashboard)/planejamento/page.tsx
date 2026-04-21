@@ -11,6 +11,7 @@ import ChartCard from '@/components/ui/ChartCard'
 import DataTable from '@/components/ui/DataTable'
 import CrudModal from '@/components/ui/CrudModal'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useOrcamentos } from '@/lib/hooks/useOrcamentos'
 import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
@@ -26,7 +27,10 @@ export default function PlanejamentoPage() {
   const [selectedMes, setSelectedMes] = useState(new Date().getMonth())
   const [selectedAno] = useState(new Date().getFullYear())
   
-  const { lancamentos, loading: loadFin, refresh: refetchFin } = useFinanceiro()
+  const { 
+    lancamentos, loading: loadFin, refresh: refetchFin, 
+    inserirBulk 
+  } = useFinanceiro()
   const { orcamentos, loading: loadOrc, inserir, atualizar, remover, refresh } = useOrcamentos(selectedMes, selectedAno)
   const { categorias } = useCategorias()
   const { diretoria, atualizar: atualizarDiretor } = useDiretoria()
@@ -35,6 +39,11 @@ export default function PlanejamentoPage() {
   const [savingIds, setSavingIds] = useState<Set<string>>(new Set())
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [reservaMeses, setReservaMeses] = useState(6)
+  
+  // Estados para Lançamento em Lote
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [isConfirmLancarOpen, setIsConfirmLancarOpen] = useState(false)
+  const [isLancing, setIsLancing] = useState(false)
 
   // Gerenciamento de Períodos ProLabore
   const [periodosMember, setPeriodosMember] = useState<any | null>(null)
@@ -92,7 +101,54 @@ export default function PlanejamentoPage() {
     const newEdits = { ...editValues }; delete newEdits[categoria]; setEditValues(newEdits)
   }
 
-  const columns = [
+  const handleLancarBulk = async () => {
+    if (selectedCategories.length === 0) return
+    setIsLancing(true)
+    try {
+      const itemsToLanch = comparativo.filter(c => selectedCategories.includes(c.categoria))
+      const mm = String(selectedMes + 1).padStart(2, '0')
+      const targetDate = `${selectedAno}-${mm}-10`
+      
+      const batch: any[] = itemsToLanch.map(item => ({
+        tipo: item.tipo,
+        descricao: `PLANEJAMENTO - ${mm}/${selectedAno} - ${item.categoria}`,
+        valor: item.planejado,
+        data: targetDate,
+        status: 'aberto',
+        categoria: item.categoria,
+        competencia_mes: selectedMes,
+        competencia_ano: selectedAno
+      }))
+
+      // Adiciona Reserva de Emergência
+      const reservaIdeal = Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100
+      batch.push({
+        tipo: 'despesa',
+        descricao: `PLANEJAMENTO - ${mm}/${selectedAno} - RESERVA DE EMERGÊNCIA`,
+        valor: reservaIdeal,
+        data: targetDate,
+        status: 'aberto',
+        categoria: 'RESERVA DE EMERGÊNCIA',
+        competencia_mes: selectedMes,
+        competencia_ano: selectedAno
+      })
+
+      const res = await inserirBulk(batch)
+      if (res.error) alert(`Erro ao lançar: ${res.error}`)
+      else {
+        alert(`${batch.length} planejamentos lançados com sucesso no Financeiro!`)
+        setSelectedCategories([])
+        setIsConfirmLancarOpen(false)
+        if (refetchFin) refetchFin(selectedAno)
+      }
+    } catch (err: any) {
+      alert(`Erro inesperado: ${err.message}`)
+    } finally {
+      setIsLancing(false)
+    }
+  }
+
+  const columns = useMemo(() => [
     { header: 'Categoria', key: 'categoria', render: (i: any) => <span className="text-xs font-bold text-slate-700">{i.categoria}</span> },
     { 
       header: 'Planejado', 
@@ -118,7 +174,7 @@ export default function PlanejamentoPage() {
         return <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{diff > 0 ? '+' : ''}{fmtR(Math.round(diff * 100) / 100)}</span>
       }
     }
-  ]
+  ], [editValues, selectedCategories])
 
   const receitasChartData = { labels: comparativo.filter(c => c.tipo === 'receita').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.planejado), backgroundColor: 'rgba(59, 130, 246, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.realizado), backgroundColor: '#10b981', borderRadius: 4 }] }
   const despesasChartData = { labels: comparativo.filter(c => c.tipo === 'despesa').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'despesa').map(c => c.planejado), backgroundColor: 'rgba(99, 102, 241, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'despesa').map(c => c.realizado), backgroundColor: '#6366f1', borderRadius: 4 }] }
@@ -237,7 +293,30 @@ export default function PlanejamentoPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="flex flex-col gap-6"><ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado"><div className="h-[210px] mt-4"><Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} /></div></ChartCard></div>
-        <div className="flex flex-col gap-4"><div className="flex items-center justify-between px-2"><h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3><button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button></div><DataTable columns={columns} data={comparativo} loading={loadFin || loadOrc} /></div>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3>
+              {selectedCategories.length > 0 && (
+                <button 
+                  onClick={() => setIsConfirmLancarOpen(true)}
+                  className="flex items-center gap-2 text-[9px] font-black text-white bg-emerald-500 px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200 animate-in zoom-in-95"
+                >
+                  <TrendingUp size={14} /> LANÇAR PLANEJAMENTO ({selectedCategories.length})
+                </button>
+              )}
+            </div>
+            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button>
+          </div>
+          <DataTable 
+            columns={columns} 
+            data={comparativo} 
+            loading={loadFin || loadOrc} 
+            selectedIds={selectedCategories}
+            onSelectChange={setSelectedCategories}
+            idKey="categoria"
+          />
+        </div>
       </div>
 
       {periodosMember && (
@@ -266,6 +345,16 @@ export default function PlanejamentoPage() {
       )}
 
       <CrudModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Nova Meta de Categoria" onSubmit={async (data) => { const cat = categorias.find(c => c.id === data.categoria_id); if(cat) await handleSaveOrcamento(cat.nome, 0); setIsAddModalOpen(false) }} fields={[{ name: 'categoria_id', label: 'Tipo de Categoria', type: 'select', required: true, options: categorias.map(c => ({ value: c.id, label: c.nome })) }]} />
+
+      <ConfirmModal 
+        isOpen={isConfirmLancarOpen}
+        onClose={() => setIsConfirmLancarOpen(false)}
+        onConfirm={handleLancarBulk}
+        title="Lançar Planejamento"
+        message={`Você deseja lançar os ${selectedCategories.length} orçamentos selecionados + a Reserva de Emergência para o dia 10 de ${MESES[selectedMes]}? Isso criará novos lançamentos provisionados no seu fluxo financeiro.`}
+        confirmText={isLancing ? 'Lançando...' : 'Sim, Lançar agora'}
+        type="info"
+      />
     </div>
   )
 }
