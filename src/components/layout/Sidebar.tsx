@@ -49,8 +49,7 @@ const MENU = [
   { 
     section: 'Gerencial', 
     items: [
-      { href: '/metas', icon: Target, label: 'Metas' },
-      { href: '/projetos', icon: Briefcase, label: 'Projetos' },
+      { href: '/estrategia', icon: Target, label: 'Estratégia' },
     ]
   },
   { 

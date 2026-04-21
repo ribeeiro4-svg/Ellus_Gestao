@@ -6,7 +6,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import { Briefcase, Calendar, DollarSign, Plus, Edit2, Trash2, User } from 'lucide-react'
 
-export default function ProjetosPage() {
+export default function ProjetosTab() {
   const { projetos, loading, inserir, atualizar, remover } = useProjetos()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -28,6 +28,7 @@ export default function ProjetosPage() {
     } else {
       await inserir(data)
     }
+    setIsModalOpen(false)
   }
 
   const columns = [
@@ -111,32 +112,29 @@ export default function ProjetosPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(79,70,229,.1)', border: '1px solid rgba(79,70,229,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4f46e5' }}>
-            <Briefcase size={24} />
-          </div>
-          <div>
-            <div className="page-title">Gestão de Projetos</div>
-            <div className="page-subtitle">Acompanhamento de orçamentos e prazos de iniciativas.</div>
-          </div>
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
+            <Briefcase className="text-indigo-600" size={20} /> Gestão de Projetos
+          </h2>
+          <p className="text-xs text-slate-500 font-medium mt-1">Acompanhamento de orçamentos e prazos de iniciativas.</p>
         </div>
-        <div className="flex items-center gap-3 ml-auto">
+        <div className="flex items-center gap-3">
            <div className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
               <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><DollarSign size={16} /></div>
               <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Pla de Investimento</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Plano de Investimento</p>
                 <h4 className="text-base font-black text-slate-900 leading-none mt-1">{fmtR(projetos.reduce((acc, p) => acc + p.orcamento, 0))}</h4>
               </div>
            </div>
-           <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}>
-             <Plus size={16} /> Novo Projeto
+           <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="bg-slate-900 text-white px-5 py-2.5 rounded-2xl font-bold text-xs hover:bg-black transition-all shadow-lg shadow-slate-200 flex items-center gap-2">
+             <Plus size={16} strokeWidth={3} /> Novo Projeto
            </button>
         </div>
       </div>
 
-      <div className="table-card">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
         <DataTable columns={columns} data={projetos} loading={loading} />
       </div>
 

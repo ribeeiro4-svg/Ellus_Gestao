@@ -315,7 +315,7 @@ export default function AssociadosTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ChartCard title="Crescimento" subtitle="Evolução acumulativa">
-            <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-50px] mb-[-40px] h-[450px]">
+            <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-80px] mb-[-60px] h-[500px]">
               <Line 
                 data={{ 
                   labels: MESES, 
@@ -323,7 +323,7 @@ export default function AssociadosTab() {
                     label: 'Associados', 
                     data: crescimentoMensal, 
                     borderColor: '#10b981',
-                    backgroundColor: 'rgba(16,185,129,0.12)',
+                    backgroundColor: 'rgba(16,185,129,0.15)',
                     fill: true,
                     tension: 0.4,
                     pointBackgroundColor: '#fff',
@@ -343,12 +343,13 @@ export default function AssociadosTab() {
                     x: { 
                       grid: { display: false }, 
                       ticks: { 
+                        display: true,
                         font: { size: 10, weight: 'bold' }, 
                         color: '#94a3b8',
-                        padding: -25 // Pull labels inside the chart area
+                        padding: -20
                       } 
                     }, 
-                    y: { display: false, beginAtZero: false } 
+                    y: { display: false } 
                   }, 
                   plugins: { 
                     legend: { display: false },
@@ -367,15 +368,15 @@ export default function AssociadosTab() {
           </ChartCard>
         </div>
         <ChartCard title="Mix" subtitle="Por categoria">
-          <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-60px] mb-[-40px] h-[450px] flex items-center justify-center">
+          <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-80px] mb-[-60px] h-[550px]">
              <Doughnut 
                data={{ labels: Object.keys(catMap).map(k => `${k} (${catMap[k]})`), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }} 
                options={{ 
                  responsive: true, 
                  maintainAspectRatio: false, 
-                 cutout: '75%', 
+                 cutout: '80%', 
                  layout: {
-                   padding: 20 // Added small padding to avoid clipping on large circles
+                   padding: 0
                  },
                  plugins: { 
                    legend: { 

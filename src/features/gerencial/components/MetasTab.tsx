@@ -6,7 +6,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import { fmtR, fmtData, pctMeta } from '@/lib/utils/formatters'
 import { Target, Plus, User, Edit2, Trash2 } from 'lucide-react'
 
-export default function MetasPage() {
+export default function MetasTab() {
   const { metas, loading, inserir, atualizar, remover } = useMetas()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -28,11 +28,12 @@ export default function MetasPage() {
     } else {
       await inserir(data)
     }
+    setIsModalOpen(false)
   }
 
   const columns = [
     { 
-      header: 'Meta Estretesgica', 
+      header: 'Meta Estratégica', 
       key: 'meta', 
       render: (i: any) => (
         <div className="flex flex-col">
@@ -107,33 +108,30 @@ export default function MetasPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(245,158,11,.1)', border: '1px solid rgba(245,158,11,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
-            <Target size={24} />
-          </div>
-          <div>
-            <div className="page-title">Metas e Performance</div>
-            <div className="page-subtitle">Acompanhamento estratégico de objetivos e resultados.</div>
-          </div>
+    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
+            <Target className="text-orange-500" size={20} /> Metas e Performance
+          </h2>
+          <p className="text-xs text-slate-500 font-medium mt-1">Acompanhamento estratégico de objetivos e resultados.</p>
         </div>
         <div className="flex items-center gap-3">
-           <div className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
+           <div className="bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm transition-all hover:shadow-md flex items-center gap-4">
               <div className="text-right">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Atingidas</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Metas Atingidas</p>
                 <h4 className="text-base font-black text-emerald-600 mt-1 leading-none">
                   {metas.filter(m => m.valor_realizado >= m.valor_meta && m.valor_meta > 0).length} / {metas.length}
                 </h4>
               </div>
            </div>
-           <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: 13 }}>
-             <Plus size={16} /> Nova Meta
+           <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="bg-slate-900 text-white px-5 py-2.5 rounded-2xl font-bold text-xs hover:bg-black transition-all shadow-lg shadow-slate-200 flex items-center gap-2">
+             <Plus size={16} strokeWidth={3} /> Nova Meta
            </button>
         </div>
       </div>
 
-      <div className="table-card">
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
          <DataTable columns={columns} data={metas} loading={loading} />
       </div>
 
@@ -160,4 +158,3 @@ export default function MetasPage() {
     </div>
   )
 }
-
