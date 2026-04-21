@@ -8,6 +8,8 @@ import { useDashboardMetrics } from '@/features/dashboard/hooks/useDashboardMetr
 import DashboardKpis from '@/features/dashboard/components/DashboardKpis'
 import DashboardCharts from '@/features/dashboard/components/DashboardCharts'
 import { MESES } from '@/lib/utils/formatters'
+import { FileText } from 'lucide-react'
+import ExportReportModal from '@/components/modals/ExportReportModal'
 
 export default function DashboardPage() {
   const { lancamentos, loading: loadFin } = useFinanceiro()
@@ -16,6 +18,7 @@ export default function DashboardPage() {
   
   const [filterMonth, setFilterMonth] = React.useState(new Date().getMonth())
   const [filterYear, setFilterYear] = React.useState(new Date().getFullYear())
+  const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
 
   const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, filterMonth, filterYear)
 
@@ -62,6 +65,9 @@ export default function DashboardPage() {
               {MESES.map((m, i) => <option key={m} value={i}>{m}</option>)}
             </select>
           </div>
+          <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-2 h-11 px-6 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95 shadow-slate-200">
+            <FileText size={16} /> Exportar
+          </button>
           <button className="h-11 w-11 flex items-center justify-center bg-white rounded-2xl border border-slate-100 text-slate-400 hover:text-emerald-500 transition-colors shadow-sm">
             <Filter size={18} />
           </button>
@@ -73,6 +79,16 @@ export default function DashboardPage() {
 
       {/* Charts Section */}
       <DashboardCharts metrics={metrics} onChartClick={() => {}} />
+
+      <ExportReportModal 
+        isOpen={isExportModalOpen} 
+        onClose={() => setIsExportModalOpen(false)} 
+        data={{
+          metrics,
+          financeiro: lancamentos,
+          associados
+        }}
+      />
     </div>
   )
 }
