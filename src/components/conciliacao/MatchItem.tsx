@@ -191,10 +191,21 @@ export default function MatchItem({
 
           {hasMatch ? (
             <div className="flex flex-col">
-              <h4 className="text-sm font-black text-emerald-900 uppercase whitespace-normal break-words">
-                {assocMatch?.nome || forMatch?.nome}
-                {forMatch?.isDirector && <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg">DIRETORIA</span>}
-              </h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-black text-emerald-900 uppercase whitespace-normal break-words">
+                  {assocMatch?.nome || forMatch?.nome}
+                  {forMatch?.isDirector && <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg">DIRETORIA</span>}
+                </h4>
+                {!isProcessed && (
+                  <button 
+                    onClick={assocMatch ? onLinkSupplier : onLinkManual}
+                    title={assocMatch ? "Mudar para Fornecedor" : "Mudar para Associado"}
+                    className="p-1.5 rounded-lg bg-emerald-100/50 text-emerald-600 hover:bg-emerald-200 transition-all active:scale-95"
+                  >
+                    <RefreshCw size={12} strokeWidth={3} />
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100/50 rounded-lg border border-emerald-200/50">
                   <Tag size={10} className="text-emerald-700" />
