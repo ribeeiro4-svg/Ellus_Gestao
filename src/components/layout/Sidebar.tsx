@@ -45,7 +45,6 @@ const MENU = [
     items: [
       { href: '/associados', icon: Users, label: 'Associados' },
       { href: '/fornecedores', icon: ShoppingCart, label: 'Fornecedores' },
-      { href: '/inadimplencia', icon: AlertTriangle, label: 'Inadimplência' },
     ]
   },
   { 

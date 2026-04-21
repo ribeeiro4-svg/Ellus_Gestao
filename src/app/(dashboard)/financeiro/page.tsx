@@ -30,6 +30,7 @@ import { processFinancialSubmit } from '@/features/financeiro/utils/processFinan
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -72,7 +73,7 @@ export default function FinanceiroPage() {
   )
 
   // Estados Base
-  const [activeTab, setActiveTab] = useState<'geral' | 'receitas' | 'despesas' | 'conciliacao'>('geral')
+  const [activeTab, setActiveTab] = useState<'geral' | 'receitas' | 'despesas' | 'inadimplencia' | 'conciliacao'>('geral')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [saving, setSaving] = useState(false)
@@ -431,6 +432,7 @@ export default function FinanceiroPage() {
         <button onClick={() => setActiveTab('geral')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'geral' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📊 Geral</button>
         <button onClick={() => setActiveTab('receitas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'receitas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↑ Receitas</button>
         <button onClick={() => setActiveTab('despesas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'despesas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↓ Despesas</button>
+        <button onClick={() => setActiveTab('inadimplencia')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'inadimplencia' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>⚠️ Inadimplência</button>
         <button onClick={() => setActiveTab('conciliacao')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'conciliacao' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📑 Conciliação</button>
       </div>
 
@@ -441,7 +443,9 @@ export default function FinanceiroPage() {
         </div>
       )}
 
-      {activeTab === 'conciliacao' ? (
+      {activeTab === 'inadimplencia' ? (
+        <InadimplenciaTab />
+      ) : activeTab === 'conciliacao' ? (
         <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-2 duration-500">
            {(extrato.length > 0 || (conciliacaoSubTab === 'cora' && (coraItems || []).length > 0)) && (
               <ConciliacaoToolbar 

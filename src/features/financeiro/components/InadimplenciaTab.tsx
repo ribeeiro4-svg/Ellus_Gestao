@@ -5,7 +5,7 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, fmtPct } from '@/lib/utils/formatters'
-import { AlertTriangle, TrendingDown, Users, ShieldAlert, Pencil, XCircle, Search, RefreshCw } from 'lucide-react'
+import { AlertTriangle, TrendingDown, Users, ShieldAlert, Pencil, XCircle, Search } from 'lucide-react'
 import { 
   Chart as ChartJS, 
   ArcElement, Tooltip, Legend, 
@@ -19,7 +19,7 @@ import { useContas } from '@/lib/hooks/useContas'
 
 ChartJS.register(ArcElement, Tooltip, Legend, DoughnutController)
 
-export default function InadimplenciaPage() {
+export default function InadimplenciaTab() {
   const { associados, loading: loadAssoc } = useAssociados()
   const { lancamentos, loading: loadFin, atualizar, remover } = useFinanceiro()
   const { contas } = useContas()
@@ -147,20 +147,7 @@ export default function InadimplenciaPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-8 pb-20">
-      {/* ── Page Header ── */}
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)' }}>
-            <AlertTriangle size={24} />
-          </div>
-          <div>
-            <div className="page-title">Painel de Inadimplência</div>
-            <div className="page-subtitle">Controle detalhado de recebíveis vencidos e atrasados</div>
-          </div>
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-10">
       {/* ── KPIs ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
@@ -169,13 +156,13 @@ export default function InadimplenciaPage() {
           { label: 'Ticket Médio', value: fmtR(ticketMedioAtraso), sub: 'por inadimplente', icon: Users, color: 'var(--text2)' },
           { label: 'Críticos (3+ Meses)', value: curva[3], sub: 'casos de alta inadimplência', icon: AlertTriangle, color: 'var(--red)' },
         ].map(k => (
-          <div key={k.label} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden group">
+          <div key={k.label} className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-sm relative overflow-hidden group transition-all hover:shadow-md hover:border-red-100">
             <div className="relative z-10">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{k.label}</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{k.label}</p>
               <h3 className="text-2xl font-black text-slate-900 tracking-tight" style={{ color: k.color }}>{k.value}</h3>
-              <p className="text-[10px] text-slate-400 mt-1 font-semibold">{k.sub}</p>
+              <p className="text-[10px] text-slate-400 mt-1 font-bold">{k.sub}</p>
             </div>
-            <k.icon size={40} className="absolute -right-2 -bottom-2 opacity-[0.03] group-hover:scale-110 transition-transform" />
+            <k.icon size={44} className="absolute -right-2 -bottom-2 opacity-[0.04] group-hover:scale-110 group-hover:opacity-[0.08] transition-all duration-500" />
           </div>
         ))}
       </div>
@@ -199,7 +186,7 @@ export default function InadimplenciaPage() {
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, padding: 15 } }
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' as const }, padding: 15 } }
                   },
                   cutout: '75%'
                 }}
@@ -209,23 +196,23 @@ export default function InadimplenciaPage() {
         </div>
 
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 h-full flex flex-col">
-            <h4 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2">
-               <ShieldAlert size={16} className="text-red-500" /> Associados em Situação Crítica
+          <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 h-full flex flex-col">
+            <h4 className="text-xs font-black text-slate-900 uppercase tracking-[2px] mb-6 flex items-center gap-2">
+               <ShieldAlert size={18} className="text-red-500" /> Associados em Situação Crítica
             </h4>
             <div className="flex-1 space-y-4">
                {mappedInadimplentes.slice(0, 3).map((item, idx) => (
-                 <div key={item.assoc?.id || idx} className="flex items-center justify-between p-4 bg-red-50/30 rounded-xl border border-red-100/50">
-                    <div className="flex items-center gap-4">
-                       <span className="text-xs font-black text-red-200">#{idx+1}</span>
+                 <div key={item.assoc?.id || idx} className="flex items-center justify-between p-5 bg-red-50/20 rounded-2xl border border-red-100/30 hover:bg-red-50/40 transition-colors">
+                    <div className="flex items-center gap-5">
+                       <div className="w-8 h-8 rounded-full bg-red-100/50 flex items-center justify-center font-black text-red-600 text-[10px]">#{idx+1}</div>
                        <div>
-                          <p className="text-xs font-bold text-slate-900">{item.assoc?.nome || 'Associado não identificado'}</p>
-                          <p className="text-[10px] text-slate-400 font-medium">{item.meses} meses em aberto</p>
+                          <p className="text-sm font-black text-slate-900">{item.assoc?.nome || 'Associado não identificado'}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{item.meses} meses em atraso</p>
                        </div>
                     </div>
                     <div className="text-right">
-                       <p className="text-sm font-black text-red-600">{fmtR(item.total)}</p>
-                       <button className="text-[9px] font-bold text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors">Acionar Cobrança</button>
+                       <p className="text-base font-black text-red-600">{fmtR(item.total)}</p>
+                       <button className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors mt-1">Acionar Cobrança</button>
                     </div>
                  </div>
                ))}
@@ -239,15 +226,15 @@ export default function InadimplenciaPage() {
         </div>
       </div>
 
-      <div className="table-card">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Lançamentos em Atraso</h4>
-            <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lançamentos em Atraso</h4>
+            <div className="relative w-full md:w-80">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input 
                     type="text" 
-                    placeholder="Filtrar lançamentos..." 
-                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs outline-none focus:ring-2 ring-red-50 transition-all font-medium"
+                    placeholder="Buscar associado ou descrição..." 
+                    className="w-full pl-12 pr-6 py-3 bg-slate-50 border-none rounded-2xl text-xs outline-none focus:ring-4 ring-red-500/5 transition-all font-bold text-slate-700"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                 />
