@@ -56,12 +56,12 @@ export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect 
         <div className="p-8 pb-4 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-black text-indigo-950 tracking-tight">Vincular Fornecedor/Diretor</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Busque na base pelo nome ou documento</p>
-              <span className="text-gray-300">•</span>
+            <div className="flex items-center flex-wrap gap-2 mt-1">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest shrink-0">Busque na base pelo nome ou documento</p>
+              <span className="text-gray-300 hidden sm:inline">•</span>
               <button 
                 onClick={() => setIsCreateOpen(true)}
-                className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors flex items-center gap-1"
+                className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors flex items-center gap-1 whitespace-nowrap"
               >
                 <Plus size={10} strokeWidth={4} />
                 Novo Fornecedor
