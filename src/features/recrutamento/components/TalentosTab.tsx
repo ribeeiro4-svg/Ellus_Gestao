@@ -17,7 +17,7 @@ import { fmtData } from '@/lib/utils/formatters'
 import type { Candidato } from '@/lib/types'
 import CandidatoDossier from '@/components/recrutamento/CandidatoDossier'
 
-export default function TalentosPage() {
+export default function TalentosTab() {
   const { candidatos, loading } = useCandidatos()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCandidato, setSelectedCandidato] = useState<Candidato | null>(null)
@@ -31,14 +31,13 @@ export default function TalentosPage() {
   )
 
   return (
-    <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500">
-      <div className="page-header flex justify-between items-center">
+    <div className="flex flex-col flex-1 gap-6 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-            <Database className="text-[#2d8c6f]" />
-            Banco de Talentos
-          </h1>
-          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            <Database className="text-[#2d8c6f]" size={20} /> Banco de Talentos
+          </h2>
+          <p className="text-xs text-gray-500 mt-1 font-medium italic">
             Consulte candidatos com potencial para futuras oportunidades.
           </p>
         </div>
@@ -130,13 +129,6 @@ export default function TalentosPage() {
             </div>
           </div>
         ))}
-
-        {talentos.length === 0 && !loading && (
-          <div className="col-span-full py-20 text-center opacity-30">
-            <Database size={48} className="mx-auto mb-4" />
-            <p className="text-[11px] font-black uppercase tracking-widest">Nenhum talento registrado nesta busca</p>
-          </div>
-        )}
       </div>
 
       {selectedCandidato && (

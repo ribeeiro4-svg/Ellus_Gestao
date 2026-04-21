@@ -55,10 +55,7 @@ const MENU = [
   { 
     section: 'Recrutamento', 
     items: [
-      { href: '/recrutamento', icon: BarChart3, label: 'Dashboard' },
-      { href: '/recrutamento/vagas', icon: Briefcase, label: 'Gestão de Vagas' },
-      { href: '/recrutamento/kanban', icon: FileCheck, label: 'Painel Kanban' },
-      { href: '/recrutamento/talentos', icon: Users, label: 'Banco de Talentos' },
+      { href: '/recrutamento', icon: BarChart3, label: 'Recrutamento' },
     ]
   },
   { 

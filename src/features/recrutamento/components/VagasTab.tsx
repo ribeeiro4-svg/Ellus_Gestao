@@ -19,7 +19,7 @@ import { fmtR } from '@/lib/utils/formatters'
 import CrudModal from '@/components/ui/CrudModal'
 import type { Vaga } from '@/lib/types'
 
-export default function VagasPage() {
+export default function VagasTab() {
   const { vagas, loading, inserir, atualizar, remover } = useVagas()
   const { candidatos, inserir: inserirCandidato } = useCandidatos()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -58,20 +58,19 @@ export default function VagasPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500">
-      <div className="page-header flex justify-between items-center">
+    <div className="flex flex-col flex-1 gap-6 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-            <Briefcase className="text-[#2d8c6f]" />
-            Gestão de Vagas
-          </h1>
-          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            <Briefcase className="text-[#2d8c6f]" size={20} /> Gestão de Vagas
+          </h2>
+          <p className="text-xs text-gray-500 mt-1 font-medium italic">
             Cadastre e gerencie as oportunidades de estágio disponíveis na associação.
           </p>
         </div>
         <button 
           onClick={() => { setEditingVaga(null); setIsModalOpen(true) }}
-          className="px-6 py-3.5 bg-[#0e2d22] text-white text-[11px] font-black rounded-2xl hover:bg-[#163d2f] transition-all flex items-center gap-3 uppercase tracking-widest shadow-xl shadow-emerald-900/10 active:scale-95 border border-emerald-500/20"
+          className="px-6 py-3 bg-[#0e2d22] text-white text-[11px] font-black rounded-2xl hover:bg-[#163d2f] transition-all flex items-center gap-3 uppercase tracking-widest shadow-xl shadow-emerald-900/10 border border-emerald-500/20"
         >
           <Plus size={16} strokeWidth={4} />
           Nova Vaga
@@ -167,15 +166,6 @@ export default function VagasPage() {
           </div>
         ))}
       </div>
-
-      {filteredVagas.length === 0 && !loading && (
-        <div className="py-20 text-center bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
-          <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 text-slate-200 shadow-sm">
-            <Briefcase size={32} />
-          </div>
-          <p className="text-[11px] font-black text-slate-400 uppercase tracking-[3px]">Nenhuma vaga encontrada</p>
-        </div>
-      )}
 
       <CrudModal 
         isOpen={isModalOpen}

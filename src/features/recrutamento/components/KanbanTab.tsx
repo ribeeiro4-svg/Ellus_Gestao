@@ -3,7 +3,6 @@ import React, { useState } from 'react'
 import { 
   FileCheck, 
   Search, 
-  Filter, 
   ArrowRight, 
   User, 
   GraduationCap, 
@@ -30,7 +29,7 @@ const COLUNAS: { key: StatusCandidato; label: string; color: string }[] = [
   { key: 'reprovado', label: 'Reprovados', color: 'bg-rose-500' },
 ]
 
-export default function KanbanPage() {
+export default function KanbanTab() {
   const { vagas } = useVagas()
   const [selectedVaga, setSelectedVaga] = useState<string>('')
   const { candidatos, loading, atualizar } = useCandidatos(selectedVaga || undefined)
@@ -51,27 +50,25 @@ export default function KanbanPage() {
   const taxaConversao = totalInscritos > 0 ? (naFilaContratacao / totalInscritos) * 100 : 0
 
   return (
-    <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 h-full overflow-hidden">
-      {/* ... Cabeçalho e Toolbar ... */}
-      <div className="page-header flex justify-between items-center shrink-0">
+    <div className="flex flex-col flex-1 gap-6 animate-in fade-in duration-500 h-[calc(100vh-280px)] overflow-hidden">
+      <div className="flex justify-between items-center shrink-0 flex-wrap gap-4">
         <div>
-          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-            <FileCheck className="text-[#2d8c6f]" />
-            Painel Kanban
-          </h1>
-          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+            <FileCheck className="text-[#2d8c6f]" size={20} /> Painel Kanban
+          </h2>
+          <p className="text-xs text-gray-500 mt-1 font-medium italic">
             Acompanhe o funil de recrutamento e a evolução de cada candidato.
           </p>
         </div>
         
         <div className="flex items-center gap-4">
-          <div className="bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <TrendingDown size={18} className="rotate-180" />
+          <div className="bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+              <TrendingDown size={14} className="rotate-180" />
             </div>
             <div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none">Taxa de Conversão Final</p>
-              <h4 className="text-xl font-black text-slate-900 leading-none mt-1.5">{taxaConversao.toFixed(1)}%</h4>
+              <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-none">Conversão Final</p>
+              <h4 className="text-sm font-black text-slate-900 leading-none mt-1">{taxaConversao.toFixed(1)}%</h4>
             </div>
           </div>
         </div>
@@ -103,60 +100,53 @@ export default function KanbanPage() {
       <div className="flex-1 min-h-0 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent pb-4">
         <div className="flex gap-6 h-full pb-2">
           {COLUNAS.map(col => (
-            <div key={col.key} className="flex flex-col w-[300px] min-w-[300px] h-full bg-slate-50/50 rounded-[32px] border border-slate-100/50 p-4">
-              <div className="flex items-center justify-between mb-5 px-2">
+            <div key={col.key} className="flex flex-col w-[280px] min-w-[280px] h-full bg-slate-50/50 rounded-[32px] border border-slate-100/50 p-4">
+              <div className="flex items-center justify-between mb-4 px-2">
                 <div className="flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full ${col.color}`}></div>
-                  <h3 className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{col.label}</h3>
+                  <div className={`w-2 h-2 rounded-full ${col.color}`}></div>
+                  <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{col.label}</h3>
                 </div>
-                <span className="text-[10px] font-black text-slate-400 bg-white px-2.5 py-1 rounded-full border border-slate-100">
+                <span className="text-[10px] font-black text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-100">
                   {getCandidatosPorStatus(col.key).length}
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-4 px-1 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto space-y-3 px-1 custom-scrollbar">
                 {getCandidatosPorStatus(col.key).map(cand => (
                   <div 
                     key={cand.id}
                     onClick={() => setSelectedCandidato(cand)}
-                    className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-500/20 transition-all cursor-pointer group"
+                    className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-500/20 transition-all cursor-pointer group"
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 font-bold overflow-hidden border border-slate-100">
-                        {cand.foto_url ? <img src={cand.foto_url} className="w-full h-full object-cover" /> : <User size={20} />}
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 font-bold overflow-hidden border border-slate-100">
+                        {cand.foto_url ? <img src={cand.foto_url} className="w-full h-full object-cover" /> : <User size={16} />}
                       </div>
-                      <button className="p-1.5 text-slate-300 hover:text-slate-600 rounded-lg">
-                        <MoreVertical size={14} />
+                      <button className="p-1 text-slate-300 hover:text-slate-600 rounded-lg">
+                        <MoreVertical size={12} />
                       </button>
                     </div>
 
-                    <h4 className="text-sm font-bold text-slate-700 tracking-tight leading-tight mb-1">{cand.nome}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">{cand.curso || 'CURSO NÃO INFORMADO'}</p>
+                    <h4 className="text-xs font-bold text-slate-700 tracking-tight leading-tight mb-1">{cand.nome}</h4>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate">{cand.curso || 'CURSO NÃO INFORMADO'}</p>
 
-                    {/* Scores e Indicadores */}
-                    <div className="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
-                      <div className="flex gap-2">
-                         {cand.nota_final && (
-                           <div className="flex flex-col">
-                             <span className="text-[8px] font-black text-slate-300 uppercase">Nota Final</span>
-                             <span className={`text-[11px] font-black ${cand.nota_final >= 8 ? 'text-emerald-500' : 'text-slate-700'}`}>{cand.nota_final.toFixed(1)}</span>
-                           </div>
-                         )}
-                      </div>
-                      <div className="flex -space-x-1">
-                        {cand.status === 'contratacao' && <CheckCircle2 size={16} className="text-emerald-500" />}
-                        {cand.status === 'reprovado' && <XCircle size={16} className="text-rose-500" />}
-                        {cand.status === 'banco_talentos' && <Database size={16} className="text-purple-500" />}
-                      </div>
+                    <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
+                       <div className="flex gap-2">
+                          {cand.nota_final && (
+                            <div className="flex flex-col">
+                              <span className="text-[7px] font-black text-slate-200 uppercase">Nota</span>
+                              <span className={`text-[10px] font-black ${cand.nota_final >= 8 ? 'text-emerald-500' : 'text-slate-700'}`}>{cand.nota_final.toFixed(1)}</span>
+                            </div>
+                          )}
+                       </div>
+                       <div className="flex -space-x-1">
+                        {cand.status === 'contratacao' && <CheckCircle2 size={14} className="text-emerald-500" />}
+                        {cand.status === 'reprovado' && <XCircle size={14} className="text-rose-500" />}
+                        {cand.status === 'banco_talentos' && <Database size={14} className="text-purple-500" />}
+                       </div>
                     </div>
                   </div>
                 ))}
-
-                {getCandidatosPorStatus(col.key).length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-10 opacity-20 filter grayscale">
-                     <FileCheck size={32} />
-                  </div>
-                )}
               </div>
             </div>
           ))}
@@ -165,7 +155,7 @@ export default function KanbanPage() {
 
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
+          width: 3px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
