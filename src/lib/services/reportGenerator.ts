@@ -96,60 +96,83 @@ function buildDashboardSection(metrics: any) {
 }
 
 function buildFinanceiroSection(lancamentos: any[]) {
-  // Pegar os 20 últimos para o relatório ou algo similar
-  const items = lancamentos.slice(0, 25);
+  const receitas = lancamentos.filter(l => l.tipo === 'receita').sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  const despesas = lancamentos.filter(l => l.tipo === 'despesa').sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+  const renderTable = (items: any[], title: string, color: string) => `
+    <div style="margin-top: 30px;">
+      <h3 style="font-size: 13px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+        <span style="width: 8px; height: 8px; border-radius: 2px; background: ${color};"></span>
+        ${title} (${items.length})
+      </h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th class="text-right">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(l => `
+            <tr>
+              <td>${new Date(l.data).toLocaleDateString('pt-BR')}</td>
+              <td>${l.descricao}</td>
+              <td>${l.categoria || 'Geral'}</td>
+              <td class="text-right font-bold" style="color: ${l.tipo === 'receita' ? '#10b981' : '#ef4444'}">
+                ${l.tipo === 'receita' ? '+' : '-'}${fmtR(l.valor)}
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
   
   return `
     <div class="page-divider"></div>
-    <h2 class="section-title">Fluxo Financeiro Recente</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Data</th>
-          <th>Descrição</th>
-          <th>Categoria</th>
-          <th class="text-right">Valor</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${items.map(l => `
-          <tr>
-            <td>${new Date(l.data).toLocaleDateString('pt-BR')}</td>
-            <td>${l.descricao}</td>
-            <td>${l.categoria || 'Geral'}</td>
-            <td class="text-right font-bold ${l.tipo === 'receita' ? 'text-emerald' : ''}">${l.tipo === 'receita' ? '+' : '-'}${fmtR(l.valor)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
+    <h2 class="section-title">Fluxo Financeiro Detalhado</h2>
+    ${renderTable(receitas, 'Receitas', '#10b981')}
+    ${renderTable(despesas, 'Despesas', '#ef4444')}
   `;
 }
 
 function buildAssociadosSection(associados: any[]) {
-  const items = associados.slice(0, 20);
+  const ativos = associados.filter(a => (a.status || '').toLowerCase().includes('ativ')).sort((a,b) => a.nome.localeCompare(b.nome));
+  const pendentes = associados.filter(a => !(a.status || '').toLowerCase().includes('ativ')).sort((a,b) => a.nome.localeCompare(b.nome));
+
+  const renderTable = (items: any[], title: string) => `
+    <div style="margin-top: 30px;">
+      <h3 style="font-size: 13px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 15px;">${title} (${items.length})</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Status</th>
+            <th>Ingresso</th>
+            <th class="text-right">Mensalidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(a => `
+            <tr>
+              <td>${a.nome}</td>
+              <td style="font-weight: bold; color: ${a.status?.toLowerCase().includes('ativ') ? '#10b981' : '#f59e0b'}">${a.status?.toUpperCase()}</td>
+              <td>${new Date(a.data_ingresso || a.created_at).toLocaleDateString('pt-BR')}</td>
+              <td class="text-right font-bold">${fmtR(a.mensalidade)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
   return `
     <div class="page-divider"></div>
     <h2 class="section-title">Quadro de Associados</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Nome</th>
-          <th>Status</th>
-          <th>Ingresso</th>
-          <th class="text-right">Mensalidade</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${items.map(a => `
-          <tr>
-            <td>${a.nome}</td>
-            <td style="font-weight: bold; color: ${a.status === 'ativo' ? '#10b981' : '#64748b'}">${a.status?.toUpperCase()}</td>
-            <td>${new Date(a.data_ingresso || a.created_at).toLocaleDateString('pt-BR')}</td>
-            <td class="text-right font-bold">${fmtR(a.mensalidade)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
+    ${renderTable(ativos, 'Associados Ativos')}
+    ${renderTable(pendentes, 'Associados Pendentes e Outros')}
   `;
 }
 
