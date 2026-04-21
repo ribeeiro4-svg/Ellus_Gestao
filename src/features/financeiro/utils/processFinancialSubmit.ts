@@ -14,23 +14,40 @@ export async function processFinancialSubmit(
   const parseValue = (val: any) => {
     if (typeof val === 'number') return val
     if (!val) return 0
-    // Remove pontos de milhar e substitui vírgula por ponto
     const cleaned = String(val).replace(/\./g, '').replace(',', '.')
     return parseFloat(cleaned) || 0
+  }
+
+  // Função para garantir que campos UUID sejam null se inválidos/undefined
+  const cleanId = (val: any) => {
+    if (!val || val === 'undefined' || val === 'null' || val === '') return null
+    return val
+  }
+
+  // Fallback para randomUUID caso não disponível (ambientes sem HTTPS ou antigos)
+  const generateUUID = () => {
+    try {
+      return crypto.randomUUID()
+    } catch {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0
+        const v = c === 'x' ? r : (r & 0x3) | 0x8
+        return v.toString(16)
+      })
+    }
   }
 
   const safeData = {
     ...data,
     valor: parseValue(data.valor),
-    associado_id: data.associado_id || null,
-    fornecedor_id: data.fornecedor_id || null,
-    diretor_id: data.diretor_id || null,
-    conta_id: data.conta_id || null
+    associado_id: cleanId(data.associado_id),
+    fornecedor_id: cleanId(data.fornecedor_id),
+    diretor_id: cleanId(data.diretor_id),
+    conta_id: cleanId(data.conta_id)
   }
 
   const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, ...dbData } = safeData
   
-  // Helper para extrair competência com segurança
   const getComp = (dtStr: string) => {
     const p = dtStr.includes('-') ? dtStr.split('-').map(Number) : dtStr.split('/').reverse().map(Number)
     return { mes: p[1] - 1, ano: p[0] }
@@ -44,7 +61,7 @@ export async function processFinancialSubmit(
       return { 
         ...dbData, 
         descricao: `${dbData.descricao.toUpperCase()} - ${assoc?.nome.toUpperCase() || 'LOTE'}`,
-        associado_id: assocId, 
+        associado_id: cleanId(assocId), 
         status: safeData.status || 'aberto',
         competencia_mes: comp.mes,
         competencia_ano: comp.ano
@@ -58,9 +75,9 @@ export async function processFinancialSubmit(
     const mesesAFrente = Number(recorrencia_meses || 12)
     const batch = []
     const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null
-    const baseDesc = dbData.descricao.toUpperCase().replace(/\s*-\s*.*$/, '') // Limpa sufixos antigos
+    const baseDesc = dbData.descricao.toUpperCase().replace(/\s*-\s*.*$/, '')
     const finalDesc = assoc ? `${baseDesc} - ${assoc.nome.toUpperCase()}` : baseDesc
-    const recId = crypto.randomUUID()
+    const recId = generateUUID()
 
     for (let i = 0; i <= mesesAFrente; i++) {
         const parts = safeData.data.includes('-') 
@@ -85,7 +102,6 @@ export async function processFinancialSubmit(
         });
     }
 
-    // Se estiver editando, atualizamos o original e inserimos a nova série
     if (editingItem) {
       const r1 = await actions.atualizar(editingItem.id, batch[0])
       if (r1?.error) return r1
