@@ -85,10 +85,14 @@ export async function processFinancialSubmit(
         });
     }
 
-    // Se estiver editando, removemos o original e inserimos a nova série
+    // Se estiver editando, atualizamos o original e inserimos a nova série
     if (editingItem) {
-      await actions.atualizar(editingItem.id, batch[0]) // Atualiza o primeiro
-      if (batch.length > 1) await actions.inserirBulk(batch.slice(1)) // Insere os demais
+      const r1 = await actions.atualizar(editingItem.id, batch[0])
+      if (r1?.error) return r1
+      if (batch.length > 1) {
+        const r2 = await actions.inserirBulk(batch.slice(1))
+        if (r2?.error) return r2
+      }
       return { error: null }
     }
     

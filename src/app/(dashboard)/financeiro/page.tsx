@@ -271,7 +271,19 @@ export default function FinanceiroPage() {
         const errorMsg = typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error
         alert(`Erro ao salvar: ${errorMsg}`)
       }
-      else { setEditingItem(null); setIsModalOpen(false) }
+      else { 
+        const d = new Date(data.data)
+        const savedMonth = d.getMonth()
+        const savedYear = d.getFullYear()
+        
+        if (savedMonth !== filterMonth || savedYear !== filterYear) {
+          const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+          alert(`Salvo com sucesso! O lançamento foi criado em ${meses[savedMonth]}/${savedYear}. Altere os filtros acima para visualizá-lo.`)
+        }
+        
+        setEditingItem(null)
+        setIsModalOpen(false) 
+      }
     } catch (err: any) { alert(`Erro inesperado: ${err.message}`) } finally { setSaving(false) }
   }
 
