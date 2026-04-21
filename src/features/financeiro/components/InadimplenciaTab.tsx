@@ -162,7 +162,7 @@ export default function InadimplenciaTab() {
               <h3 className="text-2xl font-black text-slate-900 tracking-tight" style={{ color: k.color }}>{k.value}</h3>
               <p className="text-[10px] text-slate-400 mt-1 font-bold">{k.sub}</p>
             </div>
-            <k.icon size={44} className="absolute -right-2 -bottom-2 opacity-[0.04] group-hover:scale-110 group-hover:opacity-[0.08] transition-all duration-500" />
+            <k.icon size={48} className="absolute right-4 bottom-4 opacity-[0.03] group-hover:scale-110 group-hover:opacity-[0.06] transition-all duration-500" />
           </div>
         ))}
       </div>
@@ -171,7 +171,7 @@ export default function InadimplenciaTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <ChartCard title="Curva de Atraso" subtitle="Distribuição por meses vencidos">
-            <div className="h-[240px] mt-4">
+            <div className="flex-1 w-[calc(100%+48px)] mx-[-24px] mb-[-24px] h-[340px]">
               <Doughnut 
                 data={{
                   labels: ['1 Mês', '2 Meses', '3 Meses', '3+ Meses'],
@@ -179,16 +179,31 @@ export default function InadimplenciaTab() {
                     data: curva,
                     backgroundColor: ['#fcd34d', '#fb923c', '#ef4444', '#991b1b'],
                     borderWidth: 0,
-                    hoverOffset: 10
+                    hoverOffset: 20
                   }]
                 }}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
-                  plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' as const }, padding: 15 } }
+                  layout: {
+                    padding: {
+                      top: 10,
+                      bottom: 30,
+                      left: 30,
+                      right: 30
+                    }
                   },
-                  cutout: '75%'
+                  plugins: {
+                    legend: { 
+                      position: 'bottom', 
+                      labels: { 
+                        boxWidth: 8, 
+                        font: { size: 9, weight: 'bold' as const }, 
+                        padding: 15 
+                      } 
+                    }
+                  },
+                  cutout: '65%'
                 }}
               />
             </div>
