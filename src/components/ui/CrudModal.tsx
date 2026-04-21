@@ -23,6 +23,7 @@ interface CrudModalProps {
   onSubmit: (data: any) => Promise<void>
   onChange?: (name: string, value: any, setFormData: React.Dispatch<React.SetStateAction<any>>) => void
   loading?: boolean
+  onLoad?: (setFormData: React.Dispatch<React.SetStateAction<any>>) => void
 }
 
 const FORMA_ICONS: Record<string, string> = {
@@ -41,23 +42,26 @@ const FORMA_LABELS: Record<string, string> = {
   'Cartão': 'Cartão',
 }
 
-export default function CrudModal({ isOpen, onClose, title, fields, initialData, onSubmit, onChange, loading: externalLoading }: CrudModalProps) {
+export default function CrudModal({ isOpen, onClose, title, fields, initialData, onSubmit, onChange, loading: externalLoading, onLoad }: CrudModalProps) {
   const [formData, setFormData] = useState<any>({})
   const [internalLoading, setInternalLoading] = useState(false)
   
   const loading = externalLoading || internalLoading
 
   useEffect(() => {
-    if (initialData && isOpen) {
-      setFormData(initialData)
-    } else if (isOpen) {
-      const defaults: any = {}
-      fields.forEach(f => {
-        if (f.defaultValue !== undefined) defaults[f.name] = f.defaultValue
-      })
-      setFormData(defaults)
+    if (isOpen) {
+      if (initialData) {
+        setFormData(initialData)
+      } else {
+        const defaults: any = {}
+        fields.forEach(f => {
+          if (f.defaultValue !== undefined) defaults[f.name] = f.defaultValue
+        })
+        setFormData(defaults)
+      }
+      if (onLoad) onLoad(setFormData)
     }
-  }, [initialData, isOpen])
+  }, [initialData, isOpen, fields]) // Added fields to deps to be safe
 
   if (!isOpen) return null
 

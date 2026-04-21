@@ -8,10 +8,10 @@ interface SupplierCreateModalProps {
   onClose: () => void
   memo?: string
   onSuccess: (sup: any) => void
+  inserir: (data: any) => Promise<any>
 }
 
-export default function SupplierCreateModal({ isOpen, onClose, memo, onSuccess }: SupplierCreateModalProps) {
-  const { inserir } = useFornecedores()
+export default function SupplierCreateModal({ isOpen, onClose, memo, onSuccess, inserir }: SupplierCreateModalProps) {
   const [isFetchingCnpj, setIsFetchingCnpj] = useState(false)
   const [apiData, setApiData] = useState<any>(null)
 

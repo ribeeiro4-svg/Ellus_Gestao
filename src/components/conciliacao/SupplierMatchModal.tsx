@@ -11,10 +11,11 @@ interface SupplierMatchModalProps {
   onClose: () => void
   extrato: any
   onSelect: (sup: any) => void
+  fornecedores: any[]
+  inserir: (data: any) => Promise<any>
 }
 
-export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect }: SupplierMatchModalProps) {
-  const { fornecedores, inserir } = useFornecedores()
+export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect, fornecedores, inserir }: SupplierMatchModalProps) {
   const { diretoria } = useDiretoria()
   const [search, setSearch] = useState('')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -131,6 +132,7 @@ export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect 
         onClose={() => setIsCreateOpen(false)}
         onSuccess={handleSalvarNovo}
         memo={extrato?.bank?.memo}
+        inserir={inserir}
       />
     </div>
   )

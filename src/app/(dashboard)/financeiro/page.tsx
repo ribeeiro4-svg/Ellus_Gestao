@@ -497,6 +497,7 @@ export default function FinanceiroPage() {
         title={editingItem ? 'Editar Lançamento' : 'Novo Lançamento'} 
         initialData={editingItem} 
         onSubmit={handleSalvar} 
+        onLoad={(setFn) => setParentSetFormData(() => setFn)}
         onChange={(name, val, setFn) => setParentSetFormData(() => setFn)}
         fields={modalFields} 
         loading={saving} 
@@ -506,6 +507,7 @@ export default function FinanceiroPage() {
         isOpen={isSupplierCreateOpen} 
         onClose={() => setIsSupplierCreateOpen(false)} 
         memo={currentEditMemo}
+        inserir={inserir}
         onSuccess={(sup) => {
           if (parentSetFormData) {
             parentSetFormData((prev: any) => ({ ...prev, fornecedor_id: sup.id }))
@@ -560,6 +562,8 @@ export default function FinanceiroPage() {
         isOpen={isSupplierLinkModalOpen} 
         onClose={() => setIsSupplierLinkModalOpen(false)} 
         extrato={selectedExtrato} 
+        fornecedores={fornecedores}
+        inserir={inserir}
         onSelect={(sup: any) => { 
           const tf = selectedExtrato.bank.fitid; 
           setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: enhanceMemo(sup.nome, selectedExtrato.bank.memo) })); 
