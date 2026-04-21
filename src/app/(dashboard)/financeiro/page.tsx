@@ -246,7 +246,7 @@ export default function FinanceiroPage() {
         else { l.status === 'pago' ? pExp = safeSum(pExp, l.valor) : oExp = safeSum(oExp, l.valor) }
       }
     })
-    return { pInc, pExp, realizado: safeDiff(pInc, pExp), provisionado: safeDiff(oInc, oExp), receitaProjetada: safeSum(pInc, oInc), projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), saldoCaixa: fCash, saldoBanco: fBank }
+    return { pInc, pExp, realizado: safeDiff(pInc, pExp), provisionado: oExp, receitaProjetada: safeSum(pInc, oInc), projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), saldoCaixa: fCash, saldoBanco: fBank }
   }, [lancamentos, filterYear, filterMonth])
 
   const chartData = useMemo(() => {
