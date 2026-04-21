@@ -504,7 +504,7 @@ export default function PlanejamentoPage() {
         onClose={() => setIsExportModalOpen(false)}
         data={{
           metrics,
-          financeiro: lancamentos,
+          financeiro: lancamentos.filter(l => getMesIdx(l.data) === selectedMes && getAnoIdx(l.data) === selectedAno),
           associados,
           comparativo
         }}

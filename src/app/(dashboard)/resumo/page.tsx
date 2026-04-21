@@ -104,7 +104,7 @@ export default function DashboardPage() {
         onClose={() => setIsExportModalOpen(false)} 
         data={{
           metrics,
-          financeiro: lancamentos,
+          financeiro: lancamentos.filter(l => getMesIdx(l.data) === filterMonth && getAnoIdx(l.data) === filterYear),
           associados,
           comparativo
         }}
