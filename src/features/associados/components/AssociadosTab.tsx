@@ -315,7 +315,7 @@ export default function AssociadosTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ChartCard title="Crescimento" subtitle="Evolução acumulativa">
-            <div className="w-[calc(100%+48px)] mx-[-24px] mb-[-24px] h-[400px]">
+            <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-30px] mb-[-24px] h-[420px]">
               <Line 
                 data={{ 
                   labels: MESES, 
@@ -338,7 +338,7 @@ export default function AssociadosTab() {
                   maintainAspectRatio: false, 
                   layout: {
                     padding: {
-                      top: 10,
+                      top: 0,
                       bottom: 10,
                       left: 0,
                       right: 0
@@ -365,7 +365,7 @@ export default function AssociadosTab() {
           </ChartCard>
         </div>
         <ChartCard title="Mix" subtitle="Por categoria">
-          <div className="w-[calc(100%+48px)] mx-[-24px] mb-[-24px] h-[400px]">
+          <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-30px] mb-[-24px] h-[420px]">
              <Doughnut 
                data={{ labels: Object.keys(catMap).map(k => `${k} (${catMap[k]})`), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }} 
                options={{ 
