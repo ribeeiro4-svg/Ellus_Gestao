@@ -25,14 +25,14 @@ export const reportStyles = `
   }
 
   .container {
-    padding: 40px;
-    max-width: 900px;
+    padding: 30px;
+    max-width: 1000px;
     margin: 0 auto;
   }
 
   /* ── CAPA ── */
   .cover {
-    height: 297mm;
+    height: 100vh;
     background: var(--navy);
     display: flex;
     flex-direction: column;
@@ -41,7 +41,6 @@ export const reportStyles = `
     position: relative;
     overflow: hidden;
     color: white;
-    page-break-after: always;
   }
 
   .cover::after {
@@ -195,7 +194,7 @@ export const reportStyles = `
   @media print {
     @page {
       size: A4;
-      margin: 20mm 15mm;
+      margin: 10mm;
     }
     
     .cover {
