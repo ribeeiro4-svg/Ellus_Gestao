@@ -84,9 +84,6 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
     if (item.cfop_escrituracao && ['5', '6', '7'].includes(item.cfop_escrituracao?.[0])) {
       alertas.push('⚠️ CFOP de saída! Use CFOPs de entrada (1.xxx, 2.xxx, 3.xxx)')
     }
-    if (nfeSelecionada?.crt_emitente === '1' && item.cst_icms && item.cst_icms.length === 2) {
-      alertas.push('⚠️ Emitente Simples Nacional — use CSOSN ao invés de CST ICMS regular')
-    }
     if (item.destinacao_item === '4') {
       alertas.push('ℹ️ Ativo Imobilizado — cadastre o bem no Controle de Imobilizado')
     }

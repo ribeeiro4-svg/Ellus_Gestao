@@ -155,10 +155,9 @@ export function useNFe() {
 
   const salvarClassificacao = async (nfeId: string, itens: any[]) => {
     const updates = itens.map(item => {
-      // Um item só é considerado classificado se tiver CFOP e Destinação
       const isItemClassificado = !!(item.cfop_escrituracao && item.destinacao_item)
       
-      return {
+      const updateData: any = {
         id: item.id,
         cfop_escrituracao: item.cfop_escrituracao || null,
         cst_icms: item.cst_icms || null,
@@ -170,17 +169,31 @@ export function useNFe() {
         motivo_nao_aproveitamento: item.motivo_nao_aproveitamento || null,
         obs_fiscal: item.obs_fiscal || null,
         conta_contabil_id: item.conta_contabil_id || null,
-        produto_vinc_id: item.produto_vinc_id || null,
         classificado: isItemClassificado,
         data_classificacao: isItemClassificado ? new Date().toISOString() : null,
       }
+
+      // Só incluir produto_vinc_id se ele existir no objeto (proteção contra erro de coluna)
+      if (item.produto_vinc_id) {
+        updateData.produto_vinc_id = item.produto_vinc_id
+      }
+
+      return updateData
     })
 
-    // Executar updates em lote (usando upsert para garantir persistência)
     const { error: itensError } = await sb.from('nfe_entradas_itens').upsert(updates)
-    if (itensError) return { error: itensError.message }
+    if (itensError) {
+      console.error('Erro ao salvar itens:', itensError)
+      // Se o erro for de coluna inexistente, tentamos salvar sem a coluna de produto
+      if (itensError.message.includes('produto_vinc_id')) {
+        const fallbackUpdates = updates.map(({ produto_vinc_id, ...rest }) => rest)
+        const { error: retryError } = await sb.from('nfe_entradas_itens').upsert(fallbackUpdates)
+        if (retryError) return { error: retryError.message }
+      } else {
+        return { error: itensError.message }
+      }
+    }
 
-    // Verificar status global da nota
     const todosClassificados = updates.every(i => i.classificado)
     const algumClassificado = updates.some(i => i.classificado || i.cfop_escrituracao)
 
