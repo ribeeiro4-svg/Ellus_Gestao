@@ -8,14 +8,33 @@ import { createServerSupabase } from '@/lib/supabase/server'
 export async function cleanupDuplicateMensalidadesAction() {
   const sb = await createServerSupabase()
 
-  // 1. Buscar lançamentos de receita
-  const { data: lancamentos, error } = await sb
-    .from('lancamentos')
-    .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, status, descricao, categoria, valor, associados ( nome )')
-    .eq('tipo', 'receita')
+  // 1. Buscar lançamentos de receita (com paginação para evitar limite de 1000 linhas do Supabase)
+  let lancamentos: any[] = []
+  let from = 0
+  let to = 999
+  let keepFetching = true
 
-  if (error) return { error: error.message }
-  if (!lancamentos || lancamentos.length === 0) return { count: 0 }
+  while (keepFetching) {
+    const { data, error } = await sb
+      .from('lancamentos')
+      .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, status, descricao, categoria, valor, associados ( nome )')
+      .eq('tipo', 'receita')
+      .range(from, to)
+
+    if (error) return { error: error.message }
+    
+    if (data && data.length > 0) {
+      lancamentos = [...lancamentos, ...data]
+      if (data.length < 1000) {
+        keepFetching = false
+      } else {
+        from += 1000
+        to += 1000
+      }
+    } else {
+      keepFetching = false
+    }
+  }
 
   // 1.5 Filtrar apenas o que parece ser mensalidade ou adesão para evitar deletar outras receitas do associado
   const filteredLancamentos = lancamentos.filter(l => {
