@@ -63,7 +63,16 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
     
     setSaving(true)
     // Primeiro salvar a classificação atual
-    await salvarClassificacao(selectedNfeId, itens)
+    const saveRes = await salvarClassificacao(selectedNfeId, itens)
+    if (saveRes.error) {
+      setSaving(false)
+      alert(`Erro ao salvar antes de integrar: ${saveRes.error}`)
+      return
+    }
+
+    // Pequena pausa para garantir persistência no banco (Supabase)
+    await new Promise(resolve => setTimeout(resolve, 800))
+
     // Depois integrar
     const result = await integracaoHook.finalizarEscrituracao(selectedNfeId)
     setSaving(false)

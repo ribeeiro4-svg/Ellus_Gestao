@@ -26,9 +26,10 @@ export function useIntegracaoFiscalContabil() {
     if (nfe.status_escrituracao === 'concluida') return { error: 'Escrituração já finalizada' }
 
     // 2. Verificar se todos os itens estão classificados
-    const itensPendentes = nfe.itens.filter((i: any) => !i.classificado)
+    const itensPendentes = nfe.itens.filter((i: any) => !i.classificado || !i.cfop_escrituracao || !i.destinacao_item)
     if (itensPendentes.length > 0) {
-      return { error: `Existem ${itensPendentes.length} itens pendentes de classificação.` }
+      const lista = itensPendentes.map((i: any) => `Item ${i.numero_item}: ${i.descricao_produto}`).join('\n')
+      return { error: `Existem ${itensPendentes.length} itens pendentes de classificação completa (CFOP e Destinação):\n${lista}` }
     }
 
     try {
