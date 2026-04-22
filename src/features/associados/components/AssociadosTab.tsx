@@ -153,7 +153,7 @@ export default function AssociadosTab() {
     setIsUpdatingBulk(true)
     try {
       const res = await atualizarBulk(selectedIds, { vencimento_dia: dia } as any)
-      if (!res.error) { alert('Atualizado com sucesso!'); setSelectedIds([]) }
+      if (!res.error) { alert('Atualizado com sucesso!') }
     } finally { setIsUpdatingBulk(false) }
   }
 
@@ -162,7 +162,7 @@ export default function AssociadosTab() {
     setIsUpdatingBulk(true)
     try {
       const res = await atualizarBulk(selectedIds, { recorrencia_ativa: ativa } as any)
-      if (!res.error) { alert('Recorrência atualizada em lote!'); setSelectedIds([]) }
+      if (!res.error) { alert('Recorrência atualizada em lote!') }
     } finally { setIsUpdatingBulk(false) }
   }
 
@@ -179,7 +179,7 @@ export default function AssociadosTab() {
     setIsUpdatingBulk(true)
     try {
       const res = await atualizarBulk(selectedIds, { conta_recorrencia: conta } as any)
-      if (!res.error) { alert('Conta atualizada em lote!'); setSelectedIds([]) }
+      if (!res.error) { alert('Conta atualizada em lote!') }
     } finally { setIsUpdatingBulk(false) }
   }
 
