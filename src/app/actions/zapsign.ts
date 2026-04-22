@@ -50,21 +50,18 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
       }
 
       for (const doc of results) {
-        // REGRA DE SEGURANÇA: Relaxada para garantir que nada escape
         const nameLower = (doc.name || '').toLowerCase()
         const nameClean = nameLower.normalize('NFD').replace(/[\u0300-\u036f]/g, "")
         
         const matches = [
-          'adesao', 'acprobec', 'termo', 'inscricao', 'filiacao', 'associado', 'contrato'
+          'adesao', 'acprobec', 'termo', 'inscricao', 'filiacao', 'associado', 'contrato', 'tamara'
         ]
         const isRelevant = matches.some(m => nameClean.includes(m))
         
-        if (!isRelevant) {
-          continue
-        }
+        if (!isRelevant) continue
 
-        // Busca detalhes SEMPRE com revalidate: 0 e tentando sem barra final se falhar
-        const docDetailRes = await fetch(`${ZAPSIGN_API_BASE}/docs/${doc.token}/`, {
+        // Chamada sem barra final e com revalidate: 0
+        const docDetailRes = await fetch(`${ZAPSIGN_API_BASE}/docs/${doc.token}`, {
           headers: { 'Authorization': `Bearer ${apiToken}` },
           next: { revalidate: 0 }
         })
@@ -75,9 +72,11 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
         }
       }
 
-      if (results.length < 25) hasMore = false
-      else page++
-      if (page > 50) hasMore = false // Aumentado para 50 páginas (1250 documentos)
+      if (results.length === 0) hasMore = false
+      else {
+        page++
+        if (page > 60) hasMore = false 
+      }
     }
 
     // 2. Análise de Frequência para identificar administradores/testemunhas
