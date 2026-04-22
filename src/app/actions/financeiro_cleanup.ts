@@ -155,21 +155,34 @@ export async function cleanupDuplicateMensalidadesAction() {
     return { count: 0, message: `Nenhuma duplicata excluída.\nDiagnóstico:\n${diagInfo}` }
   }
 
-  // 3.5 Buscar nomes dos associados afetados para o relatório
-  const { data: namesData } = await sb
-    .from('associados')
-    .select('nome')
-    .in('id', Array.from(associatesAffected))
+  // 3.5 Buscar nomes dos associados afetados para o relatório (em lotes para evitar Bad Request)
+  let namesList: string[] = []
+  const affArray = Array.from(associatesAffected).filter(Boolean) as string[]
+  const chunkSize = 50
+  
+  for (let i = 0; i < affArray.length; i += chunkSize) {
+    const chunk = affArray.slice(i, i + chunkSize)
+    const { data: namesData } = await sb
+      .from('associados')
+      .select('nome')
+      .in('id', chunk)
+      
+    if (namesData) {
+      namesList = [...namesList, ...namesData.map(a => a.nome)]
+    }
+  }
+  namesList = Array.from(new Set(namesList)).sort()
 
-  const namesList = (namesData || []).map(a => a.nome).sort()
+  // 4. Executar a exclusão em lotes
+  for (let i = 0; i < idsToDelete.length; i += chunkSize) {
+    const chunk = idsToDelete.slice(i, i + chunkSize)
+    const { error: deleteError } = await sb
+      .from('lancamentos')
+      .delete()
+      .in('id', chunk)
 
-  // 4. Executar a exclusão
-  const { error: deleteError } = await sb
-    .from('lancamentos')
-    .delete()
-    .in('id', idsToDelete)
-
-  if (deleteError) return { error: deleteError.message }
+    if (deleteError) return { error: `Erro ao excluir lote: ${deleteError.message}` }
+  }
 
   return { 
     success: true, 
