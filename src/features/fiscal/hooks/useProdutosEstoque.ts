@@ -133,7 +133,7 @@ export function useProdutosEstoque() {
   }, [fetchProdutos, fetchMovimentacoes, fetchBaixas])
 
   // ── PRODUTOS ────────────────────────────────────────────────────────────────
-  const criarProduto = async (data: Omit<Produto, 'id' | 'tenant_id' | 'saldo'>) => {
+  const criarProduto = async (data: Omit<Produto, 'id' | 'tenant_id' | 'saldo' | 'codigo_interno'>) => {
     // Gerar código interno automático
     const seq = (produtos.length + 1).toString().padStart(5, '0')
     const codigoInterno = `PROD-${seq}`
@@ -355,6 +355,66 @@ export function useProdutosEstoque() {
     return { error: null }
   }
 
+  const sincronizarProdutosComNotas = async () => {
+    if (!tenantId) return { error: 'Tenant não identificado' }
+    
+    try {
+      // 1. Buscar todos os itens de notas escrituradas
+      const { data: itensNfe, error: errItens } = await sb.from('nfe_entradas_itens')
+        .select('*, nfe:nfe_entradas!inner(status_escrituracao)')
+        .eq('nfe.status_escrituracao', 'concluida')
+        .eq('nfe.tenant_id', tenantId)
+
+      if (errItens) throw errItens
+      if (!itensNfe || itensNfe.length === 0) return { message: 'Nenhuma nota escriturada encontrada para sincronizar.' }
+
+      // 2. Filtrar apenas itens que NÃO estão vinculados a produtos
+      const itensSemCadastro = itensNfe.filter(item => {
+        const jaExiste = produtos.some(p => 
+          p.descricao === item.descricao_produto || 
+          (p.codigo_fornecedor && p.codigo_fornecedor === item.codigo_produto)
+        )
+        return !jaExiste && !item.produto_vinc_id
+      })
+
+      if (itensSemCadastro.length === 0) return { message: 'Todos os produtos das notas já estão cadastrados.' }
+
+      // 3. Criar os produtos faltantes (Remover duplicados na própria lista da NF)
+      const unicos = Array.from(new Set(itensSemCadastro.map(i => i.descricao_produto)))
+        .map(desc => itensSemCadastro.find(i => i.descricao_produto === desc))
+
+      let criados = 0
+      for (const item of unicos) {
+        if (!item) continue
+        const { error } = await criarProduto({
+          descricao: item.descricao_produto,
+          ncm: item.ncm || '',
+          unidade_medida: item.unidade_medida || 'UN',
+          tipo_produto: item.destinacao_item === '4' ? 'imobilizado' : 'mercadoria',
+          codigo_fornecedor: item.codigo_produto || '',
+          codigo_ean: item.codigo_ean || '',
+          destinacao_padrao: item.destinacao_item,
+          controla_estoque: ['4', '7', '8'].includes(item.destinacao_item),
+          estoque_minimo: 0,
+          estoque_maximo: null,
+          ponto_pedido: null,
+          custo_medio_ponderado: Number(item.valor_unitario),
+          ultimo_custo_compra: Number(item.valor_unitario),
+          data_ultima_compra: new Date().toISOString().split('T')[0],
+          ativo: true
+        })
+        if (!error) criados++
+      }
+
+      await fetchProdutos()
+      return { message: `${criados} novos produtos cadastrados com sucesso!` }
+
+    } catch (err: any) {
+      console.error('Erro na sincronização:', err)
+      return { error: err.message }
+    }
+  }
+
   // Stats
   const stats = {
     totalProdutos: produtos.length,
@@ -366,7 +426,7 @@ export function useProdutosEstoque() {
   return {
     produtos, movimentacoes, baixas, loading, stats,
     criarProduto, atualizarProduto,
-    registrarEntrada, criarBaixa, ajustarInventario,
+    registrarEntrada, criarBaixa, ajustarInventario, sincronizarProdutosComNotas,
     fetchMovimentacoes,
     refresh: fetchProdutos,
   }

@@ -74,22 +74,63 @@ export function useIntegracaoFiscalContabil() {
           historico: `Vlr Ref. ${item.descricao_produto} - NF ${nfe.numero_nf}`
         })
 
-        // 4. Integração com Estoque
-        // Se a destinação for Estoque (código '3' ou similar conforme useProdutosEstoque)
-        if (item.destinacao_item === '3' || item.destinacao_item === '7') {
-          // Tentar encontrar produto pelo código do fornecedor ou EAN
-          let produtoId = item.produto_vinc_id // ID do produto no sistema local vinculado ao item da NF
+        // 4. Integração com Produtos e Estoque
+        // Cadastro automático de TODOS os produtos da NF
+        let produtoId = item.produto_vinc_id
 
-          if (produtoId) {
-            await estoque.registrarEntrada(
-              produtoId,
-              Number(item.quantidade),
-              Number(item.valor_unitario),
-              `Entrada via NF-e ${nfe.numero_nf} - ${nfe.nome_emitente}`,
-              nfe.numero_nf,
-              nfe.id
-            )
+        // Se não tem vínculo, tenta buscar por descrição ou CRIA um novo (Sempre cria para controle total)
+        if (!produtoId) {
+          const { data: existente } = await sb.from('produtos')
+            .select('id')
+              .eq('tenant_id', tenantId)
+              .eq('descricao', item.descricao_produto)
+              .limit(1)
+              .single()
+            
+          if (existente) {
+            produtoId = existente.id
+          } else {
+            // Criar o produto automaticamente (Independente da destinação)
+            const { error: createErr } = await estoque.criarProduto({
+              descricao: item.descricao_produto,
+              ncm: item.ncm || '',
+              unidade_medida: item.unidade_medida || 'UN',
+              tipo_produto: item.destinacao_item === '4' ? 'imobilizado' : 'mercadoria',
+              codigo_fornecedor: item.codigo_produto || '',
+              codigo_ean: item.codigo_ean || '',
+              destinacao_padrao: item.destinacao_item, // Salva a destinação escolhida
+              controla_estoque: ['4', '7', '8'].includes(item.destinacao_item), // Apenas esses controlam saldo
+              estoque_minimo: 0,
+              estoque_maximo: null,
+              ponto_pedido: null,
+              custo_medio_ponderado: Number(item.valor_unitario),
+              ultimo_custo_compra: Number(item.valor_unitario),
+              data_ultima_compra: new Date().toISOString().split('T')[0],
+              ativo: true
+            })
+
+            if (!createErr) {
+              const { data: novoProd } = await sb.from('produtos')
+                .select('id')
+                .eq('tenant_id', tenantId)
+                .eq('descricao', item.descricao_produto)
+                .single()
+              produtoId = novoProd?.id
+            }
           }
+        }
+
+        // Registrar entrada no estoque apenas se for destinação de controle (Imobilizado, Revenda, Distribuição)
+        const deveLancarEstoque = ['4', '7', '8'].includes(item.destinacao_item)
+        if (produtoId && deveLancarEstoque) {
+          await estoque.registrarEntrada(
+            produtoId,
+            Number(item.quantidade),
+            Number(item.valor_unitario),
+            `Entrada automática via Escrituração NF-e ${nfe.numero_nf} - ${nfe.nome_emitente}`,
+            nfe.numero_nf,
+            nfe.id
+          )
         }
       }
 

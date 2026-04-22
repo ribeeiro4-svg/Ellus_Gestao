@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from 'react'
-import { Package, Plus, TrendingDown, Search, AlertTriangle, ArrowDown, ArrowUp, Layers } from 'lucide-react'
+import { Package, Plus, TrendingDown, Search, AlertTriangle, ArrowDown, ArrowUp, Layers, Filter, RefreshCw, Loader2 } from 'lucide-react'
+import { DESTINACOES_ITEM } from '@/features/fiscal/utils/tabelasCST'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtQtd = (v: number) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 4 }).format(v || 0)
@@ -8,9 +9,11 @@ const fmtQtd = (v: number) => new Intl.NumberFormat('pt-BR', { minimumFractionDi
 type SubTab = 'produtos' | 'kardex' | 'baixas'
 
 export default function EstoqueTab({ estoqueHook }: { estoqueHook: any }) {
-  const { produtos, movimentacoes, baixas, stats, criarProduto, criarBaixa, ajustarInventario, fetchMovimentacoes } = estoqueHook
+  const { produtos, movimentacoes, baixas, stats, criarProduto, criarBaixa, ajustarInventario, fetchMovimentacoes, sincronizarProdutosComNotas } = estoqueHook
   const [sub, setSub] = useState<SubTab>('produtos')
+  const [syncing, setSyncing] = useState(false)
   const [search, setSearch] = useState('')
+  const [filtroDestinacao, setFiltroDestinacao] = useState('')
   const [showNovoProduto, setShowNovoProduto] = useState(false)
   const [showNovaBaixa, setShowNovaBaixa] = useState(false)
   const [produtoKardex, setProdutoKardex] = useState('')
@@ -18,9 +21,11 @@ export default function EstoqueTab({ estoqueHook }: { estoqueHook: any }) {
   const [novaBaixa, setNovaBaixa] = useState({ tipo: 'consumo_interno', solicitante: '', projeto_ref: '', beneficiario_nome: '', observacoes: '' })
   const [itensBaixa, setItensBaixa] = useState<{ produtoId: string; quantidade: number }[]>([{ produtoId: '', quantidade: 1 }])
 
-  const filteredProdutos = produtos.filter((p: any) =>
-    !search || p.descricao.toLowerCase().includes(search.toLowerCase()) || p.codigo_interno?.includes(search)
-  )
+  const filteredProdutos = produtos.filter((p: any) => {
+    const matchesSearch = !search || p.descricao.toLowerCase().includes(search.toLowerCase()) || p.codigo_interno?.includes(search)
+    const matchesFiltro = !filtroDestinacao || p.destinacao_padrao === filtroDestinacao
+    return matchesSearch && matchesFiltro
+  })
 
   const movFiltradas = produtoKardex
     ? movimentacoes.filter((m: any) => m.produto_id === produtoKardex)
@@ -38,6 +43,14 @@ export default function EstoqueTab({ estoqueHook }: { estoqueHook: any }) {
     const r = await criarBaixa(novaBaixa.tipo, itensValidos, novaBaixa)
     if (r.error) alert(r.error)
     else { setShowNovaBaixa(false); alert(`Requisição ${r.numeroReq} criada!`) }
+  }
+
+  const handleSincronizar = async () => {
+    setSyncing(true)
+    const r = await sincronizarProdutosComNotas()
+    setSyncing(false)
+    if (r.error) alert(r.error)
+    else alert(r.message)
   }
 
   return (
@@ -82,8 +95,30 @@ export default function EstoqueTab({ estoqueHook }: { estoqueHook: any }) {
               <input type="text" placeholder="Buscar produto..." value={search} onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-100 rounded-xl text-xs font-medium outline-none shadow-sm" />
             </div>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+              <select 
+                value={filtroDestinacao} 
+                onChange={e => setFiltroDestinacao(e.target.value)}
+                className="pl-8 pr-4 py-2.5 bg-white border border-slate-100 rounded-xl text-[11px] font-bold outline-none shadow-sm min-w-[160px]"
+              >
+                <option value="">Todas as Destinações</option>
+                {DESTINACOES_ITEM.map(d => (
+                  <option key={d.codigo} value={d.codigo}>{d.descricao}</option>
+                ))}
+              </select>
+            </div>
+            <button 
+              onClick={handleSincronizar}
+              disabled={syncing}
+              className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all border border-blue-200 disabled:opacity-50"
+              title="Sincronizar cadastros com notas escrituradas"
+            >
+              {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              {syncing ? 'Sincronizando...' : 'Sincronizar Cadastros'}
+            </button>
             <button onClick={() => setShowNovoProduto(!showNovoProduto)}
-              className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all">
+              className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-lg shadow-emerald-100">
               <Plus size={14} /> Novo Produto
             </button>
           </div>
@@ -137,7 +172,7 @@ export default function EstoqueTab({ estoqueHook }: { estoqueHook: any }) {
               <table className="w-full text-xs">
                 <thead className="bg-slate-50">
                   <tr>
-                    {['Código', 'Produto', 'Tipo', 'Unid.', 'Saldo', 'CMP', 'Valor Total', 'Status'].map(h => (
+                    {['Código', 'Produto', 'Destinação', 'Tipo', 'Unid.', 'Saldo', 'Status'].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -154,6 +189,16 @@ export default function EstoqueTab({ estoqueHook }: { estoqueHook: any }) {
                           {p.ncm && <p className="text-[9px] text-slate-400">NCM: {p.ncm}</p>}
                         </td>
                         <td className="px-4 py-3">
+                          {(() => {
+                            const d = DESTINACOES_ITEM.find(di => di.codigo === p.destinacao_padrao)
+                            return (
+                              <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border whitespace-nowrap bg-${d?.color || 'slate'}-50 text-${d?.color || 'slate'}-600 border-${d?.color || 'slate'}-100`}>
+                                {d?.descricao || 'Não definida'}
+                              </span>
+                            )
+                          })()}
+                        </td>
+                        <td className="px-4 py-3">
                           <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-bold capitalize">
                             {p.tipo_produto?.replace('_', ' ')}
                           </span>
@@ -165,8 +210,6 @@ export default function EstoqueTab({ estoqueHook }: { estoqueHook: any }) {
                           </span>
                           {abaixoMin && <p className="text-[8px] text-orange-500 font-bold">Mín: {fmtQtd(p.estoque_minimo)}</p>}
                         </td>
-                        <td className="px-4 py-3 font-bold text-slate-600">{fmtR(p.custo_medio_ponderado)}</td>
-                        <td className="px-4 py-3 font-black text-slate-800">{fmtR((p.saldo ?? 0) * (p.custo_medio_ponderado ?? 0))}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${semEstoque ? 'bg-red-50 text-red-600 border-red-100' : abaixoMin ? 'bg-orange-50 text-orange-600 border-orange-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
                             {semEstoque ? 'Zerado' : abaixoMin ? 'Baixo' : 'Normal'}
