@@ -68,6 +68,12 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
           </div>
 
           <div class="section">
+            <div class="section-title">DESTINATÁRIO</div>
+            <p><b>${nfe.nome_destinatario || 'Não Identificado'}</b></p>
+            <p>CNPJ/CPF: ${nfe.cnpj_destinatario || '--'}</p>
+          </div>
+
+          <div class="section">
             <div class="section-title">ITENS DA NOTA</div>
             <table>
               <thead>
