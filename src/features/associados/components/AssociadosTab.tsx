@@ -473,7 +473,14 @@ export default function AssociadosTab() {
                  labels: Object.keys(statusMap).map(k => `${k} (${statusMap[k]})`), 
                  datasets: [{ 
                    data: Object.values(statusMap), 
-                   backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#94a3b8'], 
+                   backgroundColor: Object.keys(statusMap).map(k => {
+                     const status = k.toUpperCase()
+                     if (status.includes('ATIVO')) return '#10b981'
+                     if (status.includes('PENDENTE')) return '#f59e0b'
+                     if (status.includes('INADIMPLENTE')) return '#ef4444'
+                     if (status.includes('INATIVO')) return '#94a3b8'
+                     return '#cbd5e1'
+                   }), 
                    borderWidth: 0 
                  }] 
                }} 
