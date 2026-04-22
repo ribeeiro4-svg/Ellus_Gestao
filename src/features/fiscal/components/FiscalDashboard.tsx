@@ -36,19 +36,30 @@ export default function FiscalDashboard({ nfeHook, estoqueHook }: { nfeHook: any
   return (
     <div className="flex flex-col gap-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
           return (
-            <div key={i} className="kpi-card p-5" style={{ '--kpi-color': kpi.color } as any}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${kpi.color}18` }}>
-                  <Icon size={16} style={{ color: kpi.color }} />
+            <div key={i} className="bg-white/60 backdrop-blur-md border border-white/40 p-3.5 rounded-2xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+              <div 
+                className="absolute top-0 left-0 w-full h-1" 
+                style={{ background: kpi.color }} 
+              />
+              
+              <div className="flex flex-col gap-2">
+                <div 
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: `${kpi.color}15` }}
+                >
+                  <Icon size={14} style={{ color: kpi.color }} />
+                </div>
+                
+                <div>
+                  <p className="text-lg font-black text-slate-800 leading-none">{kpi.value}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mt-1">{kpi.label}</p>
+                  <p className="text-[9px] text-slate-300 font-medium leading-tight">{kpi.sub}</p>
                 </div>
               </div>
-              <div className="text-xl font-black text-slate-800 mb-0.5">{kpi.value}</div>
-              <div className="text-xs font-bold text-slate-500">{kpi.label}</div>
-              <div className="text-[10px] text-slate-400 font-medium mt-0.5">{kpi.sub}</div>
             </div>
           )
         })}
