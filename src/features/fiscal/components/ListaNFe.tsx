@@ -17,16 +17,16 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
 
-  const visualizarDanfe = (xml: string) => {
-    if (!xml) return alert('XML original não encontrado para esta nota.')
+  const visualizarDanfe = (chave: string) => {
+    if (!chave) return alert('Chave de acesso não encontrada para esta nota.')
     const form = document.createElement('form')
     form.method = 'POST'
-    form.action = 'https://www.fsfiscal.com.br/gerardanfe'
+    form.action = 'https://www.danfeonline.com.br/chave'
     form.target = '_blank'
     const input = document.createElement('input')
     input.type = 'hidden'
-    input.name = 'xml'
-    input.value = xml
+    input.name = 'chave'
+    input.value = chave
     form.appendChild(input)
     document.body.appendChild(form)
     form.submit()
@@ -165,7 +165,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                     </button>
                   )}
                   <button
-                    onClick={() => visualizarDanfe(nfe.xml_original)}
+                    onClick={() => visualizarDanfe(nfe.chave_acesso)}
                     className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100"
                   >
                     <Printer size={11} /> DANFE (PDF)
