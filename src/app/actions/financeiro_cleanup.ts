@@ -8,20 +8,30 @@ import { createServerSupabase } from '@/lib/supabase/server'
 export async function cleanupDuplicateMensalidadesAction() {
   const sb = await createServerSupabase()
 
-  // 1. Buscar todos os lançamentos que podem ser mensalidades
+  // 1. Buscar lançamentos que possuam associado_id (potenciais mensalidades/adesões)
   const { data: lancamentos, error } = await sb
     .from('lancamentos')
-    .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, descricao, categoria')
+    .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, descricao, categoria, valor')
     .eq('tipo', 'receita')
-    .or('categoria.eq.Mensalidade,descricao.ilike.%MENSALIDADE%')
+    .not('associado_id', 'is', null)
 
   if (error) return { error: error.message }
   if (!lancamentos || lancamentos.length === 0) return { count: 0 }
 
+  // 1.5 Filtrar apenas o que parece ser mensalidade ou adesão para evitar deletar outras receitas do associado
+  const filteredLancamentos = lancamentos.filter(l => {
+    const desc = (l.descricao || '').toUpperCase()
+    const cat = (l.categoria || '').toUpperCase()
+    return desc.includes('MENSALIDADE') || cat.includes('MENSALIDADE') || 
+           desc.includes('ADESÃO') || cat.includes('ADESÃO')
+  })
+
+  if (filteredLancamentos.length === 0) return { count: 0, message: 'Nenhum lançamento de mensalidade encontrado.' }
+
   // 2. Agrupar por associado e período
   const groups: Record<string, any[]> = {}
 
-  lancamentos.forEach(l => {
+  filteredLancamentos.forEach(l => {
     if (!l.associado_id) return
 
     // Tenta pegar mes/ano da competencia ou da data
