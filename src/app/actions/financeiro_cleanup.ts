@@ -107,8 +107,29 @@ export async function cleanupDuplicateMensalidadesAction() {
     const maxGroupSize = Math.max(0, ...Object.values(groups).map(g => g.length));
     const biggestGroup = Object.values(groups).find(g => g.length === maxGroupSize) || [];
     
+    // Rastrear Ueldijane
+    const ueldiTrace = filteredLancamentos
+      .filter(l => (l.descricao || '').toUpperCase().includes('UELDIJANE'))
+      .map(l => {
+        const s = l.data ? l.data.split('T')[0] : '';
+        let ym = '';
+        if (s.includes('-')) {
+          const p = s.split('-'); ym = p[0].length === 4 ? `${p[0]}-${p[1].padStart(2,'0')}` : `${p[2]}-${p[1].padStart(2,'0')}`;
+        } else if (s.includes('/')) {
+          const p = s.split('/'); ym = p.length >= 3 ? (p[2].length === 4 ? `${p[2]}-${p[1].padStart(2,'0')}` : `${p[0]}-${p[1].padStart(2,'0')}`) : s;
+        } else ym = s;
+        
+        let n = '';
+        if (l.associados && (l.associados as any).nome) n = (l.associados as any).nome;
+        else { const pts = (l.descricao || '').split('-'); n = pts.length > 1 ? pts[1].trim() : String(l.associado_id); }
+        const nn = n.toUpperCase().trim();
+        return `ID: ${l.id.slice(0,4)} | Data: ${l.data} -> YM: ${ym} | Nome: ${nn} | Status: ${l.status}`;
+      });
+
     let diagInfo = `Lidos ${filteredLancamentos.length}, ${Object.keys(groups).length} grupos. Maior: ${maxGroupSize}.`
-    if (biggestGroup.length > 0) {
+    if (ueldiTrace.length > 0) {
+        diagInfo += `\nTrace Ueldijane:\n` + ueldiTrace.join('\n');
+    } else if (biggestGroup.length > 0) {
         diagInfo += `\nItens do maior grupo:\n` + biggestGroup.map(x => `- ${x.descricao} | Data: ${x.data} | Status: ${x.status} | Conciliado: ${x.conciliado}`).join('\n')
     }
     
