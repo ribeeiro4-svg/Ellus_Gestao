@@ -15,6 +15,12 @@ export async function fixAssociadosRecorrenciaColumnsAction() {
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS termo_status TEXT;
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS zapsign_sync_at TIMESTAMPTZ;
 
+    -- Retrofit: Se o associado veio do ZapSign mas não tem data de sincronização, usa a data de criação
+    UPDATE associados 
+    SET zapsign_sync_at = created_at 
+    WHERE zapsign_sync_at IS NULL 
+    AND (categoria ILIKE '%zapsign%' OR zapsign_doc_token IS NOT NULL);
+
     -- Comentários para documentação
     COMMENT ON COLUMN associados.recorrencia_ativa IS 'Indica se o associado está na cobrança recorrente';
     COMMENT ON COLUMN associados.conta_recorrencia IS 'Informa a conta bancária onde a recorrência está ativa';
