@@ -10,7 +10,7 @@ export async function cleanupDuplicateMensalidadesAction() {
 
   // 1. Buscar todos os lançamentos que podem ser mensalidades
   const { data: lancamentos, error } = await sb
-    .from('financeiro')
+    .from('lancamentos')
     .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, descricao, categoria')
     .eq('tipo', 'receita')
     .or('categoria.eq.Mensalidade,descricao.ilike.%MENSALIDADE%')
@@ -84,7 +84,7 @@ export async function cleanupDuplicateMensalidadesAction() {
 
   // 4. Executar a exclusão
   const { error: deleteError } = await sb
-    .from('financeiro')
+    .from('lancamentos')
     .delete()
     .in('id', idsToDelete)
 
