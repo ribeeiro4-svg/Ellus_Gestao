@@ -154,61 +154,66 @@ export function useNFe() {
   }
 
   const salvarClassificacao = async (nfeId: string, itens: any[]) => {
-    const updates = itens.map(item => {
-      const isItemClassificado = !!(item.cfop_escrituracao && item.destinacao_item)
-      
-      const updateData: any = {
-        id: item.id,
-        nfe_entrada_id: nfeId,
-        numero_item: item.numero_item, // Obrigatório
-        descricao_produto: item.descricao_produto, // Obrigatório
-        cfop_escrituracao: item.cfop_escrituracao || null,
-        cst_icms: item.cst_icms || null,
-        cst_ipi: item.cst_ipi || null,
-        cst_pis: item.cst_pis || null,
-        cst_cofins: item.cst_cofins || null,
-        destinacao_item: item.destinacao_item || null,
-        aproveitamento_credito: !!item.aproveitamento_credito,
-        motivo_nao_aproveitamento: item.motivo_nao_aproveitamento || null,
-        obs_fiscal: item.obs_fiscal || null,
-        conta_contabil_id: item.conta_contabil_id || null,
-        classificado: isItemClassificado,
-        data_classificacao: isItemClassificado ? new Date().toISOString() : null,
+    try {
+      for (const item of itens) {
+        // Um item só é considerado classificado se tiver CFOP e Destinação
+        const isItemClassificado = !!(item.cfop_escrituracao && item.destinacao_item)
+        
+        const updateData: any = {
+          cfop_escrituracao: item.cfop_escrituracao || null,
+          cst_icms: item.cst_icms || null,
+          cst_ipi: item.cst_ipi || null,
+          cst_pis: item.cst_pis || null,
+          cst_cofins: item.cst_cofins || null,
+          destinacao_item: item.destinacao_item || null,
+          aproveitamento_credito: !!item.aproveitamento_credito,
+          motivo_nao_aproveitamento: item.motivo_nao_aproveitamento || null,
+          obs_fiscal: item.obs_fiscal || null,
+          conta_contabil_id: item.conta_contabil_id || null,
+          classificado: isItemClassificado,
+          data_classificacao: isItemClassificado ? new Date().toISOString() : null,
+        }
+
+        // Só incluir produto_vinc_id se ele existir no objeto (proteção contra erro de coluna)
+        if (item.produto_vinc_id) {
+          updateData.produto_vinc_id = item.produto_vinc_id
+        }
+
+        const { error: itemError } = await sb
+          .from('nfe_entradas_itens')
+          .update(updateData)
+          .eq('id', item.id)
+
+        if (itemError) {
+          console.error(`Erro no item ${item.numero_item}:`, itemError)
+          // Se falhar por coluna inexistente (produto_vinc_id), tentamos sem ela
+          if (itemError.message.includes('produto_vinc_id')) {
+            const { produto_vinc_id, ...fallbackData } = updateData
+            await sb.from('nfe_entradas_itens').update(fallbackData).eq('id', item.id)
+          } else {
+            return { error: `Erro no item ${item.numero_item}: ${itemError.message}` }
+          }
+        }
       }
 
-      // Só incluir produto_vinc_id se ele existir no objeto (proteção contra erro de coluna)
-      if (item.produto_vinc_id) {
-        updateData.produto_vinc_id = item.produto_vinc_id
-      }
+      // 2. Atualizar status global da nota
+      const todosClassificados = itens.every(i => !!(i.cfop_escrituracao && i.destinacao_item))
+      const algumClassificado = itens.some(i => !!(i.cfop_escrituracao || i.destinacao_item))
 
-      return updateData
-    })
+      const { error: nfeError } = await sb.from('nfe_entradas')
+        .update({
+          status_escrituracao: todosClassificados ? 'escriturada' : (algumClassificado ? 'em_andamento' : 'pendente'),
+          data_escrituracao: todosClassificados ? new Date().toISOString() : null,
+        })
+        .eq('id', nfeId)
 
-    const { error: itensError } = await sb.from('nfe_entradas_itens').upsert(updates)
-    if (itensError) {
-      console.error('Erro ao salvar itens:', itensError)
-      // Se o erro for de coluna inexistente, tentamos salvar sem a coluna de produto
-      if (itensError.message.includes('produto_vinc_id')) {
-        const fallbackUpdates = updates.map(({ produto_vinc_id, ...rest }) => rest)
-        const { error: retryError } = await sb.from('nfe_entradas_itens').upsert(fallbackUpdates)
-        if (retryError) return { error: retryError.message }
-      } else {
-        return { error: itensError.message }
-      }
+      if (!nfeError) await fetch(filterPeriodo)
+      return { error: nfeError?.message || null }
+
+    } catch (err: any) {
+      console.error('Erro fatal no salvamento:', err)
+      return { error: err.message }
     }
-
-    const todosClassificados = updates.every(i => i.classificado)
-    const algumClassificado = updates.some(i => i.classificado || i.cfop_escrituracao)
-
-    const { error } = await sb.from('nfe_entradas')
-      .update({
-        status_escrituracao: todosClassificados ? 'escriturada' : (algumClassificado ? 'em_andamento' : 'pendente'),
-        data_escrituracao: todosClassificados ? new Date().toISOString() : null,
-      })
-      .eq('id', nfeId)
-
-    if (!error) await fetch(filterPeriodo)
-    return { error }
   }
 
   const atualizarStatus = async (id: string, status: string) => {
