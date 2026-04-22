@@ -17,20 +17,92 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
 
-  const visualizarDanfe = (xml: string) => {
-    if (!xml) return alert('XML original não encontrado para esta nota.')
-    const form = document.createElement('form')
-    form.method = 'POST'
-    form.action = 'https://www.webdanfe.com.br/danfe/Home/Imprimir'
-    form.target = '_blank'
-    const input = document.createElement('input')
-    input.type = 'hidden'
-    input.name = 'xml'
-    input.value = xml
-    form.appendChild(input)
-    document.body.appendChild(form)
-    form.submit()
-    document.body.removeChild(form)
+  const visualizarDanfe = async (nfe: any) => {
+    let itens = nfe.itens
+    if (!itens) {
+      itens = await nfeHook.buscarItens(nfe.id)
+    }
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+    
+    const itensHtml = itens?.map((i: any) => `
+      <tr>
+        <td style="border:1px solid #ddd;padding:4px">${i.codigo_produto}</td>
+        <td style="border:1px solid #ddd;padding:4px">${i.descricao_produto}</td>
+        <td style="border:1px solid #ddd;padding:4px;text-align:center">${i.quantidade}</td>
+        <td style="border:1px solid #ddd;padding:4px;text-align:right">${fmtR(i.valor_unitario)}</td>
+        <td style="border:1px solid #ddd;padding:4px;text-align:right">${fmtR(i.valor_produto)}</td>
+      </tr>
+    `).join('') || ''
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>DANFE Simplificado - NF ${nfe.numero_nf}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; font-size: 12px; color: #333; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+            .section { margin-bottom: 15px; border: 1px solid #000; padding: 10px; }
+            .section-title { font-weight: bold; background: #eee; padding: 4px; margin: -10px -10px 10px -10px; border-bottom: 1px solid #000; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th { background: #eee; text-align: left; border: 1px solid #ddd; padding: 4px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h2 style="margin:0">EXTRATO DE NF-E</h2>
+              <p style="margin:0">Documento Auxiliar da Nota Fiscal Eletrônica</p>
+            </div>
+            <div style="text-align:right">
+              <p style="margin:0"><b>NÚMERO:</b> ${nfe.numero_nf} | <b>SÉRIE:</b> ${nfe.serie || '1'}</p>
+              <p style="margin:0"><b>EMISSÃO:</b> ${fmtData(nfe.data_emissao)}</p>
+            </div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">EMITENTE</div>
+            <p><b>${nfe.nome_emitente}</b></p>
+            <p>CNPJ: ${nfe.cnpj_emitente} | UF: ${nfe.uf_emitente} | IE: ${nfe.ie_emitente || 'Isento'}</p>
+          </div>
+
+          <div class="section">
+            <div class="section-title">ITENS DA NOTA</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>CÓDIGO</th>
+                  <th>DESCRIÇÃO</th>
+                  <th>QTD</th>
+                  <th>VLR UNIT</th>
+                  <th>TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>${itensHtml}</tbody>
+            </table>
+          </div>
+
+          <div class="section">
+            <div class="section-title">TOTAIS</div>
+            <div style="display:grid;grid-template-columns: repeat(4, 1fr);gap:10px;text-align:right">
+              <div><small>VLR PRODUTOS</small><br><b>${fmtR(nfe.valor_produtos)}</b></div>
+              <div><small>ICMS</small><br><b>${fmtR(nfe.valor_icms)}</b></div>
+              <div><small>IPI</small><br><b>${fmtR(nfe.valor_ipi)}</b></div>
+              <div><small>VALOR TOTAL</small><br><b style="font-size:14px">${fmtR(nfe.valor_total)}</b></div>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;font-size:10px;color:#666">
+            Chave de Acesso: ${nfe.chave_acesso}<br>
+            Protocolo de Autorização: Autorizada via SEFAZ
+          </div>
+          
+          <script>window.print();</script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
   }
 
   const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -165,7 +237,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                     </button>
                   )}
                   <button
-                    onClick={() => visualizarDanfe(nfe.xml_original)}
+                    onClick={() => visualizarDanfe(nfe)}
                     className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100"
                   >
                     <Printer size={11} /> DANFE (PDF)
