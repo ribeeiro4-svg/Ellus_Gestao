@@ -58,6 +58,7 @@ export default function AssociadosTab() {
   const [filterStatus, setFilterStatus] = useState<string>('todos')
   const [filterCategoria, setFilterCategoria] = useState<string>('todas')
   const [filterCpfInvalido, setFilterCpfInvalido] = useState(false)
+  const [filterRecorrencia, setFilterRecorrencia] = useState<string>('todos')
   const [isUpdatingBulk, setIsUpdatingBulk] = useState(false)
 
   const handleSyncZapSign = async () => {
@@ -122,12 +123,13 @@ export default function AssociadosTab() {
     }
     if (filterStatus !== 'todos') res = res.filter((a: any) => (a.status || '').toLowerCase() === filterStatus)
     if (filterCategoria !== 'todas') res = res.filter((a: any) => (a.categoria || '') === filterCategoria)
+    if (filterRecorrencia !== 'todos') res = res.filter((a: any) => filterRecorrencia === 'sim' ? a.recorrencia_ativa : !a.recorrencia_ativa)
     if (filterCpfInvalido) res = res.filter((a: any) => (a.cpf || '').replace(/\D/g, '').length < 11)
     return res
-  }, [associados, searchQ, filterStatus, filterCategoria, filterCpfInvalido])
+  }, [associados, searchQ, filterStatus, filterCategoria, filterRecorrencia, filterCpfInvalido])
 
-  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterCpfInvalido || searchQ !== ''
-  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterCpfInvalido(false); setSearchQ('') }
+  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterRecorrencia !== 'todos' || filterCpfInvalido || searchQ !== ''
+  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterRecorrencia('todos'); setFilterCpfInvalido(false); setSearchQ('') }
 
   const handleSalvar = async (data: any) => {
     if (editingItem) { await atualizar(editingItem.id, data) }
@@ -453,6 +455,11 @@ export default function AssociadosTab() {
           <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
             <option value="todas">TODAS CATEGORIAS</option>
             {categorias.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
+          </select>
+          <select value={filterRecorrencia} onChange={e => setFilterRecorrencia(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
+            <option value="todos">RECORRÊNCIA (TODOS)</option>
+            <option value="sim">COM RECORRÊNCIA</option>
+            <option value="nao">SEM RECORRÊNCIA</option>
           </select>
           {hasActiveFilters && <button onClick={clearFilters} className="text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors">Limpar Filtros</button>}
         </div>
