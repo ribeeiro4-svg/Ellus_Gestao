@@ -216,99 +216,98 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
 
       {/* Lista */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
+        <div className="flex flex-col items-center justify-center py-16 bg-white/40 backdrop-blur-md rounded-3xl border border-dashed border-white/60">
           <FileText size={40} className="text-slate-200 mb-3" />
           <p className="text-sm font-black text-slate-400">Nenhuma NF-e encontrada</p>
           <p className="text-xs text-slate-300 mt-1">Importe XMLs na aba "Importar NF-e"</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3">
           {filtered.map((nfe: any) => {
             const stConf = STATUS_CONFIG[nfe.status_escrituracao] ?? STATUS_CONFIG.pendente
             const StIcon = stConf.icon
+            
             return (
-              <div key={nfe.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 hover:shadow-md transition-all">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <FileText size={16} className="text-blue-600" />
+              <div 
+                key={nfe.id} 
+                className="bg-white/60 backdrop-blur-md border border-white/40 p-4 rounded-2xl hover:bg-white/80 transition-all group shadow-sm"
+              >
+                <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+                  {/* Info Principal */}
+                  <div className="flex-1 min-w-0 w-full">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                        NF {nfe.serie && `${nfe.serie}-`}{nfe.numero_nf}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black border ${stConf.bg} ${stConf.color}`}>
+                        <StIcon size={8} /> {stConf.label.toUpperCase()}
+                      </span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-black text-slate-800">NF {nfe.serie && `${nfe.serie}-`}{nfe.numero_nf}</p>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black border ${stConf.bg} ${stConf.color}`}>
-                          <StIcon size={9} /> {stConf.label}
-                        </span>
-                        {nfe.crt_emitente === '1' && (
-                          <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black bg-yellow-50 text-yellow-700 border border-yellow-100">
-                            Simples Nacional
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5">{nfe.nome_emitente}</p>
-                      <p className="text-[10px] text-slate-400">CNPJ: {nfe.cnpj_emitente} • UF: {nfe.uf_emitente}</p>
-                      <p className="text-[10px] text-slate-400">{nfe.nat_operacao}</p>
+                    
+                    <h4 className="text-sm font-bold text-slate-800 truncate" title={nfe.nome_emitente}>
+                      {nfe.nome_emitente}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[9px] text-slate-400 font-mono">Chave: {nfe.chave_acesso}</p>
+                      <span className="text-[9px] text-slate-300">•</span>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase">{nfe.uf_emitente}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-base font-black text-slate-800">{fmtR(nfe.valor_total)}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Emissão: {fmtData(nfe.data_emissao)}</p>
-                    <p className="text-[10px] text-slate-400">Entrada: {fmtData(nfe.data_entrada)}</p>
-                  </div>
-                </div>
 
-                {/* Impostos resumo */}
-                <div className="mt-3 grid grid-cols-4 gap-2">
-                  {[
-                    { label: 'ICMS', value: nfe.valor_icms, color: 'text-purple-600' },
-                    { label: 'IPI', value: nfe.valor_ipi, color: 'text-blue-600' },
-                    { label: 'PIS', value: nfe.valor_pis, color: 'text-rose-600' },
-                    { label: 'COFINS', value: nfe.valor_cofins, color: 'text-orange-600' },
-                  ].map((imp, i) => (
-                    <div key={i} className="bg-slate-50 rounded-xl p-2 text-center">
-                      <p className="text-[9px] text-slate-400 font-bold">{imp.label}</p>
-                      <p className={`text-[10px] font-black ${imp.color}`}>{fmtR(imp.value)}</p>
+                  {/* Resumo de Valores */}
+                  <div className="flex items-center gap-5 px-6 border-x border-slate-100/50 hidden xl:flex">
+                    <div className="text-center min-w-[80px]">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase">Total</span>
+                      <span className="text-sm font-black text-slate-800">{fmtR(nfe.valor_total)}</span>
                     </div>
-                  ))}
-                </div>
-
-                {/* Chave de acesso */}
-                {nfe.chave_acesso && (
-                  <div className="mt-2 flex items-center gap-2 bg-slate-50 rounded-xl p-2">
-                    <p className="text-[9px] font-mono text-slate-400 truncate">{nfe.chave_acesso}</p>
+                    <div className="text-center">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase">ICMS</span>
+                      <span className="text-[10px] font-bold text-purple-600">{fmtR(nfe.valor_icms)}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase">IPI</span>
+                      <span className="text-[10px] font-bold text-blue-600">{fmtR(nfe.valor_ipi)}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase">PIS/COF</span>
+                      <span className="text-[10px] font-bold text-rose-500">{fmtR((nfe.valor_pis || 0) + (nfe.valor_cofins || 0))}</span>
+                    </div>
                   </div>
-                )}
 
-                {/* Actions */}
-                <div className="mt-3 flex items-center gap-2">
-                  {nfe.status_escrituracao !== 'escriturada' && (
+                  {/* Ações */}
+                  <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
                     <button
-                      onClick={() => onEscriturar(nfe.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all"
+                      onClick={() => visualizarDanfe(nfe)}
+                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                      title="Ver DANFE"
                     >
-                      <PenLine size={11} /> Escriturar
+                      <Printer size={16} />
                     </button>
-                  )}
-                  {nfe.status_escrituracao === 'escriturada' && (
+                    
+                    {nfe.status_escrituracao !== 'escriturada' ? (
+                      <button
+                        onClick={() => onEscriturar(nfe.id)}
+                        className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 transition-all"
+                      >
+                        <PenLine size={11} /> ESCRITURAR
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onEscriturar(nfe.id)}
+                        className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl hover:bg-emerald-100 transition-all"
+                      >
+                        <Eye size={11} /> REVISAR
+                      </button>
+                    )}
+
                     <button
-                      onClick={() => onEscriturar(nfe.id)}
-                      className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl transition-all"
+                      onClick={() => confirm('Excluir esta nota?') && remover(nfe.id)}
+                      className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                      title="Excluir"
                     >
-                      <Eye size={11} /> Visualizar
+                      <Trash2 size={16} />
                     </button>
-                  )}
-                  <button
-                    onClick={() => visualizarDanfe(nfe)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100"
-                  >
-                    <Printer size={11} /> DANFE (PDF)
-                  </button>
-                  <button
-                    onClick={() => confirm('Excluir esta NF-e e todos os seus itens?') && remover(nfe.id)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-all"
-                  >
-                    <Trash2 size={11} /> Excluir
-                  </button>
+                  </div>
                 </div>
               </div>
             )
