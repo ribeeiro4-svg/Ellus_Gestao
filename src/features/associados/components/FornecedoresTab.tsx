@@ -4,12 +4,15 @@ import { useFornecedores } from '@/lib/hooks/useFornecedores'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
-import { Plus, Mail, Phone, Trash2, Search, HardDrive, ShoppingCart } from 'lucide-react'
+import { Plus, Mail, Phone, Trash2, Search, HardDrive, ShoppingCart, Link, CheckCircle2, Loader2 } from 'lucide-react'
+import { usePlanoContas } from '@/features/contabil/hooks/usePlanoContas'
 import { fmtR } from '@/lib/utils/formatters'
 
 export default function FornecedoresTab() {
   const { fornecedores, loading, inserir, atualizar, excluir } = useFornecedores()
+  const planoHook = usePlanoContas()
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [searchQ, setSearchQ] = useState('')
   const [filterCategory, setFilterCategory] = useState<string>('todas')
@@ -63,6 +66,66 @@ export default function FornecedoresTab() {
     }
   }
 
+  const handleGerarConta = async (fornecedor: any) => {
+    if (fornecedor.conta_contabil_id) return
+    setGeneratingId(fornecedor.id)
+    
+    try {
+      // 1. Achar a conta pai (Fornecedores - 2.1.3)
+      const pai = planoHook.contas.find(c => c.codigo === '2.1.3')
+      if (!pai) {
+        alert('Conta pai "2.1.3 - FORNECEDORES" não encontrada no Plano de Contas.')
+        return
+      }
+
+      // 2. Achar o próximo código disponível
+      const filhos = planoHook.contas.filter(c => c.conta_pai_id === pai.id)
+      const codigosExistentes = filhos.map(f => {
+        const partes = f.codigo.split('.')
+        return parseInt(partes[partes.length - 1])
+      })
+      const proximoNum = codigosExistentes.length > 0 ? Math.max(...codigosExistentes) + 1 : 1
+      const novoCodigo = `${pai.codigo}.${proximoNum.toString().padStart(2, '0')}`
+
+      // 3. Criar a conta
+      const { error: createError } = await planoHook.adicionarConta({
+        codigo: novoCodigo,
+        descricao: `FORN: ${fornecedor.nome.toUpperCase()}`,
+        nivel: 4,
+        tipo: 'analitica',
+        natureza: 'credora',
+        classificacao: 'passivo',
+        aceita_lancamentos: true,
+        ativa: true,
+        conta_pai_id: pai.id
+      })
+
+      if (createError) throw new Error(createError.message)
+
+      // 4. Buscar a conta recém criada para pegar o ID e vincular
+      await planoHook.refresh()
+      
+      const { createClient } = await import('@/lib/supabase/client')
+      const sb = createClient()
+      const { data: contaCriada } = await sb.from('plano_contas')
+        .select('id')
+        .eq('codigo', novoCodigo)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (contaCriada) {
+        await atualizar(fornecedor.id, { conta_contabil_id: contaCriada.id })
+      }
+
+      alert(`Conta ${novoCodigo} gerada e vinculada com sucesso!`)
+    } catch (err: any) {
+      alert(`Erro ao gerar conta: ${err.message}`)
+    } finally {
+      setGeneratingId(null)
+    }
+  }
+
   const columns = [
     {
       header: 'Fornecedor / Prestador', key: 'nome',
@@ -96,6 +159,30 @@ export default function FornecedoresTab() {
           )}
         </div>
       )
+    },
+    {
+      header: 'Contabilidade', key: 'conta_contabil_id',
+      render: (i: any) => {
+        const conta = planoHook.contas.find(c => c.id === i.conta_contabil_id)
+        if (conta) {
+          return (
+            <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 w-fit">
+              <CheckCircle2 size={12} />
+              <span className="text-[10px] font-bold uppercase">{conta.codigo}</span>
+            </div>
+          )
+        }
+        return (
+          <button 
+            onClick={() => handleGerarConta(i)}
+            disabled={generatingId === i.id}
+            className="flex items-center gap-1.5 text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 transition-all text-[10px] font-black uppercase disabled:opacity-50"
+          >
+            {generatingId === i.id ? <Loader2 size={12} className="animate-spin" /> : <Link size={12} />}
+            Gerar Conta
+          </button>
+        )
+      }
     },
     {
       header: '', key: 'acoes', className: 'w-20 text-right',

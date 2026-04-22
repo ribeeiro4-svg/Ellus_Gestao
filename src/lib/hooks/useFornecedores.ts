@@ -10,6 +10,7 @@ export interface Fornecedor {
   telefone: string | null
   categoria_padrao: string | null
   status: 'ativo' | 'inativo'
+  conta_contabil_id: string | null
   created_at: string
 }
 
