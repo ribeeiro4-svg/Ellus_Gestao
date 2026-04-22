@@ -474,11 +474,11 @@ export default function AssociadosTab() {
                  datasets: [{ 
                    data: Object.values(statusMap), 
                    backgroundColor: Object.keys(statusMap).map(k => {
-                     const status = k.toUpperCase()
-                     if (status.includes('ATIVO')) return '#10b981'
-                     if (status.includes('PENDENTE')) return '#f59e0b'
-                     if (status.includes('INADIMPLENTE')) return '#ef4444'
-                     if (status.includes('INATIVO')) return '#94a3b8'
+                     const s = k.toUpperCase().trim()
+                     if (s === 'ATIVO') return '#10b981'
+                     if (s === 'PENDENTE') return '#f59e0b'
+                     if (s === 'INADIMPLENTE') return '#ef4444'
+                     if (s === 'INATIVO') return '#94a3b8'
                      return '#cbd5e1'
                    }), 
                    borderWidth: 0 
