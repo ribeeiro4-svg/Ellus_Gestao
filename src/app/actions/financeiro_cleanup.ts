@@ -105,8 +105,15 @@ export async function cleanupDuplicateMensalidadesAction() {
   })
 
   if (idsToDelete.length === 0) {
-    const maxGroup = Math.max(0, ...Object.values(groups).map(g => g.length));
-    return { count: 0, message: `Nenhuma duplicata excluída.\nDiagnóstico: Lidos ${filteredLancamentos.length} registros, formados ${Object.keys(groups).length} grupos. Maior grupo tem ${maxGroup} itens.` }
+    const maxGroupSize = Math.max(0, ...Object.values(groups).map(g => g.length));
+    const biggestGroup = Object.values(groups).find(g => g.length === maxGroupSize) || [];
+    
+    let diagInfo = `Lidos ${filteredLancamentos.length}, ${Object.keys(groups).length} grupos. Maior: ${maxGroupSize}.`
+    if (biggestGroup.length > 0) {
+        diagInfo += `\nItens do maior grupo:\n` + biggestGroup.map(x => `- ${x.descricao} | Data: ${x.data} | Status: ${x.status} | Conciliado: ${x.conciliado}`).join('\n')
+    }
+    
+    return { count: 0, message: `Nenhuma duplicata excluída.\nDiagnóstico:\n${diagInfo}` }
   }
 
   // 3.5 Buscar nomes dos associados afetados para o relatório
