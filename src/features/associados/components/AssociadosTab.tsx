@@ -77,10 +77,13 @@ export default function AssociadosTab() {
     }
   }
 
-  const catMap = useMemo(() => {
+  const statusMap = useMemo(() => {
     const m: Record<string, number> = {}
-    associados.forEach((a: any) => { const c = a.categoria || 'Sem categoria'; m[c] = (m[c] || 0) + 1 })
-    return Object.keys(m).length ? m : { 'Sem dados': 1 }
+    associados.forEach((a: any) => { 
+      const s = a.status ? a.status.toUpperCase() : 'PENDENTE'
+      m[s] = (m[s] || 0) + 1 
+    })
+    return Object.keys(m).length ? m : { 'SEM DADOS': 1 }
   }, [associados])
 
   const categorias = useMemo(() => [...new Set(associados.map((a: any) => a.categoria || 'Sem categoria'))].sort(), [associados])
@@ -463,10 +466,17 @@ export default function AssociadosTab() {
             </div>
           </ChartCard>
         </div>
-        <ChartCard title="Mix" subtitle="Por categoria">
+        <ChartCard title="Status" subtitle="Mix de associados">
           <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-100px] mb-[-60px] h-[600px]">
              <Doughnut 
-               data={{ labels: Object.keys(catMap).map(k => `${k} (${catMap[k]})`), datasets: [{ data: Object.values(catMap), backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }} 
+               data={{ 
+                 labels: Object.keys(statusMap).map(k => `${k} (${statusMap[k]})`), 
+                 datasets: [{ 
+                   data: Object.values(statusMap), 
+                   backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#94a3b8'], 
+                   borderWidth: 0 
+                 }] 
+               }} 
                options={{ 
                  responsive: true, 
                  maintainAspectRatio: false, 
