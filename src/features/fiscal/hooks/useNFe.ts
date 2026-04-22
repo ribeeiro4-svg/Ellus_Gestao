@@ -159,13 +159,20 @@ export function useNFe() {
         // Um item só é considerado classificado se tiver CFOP e Destinação
         const isItemClassificado = !!(item.cfop_escrituracao && item.destinacao_item)
         
+        // Função auxiliar para pegar apenas o código antes do " - " ou limitar o tamanho
+        const limparCodigo = (val: string | null, max: number) => {
+          if (!val) return null
+          const soCodigo = val.split(' ')[0].split('-')[0].trim()
+          return soCodigo.substring(0, max)
+        }
+
         const updateData: any = {
-          cfop_escrituracao: item.cfop_escrituracao || null,
-          cst_icms: item.cst_icms || null,
-          cst_ipi: item.cst_ipi || null,
-          cst_pis: item.cst_pis || null,
-          cst_cofins: item.cst_cofins || null,
-          destinacao_item: item.destinacao_item || null,
+          cfop_escrituracao: limparCodigo(item.cfop_escrituracao, 4),
+          cst_icms: limparCodigo(item.cst_icms, 3),
+          cst_ipi: limparCodigo(item.cst_ipi, 2),
+          cst_pis: limparCodigo(item.cst_pis, 2),
+          cst_cofins: limparCodigo(item.cst_cofins, 2),
+          destinacao_item: limparCodigo(item.destinacao_item, 2),
           aproveitamento_credito: !!item.aproveitamento_credito,
           motivo_nao_aproveitamento: item.motivo_nao_aproveitamento || null,
           obs_fiscal: item.obs_fiscal || null,
