@@ -11,7 +11,7 @@ export async function cleanupDuplicateMensalidadesAction() {
   // 1. Buscar lançamentos que possuam associado_id (potenciais mensalidades/adesões)
   const { data: lancamentos, error } = await sb
     .from('lancamentos')
-    .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, descricao, categoria, valor')
+    .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, status, descricao, categoria, valor')
     .eq('tipo', 'receita')
     .not('associado_id', 'is', null)
 
@@ -28,23 +28,17 @@ export async function cleanupDuplicateMensalidadesAction() {
 
   if (filteredLancamentos.length === 0) return { count: 0, message: 'Nenhum lançamento de mensalidade encontrado.' }
 
-  // 2. Agrupar por associado e período
+  // 2. Agrupar por associado e DATA EXATA de vencimento
   const groups: Record<string, any[]> = {}
 
   filteredLancamentos.forEach(l => {
-    if (!l.associado_id) return
+    if (!l.associado_id || !l.data) return
 
-    // Tenta pegar mes/ano da competencia ou da data
-    let mes = l.competencia_mes
-    let ano = l.competencia_ano
-
-    if (mes === null || ano === null) {
-      const d = new Date(l.data)
-      mes = d.getUTCMonth()
-      ano = d.getUTCFullYear()
-    }
-
-    const key = `${l.associado_id}_${mes}_${ano}`
+    // O usuário quer excluir pelo vencimento exato (mesmo dia/mês/ano)
+    // l.data geralmente vem no formato YYYY-MM-DD
+    const dataVencimento = l.data.split('T')[0] // Garante pegar só a data
+    
+    const key = `${l.associado_id}_${dataVencimento}`
     if (!groups[key]) groups[key] = []
     groups[key].push(l)
   })
@@ -56,17 +50,21 @@ export async function cleanupDuplicateMensalidadesAction() {
   Object.values(groups).forEach(group => {
     if (group.length <= 1) return
 
-    // Ordenar: Conciliados primeiro (para não deletar), depois os mais antigos
-    const conciliados = group.filter(l => l.conciliado === true)
-    const pendentes = group.filter(l => l.conciliado !== true)
+    // Queremos apenas limpar os que estão 'aberto' (pendentes puramente).
+    // Se houver um 'pago', 'atrasado' ou 'conciliado', consideramos como registro oficial a não ser apagado.
+    const protegidos = group.filter(l => l.conciliado === true || l.status === 'pago' || l.status === 'atrasado')
+    const pendentes = group.filter(l => l.conciliado !== true && l.status === 'aberto')
 
     let deletedInThisGroup = 0
-    if (conciliados.length > 0) {
+    
+    if (protegidos.length > 0) {
+      // Se já tem um pago/conciliado, deleta TODOS os pendentes (duplicatas em aberto)
       pendentes.forEach(p => {
         idsToDelete.push(p.id)
         deletedInThisGroup++
       })
     } else if (pendentes.length > 1) {
+      // Se não tem nenhum pago, mas tem vários abertos pro mesmo dia, mantém o 1º e deleta o resto
       for (let i = 1; i < pendentes.length; i++) {
         idsToDelete.push(pendentes[i].id)
         deletedInThisGroup++
@@ -74,8 +72,6 @@ export async function cleanupDuplicateMensalidadesAction() {
     }
 
     if (deletedInThisGroup > 0) {
-      // Tenta extrair o nome do associado da descrição ou via busca posterior
-      // Mas como temos o associado_id, seria melhor buscar os nomes
       associatesAffected.add(group[0].associado_id)
     }
   })
