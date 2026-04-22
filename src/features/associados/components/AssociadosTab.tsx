@@ -28,6 +28,11 @@ export default function AssociadosTab() {
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
+  // Garantir que as colunas existam ao carregar a tela
+  React.useEffect(() => {
+    fixAssociadosRecorrenciaColumnsAction()
+  }, [])
+
   const toggleRow = (id: string) => {
     const next = new Set(expandedRows)
     if (next.has(id)) next.delete(id)
