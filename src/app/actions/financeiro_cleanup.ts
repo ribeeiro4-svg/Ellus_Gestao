@@ -28,14 +28,25 @@ export async function cleanupDuplicateMensalidadesAction() {
 
   if (filteredLancamentos.length === 0) return { count: 0, message: 'Nenhum lançamento de mensalidade encontrado.' }
 
-  // 2. Agrupar por NOME do associado e DATA EXATA de vencimento
-  // Usar o nome garante que se o mesmo associado estiver cadastrado duas vezes, pegaremos as duplicatas
+  // 2. Agrupar por NOME do associado e MÊS/ANO do vencimento
+  // Usar o nome e o mês garante que pegaremos duplicatas mesmo se o formato da data no banco divergir (ex: 2026-12-10 vs 10/12/2026)
   const groups: Record<string, any[]> = {}
 
   filteredLancamentos.forEach(l => {
     if (!l.associado_id || !l.data) return
 
-    const dataVencimento = l.data.split('T')[0] // Garante pegar só a data
+    // Normalizar a data para pegar o Ano e Mês de forma robusta
+    let yearMonth = ''
+    const str = l.data.split('T')[0]
+    if (str.includes('-')) {
+      const parts = str.split('-')
+      yearMonth = parts[0].length === 4 ? `${parts[0]}-${parts[1]}` : `${parts[2]}-${parts[1]}`
+    } else if (str.includes('/')) {
+      const parts = str.split('/')
+      yearMonth = parts.length >= 3 ? (parts[2].length === 4 ? `${parts[2]}-${parts[1]}` : `${parts[0]}-${parts[1]}`) : str
+    } else {
+      yearMonth = str
+    }
     
     // Tenta pegar o nome do objeto join, se não, tenta extrair da descrição
     let nome = ''
@@ -46,10 +57,10 @@ export async function cleanupDuplicateMensalidadesAction() {
       nome = partes.length > 1 ? partes[1].trim() : l.associado_id
     }
     
-    // Normalizar nome para evitar diferenças de maiúsculas/minúsculas e espaços
+    // Normalizar nome para evitar diferenças
     const nomeNorm = nome.toUpperCase().trim()
 
-    const key = `${nomeNorm}_${dataVencimento}`
+    const key = `${nomeNorm}_${yearMonth}`
     if (!groups[key]) groups[key] = []
     groups[key].push(l)
   })
