@@ -503,7 +503,36 @@ export default function AssociadosTab() {
                      } 
                    } 
                  } 
-               }} 
+               }}
+               plugins={[{
+                 id: 'centerText',
+                 beforeDraw: function(chart: any) {
+                   var width = chart.width,
+                       height = chart.height,
+                       ctx = chart.ctx;
+               
+                   ctx.restore();
+                   ctx.font = "900 56px Inter, sans-serif";
+                   ctx.textBaseline = "middle";
+                   ctx.fillStyle = "#0f172a";
+               
+                   var total = chart.config.data.datasets[0].data.reduce((a: number, b: number) => a + b, 0);
+                   var text = total.toString(),
+                       textX = Math.round((width - ctx.measureText(text).width) / 2),
+                       textY = height / 2 - 12;
+               
+                   ctx.fillText(text, textX, textY);
+                   
+                   ctx.font = "900 12px Inter, sans-serif";
+                   ctx.fillStyle = "#94a3b8";
+                   var text2 = "TOTAL",
+                       text2X = Math.round((width - ctx.measureText(text2).width) / 2),
+                       text2Y = height / 2 + 24;
+                       
+                   ctx.fillText(text2, text2X, text2Y);
+                   ctx.save();
+                 }
+               }]}
              />
           </div>
         </ChartCard>
