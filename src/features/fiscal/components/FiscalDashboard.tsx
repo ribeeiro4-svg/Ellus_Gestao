@@ -36,16 +36,16 @@ export default function FiscalDashboard({ nfeHook, estoqueHook }: { nfeHook: any
   return (
     <div className="flex flex-col gap-6">
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+      <div className="grid grid-cols-4 xl:grid-cols-8 gap-2">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon
           return (
-            <div key={i} className="bg-white border border-slate-100 p-2.5 rounded-xl shadow-sm hover:shadow-md transition-all">
+            <div key={i} className="bg-white border border-slate-100 p-3 rounded-xl shadow-sm hover:shadow-md transition-all min-w-0">
               <div className="flex items-center gap-1.5 mb-1 opacity-70">
-                <Icon size={10} style={{ color: kpi.color }} />
-                <span className="text-[8px] font-black text-slate-400 uppercase tracking-tight truncate">{kpi.label}</span>
+                <Icon size={12} style={{ color: kpi.color }} />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight truncate">{kpi.label}</span>
               </div>
-              <div className="text-[13px] font-black text-slate-800" style={{ color: i > 3 ? kpi.color : undefined }}>
+              <div className="text-base font-black text-slate-800" style={{ color: i > 3 ? kpi.color : undefined }}>
                 {kpi.value}
               </div>
             </div>
