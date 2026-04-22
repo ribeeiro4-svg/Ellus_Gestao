@@ -31,6 +31,7 @@ import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
+import { cleanupDuplicateMensalidadesAction } from '@/app/actions/financeiro_cleanup'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -181,6 +182,24 @@ export default function FinanceiroPage() {
         setProcessedIds(prev => { const next = new Set(prev); rowsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
       } else alert(`Erro Cora: ${res.error}`)
     } finally { setIsProcessingBatch(false) }
+  }
+
+  const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false)
+  const handleCleanupDuplicates = async () => {
+    if (!confirm('Deseja remover mensalidades duplicadas que ainda não foram conciliadas?')) return
+    setIsCleaningDuplicates(true)
+    try {
+      const res = await cleanupDuplicateMensalidadesAction()
+      if (res.error) alert(`Erro: ${res.error}`)
+      else {
+        const namesStr = res.names && res.names.length > 0 
+          ? `\n\nAssociados afetados:\n- ${res.names.join('\n- ')}` 
+          : ''
+        alert(`${res.message}${namesStr}`)
+      }
+    } finally {
+      setIsCleaningDuplicates(false)
+    }
   }
 
   const handleBulkDelete = async () => {
@@ -517,7 +536,15 @@ export default function FinanceiroPage() {
               <option value="ALL">Todas Categorias</option>
               {[...new Set(categorias.map(c => c.nome))].sort().map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
-            <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100"><RefreshCw size={14} /> Recorrência em Lote</button>
+            <div className="flex gap-2">
+              <button onClick={handleCleanupDuplicates} disabled={isCleaningDuplicates} className="px-4 py-4 bg-rose-50 text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-2 transition-all hover:bg-rose-100 disabled:opacity-50" title="Remover lançamentos duplicados não conciliados">
+                <Trash2 size={14} className={isCleaningDuplicates ? 'animate-spin' : ''} />
+                Limpar Duplicados
+              </button>
+              <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100">
+                <RefreshCw size={14} /> Recorrência em Lote
+              </button>
+            </div>
           </div>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
             <DataTable 
