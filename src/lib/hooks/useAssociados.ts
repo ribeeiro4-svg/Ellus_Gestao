@@ -77,8 +77,16 @@ export function useAssociados() {
       if (res.error) return { error: res.error }
       if (!res.data || res.data.length === 0) return { message: 'Nenhum novo associado encontrado na ZapSign.' }
       
-      const { error } = await inserirBulk(res.data)
-      return { error, count: res.data.length }
+      // Filtrar apenas quem não existe ainda (baseado no código) para evitar sobrescrever dados manuais
+      const codigosExistentes = new Set(associados.map(a => a.codigo))
+      const novos = res.data.filter(it => !codigosExistentes.has(it.codigo))
+
+      if (novos.length === 0) {
+        return { message: 'Sincronização concluída: Todos os associados da ZapSign já constam no sistema.' }
+      }
+      
+      const { error } = await inserirBulk(novos)
+      return { error, count: novos.length }
     } catch (err) {
       return { error: 'Falha na comunicação com o servidor de integração.' }
     } finally {
