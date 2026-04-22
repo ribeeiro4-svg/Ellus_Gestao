@@ -8,12 +8,11 @@ import { createServerSupabase } from '@/lib/supabase/server'
 export async function cleanupDuplicateMensalidadesAction() {
   const sb = await createServerSupabase()
 
-  // 1. Buscar lançamentos que possuam associado_id (potenciais mensalidades/adesões)
+  // 1. Buscar lançamentos de receita
   const { data: lancamentos, error } = await sb
     .from('lancamentos')
     .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, status, descricao, categoria, valor, associados ( nome )')
     .eq('tipo', 'receita')
-    .not('associado_id', 'is', null)
 
   if (error) return { error: error.message }
   if (!lancamentos || lancamentos.length === 0) return { count: 0 }
@@ -33,7 +32,7 @@ export async function cleanupDuplicateMensalidadesAction() {
   const groups: Record<string, any[]> = {}
 
   filteredLancamentos.forEach(l => {
-    if (!l.associado_id || !l.data) return
+    if (!l.data) return
 
     // Normalizar a data para pegar o Ano e Mês de forma robusta
     let yearMonth = ''
