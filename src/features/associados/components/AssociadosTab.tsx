@@ -352,7 +352,7 @@ export default function AssociadosTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <ChartCard title="Crescimento" subtitle="Evolução acumulativa">
-            <div className="w-[calc(100%+48px)] mx-[-24px] mt-[-40px] mb-[-24px] h-[400px]">
+            <div className="w-[calc(100%+48px)] mx-[-24px] mt-0 mb-[-24px] h-[360px] flex items-center">
               <Line 
                 data={{ 
                   labels: MESES, 
@@ -375,8 +375,8 @@ export default function AssociadosTab() {
                   maintainAspectRatio: false, 
                   layout: {
                     padding: {
-                      top: 10,
-                      bottom: 10,
+                      top: 40,
+                      bottom: 40,
                       left: 0,
                       right: 0
                     }
@@ -453,13 +453,13 @@ export default function AssociadosTab() {
           </div>
           <div className="flex items-center gap-2">
             <div className="h-6 w-px bg-red-200 mx-2" />
-            <button onClick={() => handleBatchUpdateRecorrencia(true)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Recor. Ativar</button>
+            <button onClick={() => handleBatchUpdateRecorrencia(true)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-[#0e2d22] text-white rounded-lg text-[10px] font-black uppercase shadow-sm hover:opacity-90 transition-opacity">Recor. Ativar</button>
             <button onClick={() => handleBatchUpdateRecorrencia(false)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-slate-600 border border-slate-200 rounded-lg text-[10px] font-black uppercase shadow-sm">Recor. Parar</button>
             <button onClick={handleBatchUpdateConta} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-blue-600 border border-blue-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Definir Conta</button>
             <div className="h-6 w-px bg-red-200 mx-2" />
             <button onClick={() => handleBatchUpdateVencimento(10)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-indigo-600 border border-indigo-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Dia 10</button>
             <button onClick={() => handleBatchUpdateVencimento(20)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-orange-600 border border-orange-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Dia 20</button>
-            <button onClick={handleBulkDelete} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase shadow-md flex items-center gap-2"><Trash2 size={12} /> Excluir</button>
+            <button onClick={handleBulkDelete} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-[#be123c] text-white rounded-lg text-[10px] font-black uppercase shadow-md flex items-center gap-2 hover:opacity-90 transition-opacity"><Trash2 size={12} /> Excluir</button>
           </div>
         </div>
       )}
