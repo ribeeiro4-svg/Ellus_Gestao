@@ -18,6 +18,7 @@ import { Plus, Mail, Phone, Copy, Trash2, CheckSquare, RefreshCw, Pencil, XCircl
 import { useTenant } from '@/lib/hooks/useTenant'
 import { fetchZapSignSignedFileAction } from '@/app/actions/zapsign'
 import { fixAssociadosRecorrenciaColumnsAction } from '@/app/actions/associados_fix'
+import { useContas } from '@/lib/hooks/useContas'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend, LineElement, PointElement)
 
@@ -25,6 +26,7 @@ export default function AssociadosTab() {
   const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign, refresh } = useAssociados()
   const { lancamentos } = useFinanceiro()
   const { tenant } = useTenant()
+  const { contas } = useContas()
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
@@ -164,8 +166,14 @@ export default function AssociadosTab() {
 
   const handleBatchUpdateConta = async () => {
     if (selectedIds.length === 0) return
-    const conta = prompt('Informe o nome da conta bancária para os associados selecionados:')
-    if (conta === null) return
+    const nomesContas = contas.map(c => c.nome).join('\n')
+    const conta = prompt(`Informe o NOME EXATO da conta bancária para os associados selecionados:\n\nContas cadastradas:\n${nomesContas}`)
+    if (conta === null || conta.trim() === '') return
+    
+    const contaExiste = contas.some(c => c.nome.toLowerCase() === conta.toLowerCase())
+    if (!contaExiste) {
+      if (!confirm(`A conta "${conta}" não foi encontrada no cadastro de contas bancárias. Deseja prosseguir mesmo assim?`)) return
+    }
     setIsUpdatingBulk(true)
     try {
       const res = await atualizarBulk(selectedIds, { conta_recorrencia: conta } as any)
@@ -492,7 +500,12 @@ export default function AssociadosTab() {
           { name: 'data_ingresso', label: 'Ingresso', type: 'date', required: true },
           { name: 'status', label: 'Status', type: 'select', options: [{ value: 'ativo', label: 'Ativo' }, { value: 'inadimplente', label: 'Inadimplente' }, { value: 'inativo', label: 'Inativo' }] },
           { name: 'recorrencia_ativa', label: 'Cobrança Recorrente', type: 'checkbox' },
-          { name: 'conta_recorrencia', label: 'Conta da Recorrência', type: 'text' }
+          { 
+            name: 'conta_recorrencia', 
+            label: 'Conta da Recorrência', 
+            type: 'select',
+            options: contas.map(c => ({ value: c.nome, label: c.nome }))
+          }
         ]}
       />
     </div>
