@@ -50,18 +50,25 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
       }
 
       for (const doc of results) {
-        // REGRA DE SEGURANÇA: Só importa o que for Termo de Adesão e da ACPROBEC
-        const nameClean = (doc.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")
-        const isRelevant = nameClean.includes('adesao') || nameClean.includes('acprobec') || nameClean.includes('termo')
+        // REGRA DE SEGURANÇA: Relaxada para garantir que nada escape
+        const nameLower = (doc.name || '').toLowerCase()
+        const nameClean = nameLower.normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        
+        const matches = [
+          'adesao', 'acprobec', 'termo', 'inscricao', 'filiacao', 'associado', 'contrato'
+        ]
+        const isRelevant = matches.some(m => nameClean.includes(m))
         
         if (!isRelevant) {
-          console.log(`[ZapSign] Pulando documento irrelevante: ${doc.name}`)
           continue
         }
 
+        // Busca detalhes SEMPRE com revalidate: 0 e tentando sem barra final se falhar
         const docDetailRes = await fetch(`${ZAPSIGN_API_BASE}/docs/${doc.token}/`, {
-          headers: { 'Authorization': `Bearer ${apiToken}` }
+          headers: { 'Authorization': `Bearer ${apiToken}` },
+          next: { revalidate: 0 }
         })
+        
         if (docDetailRes.ok) {
           const detail = await docDetailRes.json()
           allDocsWithDetails.push(detail)
@@ -70,7 +77,7 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
 
       if (results.length < 25) hasMore = false
       else page++
-      if (page > 30) hasMore = false // Aumentado limite de páginas para garantir que pegue antigos
+      if (page > 50) hasMore = false // Aumentado para 50 páginas (1250 documentos)
     }
 
     // 2. Análise de Frequência para identificar administradores/testemunhas
@@ -82,35 +89,34 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
       })
     })
 
-    // 3. Extração com Ranking: Apenas o Signatário mais provável de ser o Associado
+    // 3. Extração com Ranking
     const newAssociates: AssociadoInput[] = []
     
     for (const doc of allDocsWithDetails) {
-      // Aceita 'signed' ou 'completed' como ativos
       const sysStatus = (doc.status === 'signed' || doc.status === 'completed') ? 'ativo' : 'pendente'
       
       const rankedSigners = doc.signers.map(s => {
         let score = 100
-        const n = (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        const nameRaw = (s.name || '')
+        const n = nameRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")
         const freq = nameFrequency.get(n) || 0
         
         score -= (freq * 10) 
         
-        if (s.email === 'acprobec@gmail.com') score -= 500
-        if (n.includes('leandro xavier')) score -= 500
-        if (n.includes('antonio pereira')) score -= 500
-        if (n.includes('diretor')) score -= 200
+        // Penaliza administradores e diretores
+        const adminKeywords = ['acprobec', 'leandro xavier', 'antonio pereira', 'diretor', 'secretario', 'testemunha']
+        if (adminKeywords.some(kw => n.includes(kw))) score -= 500
+        if (s.email === 'acprobec@gmail.com') score -= 1000
 
         return { signer: s, score }
       })
 
-      // Ordena pelo maior score e pega o vencedor
       rankedSigners.sort((a, b) => b.score - a.score)
       const primarySigner = rankedSigners[0]?.signer
 
       if (primarySigner) {
         const signer = primarySigner
-        const foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || ''
+        const foundCpf = (signer as any).cpf || (signer as any).cnpj || (signer as any).gov_id || (signer as any).external_id || ''
         const cleanedCpf = foundCpf.replace(/\D/g, '')
 
         const emailKey = signer.email ? signer.email.toLowerCase().trim() : ''
@@ -120,7 +126,6 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           .replace(/[\s_-]+/g, '-')
           .trim()
 
-        // Prioridade de Identificação Invariável: CPF > Email > Nome
         const stableKey = cleanedCpf ? `CPF-${cleanedCpf}` : (emailKey ? `EMAIL-${emailKey}` : `NAME-${nameSlug}`)
 
         newAssociates.push({
@@ -133,8 +138,8 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           status: sysStatus,
           data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
           codigo: stableKey,
-          zapsign_doc_token: doc.token, // Garante o vínculo para download do PDF
-          zapsign_signers: doc.signers // NOVIDADE: Salva quem assinou e quem falta
+          zapsign_doc_token: doc.token,
+          zapsign_signers: doc.signers
         })
       }
     }
