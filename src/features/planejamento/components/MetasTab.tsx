@@ -16,6 +16,13 @@ import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { fmtR, MESES, getMesIdx, getAnoIdx, getBruto } from '@/lib/utils/formatters'
 import { Bar, Doughnut } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale, LinearScale, BarElement,
+  ArcElement, Title, Tooltip, Legend
+} from 'chart.js'
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend)
 
 interface MetasTabProps {
   selectedMes: number
