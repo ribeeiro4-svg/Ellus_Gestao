@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useMemo } from 'react'
-import { Search, FileText, CheckCircle, Clock, AlertTriangle, Eye, Trash2, PenLine, RefreshCw } from 'lucide-react'
+import { Search, FileText, CheckCircle, Clock, AlertTriangle, Eye, Trash2, PenLine, RefreshCw, Printer } from 'lucide-react'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtData = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
@@ -16,6 +16,22 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
   const { nfes, loading, remover, filterPeriodo, setFilterPeriodo } = nfeHook
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
+
+  const visualizarDanfe = (xml: string) => {
+    if (!xml) return alert('XML original não encontrado para esta nota.')
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = 'https://www.webdanfe.com.br/danfe/Home/Imprimir'
+    form.target = '_blank'
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = 'xml'
+    input.value = xml
+    form.appendChild(input)
+    document.body.appendChild(form)
+    form.submit()
+    document.body.removeChild(form)
+  }
 
   const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
   const ano = new Date().getFullYear()
@@ -148,6 +164,12 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                       <Eye size={11} /> Visualizar
                     </button>
                   )}
+                  <button
+                    onClick={() => visualizarDanfe(nfe.xml_original)}
+                    className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100"
+                  >
+                    <Printer size={11} /> DANFE (PDF)
+                  </button>
                   <button
                     onClick={() => confirm('Excluir esta NF-e e todos os seus itens?') && remover(nfe.id)}
                     className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-all"
