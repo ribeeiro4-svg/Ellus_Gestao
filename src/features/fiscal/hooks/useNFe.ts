@@ -153,39 +153,40 @@ export function useNFe() {
     return data ?? []
   }
 
-  const salvarClassificacao = async (nfeId: string, itens: Partial<NFeItem>[]) => {
-    const updates = itens.map(item => ({
-      id: item.id,
-      cfop_escrituracao: item.cfop_escrituracao,
-      cst_icms: item.cst_icms,
-      cst_ipi: item.cst_ipi,
-      cst_pis: item.cst_pis,
-      cst_cofins: item.cst_cofins,
-      destinacao_item: item.destinacao_item,
-      aproveitamento_credito: item.aproveitamento_credito,
-      motivo_nao_aproveitamento: item.motivo_nao_aproveitamento,
-      obs_fiscal: item.obs_fiscal,
-      conta_contabil_id: item.conta_contabil_id,
-      produto_vinc_id: item.produto_vinc_id,
-      classificado: true,
-      data_classificacao: new Date().toISOString(),
-    }))
+  const salvarClassificacao = async (nfeId: string, itens: any[]) => {
+    const updates = itens.map(item => {
+      // Um item só é considerado classificado se tiver CFOP e Destinação
+      const isItemClassificado = !!(item.cfop_escrituracao && item.destinacao_item)
+      
+      return {
+        id: item.id,
+        cfop_escrituracao: item.cfop_escrituracao || null,
+        cst_icms: item.cst_icms || null,
+        cst_ipi: item.cst_ipi || null,
+        cst_pis: item.cst_pis || null,
+        cst_cofins: item.cst_cofins || null,
+        destinacao_item: item.destinacao_item || null,
+        aproveitamento_credito: !!item.aproveitamento_credito,
+        motivo_nao_aproveitamento: item.motivo_nao_aproveitamento || null,
+        obs_fiscal: item.obs_fiscal || null,
+        conta_contabil_id: item.conta_contabil_id || null,
+        produto_vinc_id: item.produto_vinc_id || null,
+        classificado: isItemClassificado,
+        data_classificacao: isItemClassificado ? new Date().toISOString() : null,
+      }
+    })
 
-    for (const update of updates) {
-      const { id, ...data } = update
-      await sb.from('nfe_entradas_itens').update(data).eq('id', id)
-    }
+    // Executar updates em lote (usando upsert para garantir persistência)
+    const { error: itensError } = await sb.from('nfe_entradas_itens').upsert(updates)
+    if (itensError) return { error: itensError.message }
 
-    // Verificar se todos os itens estão classificados
-    const { data: allItems } = await sb.from('nfe_entradas_itens')
-      .select('classificado')
-      .eq('nfe_entrada_id', nfeId)
-
-    const todosClassificados = allItems?.every(i => i.classificado) ?? false
+    // Verificar status global da nota
+    const todosClassificados = updates.every(i => i.classificado)
+    const algumClassificado = updates.some(i => i.classificado || i.cfop_escrituracao)
 
     const { error } = await sb.from('nfe_entradas')
       .update({
-        status_escrituracao: todosClassificados ? 'escriturada' : 'em_andamento',
+        status_escrituracao: todosClassificados ? 'escriturada' : (algumClassificado ? 'em_andamento' : 'pendente'),
         data_escrituracao: todosClassificados ? new Date().toISOString() : null,
       })
       .eq('id', nfeId)

@@ -51,7 +51,10 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
     const result = await salvarClassificacao(selectedNfeId, itens)
     setSaving(false)
     if (result.error) alert(`Erro: ${result.error}`)
-    else alert('Escrituração salva com sucesso!')
+    else {
+      alert('Escrituração salva com sucesso!')
+      nfeHook.refresh()
+    }
   }
 
   const finalizar = async () => {
