@@ -359,10 +359,10 @@ export function useProdutosEstoque() {
     if (!tenantId) return { error: 'Tenant não identificado' }
     
     try {
-      // 1. Buscar todos os itens de notas escrituradas
+      // 1. Buscar todos os itens de notas escrituradas (status 'escriturada' ou 'concluida')
       const { data: itensNfe, error: errItens } = await sb.from('nfe_entradas_itens')
         .select('*, nfe:nfe_entradas!inner(status_escrituracao)')
-        .eq('nfe.status_escrituracao', 'concluida')
+        .in('nfe.status_escrituracao', ['escriturada', 'concluida'])
         .eq('nfe.tenant_id', tenantId)
 
       if (errItens) throw errItens
