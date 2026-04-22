@@ -494,7 +494,7 @@ export default function AssociadosTab() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input type="text" placeholder="Busca global..." className="w-full pl-12 pr-4 py-3 bg-gray-50 border-none rounded-2xl text-sm font-medium outline-none focus:ring-2 ring-indigo-500/10" value={searchQ} onChange={e => setSearchQ(e.target.value)} />
           </div>
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{['todos', 'ativo', 'inadimplente', 'inativo'].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}</select>
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{['todos', 'ativo', 'pendente', 'inadimplente', 'inativo'].map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}</select>
           <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
             <option value="todas">TODAS CATEGORIAS</option>
             {categorias.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}
@@ -566,7 +566,7 @@ export default function AssociadosTab() {
           { name: 'telefone', label: 'WhatsApp', type: 'text' },
           { name: 'mensalidade', label: 'Valor', type: 'number', required: true },
           { name: 'data_ingresso', label: 'Ingresso', type: 'date', required: true },
-          { name: 'status', label: 'Status', type: 'select', options: [{ value: 'ativo', label: 'Ativo' }, { value: 'inadimplente', label: 'Inadimplente' }, { value: 'inativo', label: 'Inativo' }] },
+          { name: 'status', label: 'Status', type: 'select', options: [{ value: 'ativo', label: 'Ativo' }, { value: 'pendente', label: 'Pendente' }, { value: 'inadimplente', label: 'Inadimplente' }, { value: 'inativo', label: 'Inativo' }] },
           { name: 'recorrencia_ativa', label: 'Cobrança Recorrente', type: 'checkbox' },
           { 
             name: 'conta_recorrencia', 
