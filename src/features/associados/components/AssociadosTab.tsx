@@ -17,6 +17,7 @@ import { fmtR, MESES } from '@/lib/utils/formatters'
 import { Plus, Mail, Phone, Copy, Trash2, CheckSquare, RefreshCw, Pencil, XCircle, Search, FileText, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useTenant } from '@/lib/hooks/useTenant'
 import { fetchZapSignSignedFileAction } from '@/app/actions/zapsign'
+import { fixAssociadosRecorrenciaColumnsAction } from '@/app/actions/associados_fix'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend, LineElement, PointElement)
 
@@ -53,6 +54,7 @@ export default function AssociadosTab() {
   const [isUpdatingBulk, setIsUpdatingBulk] = useState(false)
 
   const handleSyncZapSign = async () => {
+    await fixAssociadosRecorrenciaColumnsAction()
     const res = await syncZapSign()
     if (res.error) {
       const msg = typeof res.error === 'object' ? (res.error as any).message : res.error
@@ -103,7 +105,13 @@ export default function AssociadosTab() {
     let res = associados
     if (searchQ) {
       const q = normalizeStr(searchQ)
-      res = res.filter((a: any) => normalizeStr(a.nome).includes(q) || (a.cpf || '').includes(q) || (a.email || '').toLowerCase().includes(q))
+      res = res.filter((a: any) => 
+        normalizeStr(a.nome).includes(q) || 
+        (a.cpf || '').includes(q) || 
+        (a.email || '').toLowerCase().includes(q) ||
+        (a.conta_recorrencia || '').toLowerCase().includes(q) ||
+        (a.recorrencia_ativa ? 'sim' : 'nao').includes(q)
+      )
     }
     if (filterStatus !== 'todos') res = res.filter((a: any) => (a.status || '').toLowerCase() === filterStatus)
     if (filterCategoria !== 'todas') res = res.filter((a: any) => (a.categoria || '') === filterCategoria)
@@ -263,6 +271,15 @@ export default function AssociadosTab() {
     { header: 'CPF/CNPJ', key: 'cpf', className: 'w-[140px]', render: (i: any) => <span className="text-[11px] font-medium text-gray-500">{i.cpf || 'Pendente'}</span> },
     { header: 'Mensalidade', key: 'mensalidade', className: 'w-[130px]', render: (i: any) => <span className="text-xs font-bold text-gray-900">{fmtR(i.mensalidade)}</span> },
     { header: 'Status', key: 'status', className: 'w-[120px]', render: (i: any) => <StatusBadge status={i.status} type="associado" /> },
+    { 
+      header: 'Recorrência', key: 'recorrencia_ativa', className: 'w-[100px]', 
+      render: (i: any) => (
+        <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${i.recorrencia_ativa ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+          {i.recorrencia_ativa ? 'Ativa' : 'Não'}
+        </span>
+      )
+    },
+    { header: 'Conta Recor.', key: 'conta_recorrencia', className: 'w-[140px]', render: (i: any) => <span className="text-[11px] font-medium text-slate-500">{i.conta_recorrencia || '--'}</span> },
     {
       header: 'Contato', key: 'telefone', className: 'w-[140px]',
       render: (i: any) => (
@@ -443,7 +460,9 @@ export default function AssociadosTab() {
           { name: 'telefone', label: 'WhatsApp', type: 'text' },
           { name: 'mensalidade', label: 'Valor', type: 'number', required: true },
           { name: 'data_ingresso', label: 'Ingresso', type: 'date', required: true },
-          { name: 'status', label: 'Status', type: 'select', options: [{ value: 'ativo', label: 'Ativo' }, { value: 'inadimplente', label: 'Inadimplente' }, { value: 'inativo', label: 'Inativo' }] }
+          { name: 'status', label: 'Status', type: 'select', options: [{ value: 'ativo', label: 'Ativo' }, { value: 'inadimplente', label: 'Inadimplente' }, { value: 'inativo', label: 'Inativo' }] },
+          { name: 'recorrencia_ativa', label: 'Cobrança Recorrente', type: 'checkbox' },
+          { name: 'conta_recorrencia', label: 'Conta da Recorrência', type: 'text' }
         ]}
       />
     </div>

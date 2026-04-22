@@ -100,6 +100,8 @@ export interface Associado {
   vencimento_dia?: number // 10 ou 20
   zapsign_doc_token?: string // Token do documento na ZapSign
   zapsign_signers?: any[] // Histórico de signatários
+  recorrencia_ativa?: boolean // Se está na cobrança recorrente
+  conta_recorrencia?: string // Conta bancária da recorrência
   created_at: string
   updated_at: string
 }
