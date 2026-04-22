@@ -112,11 +112,11 @@ export default function FinanceiroPage() {
   }
 
   const handleProcessarLote = async () => {
-    const itemsToProcess = matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid))
+    const itemsToProcess = filteredItemsConciliacao.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid))
     if (itemsToProcess.length === 0) return alert('Nenhuma transação nova a processar.')
     setIsProcessingBatch(true)
     try {
-      const enrichments = itemsToProcess.filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument).map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument as string }))
+      const enrichments = itemsToProcess.filter((t: any) => t.needsUpdate && t.assocMatch?.id && t.newDocument).map((t: any) => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument as string }))
       if (enrichments.length > 0) await Promise.all(enrichments)
       const items = itemsToProcess.map((t: any) => {
         const parts = t.bank.date.split('-').map(Number)
@@ -143,13 +143,13 @@ export default function FinanceiroPage() {
       if (res.error) alert(`Erro: ${res.error}`)
       else {
         alert(`${items.length} lançamentos processados!`)
-        setProcessedIds(prev => { const next = new Set(prev); itemsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
+        setProcessedIds(prev => { const next = new Set(prev); itemsToProcess.forEach((it: any) => next.add(it.bank.fitid)); return next; })
       }
     } finally { setIsProcessingBatch(false) }
   }
 
   const handleCoraBatch = async () => {
-    const rowsToProcess = coraMatchedItems.filter((t: any) => !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid))
+    const rowsToProcess = filteredItemsConciliacao.filter((t: any) => !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid))
     if (rowsToProcess.length === 0) return alert('Nenhuma nova transação Cora.')
     setIsProcessingBatch(true)
     try {
