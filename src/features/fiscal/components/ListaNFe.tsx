@@ -21,7 +21,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
     if (!xml) return alert('XML original não encontrado para esta nota.')
     const form = document.createElement('form')
     form.method = 'POST'
-    form.action = 'https://www.webdanfe.com.br/danfe/Home/Imprimir'
+    form.action = 'https://www.fsfiscal.com.br/gerardanfe'
     form.target = '_blank'
     const input = document.createElement('input')
     input.type = 'hidden'
