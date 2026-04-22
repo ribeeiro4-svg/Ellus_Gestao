@@ -51,8 +51,10 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
 
       for (const doc of results) {
         // REGRA DE SEGURANÇA: Só importa o que for Termo de Adesão e da ACPROBEC
-        const nameUpper = (doc.name || '').toUpperCase()
-        if (!nameUpper.includes('ADESÃO') && !nameUpper.includes('ACPROBEC') && !nameUpper.includes('TERMO')) {
+        const nameClean = (doc.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        const isRelevant = nameClean.includes('adesao') || nameClean.includes('acprobec') || nameClean.includes('termo')
+        
+        if (!isRelevant) {
           console.log(`[ZapSign] Pulando documento irrelevante: ${doc.name}`)
           continue
         }
@@ -68,14 +70,15 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
 
       if (results.length < 25) hasMore = false
       else page++
-      if (page > 20) hasMore = false
+      if (page > 30) hasMore = false // Aumentado limite de páginas para garantir que pegue antigos
     }
 
     // 2. Análise de Frequência para identificar administradores/testemunhas
     const nameFrequency = new Map<string, number>()
     allDocsWithDetails.forEach(doc => {
       doc.signers.forEach(s => {
-        nameFrequency.set(s.name, (nameFrequency.get(s.name) || 0) + 1)
+        const n = (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        nameFrequency.set(n, (nameFrequency.get(n) || 0) + 1)
       })
     })
 
@@ -83,22 +86,20 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
     const newAssociates: AssociadoInput[] = []
     
     for (const doc of allDocsWithDetails) {
-      const sysStatus = doc.status === 'signed' ? 'ativo' : 'pendente'
+      // Aceita 'signed' ou 'completed' como ativos
+      const sysStatus = (doc.status === 'signed' || doc.status === 'completed') ? 'ativo' : 'pendente'
       
-      // Calculamos o 'Score de Associado' para cada signatário
-      // Quanto MENOR a frequência global, MAIOR a chance de ser o associado real
       const rankedSigners = doc.signers.map(s => {
         let score = 100
-        const freq = nameFrequency.get(s.name) || 0
+        const n = (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        const freq = nameFrequency.get(n) || 0
         
-        // Penaliza por frequência (Diretores aparecem muito, associados aparecem 1 vez)
         score -= (freq * 10) 
         
-        // Penaliza e-mails administrativos e nomes conhecidos
         if (s.email === 'acprobec@gmail.com') score -= 500
-        if (s.name.toLowerCase().includes('leandro xavier')) score -= 500
-        if (s.name.toLowerCase().includes('antonio pereira')) score -= 500
-        if (s.name.toLowerCase().includes('diretor')) score -= 200
+        if (n.includes('leandro xavier')) score -= 500
+        if (n.includes('antonio pereira')) score -= 500
+        if (n.includes('diretor')) score -= 200
 
         return { signer: s, score }
       })
