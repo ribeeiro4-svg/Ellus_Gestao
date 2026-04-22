@@ -11,7 +11,7 @@ export async function cleanupDuplicateMensalidadesAction() {
   // 1. Buscar lançamentos que possuam associado_id (potenciais mensalidades/adesões)
   const { data: lancamentos, error } = await sb
     .from('lancamentos')
-    .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, status, descricao, categoria, valor')
+    .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, status, descricao, categoria, valor, associados ( nome )')
     .eq('tipo', 'receita')
     .not('associado_id', 'is', null)
 
@@ -28,17 +28,28 @@ export async function cleanupDuplicateMensalidadesAction() {
 
   if (filteredLancamentos.length === 0) return { count: 0, message: 'Nenhum lançamento de mensalidade encontrado.' }
 
-  // 2. Agrupar por associado e DATA EXATA de vencimento
+  // 2. Agrupar por NOME do associado e DATA EXATA de vencimento
+  // Usar o nome garante que se o mesmo associado estiver cadastrado duas vezes, pegaremos as duplicatas
   const groups: Record<string, any[]> = {}
 
   filteredLancamentos.forEach(l => {
     if (!l.associado_id || !l.data) return
 
-    // O usuário quer excluir pelo vencimento exato (mesmo dia/mês/ano)
-    // l.data geralmente vem no formato YYYY-MM-DD
     const dataVencimento = l.data.split('T')[0] // Garante pegar só a data
     
-    const key = `${l.associado_id}_${dataVencimento}`
+    // Tenta pegar o nome do objeto join, se não, tenta extrair da descrição
+    let nome = ''
+    if (l.associados && (l.associados as any).nome) {
+      nome = (l.associados as any).nome
+    } else {
+      const partes = l.descricao.split('-')
+      nome = partes.length > 1 ? partes[1].trim() : l.associado_id
+    }
+    
+    // Normalizar nome para evitar diferenças de maiúsculas/minúsculas e espaços
+    const nomeNorm = nome.toUpperCase().trim()
+
+    const key = `${nomeNorm}_${dataVencimento}`
     if (!groups[key]) groups[key] = []
     groups[key].push(l)
   })
