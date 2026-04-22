@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useMemo } from 'react'
-import { Search, FileText, CheckCircle, Clock, AlertTriangle, Eye, Trash2, PenLine, RefreshCw, Printer } from 'lucide-react'
+import { Search, FileText, CheckCircle, Clock, AlertTriangle, Eye, Trash2, PenLine, RefreshCw, Printer, ArrowRight } from 'lucide-react'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtData = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
@@ -13,9 +13,10 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 }
 
 export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEscriturar: (id: string) => void }) {
-  const { nfes, loading, remover, filterPeriodo, setFilterPeriodo } = nfeHook
+  const { nfes, loading, remover, removerLote, filterPeriodo, setFilterPeriodo } = nfeHook
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const visualizarDanfe = async (nfe: any) => {
     let itens = nfe.itens
@@ -90,13 +91,11 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
             </div>
           </div>
 
-          <!-- PROTOCOLO -->
           <div style="border: 1px solid #000; padding: 4px; font-size: 10px; margin-bottom: 12px; display: flex; justify-content: space-between;">
             <span><b>PROTOCOLO DE AUTORIZAÇÃO DE USO:</b> 1234567890 - 31/01/2024</span>
             <span><b>CNPJ:</b> ${nfe.cnpj_emitente || '--'}</span>
           </div>
 
-          <!-- DESTINATÁRIO -->
           <div style="margin-bottom: 12px;">
             <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">DESTINATÁRIO / REMETENTE</div>
             <div class="grid" style="grid-template-columns: 3fr 1fr 1fr;">
@@ -109,7 +108,6 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
             </div>
           </div>
 
-          <!-- CÁLCULO DO IMPOSTO -->
           <div style="margin-bottom: 12px;">
             <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">CÁLCULO DO IMPOSTO</div>
             <div class="grid" style="grid-template-columns: repeat(5, 1fr);">
@@ -126,7 +124,6 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
             </div>
           </div>
 
-          <!-- ITENS -->
           <div style="margin-bottom: 12px;">
             <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">DADOS DOS PRODUTOS / SERVIÇOS</div>
             <table>
@@ -150,7 +147,6 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
             </table>
           </div>
 
-          <!-- DADOS ADICIONAIS -->
           <div style="margin-top: 10px;">
             <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">DADOS ADICIONAIS</div>
             <div style="border: 1px solid #000; padding: 5px; height: 60px; font-size: 8px;">
@@ -180,6 +176,29 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
     return matchSearch && matchStatus
   }), [nfes, search, filterStatus])
 
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filtered.map((n: any) => n.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  const handleExcluirLote = async () => {
+    if (!selectedIds.length) return
+    if (confirm(`Tem certeza que deseja excluir ${selectedIds.length} nota(s) permanentemente?`)) {
+      const { error } = await removerLote(selectedIds)
+      if (error) alert('Erro ao excluir: ' + error)
+      else setSelectedIds([])
+    }
+  }
+
   if (loading) return (
     <div className="space-y-3">
       {[1, 2, 3].map(i => <div key={i} className="h-20 bg-slate-100 rounded-2xl animate-pulse" />)}
@@ -188,8 +207,16 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Filtros */}
       <div className="flex flex-wrap items-center gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-3 pr-3 border-r border-slate-100">
+          <input 
+            type="checkbox" 
+            className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            checked={selectedIds.length === filtered.length && filtered.length > 0}
+            onChange={handleSelectAll}
+          />
+        </div>
+
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
           <input
@@ -198,23 +225,34 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
             value={search} onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)}
-          className="bg-slate-50 px-3 py-2.5 rounded-xl text-xs font-bold border-none outline-none">
-          <option value="">Todos os períodos</option>
-          {periodos.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="bg-slate-50 px-3 py-2.5 rounded-xl text-xs font-bold border-none outline-none">
-          <option value="ALL">Todos os status</option>
-          <option value="pendente">Pendentes</option>
-          <option value="em_andamento">Em Andamento</option>
-          <option value="escriturada">Escrituradas</option>
-          <option value="com_inconsistencia">Com Inconsistência</option>
-        </select>
+
+        {selectedIds.length > 0 ? (
+          <button
+            onClick={handleExcluirLote}
+            className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-black border border-rose-100 hover:bg-rose-100 transition-all"
+          >
+            <Trash2 size={14} /> EXCLUIR SELECIONADAS ({selectedIds.length})
+          </button>
+        ) : (
+          <>
+            <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)}
+              className="bg-slate-50 px-3 py-2.5 rounded-xl text-xs font-bold border-none outline-none">
+              <option value="">Todos os períodos</option>
+              {periodos.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              className="bg-slate-50 px-3 py-2.5 rounded-xl text-xs font-bold border-none outline-none">
+              <option value="ALL">Todos os status</option>
+              <option value="pendente">Pendentes</option>
+              <option value="em_andamento">Em Andamento</option>
+              <option value="escriturada">Escrituradas</option>
+              <option value="com_inconsistencia">Com Inconsistência</option>
+            </select>
+          </>
+        )}
         <span className="text-xs font-black text-slate-400">{filtered.length} nota(s)</span>
       </div>
 
-      {/* Lista */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white/40 backdrop-blur-md rounded-3xl border border-dashed border-white/60">
           <FileText size={40} className="text-slate-200 mb-3" />
@@ -226,14 +264,25 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
           {filtered.map((nfe: any) => {
             const stConf = STATUS_CONFIG[nfe.status_escrituracao] ?? STATUS_CONFIG.pendente
             const StIcon = stConf.icon
+            const isSelected = selectedIds.includes(nfe.id)
             
             return (
               <div 
                 key={nfe.id} 
-                className="bg-white/60 backdrop-blur-md border border-white/40 p-4 rounded-2xl hover:bg-white/80 transition-all group shadow-sm"
+                className={`bg-white/60 backdrop-blur-md border p-4 rounded-2xl hover:bg-white/80 transition-all group shadow-sm flex items-center gap-4 ${
+                  isSelected ? 'border-indigo-300 bg-indigo-50/50' : 'border-white/40'
+                }`}
               >
-                <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
-                  {/* Info Principal */}
+                <div className="flex-shrink-0">
+                  <input 
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    checked={isSelected}
+                    onChange={() => toggleSelect(nfe.id)}
+                  />
+                </div>
+
+                <div className="flex flex-col lg:flex-row justify-between items-center gap-4 flex-1 min-w-0">
                   <div className="flex-1 min-w-0 w-full">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
@@ -244,7 +293,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                       </span>
                     </div>
                     
-                    <h4 className="text-sm font-bold text-slate-800 truncate" title={nfe.nome_emitente}>
+                    <h4 className="text-sm font-bold text-slate-800 truncate">
                       {nfe.nome_emitente}
                     </h4>
                     <div className="flex items-center gap-2 mt-1">
@@ -254,7 +303,6 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                     </div>
                   </div>
 
-                  {/* Resumo de Valores */}
                   <div className="flex items-center gap-5 px-6 border-x border-slate-100/50 hidden xl:flex">
                     <div className="text-center min-w-[80px]">
                       <span className="block text-[8px] font-black text-slate-400 uppercase">Total</span>
@@ -274,37 +322,20 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                     </div>
                   </div>
 
-                  {/* Ações */}
                   <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
-                    <button
-                      onClick={() => visualizarDanfe(nfe)}
-                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                      title="Ver DANFE"
-                    >
+                    <button onClick={() => visualizarDanfe(nfe)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Ver DANFE">
                       <Printer size={16} />
                     </button>
-                    
                     {nfe.status_escrituracao !== 'escriturada' ? (
-                      <button
-                        onClick={() => onEscriturar(nfe.id)}
-                        className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 transition-all"
-                      >
+                      <button onClick={() => onEscriturar(nfe.id)} className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 transition-all">
                         <PenLine size={11} /> ESCRITURAR
                       </button>
                     ) : (
-                      <button
-                        onClick={() => onEscriturar(nfe.id)}
-                        className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl hover:bg-emerald-100 transition-all"
-                      >
+                      <button onClick={() => onEscriturar(nfe.id)} className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl hover:bg-emerald-100 transition-all">
                         <Eye size={11} /> REVISAR
                       </button>
                     )}
-
-                    <button
-                      onClick={() => confirm('Excluir esta nota?') && remover(nfe.id)}
-                      className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                      title="Excluir"
-                    >
+                    <button onClick={() => confirm('Excluir esta nota?') && remover(nfe.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all" title="Excluir">
                       <Trash2 size={16} />
                     </button>
                   </div>

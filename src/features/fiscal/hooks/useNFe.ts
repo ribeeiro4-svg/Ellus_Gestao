@@ -206,6 +206,13 @@ export function useNFe() {
     return { error }
   }
 
+  const removerLote = async (ids: string[]) => {
+    if (!ids.length) return { error: null }
+    const { error } = await sb.from('nfe_entradas').delete().in('id', ids)
+    if (!error) await fetch(filterPeriodo)
+    return { error }
+  }
+
   // Buscar sugestões de classificação baseadas no histórico
   const buscarSugestoes = async (cnpjEmitente: string, ncm: string, cProd: string) => {
     const { data } = await sb.from('regras_classificacao_fiscal')
@@ -264,7 +271,7 @@ export function useNFe() {
     nfes, loading, stats,
     filterPeriodo, setFilterPeriodo,
     importarNFe, buscarItens, salvarClassificacao,
-    atualizarStatus, remover,
+    atualizarStatus, remover, removerLote,
     buscarSugestoes, memorizarClassificacao,
     refresh: () => fetch(filterPeriodo),
   }
