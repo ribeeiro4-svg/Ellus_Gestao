@@ -557,12 +557,40 @@ export default function FinanceiroPage() {
 
       <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Gerar Mensalidades em Lote" onSubmit={async (p: any) => {
         let list = associados.filter(a => a.status === 'ativo');
-        if (p.publico_alvo === 'zapsign_new') { list = list.filter(a => { const isZapSign = (a.categoria || '').toLowerCase() === 'zapsign'; const semRecorrencia = !lancamentos.some(l => l.associado_id === a.id && l.categoria === 'Mensalidade'); return isZapSign && semRecorrencia; }); }
+        if (p.publico_alvo === 'zapsign_new') { 
+          list = list.filter(a => { 
+            const isZapSign = (a.categoria || '').toLowerCase() === 'zapsign'; 
+            const semRecorrencia = !lancamentos.some(l => l.associado_id === a.id && l.categoria === 'Mensalidade'); 
+            return isZapSign && semRecorrencia; 
+          }); 
+        }
         if (!list.length) return alert('Nenhum associado encontrado.');
+        
         const batch: any[] = []; 
+        let skipped = 0;
+
         list.forEach(assoc => { 
           for(let i=0; i<Number(p.meses); i++) { 
             const d = new Date(Number(p.ano_inicio), Number(p.mes_inicio)+i, Number(p.dia)); 
+            const mesAlvo = d.getMonth();
+            const anoAlvo = d.getFullYear();
+
+            // Evitar duplicidade: Verifica se já existe lançamento de 'Mensalidade' para este associado neste mês/ano
+            const jaExiste = lancamentos.some(l => 
+              l.associado_id === assoc.id && 
+              l.tipo === 'receita' &&
+              (l.categoria === 'Mensalidade' || l.descricao.toUpperCase().includes('MENSALIDADE')) &&
+              (
+                (l.competencia_mes === mesAlvo && l.competencia_ano === anoAlvo) ||
+                (getMesIdx(l.data) === mesAlvo && getAnoIdx(l.data) === anoAlvo)
+              )
+            );
+
+            if (jaExiste) {
+              skipped++;
+              continue;
+            }
+
             batch.push({ 
               tipo: 'receita', 
               descricao: `${p.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`, 
@@ -573,13 +601,21 @@ export default function FinanceiroPage() {
               associado_id: assoc.id, 
               conta_id: p.conta_id, 
               forma_pagamento: p.forma_pagamento,
-              competencia_mes: d.getMonth(),
-              competencia_ano: d.getFullYear()
+              competencia_mes: mesAlvo,
+              competencia_ano: anoAlvo
             }) 
           } 
         })
+
+        if (batch.length === 0) {
+          return alert(`Nenhuma mensalidade nova gerada. ${skipped} mensalidades já existiam no sistema para este período.`);
+        }
+
         const res = await inserirBulk(batch); 
-        if (!res.error) { alert(`Sucesso! ${res.count} mensalidades geradas.`); setIsSyncModalOpen(false) } else alert(res.error)
+        if (!res.error) { 
+          alert(`Sucesso! ${res.count} mensalidades geradas.${skipped > 0 ? ` (${skipped} já existiam e foram puladas)` : ''}`); 
+          setIsSyncModalOpen(false) 
+        } else alert(res.error)
       }} fields={[{ name: 'publico_alvo', label: 'Público Alvo', type: 'select', defaultValue: 'todos', options: [{ value: 'todos', label: 'Todos os Associados Ativos' }, { value: 'zapsign_new', label: 'Apenas Novos ZapSign (Sem Recorrência)' }] }, { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' }, { name: 'mes_inicio', label: 'Partir do Mês', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) }, { name: 'ano_inicio', label: 'Ano', type: 'number', defaultValue: new Date().getFullYear().toString() }, { name: 'dia', label: 'Dia', type: 'number', defaultValue: '10' }, { name: 'meses', label: 'Meses', type: 'select', defaultValue: '12', options: [{ value: '1', label: '1 mês' }, { value: '6', label: '6 Meses' }, { value: '12', label: '12 Meses' }] }, { name: 'forma_pagamento', label: 'Forma', type: 'select', defaultValue: 'Boleto', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] }, { name: 'conta_id', label: 'Conta', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) } ]} />
       
       <ManualMatchModal 
