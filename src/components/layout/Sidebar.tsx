@@ -112,17 +112,19 @@ export default function Sidebar() {
   const isActive = (path: string) => pathname === path
 
   return (
-    <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'}`}>
-      <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-[22px_22px_18px]'}`}>
-        <button 
-          onClick={toggleCollapse}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#2d8c6f] text-white rounded-full flex items-center justify-center shadow-lg border border-white/10 z-20 hover:scale-110 transition-transform"
-        >
-          {isCollapsed ? <Menu size={12} /> : <ChevronLeft size={12} />}
-        </button>
+    <div className="relative z-[60]">
+      <button 
+        onClick={toggleCollapse}
+        className="absolute -right-3 top-10 w-6 h-6 bg-[#2d8c6f] text-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3)] border border-white/20 z-[70] hover:scale-110 transition-transform cursor-pointer"
+        title={isCollapsed ? 'Expandir' : 'Recolher'}
+      >
+        {isCollapsed ? <Menu size={12} /> : <ChevronLeft size={12} />}
+      </button>
 
-        <div className={`logo-badge flex items-center gap-2 mb-1.5 transition-all ${isCollapsed ? 'justify-center' : ''}`}>
-          <div className="logo-icon w-8 h-8 rounded-[9px] flex items-center justify-center text-white text-[15px] font-bold bg-gradient-to-br from-[#2d8c6f] to-[#34d399] overflow-hidden shrink-0">
+      <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'}`}>
+        <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-[22px_22px_18px]'}`}>
+          <div className={`logo-badge flex items-center gap-2 mb-1.5 transition-all ${isCollapsed ? 'justify-center' : ''}`}>
+            <div className="logo-icon w-8 h-8 rounded-[9px] flex items-center justify-center text-white text-[15px] font-bold bg-gradient-to-br from-[#2d8c6f] to-[#34d399] overflow-hidden shrink-0">
             {customLogo ? (
               <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
             ) : (
@@ -206,5 +208,6 @@ export default function Sidebar() {
         )}
       </div>
     </aside>
+  </div>
   )
 }
