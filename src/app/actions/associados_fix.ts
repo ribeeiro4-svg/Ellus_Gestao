@@ -11,10 +11,14 @@ export async function fixAssociadosRecorrenciaColumnsAction() {
     -- Adicionar colunas se não existirem
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS recorrencia_ativa BOOLEAN DEFAULT FALSE;
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS conta_recorrencia TEXT;
+    ALTER TABLE associados ADD COLUMN IF NOT EXISTS plano_saude TEXT DEFAULT 'Não Possui';
+    ALTER TABLE associados ADD COLUMN IF NOT EXISTS termo_status TEXT;
 
     -- Comentários para documentação
     COMMENT ON COLUMN associados.recorrencia_ativa IS 'Indica se o associado está na cobrança recorrente';
     COMMENT ON COLUMN associados.conta_recorrencia IS 'Informa a conta bancária onde a recorrência está ativa';
+    COMMENT ON COLUMN associados.plano_saude IS 'Status do plano de saúde (Ativo, Aguardando Declaração, Não Possui)';
+    COMMENT ON COLUMN associados.termo_status IS 'Status do Termo Assinado (Enviado ao HGU, Assinatura Pendente)';
   `
 
   // Executa via RPC execute_sql (deve estar configurado no Supabase)

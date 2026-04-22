@@ -59,6 +59,8 @@ export default function AssociadosTab() {
   const [filterCategoria, setFilterCategoria] = useState<string>('todas')
   const [filterCpfInvalido, setFilterCpfInvalido] = useState(false)
   const [filterRecorrencia, setFilterRecorrencia] = useState<string>('todos')
+  const [filterPlanoSaude, setFilterPlanoSaude] = useState<string>('todos')
+  const [filterTermo, setFilterTermo] = useState<string>('todos')
   const [isUpdatingBulk, setIsUpdatingBulk] = useState(false)
   const [isBulkAccountModalOpen, setIsBulkAccountModalOpen] = useState(false)
 
@@ -125,12 +127,14 @@ export default function AssociadosTab() {
     if (filterStatus !== 'todos') res = res.filter((a: any) => (a.status || '').toLowerCase() === filterStatus)
     if (filterCategoria !== 'todas') res = res.filter((a: any) => (a.categoria || '') === filterCategoria)
     if (filterRecorrencia !== 'todos') res = res.filter((a: any) => filterRecorrencia === 'sim' ? a.recorrencia_ativa : !a.recorrencia_ativa)
+    if (filterPlanoSaude !== 'todos') res = res.filter((a: any) => (a.plano_saude || 'Não Possui') === filterPlanoSaude)
+    if (filterTermo !== 'todos') res = res.filter((a: any) => (a.termo_status || 'Assinatura Pendente') === filterTermo)
     if (filterCpfInvalido) res = res.filter((a: any) => (a.cpf || '').replace(/\D/g, '').length < 11)
     return res
-  }, [associados, searchQ, filterStatus, filterCategoria, filterRecorrencia, filterCpfInvalido])
+  }, [associados, searchQ, filterStatus, filterCategoria, filterRecorrencia, filterPlanoSaude, filterTermo, filterCpfInvalido])
 
-  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterRecorrencia !== 'todos' || filterCpfInvalido || searchQ !== ''
-  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterRecorrencia('todos'); setFilterCpfInvalido(false); setSearchQ('') }
+  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterRecorrencia !== 'todos' || filterPlanoSaude !== 'todos' || filterTermo !== 'todos' || filterCpfInvalido || searchQ !== ''
+  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterRecorrencia('todos'); setFilterPlanoSaude('todos'); setFilterTermo('todos'); setFilterCpfInvalido(false); setSearchQ('') }
 
   const handleSalvar = async (data: any) => {
     if (editingItem) { await atualizar(editingItem.id, data) }
@@ -164,6 +168,24 @@ export default function AssociadosTab() {
     try {
       const res = await atualizarBulk(selectedIds, { recorrencia_ativa: ativa } as any)
       if (!res.error) { alert('Recorrência atualizada em lote!') }
+    } finally { setIsUpdatingBulk(false) }
+  }
+
+  const handleBatchUpdatePlanoSaude = async (status: string) => {
+    if (selectedIds.length === 0) return
+    setIsUpdatingBulk(true)
+    try {
+      const res = await atualizarBulk(selectedIds, { plano_saude: status } as any)
+      if (!res.error) { alert('Plano de Saúde atualizado em lote!') }
+    } finally { setIsUpdatingBulk(false) }
+  }
+
+  const handleBatchUpdateTermo = async (status: string) => {
+    if (selectedIds.length === 0) return
+    setIsUpdatingBulk(true)
+    try {
+      const res = await atualizarBulk(selectedIds, { termo_status: status } as any)
+      if (!res.error) { alert('Status do Termo atualizado em lote!') }
     } finally { setIsUpdatingBulk(false) }
   }
 
@@ -317,6 +339,25 @@ export default function AssociadosTab() {
       )
     },
     { header: 'Conta Recor.', key: 'conta_recorrencia', className: 'w-[140px]', render: (i: any) => <span className="text-[11px] font-medium text-slate-500">{i.conta_recorrencia || '--'}</span> },
+    { 
+      header: 'Plano Saúde', key: 'plano_saude', className: 'w-[150px]', 
+      render: (i: any) => {
+        const s = i.plano_saude || 'Não Possui'
+        const colors = 
+          s === 'Ativo' ? 'bg-blue-100 text-blue-700' :
+          s === 'Aguardando Declaração' ? 'bg-orange-100 text-orange-700' :
+          'bg-slate-100 text-slate-400'
+        return <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${colors}`}>{s}</span>
+      }
+    },
+    { 
+      header: 'Termo Assinado', key: 'termo_status', className: 'w-[150px]', 
+      render: (i: any) => {
+        const s = i.termo_status || 'Assinatura Pendente'
+        const colors = s === 'Enviado ao HGU' ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'
+        return <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${colors}`}>{s}</span>
+      }
+    },
     {
       header: 'Contato', key: 'telefone', className: 'w-[140px]',
       render: (i: any) => (
@@ -463,6 +504,17 @@ export default function AssociadosTab() {
             <option value="sim">COM RECORRÊNCIA</option>
             <option value="nao">SEM RECORRÊNCIA</option>
           </select>
+          <select value={filterPlanoSaude} onChange={e => setFilterPlanoSaude(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
+            <option value="todos">PLANO SAÚDE (TODOS)</option>
+            <option value="Ativo">PLANO ATIVO</option>
+            <option value="Aguardando Declaração">AGUARDANDO DECLARAÇÃO</option>
+            <option value="Não Possui">NÃO POSSUI</option>
+          </select>
+          <select value={filterTermo} onChange={e => setFilterTermo(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
+            <option value="todos">TERMO (TODOS)</option>
+            <option value="Enviado ao HGU">ENVIADO AO HGU</option>
+            <option value="Assinatura Pendente">ASSINATURA PENDENTE</option>
+          </select>
           {hasActiveFilters && <button onClick={clearFilters} className="text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors">Limpar Filtros</button>}
         </div>
       </div>
@@ -478,6 +530,13 @@ export default function AssociadosTab() {
             <button onClick={() => handleBatchUpdateRecorrencia(true)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-[#0e2d22] text-white rounded-lg text-[10px] font-black uppercase shadow-sm hover:opacity-90 transition-opacity">Recor. Ativar</button>
             <button onClick={() => handleBatchUpdateRecorrencia(false)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-slate-600 border border-slate-200 rounded-lg text-[10px] font-black uppercase shadow-sm">Recor. Parar</button>
             <button onClick={handleBatchUpdateConta} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-blue-600 border border-blue-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Definir Conta</button>
+            <div className="h-6 w-px bg-red-200 mx-2" />
+            <button onClick={() => handleBatchUpdatePlanoSaude('Ativo')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Plano Ativo</button>
+            <button onClick={() => handleBatchUpdatePlanoSaude('Aguardando Declaração')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Aguard. Declaração</button>
+            <button onClick={() => handleBatchUpdatePlanoSaude('Não Possui')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-slate-400 border border-slate-200 rounded-lg text-[10px] font-black uppercase shadow-sm">Remover Plano</button>
+            <div className="h-6 w-px bg-red-200 mx-2" />
+            <button onClick={() => handleBatchUpdateTermo('Enviado ao HGU')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Enviado HGU</button>
+            <button onClick={() => handleBatchUpdateTermo('Assinatura Pendente')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Pendente</button>
             <div className="h-6 w-px bg-red-200 mx-2" />
             <button onClick={() => handleBatchUpdateVencimento(10)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-indigo-600 border border-indigo-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Dia 10</button>
             <button onClick={() => handleBatchUpdateVencimento(20)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-orange-600 border border-orange-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Dia 20</button>
@@ -514,6 +573,25 @@ export default function AssociadosTab() {
             label: 'Conta da Recorrência', 
             type: 'select',
             options: contas.map(c => ({ value: c.nome, label: c.nome }))
+          },
+          {
+            name: 'plano_saude',
+            label: 'Plano de Saúde',
+            type: 'select',
+            options: [
+              { value: 'Não Possui', label: 'NÃO POSSUI' },
+              { value: 'Ativo', label: 'ATIVO' },
+              { value: 'Aguardando Declaração', label: 'AGUARDANDO DECLARAÇÃO' }
+            ]
+          },
+          {
+            name: 'termo_status',
+            label: 'Termo Assinado',
+            type: 'select',
+            options: [
+              { value: 'Assinatura Pendente', label: 'ASSINATURA PENDENTE' },
+              { value: 'Enviado ao HGU', label: 'ENVIADO AO HGU' }
+            ]
           }
         ]}
       />
