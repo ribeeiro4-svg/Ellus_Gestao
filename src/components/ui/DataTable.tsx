@@ -105,16 +105,16 @@ export default function DataTable<T>({
     }
   }
 
-  if (loading) {
-    return (
-      <div className="w-full h-64 flex items-center justify-center bg-white rounded-2xl border border-slate-200">
-        <div className="w-8 h-8 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-      </div>
-    )
-  }
-
   return (
-    <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+    <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-hidden flex flex-col relative min-h-[200px]">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-[2px] transition-all animate-in fade-in duration-300">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin shadow-inner"></div>
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest animate-pulse">Sincronizando...</span>
+          </div>
+        </div>
+      )}
       {/* Table Header with Global Filter Toggle */}
       <div className="px-6 py-2 border-b border-slate-100 bg-slate-50/20 flex justify-end">
         <button 

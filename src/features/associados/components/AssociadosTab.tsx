@@ -60,6 +60,7 @@ export default function AssociadosTab() {
   const [filterCpfInvalido, setFilterCpfInvalido] = useState(false)
   const [filterRecorrencia, setFilterRecorrencia] = useState<string>('todos')
   const [isUpdatingBulk, setIsUpdatingBulk] = useState(false)
+  const [isBulkAccountModalOpen, setIsBulkAccountModalOpen] = useState(false)
 
   const handleSyncZapSign = async () => {
     await fixAssociadosRecorrenciaColumnsAction()
@@ -168,19 +169,20 @@ export default function AssociadosTab() {
 
   const handleBatchUpdateConta = async () => {
     if (selectedIds.length === 0) return
-    const nomesContas = contas.map(c => c.nome).join('\n')
-    const conta = prompt(`Informe o NOME EXATO da conta bancária para os associados selecionados:\n\nContas cadastradas:\n${nomesContas}`)
-    if (conta === null || conta.trim() === '') return
-    
-    const contaExiste = contas.some(c => c.nome.toLowerCase() === conta.toLowerCase())
-    if (!contaExiste) {
-      if (!confirm(`A conta "${conta}" não foi encontrada no cadastro de contas bancárias. Deseja prosseguir mesmo assim?`)) return
-    }
+    setIsBulkAccountModalOpen(true)
+  }
+
+  const handleConfirmBulkAccount = async (data: { conta_recorrencia: string }) => {
     setIsUpdatingBulk(true)
     try {
-      const res = await atualizarBulk(selectedIds, { conta_recorrencia: conta } as any)
-      if (!res.error) { alert('Conta atualizada em lote!') }
-    } finally { setIsUpdatingBulk(false) }
+      const res = await atualizarBulk(selectedIds, { conta_recorrencia: data.conta_recorrencia } as any)
+      if (!res.error) { 
+        alert('Conta atualizada em lote!')
+        setIsBulkAccountModalOpen(false)
+      }
+    } finally { 
+      setIsUpdatingBulk(false) 
+    }
   }
 
   const handleDownloadTermo = async (item: any) => {
@@ -511,6 +513,22 @@ export default function AssociadosTab() {
             name: 'conta_recorrencia', 
             label: 'Conta da Recorrência', 
             type: 'select',
+            options: contas.map(c => ({ value: c.nome, label: c.nome }))
+          }
+        ]}
+      />
+      <CrudModal
+        isOpen={isBulkAccountModalOpen} 
+        onClose={() => setIsBulkAccountModalOpen(false)} 
+        title="Definir Conta em Lote" 
+        onSubmit={handleConfirmBulkAccount}
+        loading={isUpdatingBulk}
+        fields={[
+          { 
+            name: 'conta_recorrencia', 
+            label: 'Selecione a Conta Bancária', 
+            type: 'select',
+            required: true,
             options: contas.map(c => ({ value: c.nome, label: c.nome }))
           }
         ]}
