@@ -163,10 +163,18 @@ export default function FornecedoresTab() {
     {
       header: 'Contabilidade', key: 'conta_contabil_id',
       render: (i: any) => {
-        const conta = planoHook.contas.find(c => c.id === i.conta_contabil_id)
+        // 1. Busca direta pelo ID vinculado
+        let conta = planoHook.contas.find(c => c.id === i.conta_contabil_id)
+        
+        // 2. Busca inteligente pela descrição (caso o ID esteja vazio)
+        if (!conta) {
+          const descBuscada = `FORN: ${i.nome.toUpperCase()}`
+          conta = planoHook.contas.find(c => c.descricao.toUpperCase() === descBuscada)
+        }
+
         if (conta) {
           return (
-            <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 w-fit">
+            <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 w-fit" title="Conta já existe no Plano de Contas">
               <CheckCircle2 size={12} />
               <span className="text-[10px] font-bold uppercase">{conta.codigo}</span>
             </div>
