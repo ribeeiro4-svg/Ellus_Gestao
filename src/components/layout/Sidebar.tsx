@@ -122,24 +122,24 @@ export default function Sidebar() {
       </button>
 
       <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'}`}>
-        <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-[22px_22px_18px]'}`}>
-          <div className={`logo-badge flex items-center gap-2 mb-1.5 transition-all ${isCollapsed ? 'justify-center' : ''}`}>
-            <div className="logo-icon w-8 h-8 rounded-[9px] flex items-center justify-center text-white text-[15px] font-bold bg-gradient-to-br from-[#2d8c6f] to-[#34d399] overflow-hidden shrink-0">
-            {customLogo ? (
-              <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
-            ) : (
-              'AC'
-            )}
+        <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-6 items-center text-center'}`}>
+          <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center gap-2 mb-2'}`}>
+            <div className="logo-icon w-10 h-10 rounded-xl flex items-center justify-center text-white text-[18px] font-bold bg-gradient-to-br from-[#2d8c6f] to-[#34d399] overflow-hidden shrink-0 shadow-lg">
+              {customLogo ? (
+                <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                'AC'
+              )}
+            </div>
+            {!isCollapsed && <div className="logo-title text-[17px] font-extrabold text-white tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-300">ACPROBEC</div>}
           </div>
-          {!isCollapsed && <div className="logo-title text-[15px] font-bold text-white tracking-tight animate-in fade-in slide-in-from-left-2 duration-300">ACPROBEC</div>}
+          {!isCollapsed && <div className="logo-sub text-[10px] text-white/40 tracking-[1.2px] font-bold uppercase animate-in fade-in slide-in-from-bottom-2 duration-300">GESTÃO INTELIGENTE</div>}
+          {!isCollapsed && (
+            <div className="logo-divider w-full flex items-center gap-2 mt-4 text-[9px] text-white/15 tracking-[1.5px] font-black after:flex-1 after:h-[1px] after:bg-white/5 before:flex-1 before:h-[1px] before:bg-white/5 animate-in fade-in duration-500">
+              INOVACONT
+            </div>
+          )}
         </div>
-        {!isCollapsed && <div className="logo-sub text-[9.5px] text-white/35 mt-0.5 tracking-[0.8px] font-medium uppercase animate-in fade-in slide-in-from-left-2 duration-300">GESTÃO INTELIGENTE</div>}
-        {!isCollapsed && (
-          <div className="logo-divider flex items-center gap-2 mt-2.5 text-[9px] text-white/20 tracking-[0.6px] font-bold after:flex-1 after:h-[1px] after:bg-white/5 before:flex-1 before:h-[1px] before:bg-white/5 animate-in fade-in duration-500">
-            INOVACONT
-          </div>
-        )}
-      </div>
 
       <nav className="flex-1 py-4 overflow-y-auto scrollbar-none">
         {MENU.map(({ section, items }) => (
