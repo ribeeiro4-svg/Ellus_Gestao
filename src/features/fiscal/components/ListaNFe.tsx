@@ -17,9 +17,20 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
 
-  const visualizarDanfe = (chave: string) => {
-    if (!chave) return alert('Chave de acesso não encontrada para esta nota.')
-    window.open(`https://meudanfe.com.br/danfe/${chave}`, '_blank')
+  const visualizarDanfe = (xml: string) => {
+    if (!xml) return alert('XML original não encontrado para esta nota.')
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = 'https://www.webdanfe.com.br/danfe/Home/Imprimir'
+    form.target = '_blank'
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = 'xml'
+    input.value = xml
+    form.appendChild(input)
+    document.body.appendChild(form)
+    form.submit()
+    document.body.removeChild(form)
   }
 
   const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -154,7 +165,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                     </button>
                   )}
                   <button
-                    onClick={() => visualizarDanfe(nfe.chave_acesso)}
+                    onClick={() => visualizarDanfe(nfe.xml_original)}
                     className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all border border-indigo-100"
                   >
                     <Printer size={11} /> DANFE (PDF)
