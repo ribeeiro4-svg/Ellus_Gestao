@@ -19,18 +19,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
 
   const visualizarDanfe = (chave: string) => {
     if (!chave) return alert('Chave de acesso não encontrada para esta nota.')
-    const form = document.createElement('form')
-    form.method = 'POST'
-    form.action = 'https://www.danfeonline.com.br/chave'
-    form.target = '_blank'
-    const input = document.createElement('input')
-    input.type = 'hidden'
-    input.name = 'chave'
-    input.value = chave
-    form.appendChild(input)
-    document.body.appendChild(form)
-    form.submit()
-    document.body.removeChild(form)
+    window.open(`https://meudanfe.com.br/danfe/${chave}`, '_blank')
   }
 
   const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
