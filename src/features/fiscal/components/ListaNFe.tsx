@@ -62,13 +62,13 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
         </head>
         <body>
           <!-- CABEÇALHO -->
-          <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+          <div style="display: flex; gap: 5px; margin-bottom: 12px;">
             <div style="flex: 1; border: 1px solid #000; padding: 5px; display: flex; flex-direction: column; justify-content: center;">
-              <div style="font-size: 12px; font-weight: bold; text-align: center;">${nfe.nome_emitente}</div>
+              <div style="font-size: 12px; font-weight: bold; text-align: center;">${nfe.nome_emitente || '--'}</div>
               <div style="font-size: 9px; text-align: center; margin-top: 5px;">
-                CNPJ: ${nfe.cnpj_emitente} | UF: ${nfe.uf_emitente}<br>
+                CNPJ: ${nfe.cnpj_emitente || '--'} | UF: ${nfe.uf_emitente || '--'}<br>
                 INSCRIÇÃO ESTADUAL: ${nfe.ie_emitente || 'ISENTO'}<br>
-                NATUREZA DA OPERAÇÃO: ${nfe.nat_operacao}
+                NATUREZA DA OPERAÇÃO: ${nfe.nat_operacao || '--'}
               </div>
             </div>
             <div style="width: 120px; border: 1px solid #000; padding: 5px; text-align: center;">
@@ -81,7 +81,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
               <div style="text-align: center; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px;">
                 <div style="background: #000; height: 35px; width: 100%; margin-bottom: 2px;"></div>
                 <div style="font-size: 9px; font-weight: bold;">CHAVE DE ACESSO</div>
-                <div style="font-size: 10px;">${nfe.chave_acesso?.replace(/(.{4})/g, '$1 ')}</div>
+                <div style="font-size: 10px;">${nfe.chave_acesso?.replace(/(.{4})/g, '$1 ') || '--'}</div>
               </div>
               <div style="text-align: center; font-size: 9px;">
                 Consulta de autenticidade no portal nacional da NF-e<br>
@@ -91,26 +91,26 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
           </div>
 
           <!-- PROTOCOLO -->
-          <div style="border: 1px solid #000; padding: 4px; font-size: 10px; margin-bottom: 5px; display: flex; justify-content: space-between;">
+          <div style="border: 1px solid #000; padding: 4px; font-size: 10px; margin-bottom: 12px; display: flex; justify-content: space-between;">
             <span><b>PROTOCOLO DE AUTORIZAÇÃO DE USO:</b> 1234567890 - 31/01/2024</span>
-            <span><b>CNPJ:</b> ${nfe.cnpj_emitente}</span>
+            <span><b>CNPJ:</b> ${nfe.cnpj_emitente || '--'}</span>
           </div>
 
           <!-- DESTINATÁRIO -->
-          <div style="margin-bottom: 5px;">
+          <div style="margin-bottom: 12px;">
             <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">DESTINATÁRIO / REMETENTE</div>
             <div class="grid" style="grid-template-columns: 3fr 1fr 1fr;">
-              <div style="grid-column: span 1;"><span class="label">NOME / RAZÃO SOCIAL</span><span class="value">${nfe.nome_destinatario}</span></div>
-              <div><span class="label">CNPJ/CPF</span><span class="value">${nfe.cnpj_destinatario}</span></div>
+              <div style="grid-column: span 1;"><span class="label">NOME / RAZÃO SOCIAL</span><span class="value">${nfe.nome_destinatario || '--'}</span></div>
+              <div><span class="label">CNPJ/CPF</span><span class="value">${nfe.cnpj_destinatario || '--'}</span></div>
               <div><span class="label">DATA EMISSÃO</span><span class="value">${fmtData(nfe.data_emissao)}</span></div>
-              <div style="grid-column: span 1;"><span class="label">ENDEREÇO</span><span class="value">DADOS DO ENDEREÇO DA NOTA...</span></div>
+              <div style="grid-column: span 1;"><span class="label">ENDEREÇO</span><span class="value">--</span></div>
               <div><span class="label">UF</span><span class="value">--</span></div>
               <div><span class="label">DATA SAÍDA/ENTRADA</span><span class="value">${fmtData(nfe.data_entrada)}</span></div>
             </div>
           </div>
 
           <!-- CÁLCULO DO IMPOSTO -->
-          <div style="margin-bottom: 5px;">
+          <div style="margin-bottom: 12px;">
             <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">CÁLCULO DO IMPOSTO</div>
             <div class="grid" style="grid-template-columns: repeat(5, 1fr);">
               <div><span class="label">BASE CÁLC. ICMS</span><span class="value">${fmtR(nfe.valor_icms > 0 ? nfe.valor_produtos : 0)}</span></div>
@@ -127,7 +127,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
           </div>
 
           <!-- ITENS -->
-          <div style="margin-bottom: 5px;">
+          <div style="margin-bottom: 12px;">
             <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">DADOS DOS PRODUTOS / SERVIÇOS</div>
             <table>
               <thead>
