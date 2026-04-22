@@ -1,0 +1,126 @@
+'use client'
+import React from 'react'
+import { BookOpen, FileText, CheckCircle, TrendingUp, BarChart3 } from 'lucide-react'
+
+const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+
+export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
+  const { lancamentos, stats } = lancHook
+  const { contas } = planoHook
+
+  const kpis = [
+    { label: 'Lançamentos', value: stats.total, sub: 'no livro diário', icon: BookOpen, color: '#6366f1' },
+    { label: 'Confirmados', value: stats.confirmados, sub: 'lançamentos válidos', icon: CheckCircle, color: '#10b981' },
+    { label: 'Estornados', value: stats.estornados, sub: 'lançamentos revertidos', icon: FileText, color: '#ef4444' },
+    { label: 'Contas no Plano', value: contas.length, sub: 'ITG 2002 (R1)', icon: BarChart3, color: '#8b5cf6' },
+  ]
+
+  const ultimos5 = lancamentos.slice(0, 5)
+  const fmtData = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
+
+  // Resumo por grupo
+  const grupos = [
+    { label: 'Contas do Ativo', qty: contas.filter((c: any) => c.classificacao === 'ativo').length, color: 'text-blue-700', bg: 'bg-blue-50' },
+    { label: 'Contas do Passivo', qty: contas.filter((c: any) => c.classificacao === 'passivo').length, color: 'text-rose-700', bg: 'bg-rose-50' },
+    { label: 'Patrimônio Social', qty: contas.filter((c: any) => c.classificacao === 'patrimonio_social').length, color: 'text-purple-700', bg: 'bg-purple-50' },
+    { label: 'Ingressos', qty: contas.filter((c: any) => c.classificacao === 'ingresso').length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+    { label: 'Despesas', qty: contas.filter((c: any) => c.classificacao === 'despesa').length, color: 'text-orange-700', bg: 'bg-orange-50' },
+  ]
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpis.map((kpi, i) => {
+          const Icon = kpi.icon
+          return (
+            <div key={i} className="kpi-card p-5" style={{ '--kpi-color': kpi.color } as any}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ background: `${kpi.color}18` }}>
+                <Icon size={16} style={{ color: kpi.color }} />
+              </div>
+              <div className="text-2xl font-black text-slate-800">{kpi.value}</div>
+              <div className="text-xs font-bold text-slate-500 mt-0.5">{kpi.label}</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">{kpi.sub}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Plano de contas summary */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h3 className="text-sm font-black text-slate-700 mb-4">🏗️ Plano de Contas ITG 2002</h3>
+          {contas.length === 0 ? (
+            <div className="flex flex-col items-center py-8 text-slate-300">
+              <BookOpen size={32} className="mb-2" />
+              <p className="text-xs font-bold">Plano não inicializado</p>
+              <p className="text-[10px] text-slate-400 mt-1">Clique em "Inicializar Plano ITG 2002" acima</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {grupos.map((g, i) => (
+                <div key={i} className={`flex items-center justify-between px-3 py-2 rounded-xl ${g.bg}`}>
+                  <span className={`text-xs font-bold ${g.color}`}>{g.label}</span>
+                  <span className={`text-sm font-black ${g.color}`}>{g.qty} contas</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-indigo-50 border-t border-indigo-100">
+                <span className="text-xs font-black text-indigo-700">Total de Contas</span>
+                <span className="text-sm font-black text-indigo-700">{contas.length}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Últimos lançamentos */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <h3 className="text-sm font-black text-slate-700 mb-4">📒 Últimos Lançamentos</h3>
+          {ultimos5.length === 0 ? (
+            <div className="flex flex-col items-center py-8 text-slate-300">
+              <FileText size={32} className="mb-2" />
+              <p className="text-xs font-bold">Nenhum lançamento registrado</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {ultimos5.map((l: any) => (
+                <div key={l.id} className="flex items-start justify-between gap-3 py-2 border-b border-slate-50 last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-black text-indigo-600">{l.numero_lancamento}</p>
+                    <p className="text-xs font-bold text-slate-700 truncate">{l.historico}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-[10px] text-slate-400">{fmtData(l.data_lancamento)}</p>
+                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${l.status === 'confirmado' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                      {l.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Compliance panel */}
+      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5">
+        <h3 className="text-sm font-black text-indigo-800 mb-3">📋 Obrigações Contábeis — ACPROBEC</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: 'ECD', sub: 'SPED Contábil', prazo: 'Até 31/07 do ano seguinte', status: 'pendente' },
+            { label: 'ECF', sub: 'Escrit. Contábil Fiscal', prazo: 'Até 31/07 do ano seguinte', status: 'pendente' },
+            { label: 'DCTF', sub: 'Declaração de Débitos', prazo: 'Mensal — dia 15', status: 'pendente' },
+            { label: 'RAIS', sub: 'Relação Anual Informações', prazo: 'Março/Abril', status: 'pendente' },
+          ].map((ob, i) => (
+            <div key={i} className="bg-white rounded-xl p-3 border border-white/80 shadow-sm">
+              <p className="text-xs font-black text-indigo-800">{ob.label}</p>
+              <p className="text-[9px] text-slate-500 font-medium">{ob.sub}</p>
+              <p className="text-[9px] text-orange-600 font-bold mt-1">⏰ {ob.prazo}</p>
+            </div>
+          ))}
+        </div>
+        <p className="text-[9px] text-indigo-500 font-medium mt-3">
+          ℹ️ A imunidade tributária (art. 150, VI, "c" da CF/88) não dispensa as associações das obrigações acessórias — ECD, ECF, SPED EFD são obrigatórios.
+        </p>
+      </div>
+    </div>
+  )
+}

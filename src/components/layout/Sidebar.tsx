@@ -21,7 +21,9 @@ import {
   FileCheck,
   ShoppingCart,
   ShieldCheck,
-  Lock
+  Lock,
+  FileText,
+  BookOpen
 } from 'lucide-react'
 
 const MENU = [
@@ -56,6 +58,13 @@ const MENU = [
     section: 'Recrutamento', 
     items: [
       { href: '/recrutamento', icon: BarChart3, label: 'Recrutamento' },
+    ]
+  },
+  { 
+    section: 'Fiscal & Contábil', 
+    items: [
+      { href: '/fiscal', icon: FileText, label: 'Escrituração Fiscal' },
+      { href: '/contabil', icon: BookOpen, label: 'Contabilidade' },
     ]
   },
   { 
