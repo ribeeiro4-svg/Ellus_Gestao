@@ -159,7 +159,9 @@ export function useNFe() {
       
       const updateData: any = {
         id: item.id,
-        nfe_entrada_id: nfeId, // Incluindo o ID da nota para satisfazer a constraint do banco
+        nfe_entrada_id: nfeId,
+        numero_item: item.numero_item, // Obrigatório
+        descricao_produto: item.descricao_produto, // Obrigatório
         cfop_escrituracao: item.cfop_escrituracao || null,
         cst_icms: item.cst_icms || null,
         cst_ipi: item.cst_ipi || null,
