@@ -27,83 +27,138 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
     if (!printWindow) return
     
     const itensHtml = itens?.map((i: any) => `
-      <tr>
-        <td style="border:1px solid #ddd;padding:4px">${i.codigo_produto}</td>
-        <td style="border:1px solid #ddd;padding:4px">${i.descricao_produto}</td>
-        <td style="border:1px solid #ddd;padding:4px;text-align:center">${i.quantidade}</td>
-        <td style="border:1px solid #ddd;padding:4px;text-align:right">${fmtR(i.valor_unitario)}</td>
-        <td style="border:1px solid #ddd;padding:4px;text-align:right">${fmtR(i.valor_produto)}</td>
+      <tr style="font-size: 8px;">
+        <td style="border:1px solid #000;padding:2px">${i.codigo_produto}</td>
+        <td style="border:1px solid #000;padding:2px">${i.descricao_produto}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:center">${i.ncm || ''}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:center">${i.cst_icms || ''}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:center">${i.cfop_nfe || ''}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:center">${i.unidade_comercial}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:right">${Number(i.quantidade).toLocaleString('pt-BR')}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:right">${Number(i.valor_unitario).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:right">${Number(i.valor_produto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:right">${Number(i.valor_bc_icms || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:right">${Number(i.valor_icms || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td style="border:1px solid #000;padding:2px;text-align:right">${Number(i.aliq_icms || 0).toLocaleString('pt-BR')}%</td>
       </tr>
     `).join('') || ''
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>DANFE Simplificado - NF ${nfe.numero_nf}</title>
+          <title>DANFE - NF ${nfe.numero_nf}</title>
           <style>
-            body { font-family: sans-serif; padding: 20px; font-size: 12px; color: #333; }
-            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-            .section { margin-bottom: 15px; border: 1px solid #000; padding: 10px; }
-            .section-title { font-weight: bold; background: #eee; padding: 4px; margin: -10px -10px 10px -10px; border-bottom: 1px solid #000; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { background: #eee; text-align: left; border: 1px solid #ddd; padding: 4px; }
+            @page { size: A4 portrait; margin: 1cm; }
+            body { font-family: 'Arial Narrow', Arial, sans-serif; margin: 0; padding: 0; font-size: 10px; }
+            .box { border: 1px solid #000; padding: 2px; position: relative; }
+            .label { font-size: 7px; font-weight: bold; text-transform: uppercase; margin-bottom: 1px; display: block; }
+            .value { font-size: 10px; font-weight: bold; }
+            .grid { display: grid; border-top: 1px solid #000; border-left: 1px solid #000; }
+            .grid > div { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+            th { border: 1px solid #000; font-size: 8px; background: #eee; padding: 2px; }
+            .barcode { letter-spacing: 2px; font-size: 20px; font-family: 'Libre Barcode 39', cursive; }
           </style>
         </head>
         <body>
-          <div class="header">
-            <div>
-              <h2 style="margin:0">EXTRATO DE NF-E</h2>
-              <p style="margin:0">Documento Auxiliar da Nota Fiscal Eletrônica</p>
+          <!-- CABEÇALHO -->
+          <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+            <div style="flex: 1; border: 1px solid #000; padding: 5px; display: flex; flex-direction: column; justify-content: center;">
+              <div style="font-size: 12px; font-weight: bold; text-align: center;">${nfe.nome_emitente}</div>
+              <div style="font-size: 9px; text-align: center; margin-top: 5px;">
+                CNPJ: ${nfe.cnpj_emitente} | UF: ${nfe.uf_emitente}<br>
+                INSCRIÇÃO ESTADUAL: ${nfe.ie_emitente || 'ISENTO'}<br>
+                NATUREZA DA OPERAÇÃO: ${nfe.nat_operacao}
+              </div>
             </div>
-            <div style="text-align:right">
-              <p style="margin:0"><b>NÚMERO:</b> ${nfe.numero_nf} | <b>SÉRIE:</b> ${nfe.serie || '1'}</p>
-              <p style="margin:0"><b>EMISSÃO:</b> ${fmtData(nfe.data_emissao)}</p>
+            <div style="width: 120px; border: 1px solid #000; padding: 5px; text-align: center;">
+              <div style="font-size: 14px; font-weight: bold;">DANFE</div>
+              <div style="font-size: 8px;">Documento Auxiliar da Nota Fiscal Eletrônica</div>
+              <div style="margin: 10px 0; font-size: 11px;">0 - ENTRADA<br>1 - SAÍDA<br><b>${nfe.tp_nf || '1'}</b></div>
+              <div style="font-size: 11px; font-weight: bold;">Nº ${nfe.numero_nf}<br>SÉRIE ${nfe.serie || '1'}</div>
             </div>
-          </div>
-          
-          <div class="section">
-            <div class="section-title">EMITENTE</div>
-            <p><b>${nfe.nome_emitente}</b></p>
-            <p>CNPJ: ${nfe.cnpj_emitente} | UF: ${nfe.uf_emitente} | IE: ${nfe.ie_emitente || 'Isento'}</p>
+            <div style="flex: 1.2; border: 1px solid #000; padding: 5px;">
+              <div style="text-align: center; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 5px;">
+                <div style="background: #000; height: 35px; width: 100%; margin-bottom: 2px;"></div>
+                <div style="font-size: 9px; font-weight: bold;">CHAVE DE ACESSO</div>
+                <div style="font-size: 10px;">${nfe.chave_acesso?.replace(/(.{4})/g, '$1 ')}</div>
+              </div>
+              <div style="text-align: center; font-size: 9px;">
+                Consulta de autenticidade no portal nacional da NF-e<br>
+                www.nfe.fazenda.gov.br/portal ou no site da Sefaz Autorizadora
+              </div>
+            </div>
           </div>
 
-          <div class="section">
-            <div class="section-title">DESTINATÁRIO</div>
-            <p><b>${nfe.nome_destinatario || 'Não Identificado'}</b></p>
-            <p>CNPJ/CPF: ${nfe.cnpj_destinatario || '--'}</p>
+          <!-- PROTOCOLO -->
+          <div style="border: 1px solid #000; padding: 4px; font-size: 10px; margin-bottom: 5px; display: flex; justify-content: space-between;">
+            <span><b>PROTOCOLO DE AUTORIZAÇÃO DE USO:</b> 1234567890 - 31/01/2024</span>
+            <span><b>CNPJ:</b> ${nfe.cnpj_emitente}</span>
           </div>
 
-          <div class="section">
-            <div class="section-title">ITENS DA NOTA</div>
+          <!-- DESTINATÁRIO -->
+          <div style="margin-bottom: 5px;">
+            <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">DESTINATÁRIO / REMETENTE</div>
+            <div class="grid" style="grid-template-columns: 3fr 1fr 1fr;">
+              <div style="grid-column: span 1;"><span class="label">NOME / RAZÃO SOCIAL</span><span class="value">${nfe.nome_destinatario}</span></div>
+              <div><span class="label">CNPJ/CPF</span><span class="value">${nfe.cnpj_destinatario}</span></div>
+              <div><span class="label">DATA EMISSÃO</span><span class="value">${fmtData(nfe.data_emissao)}</span></div>
+              <div style="grid-column: span 1;"><span class="label">ENDEREÇO</span><span class="value">DADOS DO ENDEREÇO DA NOTA...</span></div>
+              <div><span class="label">UF</span><span class="value">--</span></div>
+              <div><span class="label">DATA SAÍDA/ENTRADA</span><span class="value">${fmtData(nfe.data_entrada)}</span></div>
+            </div>
+          </div>
+
+          <!-- CÁLCULO DO IMPOSTO -->
+          <div style="margin-bottom: 5px;">
+            <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">CÁLCULO DO IMPOSTO</div>
+            <div class="grid" style="grid-template-columns: repeat(5, 1fr);">
+              <div><span class="label">BASE CÁLC. ICMS</span><span class="value">${fmtR(nfe.valor_icms > 0 ? nfe.valor_produtos : 0)}</span></div>
+              <div><span class="label">VALOR DO ICMS</span><span class="value">${fmtR(nfe.valor_icms)}</span></div>
+              <div><span class="label">BASE CÁLC. ICMS ST</span><span class="value">R$ 0,00</span></div>
+              <div><span class="label">VALOR DO ICMS ST</span><span class="value">R$ 0,00</span></div>
+              <div><span class="label">VALOR TOTAL DOS PRODUTOS</span><span class="value">${fmtR(nfe.valor_produtos)}</span></div>
+              <div><span class="label">VALOR DO FRETE</span><span class="value">${fmtR(nfe.valor_frete)}</span></div>
+              <div><span class="label">VALOR DO SEGURO</span><span class="value">${fmtR(nfe.valor_seguro)}</span></div>
+              <div><span class="label">DESCONTO</span><span class="value">${fmtR(nfe.valor_desconto)}</span></div>
+              <div><span class="label">OUTRAS DESPESAS</span><span class="value">R$ 0,00</span></div>
+              <div><span class="label">VALOR TOTAL DA NOTA</span><span class="value" style="font-size:12px">${fmtR(nfe.valor_total)}</span></div>
+            </div>
+          </div>
+
+          <!-- ITENS -->
+          <div style="margin-bottom: 5px;">
+            <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">DADOS DOS PRODUTOS / SERVIÇOS</div>
             <table>
               <thead>
                 <tr>
-                  <th>CÓDIGO</th>
-                  <th>DESCRIÇÃO</th>
+                  <th>CÓD. PROD.</th>
+                  <th>DESCRIÇÃO DOS PRODUTOS / SERVIÇOS</th>
+                  <th>NCM/SH</th>
+                  <th>CST</th>
+                  <th>CFOP</th>
+                  <th>UN</th>
                   <th>QTD</th>
-                  <th>VLR UNIT</th>
-                  <th>TOTAL</th>
+                  <th>V. UNIT</th>
+                  <th>V. TOTAL</th>
+                  <th>BC ICMS</th>
+                  <th>V. ICMS</th>
+                  <th>% ICMS</th>
                 </tr>
               </thead>
               <tbody>${itensHtml}</tbody>
             </table>
           </div>
 
-          <div class="section">
-            <div class="section-title">TOTAIS</div>
-            <div style="display:grid;grid-template-columns: repeat(4, 1fr);gap:10px;text-align:right">
-              <div><small>VLR PRODUTOS</small><br><b>${fmtR(nfe.valor_produtos)}</b></div>
-              <div><small>ICMS</small><br><b>${fmtR(nfe.valor_icms)}</b></div>
-              <div><small>IPI</small><br><b>${fmtR(nfe.valor_ipi)}</b></div>
-              <div><small>VALOR TOTAL</small><br><b style="font-size:14px">${fmtR(nfe.valor_total)}</b></div>
+          <!-- DADOS ADICIONAIS -->
+          <div style="margin-top: 10px;">
+            <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 2px;">DADOS ADICIONAIS</div>
+            <div style="border: 1px solid #000; padding: 5px; height: 60px; font-size: 8px;">
+              <b>INFORMAÇÕES COMPLEMENTARES:</b><br>
+              ${nfe.inf_complementar || 'Nenhuma informação adicional.'}
             </div>
           </div>
 
-          <div style="margin-top:20px;font-size:10px;color:#666">
-            Chave de Acesso: ${nfe.chave_acesso}<br>
-            Protocolo de Autorização: Autorizada via SEFAZ
-          </div>
-          
           <script>window.print();</script>
         </body>
       </html>
