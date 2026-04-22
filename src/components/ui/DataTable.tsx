@@ -71,8 +71,18 @@ export default function DataTable<T>({
     // 2. Sorting
     if (sortKey) {
       result.sort((a: any, b: any) => {
-        const valA = a[sortKey]
-        const valB = b[sortKey]
+        let valA = a[sortKey]
+        let valB = b[sortKey]
+        
+        // Tratar null/undefined empurrando sempre para o final ou inicio dependendo do sortDir, ou apenas tratando como vazio
+        if (valA === null || valA === undefined) valA = ''
+        if (valB === null || valB === undefined) valB = ''
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortDir === 'asc' 
+            ? valA.localeCompare(valB) 
+            : valB.localeCompare(valA)
+        }
         
         if (valA < valB) return sortDir === 'asc' ? -1 : 1
         if (valA > valB) return sortDir === 'asc' ? 1 : -1
