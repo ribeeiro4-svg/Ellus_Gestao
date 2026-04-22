@@ -79,7 +79,10 @@ export function useAssociados() {
       
       // Filtrar apenas quem não existe ainda (baseado no código) para evitar sobrescrever dados manuais
       const codigosExistentes = new Set(associados.map(a => a.codigo))
-      const novos = res.data.filter(it => !codigosExistentes.has(it.codigo))
+      const novos = res.data.filter(it => !codigosExistentes.has(it.codigo)).map(it => ({
+        ...it,
+        zapsign_sync_at: new Date().toISOString()
+      }))
 
       if (novos.length === 0) {
         return { message: 'Sincronização concluída: Todos os associados da ZapSign já constam no sistema.' }

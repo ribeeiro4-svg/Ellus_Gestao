@@ -104,6 +104,7 @@ export interface Associado {
   conta_recorrencia?: string // Conta bancária da recorrência
   plano_saude?: string // Ativo, Aguardando Declaração, Não Possui
   termo_status?: string // Enviado ao HGU, Assinatura Pendente
+  zapsign_sync_at?: string // Data da última sincronização com ZapSign
   created_at: string
   updated_at: string
 }

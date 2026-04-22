@@ -358,6 +358,10 @@ export default function AssociadosTab() {
         return <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-md ${colors}`}>{s}</span>
       }
     },
+    { 
+      header: 'Sincronizado em', key: 'zapsign_sync_at', className: 'w-[140px]', 
+      render: (i: any) => <span className="text-[11px] font-medium text-slate-500">{i.zapsign_sync_at ? new Date(i.zapsign_sync_at).toLocaleDateString('pt-BR') : '--'}</span> 
+    },
     {
       header: 'Contato', key: 'telefone', className: 'w-[140px]',
       render: (i: any) => (

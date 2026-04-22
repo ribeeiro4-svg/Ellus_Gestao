@@ -13,6 +13,7 @@ export async function fixAssociadosRecorrenciaColumnsAction() {
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS conta_recorrencia TEXT;
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS plano_saude TEXT DEFAULT 'Não Possui';
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS termo_status TEXT;
+    ALTER TABLE associados ADD COLUMN IF NOT EXISTS zapsign_sync_at TIMESTAMPTZ;
 
     -- Comentários para documentação
     COMMENT ON COLUMN associados.recorrencia_ativa IS 'Indica se o associado está na cobrança recorrente';
