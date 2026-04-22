@@ -26,6 +26,9 @@ export async function fixAssociadosRecorrenciaColumnsAction() {
     COMMENT ON COLUMN associados.conta_recorrencia IS 'Informa a conta bancária onde a recorrência está ativa';
     COMMENT ON COLUMN associados.plano_saude IS 'Status do plano de saúde (Ativo, Aguardando Declaração, Não Possui)';
     COMMENT ON COLUMN associados.termo_status IS 'Status do Termo Assinado (Enviado ao HGU, Assinatura Pendente)';
+
+    -- Forçar recarga do cache do PostgREST (Supabase API)
+    NOTIFY pgrst, 'reload schema';
   `
 
   // Executa via RPC execute_sql (deve estar configurado no Supabase)
