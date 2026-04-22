@@ -359,29 +359,29 @@ export function useProdutosEstoque() {
     if (!tenantId) return { error: 'Tenant não identificado' }
     
     try {
-      // 1. Buscar todos os itens de notas que já foram classificados (Filtrando tenant pela nota pai)
+      // 1. Buscar ABSOLUTAMENTE TODOS os itens de notas deste tenant
       const { data: itensNfe, error: errItens } = await sb.from('nfe_entradas_itens')
-        .select('*, nfe:nfe_entradas!inner(status_escrituracao, tenant_id)')
-        .eq('classificado', true)
+        .select('*, nfe:nfe_entradas!inner(tenant_id)')
         .eq('nfe.tenant_id', tenantId)
 
       if (errItens) throw errItens
-      if (!itensNfe || itensNfe.length === 0) return { message: 'Nenhuma nota escriturada encontrada para sincronizar.' }
+      if (!itensNfe || itensNfe.length === 0) return { message: 'Nenhuma nota fiscal encontrada para este tenant.' }
 
-      // 2. Filtrar apenas itens que NÃO estão vinculados a produtos
-      const itensSemCadastro = itensNfe.filter(item => {
-        const jaExiste = produtos.some(p => 
-          p.descricao === item.descricao_produto || 
+      // 2. Filtrar apenas itens que têm os dados mínimos (CFOP e Destinação) e NÃO estão cadastrados
+      const itensPendentes = itensNfe.filter(item => {
+        const temDadosMinimos = !!(item.cfop_escrituracao && item.destinacao_item)
+        const jaCadastrado = produtos.some(p => 
+          p.descricao.trim().toLowerCase() === item.descricao_produto.trim().toLowerCase() || 
           (p.codigo_fornecedor && p.codigo_fornecedor === item.codigo_produto)
         )
-        return !jaExiste && !item.produto_vinc_id
+        return temDadosMinimos && !jaCadastrado && !item.produto_vinc_id
       })
 
-      if (itensSemCadastro.length === 0) return { message: 'Todos os produtos das notas já estão cadastrados.' }
+      if (itensPendentes.length === 0) return { message: 'Nenhum novo produto pendente de cadastro foi localizado.' }
 
       // 3. Criar os produtos faltantes (Remover duplicados na própria lista da NF)
-      const unicos = Array.from(new Set(itensSemCadastro.map(i => i.descricao_produto)))
-        .map(desc => itensSemCadastro.find(i => i.descricao_produto === desc))
+      const unicos = Array.from(new Set(itensPendentes.map((i: any) => i.descricao_produto)))
+        .map(desc => itensPendentes.find((i: any) => i.descricao_produto === desc))
 
       let criados = 0
       for (const item of unicos) {
