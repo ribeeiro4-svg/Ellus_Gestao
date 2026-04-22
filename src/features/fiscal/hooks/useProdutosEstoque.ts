@@ -359,11 +359,11 @@ export function useProdutosEstoque() {
     if (!tenantId) return { error: 'Tenant não identificado' }
     
     try {
-      // 1. Buscar todos os itens de notas que já foram classificados
+      // 1. Buscar todos os itens de notas que já foram classificados (Filtrando tenant pela nota pai)
       const { data: itensNfe, error: errItens } = await sb.from('nfe_entradas_itens')
-        .select('*, nfe:nfe_entradas(status_escrituracao)')
+        .select('*, nfe:nfe_entradas!inner(status_escrituracao, tenant_id)')
         .eq('classificado', true)
-        .eq('tenant_id', tenantId)
+        .eq('nfe.tenant_id', tenantId)
 
       if (errItens) throw errItens
       if (!itensNfe || itensNfe.length === 0) return { message: 'Nenhuma nota escriturada encontrada para sincronizar.' }
