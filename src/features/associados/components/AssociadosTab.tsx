@@ -148,6 +148,26 @@ export default function AssociadosTab() {
     } finally { setIsUpdatingBulk(false) }
   }
 
+  const handleBatchUpdateRecorrencia = async (ativa: boolean) => {
+    if (selectedIds.length === 0) return
+    setIsUpdatingBulk(true)
+    try {
+      const res = await atualizarBulk(selectedIds, { recorrencia_ativa: ativa } as any)
+      if (!res.error) { alert('Recorrência atualizada em lote!'); setSelectedIds([]) }
+    } finally { setIsUpdatingBulk(false) }
+  }
+
+  const handleBatchUpdateConta = async () => {
+    if (selectedIds.length === 0) return
+    const conta = prompt('Informe o nome da conta bancária para os associados selecionados:')
+    if (conta === null) return
+    setIsUpdatingBulk(true)
+    try {
+      const res = await atualizarBulk(selectedIds, { conta_recorrencia: conta } as any)
+      if (!res.error) { alert('Conta atualizada em lote!'); setSelectedIds([]) }
+    } finally { setIsUpdatingBulk(false) }
+  }
+
   const handleDownloadTermo = async (item: any) => {
     if (!tenant?.zapsign_token || !item.zapsign_doc_token) return
     setDownloadingDoc(item.id)
@@ -432,9 +452,14 @@ export default function AssociadosTab() {
              <span className="text-sm font-bold text-red-800">{selectedIds.length} selecionados</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => handleBatchUpdateVencimento(10)} className="px-3 py-1.5 bg-white text-indigo-600 border border-indigo-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Dia 10</button>
-            <button onClick={() => handleBatchUpdateVencimento(20)} className="px-3 py-1.5 bg-white text-orange-600 border border-orange-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Dia 20</button>
-            <button onClick={handleBulkDelete} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase shadow-md flex items-center gap-2"><Trash2 size={12} /> Excluir</button>
+            <div className="h-6 w-px bg-red-200 mx-2" />
+            <button onClick={() => handleBatchUpdateRecorrencia(true)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Recor. Ativar</button>
+            <button onClick={() => handleBatchUpdateRecorrencia(false)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-slate-600 border border-slate-200 rounded-lg text-[10px] font-black uppercase shadow-sm">Recor. Parar</button>
+            <button onClick={handleBatchUpdateConta} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-blue-600 border border-blue-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Definir Conta</button>
+            <div className="h-6 w-px bg-red-200 mx-2" />
+            <button onClick={() => handleBatchUpdateVencimento(10)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-indigo-600 border border-indigo-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Dia 10</button>
+            <button onClick={() => handleBatchUpdateVencimento(20)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-orange-600 border border-orange-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Dia 20</button>
+            <button onClick={handleBulkDelete} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-[10px] font-black uppercase shadow-md flex items-center gap-2"><Trash2 size={12} /> Excluir</button>
           </div>
         </div>
       )}
