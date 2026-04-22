@@ -52,19 +52,25 @@ export async function cleanupDuplicateMensalidadesAction() {
 
     // Queremos apenas limpar os que estão 'aberto' (pendentes puramente).
     // Se houver um 'pago', 'atrasado' ou 'conciliado', consideramos como registro oficial a não ser apagado.
-    const protegidos = group.filter(l => l.conciliado === true || l.status === 'pago' || l.status === 'atrasado')
-    const pendentes = group.filter(l => l.conciliado !== true && l.status === 'aberto')
+    const protegidos = group.filter(l => {
+      const s = (l.status || '').toLowerCase().trim()
+      return l.conciliado === true || s === 'pago' || s === 'atrasado'
+    })
+    const pendentes = group.filter(l => {
+      const s = (l.status || '').toLowerCase().trim()
+      return l.conciliado !== true && s !== 'pago' && s !== 'atrasado'
+    })
 
     let deletedInThisGroup = 0
     
     if (protegidos.length > 0) {
-      // Se já tem um pago/conciliado, deleta TODOS os pendentes (duplicatas em aberto)
+      // Se já tem um protegido, deleta TODOS os pendentes (duplicatas em aberto)
       pendentes.forEach(p => {
         idsToDelete.push(p.id)
         deletedInThisGroup++
       })
     } else if (pendentes.length > 1) {
-      // Se não tem nenhum pago, mas tem vários abertos pro mesmo dia, mantém o 1º e deleta o resto
+      // Ordena por data de criação (mais recente primeiro) ou apenas pega do índice 1
       for (let i = 1; i < pendentes.length; i++) {
         idsToDelete.push(pendentes[i].id)
         deletedInThisGroup++
@@ -77,7 +83,8 @@ export async function cleanupDuplicateMensalidadesAction() {
   })
 
   if (idsToDelete.length === 0) {
-    return { count: 0, message: 'Nenhuma duplicata pendente encontrada.' }
+    const maxGroup = Math.max(0, ...Object.values(groups).map(g => g.length));
+    return { count: 0, message: `Nenhuma duplicata excluída.\nDiagnóstico: Lidos ${filteredLancamentos.length} registros, formados ${Object.keys(groups).length} grupos. Maior grupo tem ${maxGroup} itens.` }
   }
 
   // 3.5 Buscar nomes dos associados afetados para o relatório
