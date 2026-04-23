@@ -96,7 +96,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       const tipo = catConfig?.tipo || lancMes[0]?.tipo || (cat.toLowerCase().includes('receita') || cat.toLowerCase().includes('adesão') ? 'receita' : 'despesa')
 
       return { id: orc?.id || cat, categoria: cat, tipo, planejado, realizado, diferenca: Math.round((realizado - planejado) * 100) / 100, isDirty: editValues[cat] !== undefined }
-    }).filter(item => item.realizado > 0 || item.isDirty)
+    }).filter(item => item.realizado > 0 || item.planejado > 0 || item.isDirty)
   }, [lancamentos, orcamentos, selectedMes, selectedAno, editValues, categorias])
 
   const handleSaveOrcamento = async (categoria: string, valor: number, id?: string) => {
