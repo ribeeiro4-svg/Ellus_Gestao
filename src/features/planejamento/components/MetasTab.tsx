@@ -94,6 +94,15 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       const tipo = catConfig?.tipo || lancMes[0]?.tipo || (cat.toLowerCase().includes('receita') || cat.toLowerCase().includes('adesão') ? 'receita' : 'despesa')
 
       return { id: orc?.id || cat, categoria: cat, tipo, planejado, realizado, diferenca: Math.round((realizado - planejado) * 100) / 100, isDirty: editValues[cat] !== undefined }
+    }).filter(item => {
+      if (item.realizado > 0 || item.isDirty) return true
+
+      const prevMes = selectedMes === 0 ? 11 : selectedMes - 1
+      const prevAno = selectedMes === 0 ? selectedAno - 1 : selectedAno
+      const lancPrev = lancamentos.filter(l => l.categoria === item.categoria && getMesIdx(l.data) === prevMes && getAnoIdx(l.data) === prevAno)
+      const realizadoPrev = lancPrev.reduce((sum, l) => Math.round((sum + getBruto(l)) * 100) / 100, 0)
+
+      return realizadoPrev > 0
     })
   }, [lancamentos, orcamentos, selectedMes, selectedAno, editValues, categorias])
 
@@ -224,18 +233,20 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 relative z-[60] overflow-visible">
-        <KpiCard 
-          title="Receitas Projetadas" 
-          value={fmtR(totals.planejadoReceita)} 
-          icon={<ArrowUpCircle size={20} />} 
-          category="success" 
-        />
-        <KpiCard title="Despesas Projetadas" value={fmtR(totals.planejadoDespesa)} icon={<ArrowDownCircle size={20} />} category="error" />
-        <KpiCard title="Superávit Alvo" value={fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100)} icon={<CheckCircle2 size={20} />} category="info" />
-        <KpiCard title="Pró-labore" value={fmtR(totalProLabore)} icon={<Users size={20} />} category="purple" />
-        <KpiCard title="Reserva Ideal" value={fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100)} icon={<Activity size={20} />} category="indigo" />
-        <KpiCard title="Saldo Real" value={fmtR(comparativo.reduce((s, c) => Math.round((s + (c.tipo === 'receita' ? c.realizado : -c.realizado)) * 100) / 100, 0))} icon={<TrendingUp size={20} />} category="success" />
+      <div className="flex flex-wrap items-stretch gap-2 w-full relative z-[60] overflow-visible">
+        {[
+          { label: 'Receitas Projetadas', value: fmtR(totals.planejadoReceita), color: 'text-emerald-600' },
+          { label: 'Despesas Projetadas', value: fmtR(totals.planejadoDespesa), color: 'text-rose-600' },
+          { label: 'Superávit Alvo', value: fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100), color: 'text-blue-600' },
+          { label: 'Pró-labore', value: fmtR(totalProLabore), color: 'text-purple-600' },
+          { label: 'Reserva Ideal', value: fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100), color: 'text-indigo-600' },
+          { label: 'Saldo Real', value: fmtR(comparativo.reduce((s, c) => Math.round((s + (c.tipo === 'receita' ? c.realizado : -c.realizado)) * 100) / 100, 0)), color: 'text-emerald-600', isMain: true }
+        ].map(k => (
+          <div key={k.label} className={`bg-white border border-slate-100 rounded-2xl p-4 flex-1 min-w-[140px] shadow-sm transition-all hover:shadow-md ${k.isMain ? 'ring-2 ring-emerald-50 border-emerald-200 bg-emerald-50/10' : ''}`}>
+            <div className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-wider">{k.label}</div>
+            <div className={`text-base font-black ${k.color}`}>{k.value}</div>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

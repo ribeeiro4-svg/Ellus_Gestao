@@ -1,8 +1,8 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Calendar, Target, ChevronLeft, ChevronRight,
-  Target as TargetIcon, Activity, TrendingUp, BarChart3, FileText
+  Target as TargetIcon, Activity, TrendingUp, BarChart3, FileText, Save, CheckCircle2
 } from 'lucide-react'
 import MetasTab from '@/features/planejamento/components/MetasTab'
 import SimuladorTab from '@/features/planejamento/components/SimuladorTab'
@@ -22,6 +22,12 @@ export default function PlanejamentoHubPage() {
   const [activeTab, setActiveTab] = useState<TabID>('metas')
   const [reservaMeses, setReservaMeses] = useState(6)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('reserva_meses_acprobec')
+    if (saved) setReservaMeses(Number(saved))
+  }, [])
 
   const { lancamentos } = useFinanceiro()
   const { associados } = useAssociados()
@@ -77,9 +83,20 @@ export default function PlanejamentoHubPage() {
                   <span className="text-[9px] font-bold text-slate-300 mt-1">Meses</span>
                 </div>
                 <div className="flex items-center bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                   <button onClick={() => setReservaMeses(Math.max(1, reservaMeses - 1))} className="p-3 hover:bg-slate-50 text-slate-400">－</button>
-                   <input type="number" value={reservaMeses} onChange={e => setReservaMeses(Number(e.target.value))} className="w-10 text-center font-black text-slate-700 bg-transparent outline-none" />
-                   <button onClick={() => setReservaMeses(reservaMeses + 1)} className="p-3 hover:bg-slate-50 text-slate-400">＋</button>
+                   <button onClick={() => { setReservaMeses(Math.max(1, reservaMeses - 1)); setIsSaved(false); }} className="p-3 hover:bg-slate-50 text-slate-400">－</button>
+                   <input type="number" value={reservaMeses} onChange={e => { setReservaMeses(Number(e.target.value)); setIsSaved(false); }} className="w-10 text-center font-black text-slate-700 bg-transparent outline-none" />
+                   <button onClick={() => { setReservaMeses(reservaMeses + 1); setIsSaved(false); }} className="p-3 hover:bg-slate-50 border-r border-slate-100 text-slate-400">＋</button>
+                   <button 
+                     onClick={() => {
+                       localStorage.setItem('reserva_meses_acprobec', reservaMeses.toString())
+                       setIsSaved(true)
+                       setTimeout(() => setIsSaved(false), 2000)
+                     }} 
+                     className={`p-3 transition-all ${isSaved ? 'bg-emerald-50 text-emerald-600' : 'hover:bg-slate-50 text-slate-400'}`}
+                     title="Salvar padrão"
+                   >
+                     {isSaved ? <CheckCircle2 size={16} /> : <Save size={16} />}
+                   </button>
                 </div>
               </div>
 
