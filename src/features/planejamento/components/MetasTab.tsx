@@ -90,12 +90,13 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
     return todasMes.map(cat => {
       const lancMes = lancamentos.filter(l => l.categoria === cat && getMesIdx(l.data) === selectedMes && getAnoIdx(l.data) === selectedAno)
       const realizado = lancMes.reduce((sum, l) => Math.round((sum + getBruto(l)) * 100) / 100, 0)
+      const provisionado = lancMes.filter(l => l.status === 'aberto' || l.status === 'atrasado').reduce((sum, l) => Math.round((sum + getBruto(l)) * 100) / 100, 0)
       const orc = orcamentos.find(o => o.categoria === cat)
       const planejado = editValues[cat] !== undefined ? editValues[cat] : (orc?.valor_planejado || 0)
       const catConfig = categorias.find(c => c.nome === cat)
       const tipo = catConfig?.tipo || lancMes[0]?.tipo || (cat.toLowerCase().includes('receita') || cat.toLowerCase().includes('adesão') ? 'receita' : 'despesa')
 
-      return { id: orc?.id || cat, categoria: cat, tipo, planejado, realizado, diferenca: Math.round((realizado - planejado) * 100) / 100, isDirty: editValues[cat] !== undefined }
+      return { id: orc?.id || cat, categoria: cat, tipo, planejado, realizado, provisionado, diferenca: Math.round((realizado - planejado) * 100) / 100, isDirty: editValues[cat] !== undefined }
     }).filter(item => item.realizado > 0 || item.planejado > 0 || item.isDirty)
   }, [lancamentos, orcamentos, selectedMes, selectedAno, editValues, categorias])
 
@@ -197,6 +198,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
         </div>
       )
     },
+    { header: 'Lançamentos', key: 'provisionado', render: (i: any) => <span className={`text-xs font-black ${i.provisionado > 0 ? 'text-amber-500' : 'text-slate-400'}`}>{fmtR(i.provisionado)}</span> },
     { header: 'Realizado', key: 'realizado', render: (i: any) => <span className={`text-xs font-black ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-slate-600'}`}>{fmtR(i.realizado)}</span> },
     { 
       header: 'Desvio', 
