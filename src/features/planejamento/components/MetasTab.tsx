@@ -200,7 +200,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       header: 'Desvio', 
       key: 'desvio', 
       render: (i: any) => {
-        const diff = i.tipo === 'receita' ? (i.realizado - i.planejado) : (i.planejado - i.realizado)
+        const diff = i.tipo === 'receita' ? (i.planejado - i.realizado) : (i.realizado - i.planejado)
         return <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{diff > 0 ? '+' : ''}{fmtR(Math.round(diff * 100) / 100)}</span>
       }
     }
@@ -249,7 +249,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
           <ChartCard title="📉 Impacto nas Receitas" subtitle="Consumo do Faturamento por Categoria">
             <div className="h-[260px] mt-4">
               {totals.planejadoDespesa > 0 ? (
-                <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }} />
+                <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }} />
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
                   <Activity size={32} className="opacity-20" />
