@@ -84,7 +84,8 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
   const comparativo = useMemo(() => {
     const orcCats = orcamentos.map(o => o.categoria)
     const realCats = Array.from(new Set(lancamentos.filter(l => getMesIdx(l.data) === selectedMes && getAnoIdx(l.data) === selectedAno).map(l => l.categoria)))
-    const todasMes = Array.from(new Set([...orcCats, ...realCats])).sort()
+    const editCats = Object.keys(editValues)
+    const todasMes = Array.from(new Set([...orcCats, ...realCats, ...editCats])).sort()
 
     return todasMes.map(cat => {
       const lancMes = lancamentos.filter(l => l.categoria === cat && getMesIdx(l.data) === selectedMes && getAnoIdx(l.data) === selectedAno)
@@ -311,11 +312,13 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
              <div className="flex gap-3 mt-auto pt-4 border-t border-slate-100">
                <button onClick={() => { setIsAddModalOpen(false); setSelectedNewCats([]); }} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-colors">Cancelar</button>
                <button 
-                 onClick={async () => {
+                 onClick={() => {
+                   const newEdits = { ...editValues };
                    for (const id of selectedNewCats) {
                      const cat = categorias.find(c => c.id === id);
-                     if (cat) await handleSaveOrcamento(cat.nome, 0);
+                     if (cat) newEdits[cat.nome] = 0;
                    }
+                   setEditValues(newEdits);
                    setIsAddModalOpen(false);
                    setSelectedNewCats([]);
                  }}
