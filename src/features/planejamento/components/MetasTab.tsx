@@ -42,6 +42,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
   
   const [editValues, setEditValues] = useState<Record<string, number>>({})
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [selectedNewCats, setSelectedNewCats] = useState<string[]>([])
   
   // Estados para Lançamento em Lote
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -279,7 +280,54 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       </div>
 
       {/* Modais */}
-      <CrudModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Nova Meta de Categoria" onSubmit={async (data) => { const cat = categorias.find(c => c.id === data.categoria_id); if(cat) await handleSaveOrcamento(cat.nome, 0); setIsAddModalOpen(false) }} fields={[{ name: 'categoria_id', label: 'Tipo de Categoria', type: 'select', required: true, options: categorias.map(c => ({ value: c.id, label: c.nome })) }]} />
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="bg-white w-full max-w-md rounded-[32px] p-8 shadow-2xl border border-slate-100 flex flex-col max-h-[80vh]">
+             <h3 className="text-xl font-black text-slate-800 text-center mb-2 tracking-tight">Nova Meta de Categoria</h3>
+             <p className="text-center text-xs text-slate-500 mb-6 font-bold">Selecione uma ou mais categorias para adicionar</p>
+             
+             <div className="flex-1 overflow-y-auto space-y-2 mb-6 pr-2">
+               {categorias.filter(c => !comparativo.some(comp => comp.categoria === c.nome)).map(c => (
+                 <label key={c.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors">
+                   <input 
+                     type="checkbox" 
+                     className="w-5 h-5 rounded text-emerald-500 focus:ring-emerald-500"
+                     checked={selectedNewCats.includes(c.id)}
+                     onChange={(e) => {
+                       if (e.target.checked) setSelectedNewCats([...selectedNewCats, c.id]);
+                       else setSelectedNewCats(selectedNewCats.filter(id => id !== c.id));
+                     }}
+                   />
+                   <span className="text-sm font-bold text-slate-700">{c.nome}</span>
+                 </label>
+               ))}
+               {categorias.filter(c => !comparativo.some(comp => comp.categoria === c.nome)).length === 0 && (
+                 <div className="text-center p-6 text-slate-400 text-sm font-bold">
+                    Todas as categorias já estão no planejamento.
+                 </div>
+               )}
+             </div>
+             
+             <div className="flex gap-3 mt-auto pt-4 border-t border-slate-100">
+               <button onClick={() => { setIsAddModalOpen(false); setSelectedNewCats([]); }} className="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-colors">Cancelar</button>
+               <button 
+                 onClick={async () => {
+                   for (const id of selectedNewCats) {
+                     const cat = categorias.find(c => c.id === id);
+                     if (cat) await handleSaveOrcamento(cat.nome, 0);
+                   }
+                   setIsAddModalOpen(false);
+                   setSelectedNewCats([]);
+                 }}
+                 disabled={selectedNewCats.length === 0} 
+                 className="flex-1 py-3 bg-emerald-600 text-white rounded-2xl font-black disabled:opacity-50 transition-all hover:bg-emerald-700 shadow-lg shadow-emerald-200"
+               >
+                 Adicionar ({selectedNewCats.length})
+               </button>
+             </div>
+           </div>
+        </div>
+      )}
 
       {isConfirmLancarOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
