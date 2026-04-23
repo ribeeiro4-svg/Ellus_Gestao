@@ -94,16 +94,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       const tipo = catConfig?.tipo || lancMes[0]?.tipo || (cat.toLowerCase().includes('receita') || cat.toLowerCase().includes('adesão') ? 'receita' : 'despesa')
 
       return { id: orc?.id || cat, categoria: cat, tipo, planejado, realizado, diferenca: Math.round((realizado - planejado) * 100) / 100, isDirty: editValues[cat] !== undefined }
-    }).filter(item => {
-      if (item.realizado > 0 || item.isDirty) return true
-
-      const prevMes = selectedMes === 0 ? 11 : selectedMes - 1
-      const prevAno = selectedMes === 0 ? selectedAno - 1 : selectedAno
-      const lancPrev = lancamentos.filter(l => l.categoria === item.categoria && getMesIdx(l.data) === prevMes && getAnoIdx(l.data) === prevAno)
-      const realizadoPrev = lancPrev.reduce((sum, l) => Math.round((sum + getBruto(l)) * 100) / 100, 0)
-
-      return realizadoPrev > 0
-    })
+    }).filter(item => item.realizado > 0 || item.isDirty)
   }, [lancamentos, orcamentos, selectedMes, selectedAno, editValues, categorias])
 
   const handleSaveOrcamento = async (categoria: string, valor: number, id?: string) => {
