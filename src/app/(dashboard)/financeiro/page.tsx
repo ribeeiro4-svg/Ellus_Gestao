@@ -25,12 +25,13 @@ import SupplierCreateModal from '@/components/conciliacao/SupplierCreateModal'
 import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToolbar'
 import { useFechamento } from '@/lib/hooks/useFechamento'
 import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
-import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, CloudLightning, Trash2 } from 'lucide-react'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, CloudLightning, Trash2, Target } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
+import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction } from '@/app/actions/financeiro_cleanup'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
@@ -82,6 +83,8 @@ export default function FinanceiroPage() {
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
+  const [isCompModalOpen, setIsCompModalOpen] = useState(false)
+  const [compTarget, setCompTarget] = useState<any>(null)
   const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
   const [filterCategory, setFilterCategory] = useState<string>('ALL')
   const [isSupplierCreateOpen, setIsSupplierCreateOpen] = useState(false)
@@ -358,7 +361,26 @@ export default function FinanceiroPage() {
     { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
     { header: 'Conciliação', key: 'data_conciliacao', render: (l: any) => (l.conciliado ? (<div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-600">{fmtData(l.data_conciliacao)}</span><span className="text-[8px] text-emerald-400 font-medium uppercase tracking-tighter">Liquidado</span></div>) : (<span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Pendente</span>))},
     { header: 'Data Lançamento', key: 'created_at', filterValue: (l: any) => l.created_at ? fmtData(l.created_at) : '--', render: (l: any) => <span className="text-[10px] font-bold text-slate-500">{l.created_at ? fmtData(l.created_at) : '--'}</span> },
-    { header: '', key: 'acoes', className: 'text-right', render: (i: any) => (<div className="flex items-center justify-end gap-2 group-hover:opacity-100 opacity-0 transition-opacity"><button onClick={() => { setEditingItem(i); setIsModalOpen(true) }} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"><Pencil size={14} /></button><button onClick={() => confirm('Excluir?') && remover(i.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><XCircle size={14} /></button></div>) }
+    { 
+      header: '', 
+      key: 'acoes', 
+      className: 'text-right', 
+      render: (i: any) => (
+        <div className="flex items-center justify-end gap-2 group-hover:opacity-100 opacity-0 transition-opacity">
+          {i.tipo === 'receita' && (
+            <button 
+              onClick={() => { setCompTarget(i); setIsCompModalOpen(true) }} 
+              className="p-1.5 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100"
+              title="Indicar Competência"
+            >
+              <Target size={14} />
+            </button>
+          )}
+          <button onClick={() => { setEditingItem(i); setIsModalOpen(true) }} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"><Pencil size={14} /></button>
+          <button onClick={() => confirm('Excluir?') && remover(i.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><XCircle size={14} /></button>
+        </div>
+      ) 
+    }
   ], [associados, fornecedores, diretoria, editedMemos, remover])
 
   const modalFields: Field[] = useMemo(() => [
@@ -419,6 +441,8 @@ export default function FinanceiroPage() {
       { value: '12', label: '1 ano (12 meses)' },
       { value: '24', label: '2 anos (24 meses)' },
     ]},
+    { name: 'competencia_mes', label: 'Mês de Competência', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: MESES.map((m, idx) => ({ value: idx, label: m })) },
+    { name: 'competencia_ano', label: 'Ano de Competência', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [2024, 2025, 2026].map(y => ({ value: y, label: String(y) })) },
   ], [contas, categorias, associados, fornecedores, diretoria, isSupplierCreateOpen])
 
   const conciliacaoStats = useMemo(() => {
@@ -696,6 +720,17 @@ export default function FinanceiroPage() {
         message={`Você tem certeza que deseja excluir permanentemente ${selectedIds.length} lançamentos? Esta ação não poderá ser desfeita.`}
         confirmText="Sim, Excluir Tudo"
         type="danger"
+      />
+
+      <IndicarCompetenciaModal 
+        isOpen={isCompModalOpen} 
+        onClose={() => setIsCompModalOpen(false)} 
+        launch={compTarget}
+        lancamentos={lancamentos}
+        onSave={async (id, mes, ano) => {
+          const res = await atualizar(id, { competencia_mes: mes, competencia_ano: ano })
+          if (res.error) throw new Error(String(res.error))
+        }}
       />
     </div>
   )
