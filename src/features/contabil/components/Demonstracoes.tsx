@@ -1,13 +1,15 @@
 'use client'
 import React, { useState } from 'react'
+import { Loader2, Lock } from 'lucide-react'
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
 export default function Demonstracoes({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
   const { contas } = planoHook
-  const { calcularBalancete } = lancHook
+  const { calcularBalancete, refresh } = lancHook
   const [demo, setDemo] = useState<'dsd' | 'bp' | 'dmps'>('dsd')
   const [saldos, setSaldos] = useState<Record<string, { debitos: number; creditos: number }>>({})
   const [loading, setLoading] = useState(false)
+  const [encerrando, setEncerrando] = useState(false)
   const ano = new Date().getFullYear()
 
   React.useEffect(() => {
@@ -228,19 +230,51 @@ export default function Demonstracoes({ lancHook, planoHook }: { lancHook: any; 
     )
   }
 
+  const handleEncerrarExercicio = async () => {
+    const msg = `⚠️ ATENÇÃO — OPERAÇÃO IRREVERSÍVEL\n\nVocê está prestes a ENCERRAR O EXERCÍCIO de ${ano}.\n\nO sistema irá:\n✅ Zerar todas as contas de Ingressos (Grupo 3)\n✅ Zerar todas as contas de Dispêndios (Grupo 4)\n✅ Calcular o Superávit ou Déficit\n✅ Transferir o resultado para o Patrimônio Social\n\nDeseja continuar?`
+    if (!confirm(msg)) return
+    setEncerrando(true)
+    try {
+      const { encerrarExercicioAction } = await import('@/features/contabil/actions/yearEndClosing')
+      const res = await encerrarExercicioAction(ano)
+      if (res.error) {
+        alert(`Erro: ${res.error}`)
+      } else {
+        const tipo = res.tipo === 'superavit' ? '✅ SUPERÁVIT' : '⚠️ DÉFICIT'
+        alert(`Exercício ${res.ano} encerrado com sucesso!\n\n${tipo}: ${fmtR(Math.abs(res.resultado ?? 0))}\n\nIngressos: ${fmtR(res.totalIngressos ?? 0)}\nDispêndios: ${fmtR(res.totalDispendios ?? 0)}\nContas zeradas: ${res.contasZeradas}\n\nDois lançamentos de encerramento foram inseridos no Livro Diário em 31/12/${res.ano}.`)
+        // Recarregar os saldos das demonstrações
+        const novosSaldos = await calcularBalancete(ano.toString())
+        setSaldos(novosSaldos)
+        refresh?.()
+      }
+    } finally {
+      setEncerrando(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl w-fit">
-        {[
-          { id: 'dsd', label: '📊 DSD' },
-          { id: 'bp', label: '⚖️ Balanço Patrimonial' },
-          { id: 'dmps', label: '🔄 DMPS' },
-        ].map(t => (
-          <button key={t.id} onClick={() => setDemo(t.id as any)}
-            className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${demo === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-            {t.label}
-          </button>
-        ))}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl">
+          {[
+            { id: 'dsd', label: '📊 DSD' },
+            { id: 'bp', label: '⚖️ Balanço Patrimonial' },
+            { id: 'dmps', label: '🔄 DMPS' },
+          ].map(t => (
+            <button key={t.id} onClick={() => setDemo(t.id as any)}
+              className={`px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${demo === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={handleEncerrarExercicio}
+          disabled={encerrando}
+          className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition-all disabled:opacity-50 shadow-sm"
+        >
+          {encerrando ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
+          {encerrando ? 'Encerrando...' : `🔒 Encerrar Exercício ${ano}`}
+        </button>
       </div>
 
       <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-3">

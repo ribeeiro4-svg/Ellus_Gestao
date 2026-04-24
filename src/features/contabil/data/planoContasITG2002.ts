@@ -93,6 +93,10 @@ export const PLANO_CONTAS_ITG2002: PlanoContasItem[] = [
   { codigo:'2.3.2.01', descricao:'Superávits ou Déficits de Exercícios Anteriores', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
   { codigo:'2.3.2.01.001', descricao:'Superávits/Déficits Acumulados', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
 
+  { codigo:'2.3.3', descricao:'RESULTADO DO EXERCÍCIO', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
+  { codigo:'2.3.3.01', descricao:'Resultado do Exercício Atual', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
+  { codigo:'2.3.3.01.001', descricao:'Superávit/Déficit do Exercício Atual', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
+
   // ── 3 INGRESSOS (RECEITAS) ────────────────────────────────────────────────
   { codigo:'3', descricao:'INGRESSOS', nivel:1, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
   { codigo:'3.1', descricao:'INGRESSOS DAS ATIVIDADES COM RESTRIÇÃO', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
