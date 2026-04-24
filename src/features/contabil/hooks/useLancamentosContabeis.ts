@@ -153,10 +153,16 @@ export function useLancamentosContabeis() {
   }
 
   // Balancete de verificação por período
-  const calcularBalancete = async (anoMes: string) => {
-    const [ano, mes] = anoMes.split('-')
-    const start = `${ano}-${mes}-01`
-    const end = `${ano}-${mes}-31`
+  const calcularBalancete = async (periodo: string) => {
+    let start, end;
+    if (periodo.includes('-')) {
+      const [ano, mes] = periodo.split('-')
+      start = `${ano}-${mes}-01`
+      end = `${ano}-${mes}-31`
+    } else {
+      start = `${periodo}-01-01`
+      end = `${periodo}-12-31`
+    }
 
     const { data: partidas } = await sb.from('lancamentos_partidas')
       .select('conta_id, tipo_partida, valor, lancamento:lancamento_id(data_competencia, status, tenant_id)')

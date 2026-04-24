@@ -13,7 +13,7 @@ export default function Demonstracoes({ lancHook, planoHook }: { lancHook: any; 
   React.useEffect(() => {
     async function load() {
       setLoading(true)
-      const res = await calcularBalancete(`${ano}-01`)
+      const res = await calcularBalancete(ano.toString())
       setSaldos(res)
       setLoading(false)
     }
