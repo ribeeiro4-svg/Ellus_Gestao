@@ -94,3 +94,30 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   
   return { error: insErr?.message || null }
 }
+
+export async function sincronizarPeriodoContabil(dataInicio: string) {
+  const sb = await createServerSupabase()
+  
+  // 1. Buscar todos os lançamentos pagos desde a data de início
+  const { data: lancs, error } = await sb
+    .from('lancamentos')
+    .select('id')
+    .eq('status', 'pago')
+    .gte('data', dataInicio)
+  
+  if (error) return { error: error.message }
+  if (!lancs || lancs.length === 0) return { success: true, count: 0 }
+
+  let count = 0
+  let errors = []
+
+  for (const l of lancs) {
+    const res = await sincronizarLancamentoContabil(l.id)
+    if (!res.error) count++
+    else if (res.error !== 'Lançamento já sincronizado') {
+      errors.push(`${l.id}: ${res.error}`)
+    }
+  }
+
+  return { success: true, count, total: lancs.length, errors: errors.length > 0 ? errors : null }
+}

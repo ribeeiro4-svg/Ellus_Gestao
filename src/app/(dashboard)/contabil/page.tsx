@@ -48,6 +48,21 @@ export default function ContabilPage() {
           )}
           <button
             onClick={async () => {
+              if (confirm('Deseja integrar todos os lançamentos pagos de Janeiro/2026 até hoje ao Livro Diário?')) {
+                const { sincronizarPeriodoContabil } = await import('@/features/contabil/actions/accountingActions')
+                const res = await sincronizarPeriodoContabil('2026-01-01')
+                if (res.success) {
+                  alert(`Sucesso! ${res.count} de ${res.total} lançamentos foram sincronizados.`)
+                  window.location.reload()
+                } else alert(`Erro na sincronização: ${res.error}`)
+              }
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-amber-600 bg-white border border-amber-100 hover:bg-amber-50 rounded-xl transition-all shadow-sm"
+          >
+            🔄 Sincronizar Retroativos
+          </button>
+          <button
+            onClick={async () => {
               if (confirm('Deseja configurar automaticamente o mapeamento das categorias financeiras para o Plano de Contas ITG 2002?')) {
                 const { seedAccountingConfigAction } = await import('@/features/contabil/actions/seedAccountingConfig')
                 const res = await seedAccountingConfigAction()
