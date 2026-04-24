@@ -25,7 +25,7 @@ import SupplierCreateModal from '@/components/conciliacao/SupplierCreateModal'
 import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToolbar'
 import { useFechamento } from '@/lib/hooks/useFechamento'
 import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
-import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, CloudLightning, Trash2, Target } from 'lucide-react'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, CloudLightning, Trash2, Target, ArrowRightLeft } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
@@ -33,6 +33,7 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
 import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction } from '@/app/actions/financeiro_cleanup'
+import RemanejarModal from '@/components/ui/RemanejarModal'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -84,7 +85,9 @@ export default function FinanceiroPage() {
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [isCompModalOpen, setIsCompModalOpen] = useState(false)
+  const [isRemanejarModalOpen, setIsRemanejarModalOpen] = useState(false)
   const [compTarget, setCompTarget] = useState<any>(null)
+  const [remanejarTarget, setRemanejarTarget] = useState<any>(null)
   const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
   const [filterCategory, setFilterCategory] = useState<string>('ALL')
   const [isSupplierCreateOpen, setIsSupplierCreateOpen] = useState(false)
@@ -374,6 +377,15 @@ export default function FinanceiroPage() {
               title="Indicar Competência"
             >
               <Target size={14} />
+            </button>
+          )}
+          {i.tipo === 'receita' && i.status === 'pago' && (
+            <button 
+              onClick={() => { setRemanejarTarget(i); setIsRemanejarModalOpen(true) }} 
+              className="p-1.5 text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100"
+              title="Remanejar para outro associado"
+            >
+              <ArrowRightLeft size={14} />
             </button>
           )}
           <button onClick={() => { setEditingItem(i); setIsModalOpen(true) }} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"><Pencil size={14} /></button>
@@ -731,6 +743,14 @@ export default function FinanceiroPage() {
           const res = await atualizar(id, { competencia_mes: mes, competencia_ano: ano })
           if (res.error) throw new Error(String(res.error))
         }}
+      />
+
+      <RemanejarModal 
+        isOpen={isRemanejarModalOpen}
+        onClose={() => setIsRemanejarModalOpen(false)}
+        original={remanejarTarget}
+        associados={associados}
+        onConfirm={remanejar}
       />
     </div>
   )
