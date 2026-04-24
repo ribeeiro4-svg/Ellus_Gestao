@@ -1,15 +1,23 @@
-'use client'
 import React from 'react'
-import { FileText, Printer, FileSpreadsheet } from 'lucide-react'
+import { FileText, Printer, FileSpreadsheet, Loader2 } from 'lucide-react'
+import Balancete from './Balancete'
+import Demonstracoes from './Demonstracoes'
+import DFC from './DFC'
 
 export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
   
-  const imprimirRelatorio = (titulo: string, idElemento: string) => {
-    const conteudo = document.getElementById(idElemento)
-    if (!conteudo) return
+  const handleImprimir = (id: string, titulo: string) => {
+    const conteudo = document.getElementById(id)
+    if (!conteudo) {
+      alert(`O relatório "${titulo}" ainda não foi carregado. Por favor, acesse a aba correspondente primeiro ou aguarde um instante.`)
+      return
+    }
 
     const janela = window.open('', '', 'width=900,height=700')
-    if (!janela) return
+    if (!janela) {
+      alert('Bloqueio de pop-up detectado! Por favor, permita pop-ups para imprimir.')
+      return
+    }
 
     janela.document.write(`
       <html>
@@ -26,6 +34,7 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
             .total { font-weight: 800; background-color: #f1f5f9; }
             .text-right { text-align: right; }
             .indent { padding-left: 30px; }
+            .bg-emerald-600, .bg-indigo-600 { background: #f8fafc !important; color: #000 !important; }
             @media print {
               .no-print { display: none; }
               body { padding: 0; }
@@ -36,12 +45,8 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
           <div class="header">
             <h1>ASSOCIACAO COMUNITARIA PROBEC — ACPROBEC</h1>
             <p>${titulo.toUpperCase()}</p>
-            <p style="font-size: 10px; font-weight: normal;">Emitido em: ${new Date().toLocaleString('pt-BR')}</p>
           </div>
           ${conteudo.innerHTML}
-          <div style="margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 10px; text-align: center; font-size: 9px; color: #94a3b8;">
-            Relatório gerado automaticamente pelo Sistema Inovacont ACPROBEC — Conformidade ITG 2002 (R1)
-          </div>
         </body>
       </html>
     `)
@@ -69,11 +74,11 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
             
             <div className="flex gap-2">
               <button 
-                onClick={() => alert('Dica: Selecione a aba do relatório desejado abaixo antes de imprimir para garantir que os dados estejam carregados.')}
+                onClick={() => handleImprimir(rel.id, rel.title)}
                 className="flex-1 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
               >
                 <Printer size={12} />
-                IMPRIMIR PDF
+                IMPRIMIR AGORA
               </button>
               <button className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:text-emerald-600 hover:bg-emerald-50 transition-all">
                 <FileSpreadsheet size={16} />
@@ -81,6 +86,19 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Renderização Oculta para Captura de Dados */}
+      <div className="hidden">
+        <div id="bp-print">
+          <Demonstracoes lancHook={lancHook} planoHook={planoHook} initialTab="bp" />
+        </div>
+        <div id="dsd-print">
+          <Demonstracoes lancHook={lancHook} planoHook={planoHook} initialTab="dsd" />
+        </div>
+        <div id="dfc-print">
+          <DFC lancHook={lancHook} planoHook={planoHook} />
+        </div>
       </div>
 
       {/* Instrução */}
