@@ -47,33 +47,7 @@ export default function Topbar() {
       </div>
 
       <div className="topbar-right flex items-center gap-[10px]">
-        <div className="hidden lg:flex items-center bg-white rounded-lg px-4 py-2 gap-3 border border-slate-200 focus-within:ring-4 focus-within:ring-[var(--accent)]/5 focus-within:border-[var(--accent)] transition-all w-72 shadow-sm">
-          <Search size={16} className="text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Pesquisar em tudo..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-transparent border-none outline-none text-[12.5px] text-slate-700 placeholder:text-slate-400 w-full font-medium"
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-           <button 
-             onClick={handleClear}
-             className="btn btn-secondary w-[38px] h-[38px] p-0 flex items-center justify-center shadow-lg shadow-emerald-900/40"
-             title="Limpar Todos os Filtros"
-           >
-             <Trash2 strokeWidth={2.5} className="w-5 h-5 min-w-[20px] min-h-[20px] flex-shrink-0 text-white" />
-           </button>
-           <button 
-             className="btn btn-secondary w-[38px] h-[38px] p-0 flex items-center justify-center relative shadow-lg shadow-emerald-900/40"
-             title="Notificações"
-           >
-             <Bell strokeWidth={2.5} className="w-5 h-5 min-w-[20px] min-h-[20px] flex-shrink-0 text-white" />
-             <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#ff3333] rounded-full border-2 border-[#1d4f3e]"></span>
-           </button>
-        </div>
+        {/* Search and action buttons removed by user request */}
 
         <div className="h-6 w-[1px] bg-slate-200 mx-2"></div>
 
