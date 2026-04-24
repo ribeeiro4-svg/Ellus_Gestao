@@ -44,7 +44,7 @@ export default function FinanceiroPage() {
   } = useFinanceiro()
   const { contas } = useContas()
   const { associados, atualizar: atualizarAssociado } = useAssociados()
-  const { fornecedores } = useFornecedores()
+  const { fornecedores, inserir: inserirFornecedor } = useFornecedores()
   const { diretoria } = useDiretoria()
   const { categorias } = useCategorias()
 
@@ -384,7 +384,7 @@ export default function FinanceiroPage() {
   ], [associados, fornecedores, diretoria, editedMemos, remover])
 
   const modalFields: Field[] = useMemo(() => [
-    { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Receita' }, { value: 'despesa', label: 'Despesa' }] },
+    { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Ingresso' }, { value: 'despesa', label: 'Dispêndio' }] },
     { name: 'data', label: 'Data', type: 'date', required: true },
     { name: 'descricao', label: 'Descrição', type: 'text', required: true },
     { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
@@ -441,8 +441,8 @@ export default function FinanceiroPage() {
       { value: '12', label: '1 ano (12 meses)' },
       { value: '24', label: '2 anos (24 meses)' },
     ]},
-    { name: 'competencia_mes', label: 'Mês de Competência', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: MESES.map((m, idx) => ({ value: idx, label: m })) },
-    { name: 'competencia_ano', label: 'Ano de Competência', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [2024, 2025, 2026].map(y => ({ value: y, label: String(y) })) },
+    { name: 'competencia_mes', label: 'Mês de Competência', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: MESES.map((m, idx) => ({ value: String(idx), label: m })) },
+    { name: 'competencia_ano', label: 'Ano de Competência', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [2024, 2025, 2026].map(y => ({ value: String(y), label: String(y) })) },
   ], [contas, categorias, associados, fornecedores, diretoria, isSupplierCreateOpen])
 
   const conciliacaoStats = useMemo(() => {
@@ -469,19 +469,19 @@ export default function FinanceiroPage() {
         </div>
       </div>
 
-      <FinancialKpiGrid kpis={kpiData} onNewReceita={() => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) }} onNewDespesa={() => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) }} />
+      <FinancialKpiGrid kpis={kpiData} onNewIngresso={() => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) }} onNewDespesa={() => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) }} />
 
       <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl w-fit">
         <button onClick={() => setActiveTab('geral')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'geral' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📊 Geral</button>
-        <button onClick={() => setActiveTab('receitas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'receitas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↑ Receitas</button>
-        <button onClick={() => setActiveTab('despesas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'despesas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↓ Despesas</button>
+        <button onClick={() => setActiveTab('receitas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'receitas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↑ Ingressos</button>
+        <button onClick={() => setActiveTab('despesas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'despesas' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↓ Dispêndios</button>
         <button onClick={() => setActiveTab('inadimplencia')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'inadimplencia' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>⚠️ Inadimplência</button>
         <button onClick={() => setActiveTab('conciliacao')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'conciliacao' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📑 Conciliação</button>
       </div>
 
       {activeTab === 'geral' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Receita Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Receita Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Desp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Desp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+          <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Ingresso Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Ingresso Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Disp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Disp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
           <ChartCard title="📈 Saldo Acumulado" subtitle="Evolução do caixa"><Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
         </div>
       )}
@@ -598,7 +598,7 @@ export default function FinanceiroPage() {
         isOpen={isSupplierCreateOpen} 
         onClose={() => setIsSupplierCreateOpen(false)} 
         memo={currentEditMemo}
-        inserir={inserir}
+        inserir={inserirFornecedor}
         onSuccess={(sup) => {
           if (parentSetFormData) {
             parentSetFormData((prev: any) => ({ ...prev, fornecedor_id: sup.id }))
@@ -690,7 +690,7 @@ export default function FinanceiroPage() {
         onClose={() => setIsSupplierLinkModalOpen(false)} 
         extrato={selectedExtrato} 
         fornecedores={fornecedores}
-        inserir={inserir}
+        inserir={inserirFornecedor}
         onSelect={(sup: any) => { 
           const tf = selectedExtrato.bank.fitid; 
           setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: enhanceMemo(sup.nome, selectedExtrato.bank.memo) })); 

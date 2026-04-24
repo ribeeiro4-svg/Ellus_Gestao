@@ -89,18 +89,18 @@ export default function EvolucaoTab() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <ChartCard title="Receita vs Despesa" subtitle="Histórico operacional mensal">
+        <ChartCard title="Ingresso vs Dispêndio" subtitle="Histórico operacional mensal">
           <div className="h-[280px] mt-4">
             <Chart 
               type="bar" 
               data={{
                 labels: MESES,
                 datasets: [
-                  { label: `Receitas ${selectedYear}`, data: baseData.map(m => m.receita), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 4 },
-                  { label: `Despesas ${selectedYear}`, data: baseData.map(m => m.despesa), backgroundColor: 'rgba(239, 68, 68, 0.6)', borderRadius: 4 },
+                  { label: `Ingressos ${selectedYear}`, data: baseData.map(m => m.receita), backgroundColor: 'rgba(16, 185, 129, 0.7)', borderRadius: 4 },
+                  { label: `Dispêndios ${selectedYear}`, data: baseData.map(m => m.despesa), backgroundColor: 'rgba(239, 68, 68, 0.6)', borderRadius: 4 },
                   ...(compareData ? [
-                    { label: `Receitas ${compareYear}`, data: compareData.map(m => m.receita), backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 4, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
-                    { label: `Despesas ${compareYear}`, data: compareData.map(m => m.despesa), backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 4, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' }
+                    { label: `Ingressos ${compareYear}`, data: compareData.map(m => m.receita), backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 4, borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)' },
+                    { label: `Dispêndios ${compareYear}`, data: compareData.map(m => m.despesa), backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 4, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' }
                   ] : [])
                 ]
               }}
@@ -116,14 +116,14 @@ export default function EvolucaoTab() {
           </div>
         </ChartCard>
 
-        <ChartCard title="Evolução do Resultado" subtitle="Variação mensal do lucro líquido">
+        <ChartCard title="Evolução do Superávit/Déficit" subtitle="Variação mensal do superávit líquido">
           <div className="h-[280px] mt-4">
             <Line 
               data={{
                 labels: MESES,
                 datasets: [
-                  { label: `Resultado ${selectedYear}`, data: baseData.map(m => m.resultado), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.4, pointRadius: 3 },
-                  ...(compareData ? [{ label: `Resultado ${compareYear}`, data: compareData.map(m => m.resultado), borderColor: 'rgba(139, 92, 246, 0.3)', fill: false, tension: 0.4, borderDash: [5, 5] }] : [])
+                  { label: `Superávit/Déficit ${selectedYear}`, data: baseData.map(m => m.resultado), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+                  ...(compareData ? [{ label: `Superávit/Déficit ${compareYear}`, data: compareData.map(m => m.resultado), borderColor: 'rgba(139, 92, 246, 0.3)', fill: false, tension: 0.4, borderDash: [5, 5] }] : [])
                 ]
               }}
               options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: fontSm } } } }}
@@ -164,7 +164,7 @@ export default function EvolucaoTab() {
                  <h3 className="text-3xl font-black text-white">{Math.round((totalReceita / (totalDespesa || 1)) * 100)}%</h3>
                  {compareData && (totalReceita / (totalDespesa || 1) >= (compareData.reduce((s,m)=>s+m.receita,0)/compareData.reduce((s,m)=>s+m.despesa,1)) ? <ArrowUpRight className="text-emerald-400 mb-2" size={18}/> : <ArrowDownRight className="text-rose-400 mb-2" size={18}/>)}
               </div>
-              <p className="text-xs text-slate-400 font-medium">Sua receita cobre os custos operacionais com folga estratégica.</p>
+              <p className="text-xs text-slate-400 font-medium">Seu ingresso cobre os custos operacionais com folga estratégica.</p>
            </div>
            <div className="bg-white rounded-[32px] border border-slate-100 p-8 flex flex-col items-center text-center shadow-sm">
               <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4"><Users size={24} /></div>

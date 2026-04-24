@@ -62,9 +62,9 @@ export function generateReportHtml({ title, period, treasurer, sections, charts,
 
 function buildDashboardSection(metrics: any, charts?: Record<string, string>) {
   const kpis = [
-    { label: 'Receita Total', value: fmtR(metrics.receitaTotal), color: 'var(--emerald)' },
-    { label: 'Despesa Total', value: fmtR(metrics.despesasTotais), color: '#ef4444' },
-    { label: 'Resultado Líquido', value: fmtR(metrics.resultadoPeriodo), color: 'var(--slate-800)' },
+    { label: 'Ingresso Total', value: fmtR(metrics.receitaTotal), color: 'var(--emerald)' },
+    { label: 'Dispêndio Total', value: fmtR(metrics.despesasTotais), color: '#ef4444' },
+    { label: 'Superávit/Déficit Líquido', value: fmtR(metrics.resultadoPeriodo), color: 'var(--slate-800)' },
     { label: 'Associados Ativos', value: metrics.associadosAtivos, color: 'var(--slate-800)' },
     { label: 'Taxa Recuperada', value: fmtR(metrics.taxasRecuperadas), color: 'var(--emerald)' },
     { label: 'Planejado vs Realizado', value: (metrics.planejamentoStats?.percentual || 0).toFixed(0) + '%', color: 'var(--slate-800)' },
@@ -99,8 +99,8 @@ function buildDashboardSection(metrics: any, charts?: Record<string, string>) {
 }
 
 function buildFinanceiroSection(lancamentos: any[]) {
-  const receitas = lancamentos.filter(l => l.tipo === 'receita').sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-  const despesas = lancamentos.filter(l => l.tipo === 'despesa').sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  const ingressos = lancamentos.filter(l => l.tipo === 'receita').sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  const dispendios = lancamentos.filter(l => l.tipo === 'despesa').sort((a,b) => new Date(b.data).getTime() - new Date(a.data).getTime());
 
   const renderTable = (items: any[], title: string, color: string) => `
     <div style="margin-top: 30px;">
@@ -136,8 +136,8 @@ function buildFinanceiroSection(lancamentos: any[]) {
   return `
     <div class="page-divider"></div>
     <h2 class="section-title">Fluxo Financeiro Detalhado</h2>
-    ${renderTable(receitas, 'Receitas', '#10b981')}
-    ${renderTable(despesas, 'Despesas', '#ef4444')}
+    ${renderTable(ingressos, 'Ingressos', '#10b981')}
+    ${renderTable(dispendios, 'Dispêndios', '#ef4444')}
   `;
 }
 
@@ -202,8 +202,8 @@ function buildChartsSection(charts: Record<string, string>, skipDashboard = fals
 }
 
 function buildPlanejamentoSection(comparativo: any[], metrics: any) {
-  const totalRevenue = metrics.receitaTotal || 1;
-  const expItems = comparativo.filter(c => c.tipo === 'despesa' && c.planejado > 0)
+  const totalIngresso = metrics.receitaTotal || 1;
+  const dispItems = comparativo.filter(c => c.tipo === 'despesa' && c.planejado > 0)
     .sort((a,b) => b.planejado - a.planejado);
 
   return `
@@ -240,15 +240,15 @@ function buildPlanejamentoSection(comparativo: any[], metrics: any) {
     </div>
 
     <div>
-      <h3 style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 15px;">Impacto nas Receitas (Top Despesas)</h3>
+      <h3 style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 15px;">Impacto nos Ingressos (Top Dispêndios)</h3>
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        ${expItems.slice(0, 8).map(item => {
-          const pct = ((item.planejado / totalRevenue) * 100).toFixed(1);
+        ${dispItems.slice(0, 8).map(item => {
+          const pct = ((item.planejado / totalIngresso) * 100).toFixed(1);
           return `
             <div class="report-card" style="padding: 15px; margin-bottom: 0;">
               <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; margin-bottom: 8px;">
                 <span style="color: #1e293b;">${item.categoria}</span>
-                <span style="color: #64748b;">${pct}% da Receita</span>
+                <span style="color: #64748b;">${pct}% do Ingresso</span>
               </div>
               <div style="height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
                 <div style="height: 100%; width: ${pct}%; background: #10b981;"></div>
@@ -268,15 +268,15 @@ function buildProjectionsSection(metrics: any) {
   return `
     <div class="page-divider"></div>
     <h2 class="section-title">Projeções Financeiras</h2>
-    <p style="font-size: 11px; color: #64748b; margin-bottom: 20px;">Visão consolidada de receitas e despesas provisionadas para o ano corrente.</p>
+    <p style="font-size: 11px; color: #64748b; margin-bottom: 20px;">Visão consolidada de ingressos e dispêndios provisionados para o ano corrente.</p>
     
     <table>
       <thead>
         <tr>
           <th>Mês</th>
-          <th class="text-right">Receita Projetada</th>
-          <th class="text-right">Despesa Projetada</th>
-          <th class="text-right">Saldo Projetado</th>
+          <th class="text-right">Ingresso Projetado</th>
+          <th class="text-right">Dispêndio Projetado</th>
+          <th class="text-right">Superávit/Déficit Projetado</th>
         </tr>
       </thead>
       <tbody>
@@ -301,7 +301,7 @@ function buildProjectionsSection(metrics: any) {
       <h4 style="margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #10b981;">Análise de Projeção</h4>
       <p style="margin: 0; font-size: 11px; line-height: 1.6; opacity: 0.8;">
         As projeções acima refletem todos os lançamentos em status 'aberto' cadastrados no sistema. 
-        Note que o saldo projetado é uma estimativa baseada na concretização integral das receitas previstas e na manutenção do teto de gastos configurado para as despesas.
+        Note que o superávit projetado é uma estimativa baseada na concretização integral dos ingressos previstos e na manutenção do teto de gastos configurado para os dispêndios.
       </p>
     </div>
   `;

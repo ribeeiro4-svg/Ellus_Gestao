@@ -7,23 +7,30 @@ import {
   Trash2, 
   Pencil,
   Building2,
-  Wallet
+  Wallet,
+  BookOpen,
+  PieChart,
+  LayoutDashboard
 } from 'lucide-react'
 import { useContas } from '@/lib/hooks/useContas'
 import { useCategorias } from '@/lib/hooks/useCategorias'
 import { fmtR } from '@/lib/utils/formatters'
 import CrudModal from '@/components/ui/CrudModal'
-
 import { useTenant } from '@/lib/hooks/useTenant'
+import { useConfiguracoesContabeis } from '@/features/contabil/hooks/useConfiguracoesContabeis'
+import ContaContabilSelect from '@/features/contabil/components/ContaContabilSelect'
+
+type TabType = 'geral' | 'financeiro' | 'contabil'
 
 export default function ConfigPage() {
+  const [activeTab, setActiveTab] = useState<TabType>('geral')
   const { contas, loading: loadingContas, inserir: inserirConta, atualizar: atualizarConta, remover: removerConta } = useContas()
   const { categorias, loading: loadingCats, inserir: inserirCat, atualizar: atualizarCat, remover: removerCat } = useCategorias()
   const { tenant, loading: loadingTenant, atualizar: atualizarTenant } = useTenant()
+  const { configuracoes, salvarMapping } = useConfiguracoesContabeis()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
-
   const [isCatModalOpen, setIsCatModalOpen] = useState(false)
   const [editingCat, setEditingCat] = useState<any>(null)
 
@@ -56,14 +63,9 @@ export default function ConfigPage() {
         cora_cert: coraCert,
         cora_key: coraKey
       })
-      if (error) {
-        console.error('[ConfigPage] Erro ao salvar:', error)
-        alert(`Erro ao salvar no banco: ${error.message}`)
-      } else {
-        alert('Configurações salvas com sucesso!')
-      }
+      if (error) alert(`Erro ao salvar no banco: ${error.message}`)
+      else alert('Configurações salvas com sucesso!')
     } catch (err: any) {
-      console.error('[ConfigPage] Erro inesperado:', err)
       alert('Erro inesperado: ' + err.message)
     }
   }
@@ -71,20 +73,17 @@ export default function ConfigPage() {
   const handleSalvarConta = async (data: any) => {
     if (editingItem) { await atualizarConta(editingItem.id, data) }
     else { await inserirConta(data) }
+    setIsModalOpen(false)
   }
 
   const handleSalvarCat = async (data: any) => {
     try {
       let res;
-      if (editingCat) { 
-        res = await atualizarCat(editingCat.id, data) 
-      } else { 
-        res = await inserirCat(data) 
-      }
+      if (editingCat) res = await atualizarCat(editingCat.id, data)
+      else res = await inserirCat(data)
       
-      if (res?.error) {
-        alert('Erro ao salvar categoria: ' + (res.error as any).message)
-      } else {
+      if (res?.error) alert('Erro ao salvar categoria: ' + (res.error as any).message)
+      else {
         setIsCatModalOpen(false)
         setEditingCat(null)
       }
@@ -102,135 +101,171 @@ export default function ConfigPage() {
     )
   }
 
+  const tabs = [
+    { id: 'geral', label: 'Dados Gerais', icon: Building2 },
+    { id: 'financeiro', label: 'Gestão Financeira', icon: Wallet },
+    { id: 'contabil', label: 'Mapeamento Contábil', icon: BookOpen },
+  ]
+
   return (
     <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20">
-      <div className="page-header flex justify-between items-center">
+      <div className="page-header flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/40 backdrop-blur-md p-8 rounded-[32px] border border-white shadow-sm">
         <div>
-          <h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-            <Settings className="text-[#2d8c6f]" />
-            Configurações
+          <h1 className="page-title text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+              <Settings size={20} />
+            </div>
+            Painel de Configurações
           </h1>
-          <p className="page-subtitle text-xs text-gray-500 mt-1 font-medium italic">
-            Gerencie suas contas bancárias, padronize categorias e configure integrações.
+          <p className="page-subtitle text-sm text-slate-500 mt-1 font-bold italic opacity-70">
+            Ajuste os parâmetros da ACPROBEC e automatize sua contabilidade.
           </p>
+        </div>
+
+        <div className="flex bg-slate-100 p-1 rounded-2xl">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as TabType)}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeTab === tab.id 
+                  ? 'bg-white text-emerald-600 shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Perfil do Portal */}
-        <div className="table-card p-6 flex flex-col gap-6">
-          <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
-            <Building2 className="text-[#2d8c6f] w-4 h-4" />
-            Identidade e Integrações
-          </h2>
-          
-          <div className="space-y-4">
-            <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold text-gray-600 uppercase">Nome da Instituição</label>
-              <input 
-                type="text" 
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                placeholder="Ex: ACPROBEC Gestão"
-                className="w-full h-11 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-[#2d8c6f]/30 transition-all outline-none"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="text-[11px] font-bold text-gray-600 uppercase">URL do Logotipo</label>
-              <div className="flex gap-3">
+      {activeTab === 'geral' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="table-card p-10 flex flex-col gap-8 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/40">
+            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[2px] flex items-center gap-3">
+              <Building2 className="text-emerald-600 w-5 h-5" />
+              Identidade Institucional
+            </h2>
+            
+            <div className="space-y-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome da Associação</label>
                 <input 
                   type="text" 
-                  value={customLogo}
-                  onChange={(e) => setCustomLogo(e.target.value)}
-                  placeholder="https://exemplo.com/logo.png"
-                  className="flex-1 h-11 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-[#2d8c6f]/30 transition-all outline-none"
-                />
-                {customLogo && (
-                  <div className="w-11 h-11 rounded-xl bg-white border border-gray-100 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-sm">
-                    <img src={customLogo} alt="Preview" className="w-full h-full object-contain" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-gray-100 flex flex-col gap-4">
-              <label className="text-[11px] font-bold text-indigo-600 uppercase flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
-                Integração ZapSign
-              </label>
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Token da API</label>
-                <input 
-                  type="password" 
-                  value={zapsignToken}
-                  onChange={(e) => setZapsignToken(e.target.value)}
-                  placeholder="Seu token ZapSign..."
-                  className="w-full h-11 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-indigo-400/30 transition-all outline-none font-mono"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  placeholder="Ex: ACPROBEC Nacional"
+                  className="w-full h-12 px-5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:bg-white focus:border-emerald-500/30 transition-all outline-none"
                 />
               </div>
-            </div>
-
-            <div className="pt-4 border-t border-gray-100 flex flex-col gap-4">
-              <label className="text-[11px] font-bold text-emerald-600 uppercase flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                Integração Cora (mTLS)
-              </label>
 
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">Client ID (ID)</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Logotipo (URL)</label>
+                <div className="flex gap-4">
+                  <input 
+                    type="text" 
+                    value={customLogo}
+                    onChange={(e) => setCustomLogo(e.target.value)}
+                    placeholder="https://sua-logo.com/img.png"
+                    className="flex-1 h-12 px-5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:bg-white focus:border-emerald-500/30 transition-all outline-none"
+                  />
+                  {customLogo && (
+                    <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 p-1 flex items-center justify-center overflow-hidden shrink-0 shadow-sm ring-4 ring-slate-50">
+                      <img src={customLogo} alt="Preview" className="w-full h-full object-contain" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-8 border-t border-slate-100 space-y-6">
+                <label className="text-[11px] font-black text-indigo-600 uppercase flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse shadow-lg shadow-indigo-200"></div>
+                  Integração ZapSign (Contratos)
+                </label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Token Secreto da API</label>
+                  <input 
+                    type="password" 
+                    value={zapsignToken}
+                    onChange={(e) => setZapsignToken(e.target.value)}
+                    placeholder="••••••••••••••••"
+                    className="w-full h-12 px-5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-mono focus:bg-white focus:border-indigo-400/30 transition-all outline-none"
+                  />
+                </div>
+              </div>
+
+              <button 
+                onClick={handleSavePerfil}
+                className="mt-4 w-full h-14 bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95"
+              >
+                Salvar Dados Institucionais
+              </button>
+            </div>
+          </div>
+
+          <div className="table-card p-10 flex flex-col gap-8 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/40">
+            <h2 className="text-sm font-black text-slate-400 uppercase tracking-[2px] flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <PieChart size={18} />
+              </div>
+              Integração Bancária Cora (mTLS)
+            </h2>
+
+            <div className="space-y-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Client ID</label>
                 <input 
                   type="text" 
                   value={coraId}
                   onChange={(e) => setCoraId(e.target.value)}
                   placeholder="int-..."
-                  className="w-full h-11 px-4 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:bg-white focus:border-emerald-400/30 transition-all outline-none font-mono"
+                  className="w-full h-12 px-5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-mono focus:bg-white focus:border-emerald-400/30 transition-all outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Certificado (.cert)</label>
-                  <textarea 
-                    value={coraCert}
-                    onChange={(e) => setCoraCert(e.target.value)}
-                    placeholder="-----BEGIN CERTIFICATE-----"
-                    className="w-full h-24 p-3 bg-gray-50 border border-gray-100 rounded-xl text-[10px] focus:bg-white focus:border-emerald-400/30 transition-all outline-none font-mono resize-none"
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Chave Privada (.key)</label>
-                  <textarea 
-                    value={coraKey}
-                    onChange={(e) => setCoraKey(e.target.value)}
-                    placeholder="-----BEGIN RSA PRIVATE KEY-----"
-                    className="w-full h-24 p-3 bg-gray-50 border border-gray-100 rounded-xl text-[10px] focus:bg-white focus:border-emerald-400/30 transition-all outline-none font-mono resize-none"
-                  />
-                </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Certificado Público (.cert)</label>
+                <textarea 
+                  value={coraCert}
+                  onChange={(e) => setCoraCert(e.target.value)}
+                  placeholder="-----BEGIN CERTIFICATE-----"
+                  className="w-full h-32 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-mono focus:bg-white focus:border-emerald-400/30 transition-all outline-none resize-none"
+                />
               </div>
-            </div>
 
-            <button 
-              onClick={handleSavePerfil}
-              disabled={loadingTenant}
-              className="mt-2 w-full h-11 bg-[#2d8c6f] text-white text-[11px] font-black uppercase rounded-xl hover:shadow-lg hover:shadow-emerald-900/10 transition-all active:scale-95 disabled:opacity-50"
-            >
-              {loadingTenant ? 'Salvando...' : 'Salvar Alterações'}
-            </button>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Chave Privada (.key)</label>
+                <textarea 
+                  value={coraKey}
+                  onChange={(e) => setCoraKey(e.target.value)}
+                  placeholder="-----BEGIN RSA PRIVATE KEY-----"
+                  className="w-full h-32 p-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-mono focus:bg-white focus:border-emerald-400/30 transition-all outline-none resize-none"
+                />
+              </div>
+
+              <button 
+                onClick={handleSavePerfil}
+                className="w-full h-14 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-emerald-500 transition-all shadow-xl shadow-emerald-100 active:scale-95"
+              >
+                Atualizar Credenciais Bancárias
+              </button>
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="flex flex-col gap-8">
-          {/* Contas Bancárias */}
-          <div className="table-card p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-sm font-bold text-gray-400 font-sans uppercase tracking-[2px] flex items-center gap-2">
-                <CreditCard className="text-[#2d8c6f] w-4 h-4" />
+      {activeTab === 'financeiro' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="table-card p-10 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/40">
+            <div className="flex justify-between items-center mb-10">
+              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[2px] flex items-center gap-3">
+                <CreditCard className="text-emerald-600 w-5 h-5" />
                 Contas Bancárias
               </h2>
               <button 
                 onClick={() => { setEditingItem(null); setIsModalOpen(true) }}
-                className="px-4 py-2 bg-[#2d8c6f] text-white text-[10px] font-bold rounded-xl hover:bg-[#246d56] transition-all uppercase shadow-sm"
+                className="px-6 py-3 bg-emerald-600 text-white text-[10px] font-black rounded-xl hover:bg-emerald-500 transition-all uppercase tracking-widest"
               >
                 + Nova Conta
               </button>
@@ -238,49 +273,40 @@ export default function ConfigPage() {
 
             <div className="space-y-4">
               {contas.map(conta => (
-                <div key={conta.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-[#2d8c6f] shadow-sm">
-                      {conta.tipo === 'caixa_fisico' ? <Wallet size={20} /> : <Building2 size={20} />}
+                <div key={conta.id} className="flex items-center justify-between p-6 bg-slate-50/50 rounded-3xl border border-slate-100 group hover:bg-white hover:border-emerald-200 hover:shadow-md transition-all">
+                  <div className="flex items-center gap-5">
+                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-emerald-600 shadow-sm border border-slate-50 group-hover:scale-110 transition-transform">
+                      {conta.tipo === 'caixa_fisico' ? <Wallet size={24} /> : <Building2 size={24} />}
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-gray-800">{conta.nome}</div>
-                      <div className="text-[10px] text-gray-400 uppercase font-black">{conta.tipo.replace('_', ' ')}</div>
+                      <div className="text-[13px] font-black text-slate-800 tracking-tight">{conta.nome}</div>
+                      <div className="text-[10px] text-slate-400 uppercase font-black tracking-widest">{conta.tipo.replace('_', ' ')}</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-8">
                     <div className="text-right">
-                      <div className="text-[10px] text-gray-400 uppercase font-bold">Saldo Inicial</div>
-                      <div className="text-sm font-black text-gray-700">{fmtR(conta.saldo_inicial)}</div>
+                      <div className="text-[9px] text-slate-400 uppercase font-black tracking-widest mb-0.5">Saldo Inicial</div>
+                      <div className="text-sm font-black text-slate-700">{fmtR(conta.saldo_inicial)}</div>
                     </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditingItem(conta); setIsModalOpen(true) }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Pencil size={14} /></button>
-                      <button onClick={() => confirm('Excluir esta conta?') && removerConta(conta.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 size={14} /></button>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setEditingItem(conta); setIsModalOpen(true) }} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><Pencil size={14} /></button>
+                      <button onClick={() => confirm('Excluir esta conta?') && removerConta(conta.id)} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
               ))}
-              {contas.length === 0 && !loadingContas && (
-                <div className="text-center py-8 text-gray-400 text-xs italic">Nenhuma conta cadastrada.</div>
-              )}
-              {loadingContas && (
-                <div className="text-center py-8 text-gray-300 animate-pulse text-[10px] uppercase font-bold italic">Carregando contas...</div>
-              )}
             </div>
           </div>
 
-          {/* Categorias Padronizadas */}
-          <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-amber-400 via-amber-200 to-transparent"></div>
-            
+          <div className="table-card p-10 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/40">
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-[12px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-3">
-                <Plus className="text-amber-500 w-5 h-5" strokeWidth={3} />
-                Categorias Padronizadas
+              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[2px] flex items-center gap-3">
+                <LayoutDashboard className="text-amber-500 w-5 h-5" />
+                Categorias (ITG 2002)
               </h2>
               <button 
                 onClick={() => { setEditingCat(null); setIsCatModalOpen(true) }}
-                className="px-8 py-4 bg-[#f39c12] hover:bg-[#e67e22] text-white text-[11px] font-black rounded-2xl transition-all uppercase tracking-widest shadow-lg shadow-orange-100 active:scale-95"
+                className="px-6 py-3 bg-amber-500 text-white text-[10px] font-black rounded-xl hover:bg-amber-400 transition-all uppercase tracking-widest"
               >
                 + Nova Categoria
               </button>
@@ -290,36 +316,77 @@ export default function ConfigPage() {
               {categorias.map(cat => (
                 <div 
                   key={cat.id} 
-                  className="flex items-center justify-between p-6 bg-slate-50/50 rounded-[24px] border border-slate-100 group hover:bg-white hover:border-amber-200 hover:shadow-md transition-all cursor-pointer"
+                  className="flex items-center justify-between p-5 bg-slate-50/50 rounded-2xl border border-slate-100 group hover:bg-white hover:border-amber-200 hover:shadow-md transition-all cursor-pointer"
                   onClick={() => { setEditingCat(cat); setIsCatModalOpen(true) }}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-3 h-3 rounded-full shadow-sm ${cat.tipo === 'receita' ? 'bg-[#2ecc71] ring-4 ring-emerald-50' : 'bg-[#e91e63] ring-4 ring-rose-50'}`}></div>
-                    <span className="text-[12px] font-black text-slate-700 uppercase tracking-tighter">{cat.nome}</span>
+                    <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${cat.tipo === 'receita' ? 'bg-emerald-500 ring-4 ring-emerald-50' : 'bg-rose-500 ring-4 ring-rose-50'}`}></div>
+                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{cat.nome}</span>
                   </div>
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); confirm('Excluir esta categoria?') && removerCat(cat.id) }} 
-                      className="w-10 h-10 flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); confirm('Excluir esta categoria?') && removerCat(cat.id) }} 
+                    className="opacity-0 group-hover:opacity-100 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               ))}
-              
-              {categorias.length === 0 && !loadingCats && (
-                <div className="col-span-2 py-16 text-center">
-                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-                      <Plus size={32} />
-                   </div>
-                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest italic">Nenhuma categoria cadastrada</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'contabil' && (
+        <div className="table-card p-10 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/40 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-5 mb-12">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-100">
+              <BookOpen size={28} />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight">Mapeamento de Contas ITG 2002</h2>
+              <p className="text-sm text-slate-500 font-bold opacity-70">Vincule suas categorias financeiras às contas do livro contábil.</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {categorias.map(cat => {
+              const mapping = configuracoes.find(c => c.categoria_nome === cat.nome)
+              return (
+                <div key={cat.id} className="grid grid-cols-1 lg:grid-cols-12 items-center gap-8 p-8 bg-slate-50/50 rounded-[32px] border border-slate-100 hover:bg-white hover:border-indigo-100 hover:shadow-lg transition-all">
+                  <div className="lg:col-span-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${cat.tipo === 'receita' ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                      <span className="text-sm font-black text-slate-700 uppercase tracking-tight">{cat.nome}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-black uppercase mt-1 tracking-widest">{cat.tipo === 'receita' ? 'Ingresso' : 'Dispêndio'}</div>
+                  </div>
+
+                  <div className="lg:col-span-1 flex justify-center">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-400">
+                      <Plus size={14} strokeWidth={3} />
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-8">
+                    <ContaContabilSelect 
+                      value={mapping?.conta_contabil_codigo}
+                      tipo={cat.tipo === 'receita' ? 'ingresso' : 'dispesa'}
+                      onChange={(item) => salvarMapping(cat.nome, item.codigo, item.descricao, cat.tipo === 'receita' ? 'ingresso' : 'dispendio')}
+                    />
+                    {mapping && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-indigo-100">
+                          Vinculado a: {mapping.conta_contabil_codigo} — {mapping.conta_contabil_nome}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <CrudModal 
         isOpen={isModalOpen}
@@ -346,9 +413,9 @@ export default function ConfigPage() {
         onSubmit={handleSalvarCat}
         fields={[
           { name: 'nome', label: 'Nome da Categoria', type: 'text', required: true, placeholder: 'Ex: Mensalidades, Aluguel...' },
-          { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [
-            { value: 'receita', label: 'Receita' },
-            { value: 'despesa', label: 'Despesa' },
+          { name: 'tipo', label: 'Tipo (Terminologia ITG 2002)', type: 'select', required: true, options: [
+            { value: 'receita', label: 'Ingresso (Receita)' },
+            { value: 'despesa', label: 'Dispêndio (Despesa)' },
           ]},
         ]}
       />

@@ -47,9 +47,9 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
   const grupos = [
     { cls: 'ativo', label: '1. ATIVO', color: 'text-blue-700' },
     { cls: 'passivo', label: '2. PASSIVO', color: 'text-rose-700' },
-    { cls: 'patrimonio_social', label: '3. PATRIMÔNIO SOCIAL', color: 'text-purple-700' },
-    { cls: 'ingresso', label: '4. INGRESSOS', color: 'text-emerald-700' },
-    { cls: 'despesa', label: '5. DESPESAS', color: 'text-orange-700' },
+    { cls: 'patrimonio_social', label: '2.3 PATRIMÔNIO SOCIAL', color: 'text-purple-700' },
+    { cls: 'ingresso', label: '3. INGRESSOS', color: 'text-emerald-700' },
+    { cls: 'despesa', label: '4. DISPÊNDIOS', color: 'text-orange-700' },
   ]
 
   return (

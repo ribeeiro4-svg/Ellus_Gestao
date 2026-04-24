@@ -23,11 +23,6 @@ import {
   Zap as ZapIcon 
 } from 'lucide-react'
 
-interface DashboardChartsProps {
-  metrics: any
-  onChartClick: (config: any) => void
-}
-
 export default function DashboardCharts({ metrics, onChartClick }: DashboardChartsProps) {
   const { 
     recReal, recProv, despReal, despProv, resultadoData, 
@@ -49,15 +44,15 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       chartData: {
         labels: MESES,
         datasets: [
-          { label: 'Receita (Paga)', data: recReal, backgroundColor: 'rgba(45, 140, 111, 0.85)', borderRadius: 5, stack: 'receita' },
-          { label: 'Receita (Aberta)', data: recProv, backgroundColor: 'rgba(45, 140, 111, 0.25)', borderRadius: 5, stack: 'receita' },
-          { label: 'Despesa (Paga)', data: despReal, backgroundColor: 'rgba(239, 68, 68, 0.8)', borderRadius: 5, stack: 'despesa' },
-          { label: 'Despesa (Aberta)', data: despProv, backgroundColor: 'rgba(239, 68, 68, 0.2)', borderRadius: 5, stack: 'despesa' },
-          { label: 'Resultado', data: resultadoData, type: 'line', borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true, borderWidth: 2.5, pointRadius: 4 },
+          { label: 'Ingresso (Pago)', data: recReal, backgroundColor: 'rgba(45, 140, 111, 0.85)', borderRadius: 5, stack: 'receita' },
+          { label: 'Ingresso (Aberto)', data: recProv, backgroundColor: 'rgba(45, 140, 111, 0.25)', borderRadius: 5, stack: 'receita' },
+          { label: 'Dispêndio (Pago)', data: despReal, backgroundColor: 'rgba(239, 68, 68, 0.8)', borderRadius: 5, stack: 'despesa' },
+          { label: 'Dispêndio (Aberto)', data: despProv, backgroundColor: 'rgba(239, 68, 68, 0.2)', borderRadius: 5, stack: 'despesa' },
+          { label: 'Superávit/Déficit', data: resultadoData, type: 'line', borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.4, fill: true, borderWidth: 2.5, pointRadius: 4 },
         ]
       },
       tableData: {
-        headers: ['Mês', 'Rec. Real', 'Rec. Prov', 'Desp. Real', 'Desp. Prov'],
+        headers: ['Mês', 'Ingr. Pago', 'Ingr. Aberto', 'Disp. Pago', 'Disp. Aberto'],
         rows: MESES.map((m: any, i: any) => [m, fmtR(recReal[i]), fmtR(recProv[i]), fmtR(despReal[i]), fmtR(despProv[i])])
       }
     },
@@ -68,7 +63,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       icon: <Target size={16} />,
       chartType: 'bar',
       chartData: {
-        labels: ['Planejado (Orçamento)', 'Realizado (Receita)'],
+        labels: ['Planejado (Ingressos)', 'Realizado (Ingressos)'],
         datasets: [{
           label: 'Valor Financeiro',
           data: [planejado, realizado],
@@ -79,7 +74,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       tableData: {
         headers: ['Tipo', 'Valor', '% Atingido'],
         rows: [
-          ['Meta Planejada', fmtR(planejado), '100%'],
+          ['Ingresso Planejado', fmtR(planejado), '100%'],
           ['Valor Realizado', fmtR(realizado), fmtPct(percentual)],
         ]
       }

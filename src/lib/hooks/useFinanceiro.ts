@@ -44,6 +44,20 @@ export function useFinanceiro() {
         }
       }
       
+      // Auto-update para status 'atrasado' se a data já passou e ainda está 'aberto'
+      const todayStr = new Date().toISOString().split('T')[0]
+      const itemsToMarkOverdue = allData.filter(l => l.status === 'aberto' && l.data < todayStr)
+      
+      if (itemsToMarkOverdue.length > 0) {
+        const ids = itemsToMarkOverdue.map(i => i.id)
+        // Faz o update no banco de forma silenciosa
+        sb.from('lancamentos').update({ status: 'atrasado' }).in('id', ids).then(({ error }) => {
+          if (error) console.error('Erro ao atualizar status atrasado:', error)
+        })
+        // Atualiza a lista local antes do setLancamentos para refletir imediatamente na UI
+        allData = allData.map(l => (l.status === 'aberto' && l.data < todayStr) ? { ...l, status: 'atrasado' } : l)
+      }
+      
       setLancamentos(allData)
     } catch (err) {
       console.error('Error fetching financeiro:', err)
@@ -94,7 +108,14 @@ export function useFinanceiro() {
     if (input.data && isPeriodoBloqueado(input.data)) return { error: 'Não é possível mover lançamentos para períodos fechados.' }
     
     const { error } = await sb.from('lancamentos').update(input).eq('id', id)
-    if (!error) fetch()
+    if (!error) {
+      // Integração Contábil Automática
+      if (input.status === 'pago') {
+        const { sincronizarLancamentoContabil } = await import('@/features/contabil/actions/accountingActions')
+        sincronizarLancamentoContabil(id)
+      }
+      fetch()
+    }
     return { error }
   }
 

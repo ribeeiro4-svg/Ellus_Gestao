@@ -230,8 +230,8 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
     <div className="flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex flex-wrap items-stretch gap-2 w-full relative z-[60] overflow-visible">
         {[
-          { label: 'Receitas Projetadas', value: fmtR(totals.planejadoReceita), color: 'text-emerald-600' },
-          { label: 'Despesas Projetadas', value: fmtR(totals.planejadoDespesa), color: 'text-rose-600' },
+          { label: 'Ingressos Projetados', value: fmtR(totals.planejadoReceita), color: 'text-emerald-600' },
+          { label: 'Dispêndios Projetados', value: fmtR(totals.planejadoDespesa), color: 'text-rose-600' },
           { label: 'Superávit Alvo', value: fmtR(Math.round((totals.planejadoReceita - totals.planejadoDespesa) * 100) / 100), color: 'text-blue-600' },
           { label: 'Pró-labore', value: fmtR(totalProLabore), color: 'text-purple-600' },
           { label: 'Reserva Ideal', value: fmtR(Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100), color: 'text-indigo-600' },
@@ -252,14 +252,14 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
             </div>
           </ChartCard>
           
-          <ChartCard title="📉 Impacto nas Receitas" subtitle="Consumo do Faturamento por Categoria">
+          <ChartCard title="📉 Impacto nos Ingressos" subtitle="Consumo do Faturamento por Categoria">
             <div className="h-[260px] mt-4">
               {totals.planejadoDespesa > 0 ? (
                 <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }} />
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
                   <Activity size={32} className="opacity-20" />
-                  <span className="text-xs font-bold uppercase tracking-widest">Nenhuma despesa planejada</span>
+                  <span className="text-xs font-bold uppercase tracking-widest">Nenhum dispêndio planejado</span>
                 </div>
               )}
             </div>
@@ -270,6 +270,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-3">
               <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Superávit Projetado (%)</span>
               {selectedCategories.length > 0 && (
                 <button onClick={() => setIsConfirmLancarOpen(true)} className="flex items-center gap-2 text-[9px] font-black text-white bg-emerald-500 px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
                   <TrendingUp size={14} /> LANÇAR PLANEJAMENTO ({selectedCategories.length})

@@ -150,7 +150,7 @@ export default function SimuladorTab() {
   }
 
   const chartDataSnapshot = {
-    labels: ['Receita', 'Fixas', 'Variáveis', 'Folha', 'Resultado'],
+    labels: ['Ingresso', 'Fixas', 'Variáveis', 'Folha', 'Superávit/Déficit'],
     datasets: [
       {
         label: visao === 'mensal' ? 'Valor Mensal' : 'Acumulado Anual',
@@ -177,7 +177,7 @@ export default function SimuladorTab() {
     labels: MESES,
     datasets: [
       {
-        label: 'Resultado (R$)',
+        label: 'Superávit/Déficit (R$)',
         data: projecaoAnual.map(p => p.resultado),
         borderColor: '#2d8c6f',
         backgroundColor: 'rgba(45, 140, 111, 0.1)',
@@ -266,7 +266,7 @@ export default function SimuladorTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
-          title={`Receita ${visao === 'mensal' ? 'Mensal' : 'Anual'}`} 
+          title={`Ingresso ${visao === 'mensal' ? 'Mensal' : 'Anual'}`} 
           value={fmtR(calculos.totalReceita)} 
           icon={<TrendingUp size={20} />} 
           category="success" 
@@ -290,14 +290,14 @@ export default function SimuladorTab() {
           }}
         />
         <KpiCard 
-          title={`Resultado ${visao === 'mensal' ? 'Líquido' : 'Anual'}`} 
+          title={`Superávit/Déficit ${visao === 'mensal' ? 'Líquido' : 'Anual'}`} 
           value={fmtR(calculos.resultado)} 
           icon={<DollarSign size={20} />} 
           category={calculos.resultado >= 0 ? 'success' : 'error'} 
           trendLabel={`Margem de ${fmtPct(calculos.margem)}`}
           explanation={{
             description: "O que sobra livre para a reserva após pagar custos fixos, variáveis e folha de pagamento.",
-            formula: "Receita - (Fixas + Variáveis + Folha)",
+            formula: "Ingresso - (Fixas + Variáveis + Folha)",
             example: "Visão consolidada para verificar se o cenário é sustentável a longo prazo."
           }}
         />
@@ -536,7 +536,7 @@ export default function SimuladorTab() {
                     legend: { display: false },
                     tooltip: {
                       callbacks: {
-                        label: (ctx) => `Resultado: ${fmtR(ctx.parsed.y || 0)}`
+                        label: (ctx) => `Superávit/Déficit: ${fmtR(ctx.parsed.y || 0)}`
                       }
                     }
                   }

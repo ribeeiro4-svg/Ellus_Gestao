@@ -9,9 +9,9 @@ export default function DashboardKpis({ metrics }: DashboardKpisProps) {
   const { receitaTotal, despesaTotal, associadosStats } = metrics
 
   const cards = [
-    { label: `📈 Receita Realizada`, value: fmtR(receitaTotal), color: 'text-emerald-600' },
-    { label: `📉 Despesas Pagas`, value: fmtR(despesaTotal), color: 'text-rose-600' },
-    { label: `💵 Resultado Líquido`, value: fmtR(receitaTotal - despesaTotal), color: 'text-indigo-600' },
+    { label: `📈 Ingresso Realizado`, value: fmtR(receitaTotal), color: 'text-emerald-600' },
+    { label: `📉 Dispêndios Pagos`, value: fmtR(despesaTotal), color: 'text-rose-600' },
+    { label: `💵 Superávit/Déficit Líquido`, value: fmtR(receitaTotal - despesaTotal), color: 'text-indigo-600' },
     { label: `🚀 Superávit`, value: fmtR(receitaTotal - despesaTotal), color: 'text-emerald-600' },
     { label: `⚠️ Inadimplência`, value: fmtPct(associadosStats.pctInadimp), color: 'text-rose-500' },
   ]

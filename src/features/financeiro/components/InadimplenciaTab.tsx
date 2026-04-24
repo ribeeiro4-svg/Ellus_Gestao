@@ -5,7 +5,7 @@ import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
 import ChartCard from '@/components/ui/ChartCard'
 import { fmtR, fmtData, fmtPct } from '@/lib/utils/formatters'
-import { AlertTriangle, TrendingDown, Users, ShieldAlert, Pencil, XCircle, Search } from 'lucide-react'
+import { AlertTriangle, TrendingDown, Users, ShieldAlert, Pencil, XCircle, Search, Trash2, Loader2, MessageCircle } from 'lucide-react'
 import { 
   Chart as ChartJS, 
   ArcElement, Tooltip, Legend, 
@@ -21,12 +21,13 @@ ChartJS.register(ArcElement, Tooltip, Legend, DoughnutController)
 
 export default function InadimplenciaTab() {
   const { associados, loading: loadAssoc } = useAssociados()
-  const { lancamentos, loading: loadFin, atualizar, remover } = useFinanceiro()
+  const { lancamentos, loading: loadFin, atualizar, remover, removerBulk } = useFinanceiro()
   const { contas } = useContas()
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [isCleaning, setIsCleaning] = useState(false)
 
   // Lançamentos atrasados (detalhado) - Base de cálculo real
   const lancamentosAtrasados = useMemo(() => {
@@ -90,6 +91,78 @@ export default function InadimplenciaTab() {
     setEditingItem(null)
   }
 
+  const handleCobrar = (assoc: any) => {
+    if (!assoc) return
+    // Filtrar todos os atrasos deste associado específico na base atual
+    const atrasos = lancamentos.filter(l => 
+      l.associado_id === assoc.id && 
+      (l.status === 'atrasado' || (l.status === 'aberto' && new Date(l.data) < new Date()))
+    )
+
+    if (atrasos.length === 0) {
+      alert('Nenhum boleto em atraso encontrado para este associado.')
+      return
+    }
+
+    const listaBoletos = atrasos.map(l => {
+      // Limpar a descrição: Pega apenas o que vem antes do primeiro "-" (caso tenha o nome do associado no texto)
+      const descLimpa = l.descricao.split(' - ')[0].toUpperCase()
+      return `📄 ${descLimpa} - ${fmtData(l.data)}`
+    }).join('\n')
+
+    const msg = `Olá, ${assoc.nome}! Tudo bem?\n\nPassando rapidinho pra te avisar que temos um ou mais boletos em aberto:\n\n${listaBoletos}\n\nSe já tiver pago, desconsidera essa mensagem 😊\n\nCaso contrário, posso te reenviar ou te ajudar com o que precisar!`
+    
+    const fone = assoc.telefone?.replace(/\D/g, '') || ''
+    if (!fone) {
+      alert('Associado sem telefone cadastrado.')
+      return
+    }
+
+    // Usar 55 como prefixo do Brasil se não houver
+    const finalPhone = fone.startsWith('55') ? fone : `55${fone}`
+    const url = `https://web.whatsapp.com/send?phone=${finalPhone}&text=${encodeURIComponent(msg)}`
+    window.open(url, '_blank')
+  }
+
+  const handleCleanupDuplicates = async () => {
+    if (lancamentosAtrasados.length === 0) return
+    if (!confirm(`Deseja remover mensalidades duplicadas na lista de inadimplência? O sistema manterá apenas um lançamento por associado/mês.`)) return
+
+    setIsCleaning(true)
+    try {
+      // Agrupar por associado_id e Mes/Ano
+      const groups: Record<string, any[]> = {}
+      
+      lancamentosAtrasados.forEach(l => {
+        if (!l.associado_id || !l.data) return
+        const d = new Date(l.data)
+        const key = `${l.associado_id}_${d.getFullYear()}_${d.getMonth()}`
+        if (!groups[key]) groups[key] = []
+        groups[key].push(l)
+      })
+
+      const idsToDelete: string[] = []
+      Object.values(groups).forEach(group => {
+        if (group.length <= 1) return
+        // Manter o primeiro, deletar o resto
+        for (let i = 1; i < group.length; i++) {
+          idsToDelete.push(group[i].id)
+        }
+      })
+
+      if (idsToDelete.length === 0) {
+        alert('Nenhuma duplicata identificada nesta lista.')
+        return
+      }
+
+      const res = await removerBulk(idsToDelete)
+      if (res.error) alert(`Erro: ${res.error}`)
+      else alert(`Sucesso! ${idsToDelete.length} lançamentos duplicados removidos.`)
+    } finally {
+      setIsCleaning(false)
+    }
+  }
+
   const modalFields: Field[] = useMemo(() => [
     { name: 'descricao', label: 'Descrição', type: 'text', required: true },
     { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
@@ -132,17 +205,23 @@ export default function InadimplenciaTab() {
     { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
     { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
     { 
-      header: '', key: 'acoes', className: 'w-20 text-right', 
-      render: (i: any) => (
-        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => handleEdit(i)} title="Editar Lançamento" className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-            <Pencil size={14} />
-          </button>
-          <button onClick={() => handleDelete(i.id)} title="Excluir" className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
-            <XCircle size={14} />
-          </button>
-        </div>
-      )
+      header: '', key: 'acoes', className: 'w-24 text-right', 
+      render: (i: any) => {
+        const assoc = associados.find(a => a.id === i.associado_id)
+        return (
+          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onClick={() => handleCobrar(assoc)} title="Cobrar via WhatsApp" className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors">
+              <MessageCircle size={14} />
+            </button>
+            <button onClick={() => handleEdit(i)} title="Editar Lançamento" className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+              <Pencil size={14} />
+            </button>
+            <button onClick={() => handleDelete(i.id)} title="Excluir" className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
+              <XCircle size={14} />
+            </button>
+          </div>
+        )
+      }
     },
   ]
 
@@ -229,7 +308,12 @@ export default function InadimplenciaTab() {
                     </div>
                     <div className="text-right">
                        <p className="text-base font-black text-red-600">{fmtR(item.total)}</p>
-                       <button className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors mt-1">Acionar Cobrança</button>
+                       <button 
+                         onClick={() => handleCobrar(item.assoc)}
+                         className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors mt-1"
+                       >
+                         Acionar Cobrança
+                       </button>
                     </div>
                  </div>
                ))}
@@ -245,7 +329,17 @@ export default function InadimplenciaTab() {
 
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lançamentos em Atraso</h4>
+            <div className="flex items-center gap-4">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lançamentos em Atraso</h4>
+                <button 
+                  onClick={handleCleanupDuplicates}
+                  disabled={isCleaning || lancamentosAtrasados.length === 0}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all disabled:opacity-50"
+                >
+                  {isCleaning ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  Limpar Duplicados (Inadimplência)
+                </button>
+            </div>
             <div className="relative w-full md:w-80">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input 

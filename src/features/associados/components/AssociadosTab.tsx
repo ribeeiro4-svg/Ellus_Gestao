@@ -24,7 +24,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tool
 
 export default function AssociadosTab() {
   const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign, refresh } = useAssociados()
-  const { lancamentos } = useFinanceiro()
+  const { lancamentos, inserirBulk } = useFinanceiro()
   const { tenant } = useTenant()
   const { contas } = useContas()
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null)
@@ -63,6 +63,8 @@ export default function AssociadosTab() {
   const [filterTermo, setFilterTermo] = useState<string>('todos')
   const [isUpdatingBulk, setIsUpdatingBulk] = useState(false)
   const [isBulkAccountModalOpen, setIsBulkAccountModalOpen] = useState(false)
+  const [isIndividualSyncModalOpen, setIsIndividualSyncModalOpen] = useState(false)
+  const [recurrenceTarget, setRecurrenceTarget] = useState<any>(null)
 
   const handleSyncZapSign = async () => {
     await fixAssociadosRecorrenciaColumnsAction()
@@ -70,10 +72,8 @@ export default function AssociadosTab() {
     if (res.error) {
       const msg = typeof res.error === 'object' ? (res.error as any).message : res.error
       alert(`Erro na sincronização: ${msg}`)
-    } else if (res.count) {
-      alert(`Sucesso! ${res.count} associados sincronizados da ZapSign.`)
     } else {
-      alert(res.message || 'Sincronização concluída.')
+      alert(res.message || `Sucesso! ${res.count || 0} registros processados.`)
     }
   }
 
@@ -257,15 +257,15 @@ export default function AssociadosTab() {
                 {i.zapsign_signers.map((s: any, idx: number) => (
                   <div key={idx} className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${s.status === 'signed' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${s.status === 'signed' || s.signed_at ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                       <span className="text-[10px] font-bold text-slate-600 max-w-[150px] truncate">{s.name}</span>
                     </div>
                     <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
-                      s.status === 'signed' 
+                      s.status === 'signed' || s.signed_at
                         ? 'bg-emerald-100 text-emerald-700' 
                         : 'bg-slate-200 text-slate-500'
                     }`}>
-                      {s.status === 'signed' ? '✓ Assinado' : 'Pendente'}
+                      {(s.status === 'signed' || s.signed_at) ? '✓ Assinado' : 'Pendente'}
                     </span>
                   </div>
                 ))}
@@ -388,6 +388,13 @@ export default function AssociadosTab() {
       header: '', key: 'acoes', className: 'w-[80px] text-right',
       render: (i: any) => (
         <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            onClick={() => { setRecurrenceTarget(i); setIsIndividualSyncModalOpen(true) }} 
+            className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-md"
+            title="Gerar Recorrência Individual"
+          >
+            <RefreshCw size={12} />
+          </button>
           <button onClick={() => handleEdit(i)} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md"><Pencil size={12} /></button>
           <button onClick={() => handleDuplicate(i)} className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-md"><Copy size={12} /></button>
           <button onClick={() => handleDelete(i.id)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-md"><XCircle size={12} /></button>
@@ -660,6 +667,74 @@ export default function AssociadosTab() {
             options: contas.map(c => ({ value: c.nome, label: c.nome }))
           }
         ]}
+      />
+
+      <CrudModal 
+        isOpen={isIndividualSyncModalOpen} 
+        onClose={() => setIsIndividualSyncModalOpen(false)} 
+        title={`Gerar Recorrência: ${recurrenceTarget?.nome}`}
+        onSubmit={async (p: any) => {
+          if (!recurrenceTarget) return
+          
+          const batch: any[] = []
+          let skipped = 0
+
+          for(let i=0; i<Number(p.meses); i++) { 
+            const d = new Date(Number(p.ano_inicio), Number(p.mes_inicio)+i, Number(p.dia))
+            const mesAlvo = d.getMonth()
+            const anoAlvo = d.getFullYear()
+
+            // Evitar duplicidade
+            const jaExiste = lancamentos.some(l => 
+              l.associado_id === recurrenceTarget.id && 
+              l.tipo === 'receita' &&
+              (l.categoria === 'Mensalidade' || l.descricao.toUpperCase().includes('MENSALIDADE')) &&
+              (
+                (l.competencia_mes === mesAlvo && l.competencia_ano === anoAlvo) ||
+                (new Date(l.data).getMonth() === mesAlvo && new Date(l.data).getFullYear() === anoAlvo)
+              )
+            )
+
+            if (jaExiste) {
+              skipped++
+              continue
+            }
+
+            batch.push({ 
+              tipo: 'receita', 
+              descricao: `${p.descricao_padrao.toUpperCase()} - ${recurrenceTarget.nome.toUpperCase()}`, 
+              categoria: 'Mensalidade', 
+              valor: recurrenceTarget.mensalidade || 50, 
+              data: d.toISOString().split('T')[0], 
+              status: 'aberto', 
+              associado_id: recurrenceTarget.id, 
+              conta_id: p.conta_id, 
+              forma_pagamento: p.forma_pagamento,
+              competencia_mes: mesAlvo,
+              competencia_ano: anoAlvo
+            }) 
+          }
+
+          if (batch.length === 0) {
+            return alert(`Nenhuma mensalidade nova gerada. ${skipped} já existiam no sistema para este período.`)
+          }
+
+          const res = await inserirBulk(batch)
+          if (!res.error) { 
+            alert(`Sucesso! ${res.count} mensalidades geradas.${skipped > 0 ? ` (${skipped} já existiam)` : ''}`)
+            setIsIndividualSyncModalOpen(false)
+            refresh()
+          } else alert(res.error)
+        }} 
+        fields={[
+          { name: 'descricao_padrao', label: 'Descrição Base', type: 'text', defaultValue: 'MENSALIDADE' }, 
+          { name: 'mes_inicio', label: 'Partir do Mês', type: 'select', defaultValue: new Date().getMonth().toString(), options: MESES.map((m, idx) => ({ value: idx.toString(), label: m })) }, 
+          { name: 'ano_inicio', label: 'Ano', type: 'number', defaultValue: new Date().getFullYear().toString() }, 
+          { name: 'dia', label: 'Dia', type: 'number', defaultValue: '10' }, 
+          { name: 'meses', label: 'Quantidade de Meses', type: 'select', defaultValue: '12', options: [{ value: '1', label: '1 mês' }, { value: '6', label: '6 Meses' }, { value: '12', label: '12 Meses' }, { value: '24', label: '24 Meses' }] }, 
+          { name: 'forma_pagamento', label: 'Forma Padrão', type: 'select', defaultValue: 'Boleto', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }] }, 
+          { name: 'conta_id', label: 'Conta Destino', type: 'select', options: contas.map(c => ({ value: c.id, label: c.nome })) }
+        ]} 
       />
     </div>
   )

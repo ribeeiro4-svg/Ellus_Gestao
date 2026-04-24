@@ -31,11 +31,12 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
 
     // 1. Coleta todos os documentos e seus detalhes (paginado)
     while (hasMore) {
-      const docsRes = await fetch(`${ZAPSIGN_API_BASE}/docs/?page=${page}`, {
+      const docsRes = await fetch(`${ZAPSIGN_API_BASE}/docs/?page=${page}&t=${Date.now()}`, {
         headers: { 
           'Authorization': `Bearer ${apiToken}`,
           'Content-Type': 'application/json'
         },
+        cache: 'no-store',
         next: { revalidate: 0 }
       })
       
@@ -61,8 +62,9 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
         if (!isRelevant) continue
 
         // Chamada sem barra final e com revalidate: 0
-        const docDetailRes = await fetch(`${ZAPSIGN_API_BASE}/docs/${doc.token}`, {
+        const docDetailRes = await fetch(`${ZAPSIGN_API_BASE}/docs/${doc.token}?t=${Date.now()}`, {
           headers: { 'Authorization': `Bearer ${apiToken}` },
+          cache: 'no-store',
           next: { revalidate: 0 }
         })
         
@@ -75,7 +77,7 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
       if (results.length === 0) hasMore = false
       else {
         page++
-        if (page > 60) hasMore = false 
+        if (page > 100) hasMore = false 
       }
     }
 
@@ -92,7 +94,9 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
     const newAssociates: AssociadoInput[] = []
     
     for (const doc of allDocsWithDetails) {
-      const sysStatus = (doc.status === 'signed' || doc.status === 'completed') ? 'ativo' : 'pendente'
+      // Status mais flexível para o documento
+      const docStatus = (doc.status || '').toLowerCase()
+      const isDocSigned = docStatus === 'signed' || docStatus === 'completed' || docStatus === 'assinada' || docStatus === 'finalizada'
       
       const rankedSigners = doc.signers.map(s => {
         let score = 100
@@ -126,6 +130,16 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           .trim()
 
         const stableKey = cleanedCpf ? `CPF-${cleanedCpf}` : (emailKey ? `EMAIL-${emailKey}` : `NAME-${nameSlug}`)
+        
+        // Se o doc estiver assinado OU o signatário principal tiver assinado
+        const isPrimarySigned = !!signer.signed_at || isDocSigned
+        const sysStatus = isPrimarySigned ? 'ativo' : 'pendente'
+
+        // Normaliza o status dos signatários para garantir que 'signed_at' reflita no status
+        const normalizedSigners = doc.signers.map((s: any) => ({
+          ...s,
+          status: (s.status === 'signed' || s.signed_at) ? 'signed' : s.status
+        }))
 
         newAssociates.push({
           nome: signer.name,
@@ -138,7 +152,7 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
           codigo: stableKey,
           zapsign_doc_token: doc.token,
-          zapsign_signers: doc.signers
+          zapsign_signers: normalizedSigners
         })
       }
     }

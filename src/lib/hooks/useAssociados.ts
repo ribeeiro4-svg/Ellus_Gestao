@@ -75,23 +75,69 @@ export function useAssociados() {
       const res = await fetchZapSignAssociatesAction(tenant.zapsign_token)
       
       if (res.error) return { error: res.error }
-      if (!res.data || res.data.length === 0) return { message: 'Nenhum novo associado encontrado na ZapSign.' }
+      if (!res.data || res.data.length === 0) return { message: 'Nenhum dado encontrado na ZapSign.' }
       
-      // Filtrar apenas quem não existe ainda (baseado no código) para evitar sobrescrever dados manuais
-      const codigosExistentes = new Set(associados.map(a => a.codigo))
-      const novos = res.data.filter(it => !codigosExistentes.has(it.codigo)).map(it => ({
-        ...it,
-        zapsign_sync_at: new Date().toISOString()
-      }))
+      const codigosExistentes = new Map(associados.map(a => [(a.codigo || '').toLowerCase(), a]))
+      
+      const novos: AssociadoInput[] = []
+      const paraAtualizarStatus: any[] = []
 
-      if (novos.length === 0) {
-        return { message: 'Sincronização concluída: Todos os associados da ZapSign já constam no sistema.' }
-      }
+      res.data.forEach(it => {
+        const itCodigoLower = (it.codigo || '').toLowerCase()
+        const existing = codigosExistentes.get(itCodigoLower)
+        if (existing) {
+          // Atualiza APENAS campos de assinatura para não perder dados manuais
+          paraAtualizarStatus.push({
+            id: existing.id,
+            tenant_id: tenantId,
+            codigo: existing.codigo, // Inclui o código original para evitar conflito de Unique Constraint
+            status: it.status,
+            zapsign_doc_token: it.zapsign_doc_token,
+            zapsign_signers: it.zapsign_signers,
+            zapsign_sync_at: new Date().toISOString()
+          })
+        } else {
+          // Novo associado: traz tudo
+          novos.push({
+            ...it,
+            zapsign_sync_at: new Date().toISOString()
+          })
+        }
+      })
+
+      let finalMsg = ''
       
-      const { error } = await inserirBulk(novos)
-      return { error, count: novos.length }
-    } catch (err) {
-      return { error: 'Falha na comunicação com o servidor de integração.' }
+      if (novos.length > 0) {
+        const { error: errIns } = await inserirBulk(novos)
+        if (errIns) console.error('Erro ao inserir novos:', errIns)
+        else finalMsg += `${novos.length} novos associados importados. `
+      }
+
+      if (paraAtualizarStatus.length > 0) {
+        // Usamos update individual para cada um para evitar erros de constraint (como o 'nome' ser nulo num upsert parcial)
+        // e para garantir que NENHUM outro campo seja alterado.
+        const updatePromises = paraAtualizarStatus.map(item => {
+          const { id, ...dataToUpdate } = item
+          return sb.from('associados').update(dataToUpdate).eq('id', id)
+        })
+        
+        const results = await Promise.all(updatePromises)
+        const errors = results.filter(r => r.error)
+        
+        if (errors.length > 0) {
+          console.error('Erros ao atualizar status:', errors)
+          finalMsg += `(${errors.length} erros na atualização). `
+        } else {
+          finalMsg += `${paraAtualizarStatus.length} status de assinatura atualizados.`
+        }
+      }
+
+      if (!finalMsg) finalMsg = 'Sincronização concluída: Todos os dados já estavam atualizados.'
+      
+      fetch()
+      return { message: finalMsg, count: novos.length + paraAtualizarStatus.length }
+    } catch (err: any) {
+      return { error: err.message || 'Falha na comunicação com o servidor de integração.' }
     } finally {
       setIsSyncing(false)
     }

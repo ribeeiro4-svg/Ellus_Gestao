@@ -1,120 +1,134 @@
+export type PlanoContasItem = {
+  codigo: string
+  descricao: string
+  nivel: number
+  tipo: 'sintetica' | 'analitica'
+  natureza: 'devedora' | 'credora'
+  classificacao: string
+  aceita_lancamentos?: boolean
+}
+
 // Plano de Contas ITG 2002 (R1) — Associações sem fins lucrativos
-export const PLANO_CONTAS_ITG2002 = [
-  // ── ATIVO ────────────────────────────────────────────────────────────────
+// Versão 2.0 — Expandido para 5 Níveis para suporte a projetos e centros de custo
+export const PLANO_CONTAS_ITG2002: PlanoContasItem[] = [
+  // ── 1 ATIVO ────────────────────────────────────────────────────────────────
   { codigo:'1', descricao:'ATIVO', nivel:1, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
   { codigo:'1.1', descricao:'ATIVO CIRCULANTE', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
   { codigo:'1.1.1', descricao:'CAIXA E EQUIVALENTES DE CAIXA', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
-  { codigo:'1.1.1.01', descricao:'Caixa Geral', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.1.02', descricao:'Banco Conta Corrente', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.1.03', descricao:'Aplicações de Liquidez Imediata', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.1.01', descricao:'Caixa Geral', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
+  { codigo:'1.1.1.01.001', descricao:'Caixa Sede', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  
+  { codigo:'1.1.1.02', descricao:'Bancos Conta Corrente', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
+  { codigo:'1.1.1.02.001', descricao:'Banco Cora — Conta Principal', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.1.02.002', descricao:'Banco do Brasil — Convênios', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.1.02.003', descricao:'Outras Contas Bancárias', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  
+  { codigo:'1.1.1.03', descricao:'Aplicações Financeiras', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
+  { codigo:'1.1.1.03.001', descricao:'Aplicações de Liquidez Imediata', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.1.03.002', descricao:'CDB/RDB Curto Prazo', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+
   { codigo:'1.1.2', descricao:'CRÉDITOS', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
-  { codigo:'1.1.2.01', descricao:'Mensalidades a Receber', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.2.02', descricao:'Contribuições a Receber', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.2.03', descricao:'Subvenções a Receber', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.2.04', descricao:'Adiantamentos a Empregados', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.2.05', descricao:'(-) Provisão p/ Créditos de Liquidação Duvidosa', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.2.01', descricao:'Mensalidades e Contribuições', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
+  { codigo:'1.1.2.01.001', descricao:'Mensalidades de Associados a Receber', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.2.01.002', descricao:'Taxas de Adesão a Receber', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  
+  { codigo:'1.1.2.02', descricao:'Outros Créditos', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
+  { codigo:'1.1.2.02.001', descricao:'Adiantamentos a Empregados', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.2.02.002', descricao:'Adiantamentos a Fornecedores', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.2.02.003', descricao:'(-) Provisão p/ Créditos de Liquidação Duvidosa', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'ativo', aceita_lancamentos:true },
+
   { codigo:'1.1.3', descricao:'ESTOQUES', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
-  { codigo:'1.1.3.01', descricao:'Estoque de Materiais de Consumo', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.3.02', descricao:'Estoque de Materiais para Distribuição', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.4', descricao:'OUTROS ATIVOS CIRCULANTES', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
-  { codigo:'1.1.4.01', descricao:'Despesas Antecipadas', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.1.4.02', descricao:'Impostos a Recuperar', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.3.01', descricao:'Materiais e Insumos', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
+  { codigo:'1.1.3.01.001', descricao:'Estoque de Materiais de Consumo', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.1.3.01.002', descricao:'Estoque de Materiais para Distribuição', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+
   { codigo:'1.2', descricao:'ATIVO NÃO CIRCULANTE', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
-  { codigo:'1.2.1', descricao:'REALIZÁVEL A LONGO PRAZO', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
-  { codigo:'1.2.1.01', descricao:'Depósitos Compulsórios', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
   { codigo:'1.2.2', descricao:'IMOBILIZADO', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
-  { codigo:'1.2.2.01', descricao:'Terrenos', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.2.2.02', descricao:'Edificações', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.2.2.03', descricao:'Móveis e Utensílios', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.2.2.04', descricao:'Equipamentos de Informática', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.2.2.05', descricao:'Veículos', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.2.2.06', descricao:'(-) Depreciação Acumulada — Edificações', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.2.2.07', descricao:'(-) Depreciação Acumulada — Equipamentos', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ativo', aceita_lancamentos:true },
-  { codigo:'1.2.3', descricao:'INTANGÍVEL', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
-  { codigo:'1.2.3.01', descricao:'Softwares e Sistemas', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
-  // ── PASSIVO ───────────────────────────────────────────────────────────────
+  { codigo:'1.2.2.01', descricao:'Bens Imóveis', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
+  { codigo:'1.2.2.01.001', descricao:'Terrenos', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.2.2.01.002', descricao:'Edificações', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  
+  { codigo:'1.2.2.02', descricao:'Bens Móveis', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'ativo' },
+  { codigo:'1.2.2.02.001', descricao:'Móveis e Utensílios', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.2.2.02.002', descricao:'Equipamentos de Informática', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.2.2.02.003', descricao:'Veículos', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'ativo', aceita_lancamentos:true },
+  
+  { codigo:'1.2.2.03', descricao:'(-) Depreciações Acumuladas', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'ativo' },
+  { codigo:'1.2.2.03.001', descricao:'(-) Depreciação Acumulada — Edificações', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'ativo', aceita_lancamentos:true },
+  { codigo:'1.2.2.03.002', descricao:'(-) Depreciação Acumulada — Equipamentos', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'ativo', aceita_lancamentos:true },
+
+  // ── 2 PASSIVO ──────────────────────────────────────────────────────────────
   { codigo:'2', descricao:'PASSIVO', nivel:1, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
   { codigo:'2.1', descricao:'PASSIVO CIRCULANTE', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
   { codigo:'2.1.1', descricao:'OBRIGAÇÕES TRABALHISTAS E SOCIAIS', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
-  { codigo:'2.1.1.01', descricao:'Salários a Pagar', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.1.02', descricao:'Férias a Pagar', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.1.03', descricao:'13º Salário a Pagar', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.1.04', descricao:'FGTS a Recolher', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.1.05', descricao:'INSS a Recolher', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.2', descricao:'OBRIGAÇÕES FISCAIS', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
-  { codigo:'2.1.2.01', descricao:'ISS a Recolher', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.2.02', descricao:'IRRF a Recolher', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.2.03', descricao:'PIS a Recolher', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.2.04', descricao:'COFINS a Recolher', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.3', descricao:'FORNECEDORES E CONTAS A PAGAR', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
-  { codigo:'2.1.3.01', descricao:'Fornecedores Nacionais', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.3.02', descricao:'Aluguéis a Pagar', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.3.03', descricao:'Serviços de Terceiros a Pagar', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.4', descricao:'RECEITAS ANTECIPADAS', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
-  { codigo:'2.1.4.01', descricao:'Mensalidades Antecipadas', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.1.4.02', descricao:'Subvenções Antecipadas', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  { codigo:'2.2', descricao:'PASSIVO NÃO CIRCULANTE', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
-  { codigo:'2.2.1.01', descricao:'Empréstimos de Longo Prazo', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
-  // ── PATRIMÔNIO SOCIAL ────────────────────────────────────────────────────
-  { codigo:'3', descricao:'PATRIMÔNIO SOCIAL', nivel:1, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
-  { codigo:'3.1', descricao:'PATRIMÔNIO SOCIAL INICIAL', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
-  { codigo:'3.1.1.01', descricao:'Fundo Social', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
-  { codigo:'3.1.1.02', descricao:'Reservas de Capital', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
-  { codigo:'3.2', descricao:'SUPERÁVITS/DÉFICITS ACUMULADOS', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
-  { codigo:'3.2.1.01', descricao:'Superávits/Déficits Acumulados', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
-  { codigo:'3.3', descricao:'SUPERÁVIT/DÉFICIT DO EXERCÍCIO', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
-  { codigo:'3.3.1.01', descricao:'Superávit/Déficit do Exercício', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
-  // ── INGRESSOS (RECEITAS) ──────────────────────────────────────────────────
-  { codigo:'4', descricao:'INGRESSOS', nivel:1, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
-  { codigo:'4.1', descricao:'INGRESSOS DAS ATIVIDADES', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
-  { codigo:'4.1.1', descricao:'CONTRIBUIÇÕES E MENSALIDADES', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
-  { codigo:'4.1.1.01', descricao:'Mensalidades de Associados', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.1.1.02', descricao:'Taxa de Adesão', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.1.1.03', descricao:'Contribuições Voluntárias', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.1.2', descricao:'SUBVENÇÕES E DOAÇÕES', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
-  { codigo:'4.1.2.01', descricao:'Subvenções Governamentais', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.1.2.02', descricao:'Doações de Pessoas Físicas', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.1.2.03', descricao:'Doações de Pessoas Jurídicas', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.1.3', descricao:'SERVIÇOS PRESTADOS', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
-  { codigo:'4.1.3.01', descricao:'Receita de Eventos', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.1.3.02', descricao:'Receita de Cursos e Treinamentos', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.1.3.03', descricao:'Receita de Projetos Sociais', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.2', descricao:'INGRESSOS FINANCEIROS', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
-  { codigo:'4.2.1.01', descricao:'Rendimentos de Aplicações Financeiras', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.2.1.02', descricao:'Juros Ativos', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.3', descricao:'OUTROS INGRESSOS', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
-  { codigo:'4.3.1.01', descricao:'Alienação de Bens', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  { codigo:'4.3.1.02', descricao:'Ingressos Eventuais', nivel:4, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
-  // ── DESPESAS ──────────────────────────────────────────────────────────────
-  { codigo:'5', descricao:'DESPESAS', nivel:1, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.1', descricao:'DESPESAS DAS ATIVIDADES FIM', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.1.1', descricao:'DESPESAS COM PESSOAL — ATIV. FIM', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.1.1.01', descricao:'Salários e Vencimentos — Ativ. Fim', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.1.1.02', descricao:'Encargos Sociais — Ativ. Fim', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.1.2', descricao:'MATERIAIS DISTRIBUÍDOS', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.1.2.01', descricao:'Materiais Distribuídos a Beneficiários', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.1.3', descricao:'SERVIÇOS DE TERCEIROS — ATIV. FIM', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.1.3.01', descricao:'Serviços Técnicos Especializados', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2', descricao:'DESPESAS ADMINISTRATIVAS (OVERHEAD)', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.2.1', descricao:'DESPESAS COM PESSOAL — ADMIN.', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.2.1.01', descricao:'Salários e Vencimentos — Admin.', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.1.02', descricao:'Pró-Labore da Diretoria', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.1.03', descricao:'Encargos Sociais — Admin.', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.2', descricao:'DESPESAS OPERACIONAIS', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.2.2.01', descricao:'Aluguel e Condomínio', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.2.02', descricao:'Energia Elétrica', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.2.03', descricao:'Telefone e Internet', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.2.04', descricao:'Materiais de Escritório e Consumo', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.2.05', descricao:'Serviços Contábeis', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.2.06', descricao:'Serviços Jurídicos', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.2.07', descricao:'Seguros', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.2.08', descricao:'Manutenção Predial e Equipamentos', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.3', descricao:'DESPESAS FINANCEIRAS', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.2.3.01', descricao:'Juros e Encargos Financeiros', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.2.3.02', descricao:'Tarifas Bancárias', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.3', descricao:'DEPRECIAÇÕES E AMORTIZAÇÕES', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
-  { codigo:'5.3.1.01', descricao:'Depreciação de Bens do Imobilizado', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-  { codigo:'5.3.1.02', descricao:'Amortização de Intangíveis', nivel:4, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
-]
+  { codigo:'2.1.1.01', descricao:'Salários e Remunerações a Pagar', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
+  { codigo:'2.1.1.01.001', descricao:'Salários a Pagar', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.1.01.002', descricao:'Férias a Pagar', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.1.01.003', descricao:'13º Salário a Pagar', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.1.01.004', descricao:'Rescisões a Pagar', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  
+  { codigo:'2.1.1.02', descricao:'Encargos Sociais a Recolher', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
+  { codigo:'2.1.1.02.001', descricao:'FGTS a Recolher', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.1.02.002', descricao:'INSS a Recolher', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.1.02.003', descricao:'PIS s/ Folha a Recolher', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
 
-export type PlanoContasItem = typeof PLANO_CONTAS_ITG2002[0] & { aceita_lancamentos?: boolean }
+  { codigo:'2.1.3', descricao:'FORNECEDORES E CONTAS A PAGAR', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
+  { codigo:'2.1.3.01', descricao:'Fornecedores de Bens e Serviços', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
+  { codigo:'2.1.3.01.001', descricao:'Fornecedores Nacionais', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.3.01.002', descricao:'Serviços de Terceiros a Pagar', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  
+  { codigo:'2.1.3.02', descricao:'Outras Contas a Pagar', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
+  { codigo:'2.1.3.02.001', descricao:'Aluguéis a Pagar', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.3.02.002', descricao:'Energia e Água a Pagar', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+
+  { codigo:'2.3', descricao:'PATRIMÔNIO SOCIAL', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
+  { codigo:'2.3.1', descricao:'PATRIMÔNIO SOCIAL INICIAL', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
+  { codigo:'2.3.1.01', descricao:'Fundo Social Inicial', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
+  { codigo:'2.3.1.01.001', descricao:'Fundo Social Efetivado', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
+  
+  { codigo:'2.3.2', descricao:'SUPERÁVITS/DÉFICITS ACUMULADOS', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
+  { codigo:'2.3.2.01', descricao:'Superávits ou Déficits de Exercícios Anteriores', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
+  { codigo:'2.3.2.01.001', descricao:'Superávits/Déficits Acumulados', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
+
+  // ── 3 INGRESSOS (RECEITAS) ────────────────────────────────────────────────
+  { codigo:'3', descricao:'INGRESSOS', nivel:1, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.1', descricao:'INGRESSOS DAS ATIVIDADES COM RESTRIÇÃO', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.1.1', descricao:'CONTRIBUIÇÕES E MENSALIDADES', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.1.1.01', descricao:'Mensalidades Sociais', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.1.1.01.001', descricao:'Mensalidades de Associados', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
+  { codigo:'3.1.1.01.002', descricao:'Taxas de Adesão de Novos Membros', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
+  
+  { codigo:'3.1.2', descricao:'DOAÇÕES E SUBVENÇÕES', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.1.2.01', descricao:'Doações de Pessoas Físicas', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.1.2.01.001', descricao:'Doações Espontâneas — PF', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
+  
+  { codigo:'3.2', descricao:'OUTROS INGRESSOS OPERACIONAIS', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.2.1', descricao:'SERVIÇOS E EVENTOS', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.2.1.01', descricao:'Ingressos de Cursos e Treinamentos', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
+  { codigo:'3.2.1.01.001', descricao:'Inscrições em Cursos Livres', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'ingresso', aceita_lancamentos:true },
+
+  // ── 4 DISPÊNDIOS (DESPESAS) ────────────────────────────────────────────────
+  { codigo:'4', descricao:'DISPÊNDIOS', nivel:1, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.1', descricao:'DISPÊNDIOS DAS ATIVIDADES FIM', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.1.1', descricao:'DISPÊNDIOS COM PESSOAL — ATIV. FIM', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.1.1.01', descricao:'Remuneração e Benefícios — Ativ. Fim', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.1.1.01.001', descricao:'Salários e Ordenados — Ativ. Fim', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  { codigo:'4.1.1.01.002', descricao:'Encargos Sociais s/ Folha — Ativ. Fim', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+
+  { codigo:'4.2', descricao:'DISPÊNDIOS ADMINISTRATIVOS E GERAIS', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.1', descricao:'PESSOAL ADMINISTRATIVO', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.1.01', descricao:'Remuneração de Diretores e Gestores', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.1.01.001', descricao:'Pró-Labore da Diretoria Executiva', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  { codigo:'4.2.1.01.002', descricao:'Encargos s/ Pró-Labore', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  
+  { codigo:'4.2.2', descricao:'MANUTENÇÃO E INFRAESTRUTURA', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.2.01', descricao:'Serviços de Utilidade Pública', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.2.01.001', descricao:'Energia Elétrica Sede', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  { codigo:'4.2.2.01.002', descricao:'Água e Esgoto Sede', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  { codigo:'4.2.2.01.003', descricao:'Serviços de Telecomunicações', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  
+  { codigo:'4.2.3', descricao:'DISPÊNDIOS FINANCEIROS', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.3.01', descricao:'Tarifas e Comissões Bancárias', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.3.01.001', descricao:'Taxas de Manutenção de Conta', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  { codigo:'4.2.3.01.002', descricao:'Taxas s/ Boletos e Recebimentos', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+]

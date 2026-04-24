@@ -24,7 +24,7 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
     { label: 'Contas do Passivo', qty: contas.filter((c: any) => c.classificacao === 'passivo').length, color: 'text-rose-700', bg: 'bg-rose-50' },
     { label: 'Patrimônio Social', qty: contas.filter((c: any) => c.classificacao === 'patrimonio_social').length, color: 'text-purple-700', bg: 'bg-purple-50' },
     { label: 'Ingressos', qty: contas.filter((c: any) => c.classificacao === 'ingresso').length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-    { label: 'Despesas', qty: contas.filter((c: any) => c.classificacao === 'despesa').length, color: 'text-orange-700', bg: 'bg-orange-50' },
+    { label: 'Dispêndios', qty: contas.filter((c: any) => c.classificacao === 'despesa').length, color: 'text-orange-700', bg: 'bg-orange-50' },
   ]
 
   return (

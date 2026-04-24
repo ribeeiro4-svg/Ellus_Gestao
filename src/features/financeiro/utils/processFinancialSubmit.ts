@@ -43,7 +43,9 @@ export async function processFinancialSubmit(
     associado_id: cleanId(data.associado_id),
     fornecedor_id: cleanId(data.fornecedor_id),
     diretor_id: cleanId(data.diretor_id),
-    conta_id: cleanId(data.conta_id)
+    conta_id: cleanId(data.conta_id),
+    competencia_mes: data.competencia_mes !== undefined && data.competencia_mes !== '' ? Number(data.competencia_mes) : undefined,
+    competencia_ano: data.competencia_ano !== undefined && data.competencia_ano !== '' ? Number(data.competencia_ano) : undefined,
   }
 
   const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, ...dbData } = safeData
