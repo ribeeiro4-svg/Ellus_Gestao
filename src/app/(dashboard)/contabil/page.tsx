@@ -14,8 +14,9 @@ import CentrosCusto from '@/features/contabil/components/CentrosCusto'
 import DFC from '@/features/contabil/components/DFC'
 import PreFechamento from '@/features/contabil/components/PreFechamento'
 import RelatoriosExport from '@/features/contabil/components/RelatoriosExport'
+import ExecucaoRubrica from '@/features/contabil/components/ExecucaoRubrica'
 
-type Tab = 'dashboard' | 'lancamentos' | 'plano' | 'balancete' | 'demonstracoes' | 'imobilizado' | 'periodos' | 'centros_custo' | 'dfc' | 'pre_fechamento' | 'relatorios'
+type Tab = 'dashboard' | 'lancamentos' | 'plano' | 'balancete' | 'demonstracoes' | 'imobilizado' | 'periodos' | 'centros_custo' | 'dfc' | 'pre_fechamento' | 'relatorios' | 'execucao'
 
 export default function ContabilPage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
@@ -34,6 +35,7 @@ export default function ContabilPage() {
     { id: 'dfc' as Tab, label: '💸 DFC' },
     { id: 'pre_fechamento' as Tab, label: '🏁 Pré-Fechamento' },
     { id: 'relatorios' as Tab, label: '📄 Relatórios' },
+    { id: 'execucao' as Tab, label: '🎯 MROSC' },
   ]
 
   return (
@@ -135,6 +137,7 @@ export default function ContabilPage() {
       {activeTab === 'dfc' && <DFC lancHook={lancHook} planoHook={planoHook} />}
       {activeTab === 'pre_fechamento' && <PreFechamento />}
       {activeTab === 'relatorios' && <RelatoriosExport lancHook={lancHook} planoHook={planoHook} />}
+      {activeTab === 'execucao' && <ExecucaoRubrica lancHook={lancHook} />}
     </div>
   )
 }
