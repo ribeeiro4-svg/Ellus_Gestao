@@ -41,6 +41,17 @@ export function useConciliacaoAudit(
 
     const assocCpfMatch = associados.find(a => a.cpf && numbersInMemo.includes(a.cpf.replace(/\D/g, '')))
     if (assocCpfMatch) {
+      const bankDate = new Date(bankDateStr)
+      const m = bankDate.getMonth()
+      const y = bankDate.getFullYear()
+
+      const existingMatch = lancamentos.find(l => 
+        l.associado_id === assocCpfMatch.id && 
+        l.status === 'aberto' && 
+        (l.categoria === 'Mensalidade' || l.categoria === 'Mensalidades') &&
+        ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+      )
+
       const hasAdesaoInSystem = lancamentos.some(l => l.associado_id === assocCpfMatch.id && (l.categoria === 'ADESÃO' || l.descricao?.toUpperCase().includes('ADESAO')))
       const hasAnyPayment = lancamentos.some(l => l.associado_id === assocCpfMatch.id && l.status === 'pago')
       
@@ -51,7 +62,8 @@ export function useConciliacaoAudit(
           forMatch: null, 
           suggestedCategory: 'ADESÃO', 
           warning: 'Adesão não lançada no sistema. Sincronize com ZapSign primeiro.',
-          isAdesao: true 
+          isAdesao: true,
+          existingMatch
         }
       }
 
@@ -59,7 +71,8 @@ export function useConciliacaoAudit(
         assocMatch: assocCpfMatch, 
         forMatch: null, 
         suggestedCategory: !hasAnyPayment ? 'ADESÃO' : 'Mensalidades', 
-        isAdesao: !hasAnyPayment 
+        isAdesao: !hasAnyPayment,
+        existingMatch
       }
     }
 
@@ -108,13 +121,25 @@ export function useConciliacaoAudit(
 
     const assocFuzzy = associados.find(a => fuzzyMatch(a.nome))
     if (assocFuzzy) {
+      const bankDate = new Date(bankDateStr)
+      const m = bankDate.getMonth()
+      const y = bankDate.getFullYear()
+
+      const existingMatch = lancamentos.find(l => 
+        l.associado_id === assocFuzzy.id && 
+        l.status === 'aberto' && 
+        (l.categoria === 'Mensalidade' || l.categoria === 'Mensalidades') &&
+        ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+      )
+
       const isAdesao = !lancamentos.some(l => l.associado_id === assocFuzzy.id)
       return { 
         assocMatch: assocFuzzy, 
         forMatch: null, 
         suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', 
         isAdesao,
-        needsUpdate: !assocFuzzy.cpf && !!extractedDoc,
+        existingMatch,
+        needsUpdate: !assocFuzzy.cpf && extractedDoc?.length === 11,
         newDocument: extractedDoc
       }
     }
