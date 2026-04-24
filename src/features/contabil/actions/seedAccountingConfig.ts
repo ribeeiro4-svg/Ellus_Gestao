@@ -27,16 +27,16 @@ export async function seedAccountingConfigAction() {
     { categoria_nome: 'IMPOSTOS TRABALHISTAS', conta_contabil_codigo: '4.1.1.01.002', conta_contabil_nome: 'Encargos Sociais s/ Folha — Ativ. Fim', tipo: 'dispendio' },
     
     // Manutenção e Serviços
-    { categoria_nome: 'CONTABILIDADE/JURÍDICO', conta_contabil_codigo: '2.1.3.01.002', conta_contabil_nome: 'Serviços de Terceiros a Pagar', tipo: 'dispendio' },
-    { categoria_nome: 'SERVIÇOS CONTRATADOS PJ', conta_contabil_codigo: '2.1.3.01.002', conta_contabil_nome: 'Serviços de Terceiros a Pagar', tipo: 'dispendio' },
-    { categoria_nome: 'SOFTWARE OPERACIONAL', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
+    { categoria_nome: 'CONTABILIDADE/JURÍDICO', conta_contabil_codigo: '4.2.2.01.008', conta_contabil_nome: 'Assessoria Contábil e Jurídica', tipo: 'dispendio' },
+    { categoria_nome: 'SERVIÇOS CONTRATADOS PJ', conta_contabil_codigo: '4.2.2.01.007', conta_contabil_nome: 'Serviços de Terceiros - Pessoa Jurídica', tipo: 'dispendio' },
+    { categoria_nome: 'SOFTWARE OPERACIONAL', conta_contabil_codigo: '4.2.2.01.006', conta_contabil_nome: 'Manutenção de Sistemas e Software', tipo: 'dispendio' },
     { categoria_nome: 'INTERNET (WI-FI)', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
-    { categoria_nome: 'INFRAESTRUTURA', conta_contabil_codigo: '4.2.2.01.002', conta_contabil_nome: 'Água e Esgoto Sede', tipo: 'dispendio' },
+    { categoria_nome: 'INFRAESTRUTURA', conta_contabil_codigo: '4.2.2.01.011', conta_contabil_nome: 'Manutenção de Infraestrutura e Reparos', tipo: 'dispendio' },
     
     // Materiais e Outros
-    { categoria_nome: 'ARTIGOS DE GRÁFICA', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica Sede', tipo: 'dispendio' },
-    { categoria_nome: 'MATERIAIS DE ESCRITÓRIO', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica Sede', tipo: 'dispendio' },
-    { categoria_nome: 'MATERIAIS USO E CONSUMO DA SEDE', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica Sede', tipo: 'dispendio' },
+    { categoria_nome: 'ARTIGOS DE GRÁFICA', conta_contabil_codigo: '4.2.2.01.009', conta_contabil_nome: 'Despesas com Gráfica e Impressos', tipo: 'dispendio' },
+    { categoria_nome: 'MATERIAIS DE ESCRITÓRIO', conta_contabil_codigo: '4.2.2.01.004', conta_contabil_nome: 'Materiais de Escritório e Expediente', tipo: 'dispendio' },
+    { categoria_nome: 'MATERIAIS USO E CONSUMO DA SEDE', conta_contabil_codigo: '4.2.2.01.005', conta_contabil_nome: 'Materiais de Limpeza e Consumo da Sede', tipo: 'dispendio' },
     { categoria_nome: 'RESERVA DE EMERGÊNCIA', conta_contabil_codigo: '1.1.1.03.001', conta_contabil_nome: 'Aplicações de Liquidez Imediata', tipo: 'dispendio' },
     { categoria_nome: 'EMPRÉSTIMOS (DIRETORIA)', conta_contabil_codigo: '1.1.2.02.001', conta_contabil_nome: 'Adiantamentos a Empregados', tipo: 'dispendio' },
   ]
