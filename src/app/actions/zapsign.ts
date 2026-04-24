@@ -247,10 +247,6 @@ export async function tempFixDatabaseAction() {
         cpf = COALESCE(EXCLUDED.cpf, associados.cpf),
         email = COALESCE(EXCLUDED.email, associados.email),
         telefone = COALESCE(EXCLUDED.telefone, associados.telefone),
-        status = CASE 
-          WHEN associados.status = 'inativo' THEN 'inativo' 
-          ELSE EXCLUDED.status 
-        END,
         zapsign_doc_token = COALESCE(EXCLUDED.zapsign_doc_token, associados.zapsign_doc_token),
         updated_at = NOW();
     END;
