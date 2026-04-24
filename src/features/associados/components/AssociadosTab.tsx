@@ -61,6 +61,7 @@ export default function AssociadosTab() {
   const [filterRecorrencia, setFilterRecorrencia] = useState<string>('todos')
   const [filterPlanoSaude, setFilterPlanoSaude] = useState<string>('todos')
   const [filterTermo, setFilterTermo] = useState<string>('todos')
+  const [filterAdesao, setFilterAdesao] = useState<string>('todos')
   const [isUpdatingBulk, setIsUpdatingBulk] = useState(false)
   const [isBulkAccountModalOpen, setIsBulkAccountModalOpen] = useState(false)
   const [isIndividualSyncModalOpen, setIsIndividualSyncModalOpen] = useState(false)
@@ -133,11 +134,23 @@ export default function AssociadosTab() {
     if (filterPlanoSaude !== 'todos') res = res.filter((a: any) => (a.plano_saude || 'Não Possui') === filterPlanoSaude)
     if (filterTermo !== 'todos') res = res.filter((a: any) => (a.termo_status || 'Assinatura Pendente') === filterTermo)
     if (filterCpfInvalido) res = res.filter((a: any) => (a.cpf || '').replace(/\D/g, '').length < 11)
+    
+    if (filterAdesao !== 'todos') {
+      res = res.filter((a: any) => {
+        const hasAdesaoPaga = lancamentos.some(l => 
+          l.associado_id === a.id && 
+          l.status === 'pago' && 
+          (l.categoria?.toUpperCase().includes('ADESÃO') || l.descricao?.toUpperCase().includes('ADESÃO'))
+        )
+        return filterAdesao === 'identificada' ? hasAdesaoPaga : !hasAdesaoPaga
+      })
+    }
+    
     return res
-  }, [associados, searchQ, filterStatus, filterCategoria, filterRecorrencia, filterPlanoSaude, filterTermo, filterCpfInvalido])
+  }, [associados, lancamentos, searchQ, filterStatus, filterCategoria, filterRecorrencia, filterPlanoSaude, filterTermo, filterCpfInvalido, filterAdesao])
 
-  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterRecorrencia !== 'todos' || filterPlanoSaude !== 'todos' || filterTermo !== 'todos' || filterCpfInvalido || searchQ !== ''
-  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterRecorrencia('todos'); setFilterPlanoSaude('todos'); setFilterTermo('todos'); setFilterCpfInvalido(false); setSearchQ('') }
+  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterRecorrencia !== 'todos' || filterPlanoSaude !== 'todos' || filterTermo !== 'todos' || filterAdesao !== 'todos' || filterCpfInvalido || searchQ !== ''
+  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterRecorrencia('todos'); setFilterPlanoSaude('todos'); setFilterTermo('todos'); setFilterAdesao('todos'); setFilterCpfInvalido(false); setSearchQ('') }
 
   const handleSalvar = async (data: any) => {
     if (editingItem) { await atualizar(editingItem.id, data) }
@@ -571,6 +584,11 @@ export default function AssociadosTab() {
             <option value="todos">TERMO (TODOS)</option>
             <option value="Enviado ao HGU">ENVIADO AO HGU</option>
             <option value="Assinatura Pendente">ASSINATURA PENDENTE</option>
+          </select>
+          <select value={filterAdesao} onChange={e => setFilterAdesao(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
+            <option value="todos">ADESÃO (TODOS)</option>
+            <option value="identificada">ADESÃO IDENTIFICADA</option>
+            <option value="pendente">ADESÃO PENDENTE</option>
           </select>
           {hasActiveFilters && <button onClick={clearFilters} className="text-[10px] font-black uppercase text-gray-400 hover:text-red-500 transition-colors">Limpar Filtros</button>}
         </div>
