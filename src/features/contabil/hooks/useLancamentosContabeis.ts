@@ -136,6 +136,22 @@ export function useLancamentosContabeis() {
     return r
   }
 
+  const excluir = async (id: string, senha: string) => {
+    if (senha !== '19072425') return { error: 'Senha de exclusão incorreta.' }
+    const original = lancamentos.find(l => l.id === id)
+    if (!original) return { error: 'Lançamento não encontrado' }
+
+    // Excluir as partidas (caso não haja ON DELETE CASCADE configurado)
+    const { error: partErr } = await sb.from('lancamentos_partidas').delete().eq('lancamento_id', id)
+    if (partErr) return { error: partErr.message }
+
+    const { error: lancErr } = await sb.from('lancamentos_contabeis').delete().eq('id', id)
+    if (lancErr) return { error: lancErr.message }
+
+    fetch()
+    return { error: null }
+  }
+
   // Balancete de verificação por período
   const calcularBalancete = async (anoMes: string) => {
     const [ano, mes] = anoMes.split('-')
@@ -166,5 +182,5 @@ export function useLancamentosContabeis() {
     estornados: lancamentos.filter(l => l.status === 'estornado').length,
   }
 
-  return { lancamentos, loading, stats, inserir, estornar, buscarPartidas, calcularBalancete, refresh: fetch }
+  return { lancamentos, loading, stats, inserir, estornar, excluir, buscarPartidas, calcularBalancete, refresh: fetch }
 }

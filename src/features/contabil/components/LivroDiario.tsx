@@ -6,7 +6,7 @@ const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', 
 const fmtData = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
 
 export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
-  const { lancamentos, loading, inserir, estornar, buscarPartidas } = lancHook
+  const { lancamentos, loading, inserir, estornar, excluir, buscarPartidas } = lancHook
   const { contasAnaliticas } = planoHook
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
@@ -206,10 +206,23 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
                       <div className="flex items-center gap-2">
                         <ChevronRight size={12} className={`text-slate-400 transition-transform ${expandedId === l.id ? 'rotate-90' : ''}`} />
                         {l.status === 'confirmado' && (
-                          <button onClick={e => { e.stopPropagation(); confirm('Estornar este lançamento?') && estornar(l.id) }}
-                            className="p-1 text-orange-500 hover:bg-orange-50 rounded-lg" title="Estornar">
-                            <RotateCcw size={12} />
-                          </button>
+                          <>
+                            <button onClick={e => { e.stopPropagation(); confirm('Estornar este lançamento?') && estornar(l.id) }}
+                              className="p-1 text-orange-500 hover:bg-orange-50 rounded-lg" title="Estornar">
+                              <RotateCcw size={12} />
+                            </button>
+                            <button onClick={async e => { 
+                              e.stopPropagation(); 
+                              const senha = prompt('Digite a senha de exclusão para remover este lançamento permanentemente:')
+                              if (senha) {
+                                const res = await excluir(l.id, senha)
+                                if (res?.error) alert(res.error)
+                              }
+                            }}
+                              className="p-1 text-red-500 hover:bg-red-50 rounded-lg" title="Excluir Definitivamente">
+                              <Trash2 size={12} />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
