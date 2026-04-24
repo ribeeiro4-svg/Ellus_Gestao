@@ -114,6 +114,8 @@ export const PLANO_CONTAS_ITG2002: PlanoContasItem[] = [
   { codigo:'4.1.1.01', descricao:'Remuneração e Benefícios — Ativ. Fim', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
   { codigo:'4.1.1.01.001', descricao:'Salários e Ordenados — Ativ. Fim', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
   { codigo:'4.1.1.01.002', descricao:'Encargos Sociais s/ Folha — Ativ. Fim', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  { codigo:'4.1.1.01.003', descricao:'Bolsa-Auxílio (Estagiários)', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  { codigo:'4.1.1.01.004', descricao:'Auxílio Transporte e Benefícios (Estagiários)', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
 
   { codigo:'4.2', descricao:'DISPÊNDIOS ADMINISTRATIVOS E GERAIS', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
   { codigo:'4.2.1', descricao:'PESSOAL ADMINISTRATIVO', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
