@@ -15,12 +15,15 @@ export async function seedAccountingConfigAction() {
     { categoria_nome: 'MENSALIDADES', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
     { categoria_nome: 'ADESÃO', conta_contabil_codigo: '3.1.1.01.002', conta_contabil_nome: 'Taxas de Adesão de Novos Membros', tipo: 'ingresso' },
     
-    // Dispêndios com Pessoal
+    // Dispêndios com Pessoal (Bolsas e Estagiários)
     { categoria_nome: 'PRÓ-LABORE (DIRETORIA)', conta_contabil_codigo: '4.2.1.01.001', conta_contabil_nome: 'Pró-Labore da Diretoria Executiva', tipo: 'dispendio' },
     { categoria_nome: 'BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
     { categoria_nome: '13º BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: '13° BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' }, // Variação com °
     { categoria_nome: 'AUXÍLIOS ESTAGIÁRIO', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
     { categoria_nome: 'FÉRIAS REMUNERADAS (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'ESTAGIÁRIO - FUNDO DE RESERVA (FÉRIAS E 13º AUXÍLIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'ESTAGIÁRIO – FUNDO DE RESERVA (FÉRIAS E 13º AUXÍLIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' }, // Variação com travessão
     { categoria_nome: 'IMPOSTOS TRABALHISTAS', conta_contabil_codigo: '4.1.1.01.002', conta_contabil_nome: 'Encargos Sociais s/ Folha — Ativ. Fim', tipo: 'dispendio' },
     
     // Manutenção e Serviços
