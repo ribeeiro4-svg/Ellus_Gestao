@@ -91,7 +91,7 @@ export function useAssociados() {
             id: existing.id,
             tenant_id: tenantId,
             codigo: existing.codigo, // Inclui o código original para evitar conflito de Unique Constraint
-            status: it.status,
+            status: existing.status === 'inativo' ? 'inativo' : it.status,
             zapsign_doc_token: it.zapsign_doc_token,
             zapsign_signers: it.zapsign_signers,
             zapsign_sync_at: new Date().toISOString()
