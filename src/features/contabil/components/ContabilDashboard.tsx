@@ -1,18 +1,20 @@
 'use client'
 import React from 'react'
 import { BookOpen, FileText, CheckCircle, TrendingUp, BarChart3 } from 'lucide-react'
+import { useConfiguracoesContabeis } from '@/features/contabil/hooks/useConfiguracoesContabeis'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
 export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
   const { lancamentos, stats } = lancHook
   const { contas } = planoHook
+  const { configuracoes } = useConfiguracoesContabeis()
 
   const kpis = [
     { label: 'Lançamentos', value: stats.total, sub: 'no livro diário', icon: BookOpen, color: '#6366f1' },
     { label: 'Confirmados', value: stats.confirmados, sub: 'lançamentos válidos', icon: CheckCircle, color: '#10b981' },
     { label: 'Estornados', value: stats.estornados, sub: 'lançamentos revertidos', icon: FileText, color: '#ef4444' },
-    { label: 'Contas no Plano', value: contas.length, sub: 'ITG 2002 (R1)', icon: BarChart3, color: '#8b5cf6' },
+    { label: 'Categorias Mapeadas', value: configuracoes.length, sub: 'ITG 2002 (R1)', icon: BarChart3, color: '#8b5cf6' },
   ]
 
   const ultimos5 = lancamentos.slice(0, 5)
@@ -23,8 +25,8 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
     { label: 'Contas do Ativo', qty: contas.filter((c: any) => c.classificacao === 'ativo').length, color: 'text-blue-700', bg: 'bg-blue-50' },
     { label: 'Contas do Passivo', qty: contas.filter((c: any) => c.classificacao === 'passivo').length, color: 'text-rose-700', bg: 'bg-rose-50' },
     { label: 'Patrimônio Social', qty: contas.filter((c: any) => c.classificacao === 'patrimonio_social').length, color: 'text-purple-700', bg: 'bg-purple-50' },
-    { label: 'Ingressos', qty: contas.filter((c: any) => c.classificacao === 'ingresso').length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-    { label: 'Dispêndios', qty: contas.filter((c: any) => c.classificacao === 'despesa').length, color: 'text-orange-700', bg: 'bg-orange-50' },
+    { label: 'Ingressos Mapeados', qty: configuracoes.filter((c: any) => c.tipo === 'ingresso').length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+    { label: 'Dispêndios Mapeados', qty: configuracoes.filter((c: any) => c.tipo === 'dispendio').length, color: 'text-orange-700', bg: 'bg-orange-50' },
   ]
 
   return (

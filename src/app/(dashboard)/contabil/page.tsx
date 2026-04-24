@@ -37,14 +37,29 @@ export default function ContabilPage() {
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">ITG 2002 (R1) • Livro Diário • ECD • SPED Contábil</p>
           </div>
         </div>
-        {planoHook.contas.length === 0 && (
+        <div className="flex gap-2">
+          {planoHook.contas.length === 0 && (
+            <button
+              onClick={() => planoHook.inicializarPlanoContas()}
+              className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all"
+            >
+              🚀 Inicializar Plano de Contas ITG 2002
+            </button>
+          )}
           <button
-            onClick={() => planoHook.inicializarPlanoContas()}
-            className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all"
+            onClick={async () => {
+              if (confirm('Deseja configurar automaticamente o mapeamento das categorias financeiras para o Plano de Contas ITG 2002?')) {
+                const { seedAccountingConfigAction } = await import('@/features/contabil/actions/seedAccountingConfig')
+                const res = await seedAccountingConfigAction()
+                if (res.success) alert('Mapeamento contábil configurado com sucesso!')
+                else alert(`Erro ao configurar: ${res.error}`)
+              }
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-indigo-600 bg-white border border-indigo-100 hover:bg-indigo-50 rounded-xl transition-all shadow-sm"
           >
-            🚀 Inicializar Plano de Contas ITG 2002
+            ⚙️ Mapeamento Automático
           </button>
-        )}
+        </div>
       </div>
 
       {/* Aviso ITG 2002 */}
