@@ -40,9 +40,52 @@ export function useFornecedores() {
 
   const inserirFornecedor = async (obj: Partial<Fornecedor>) => {
     if (!tenantId) return { error: 'Tenant não identificado' }
+
+    // Auto-gerar conta contábil para o fornecedor
+    let contaContabilId = obj.conta_contabil_id
+    if (!contaContabilId) {
+      try {
+        const { data: ultimasContas } = await sb.from('plano_contas')
+          .select('codigo')
+          .eq('tenant_id', tenantId)
+          .like('codigo', '2.1.3.01.%')
+          .order('codigo', { ascending: false })
+          .limit(1)
+
+        let novoCodigo = '2.1.3.01.100' // Começa no 100 para evitar conflitos com ITG padrão
+        if (ultimasContas && ultimasContas.length > 0) {
+          const ultimo = ultimasContas[0].codigo
+          const partes = ultimo.split('.')
+          const sequencial = parseInt(partes[partes.length - 1], 10)
+          if (!isNaN(sequencial) && sequencial >= 100) {
+            novoCodigo = `2.1.3.01.${String(sequencial + 1).padStart(3, '0')}`
+          }
+        }
+
+        const { data: pai } = await sb.from('plano_contas').select('id').eq('tenant_id', tenantId).eq('codigo', '2.1.3.01').single()
+
+        const { data: novaConta } = await sb.from('plano_contas').insert({
+          tenant_id: tenantId,
+          codigo: novoCodigo,
+          descricao: `Fornecedor: ${obj.nome}`,
+          nivel: 5,
+          tipo: 'analitica',
+          natureza: 'credora',
+          classificacao: 'passivo',
+          aceita_lancamentos: true,
+          ativa: true,
+          conta_pai_id: pai?.id || null
+        }).select('id').single()
+
+        if (novaConta) contaContabilId = novaConta.id
+      } catch (err) {
+        console.error('Erro ao auto-gerar conta do fornecedor:', err)
+      }
+    }
+
     const { data, error } = await sb
       .from('fornecedores')
-      .insert([{ ...obj, tenant_id: tenantId }])
+      .insert([{ ...obj, tenant_id: tenantId, conta_contabil_id: contaContabilId }])
       .select()
     if (!error) await fetchFornecedores()
     return { data, error }

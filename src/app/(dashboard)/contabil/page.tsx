@@ -63,10 +63,12 @@ export default function ContabilPage() {
           </button>
           <button
             onClick={async () => {
-              if (confirm('Deseja configurar automaticamente o mapeamento das categorias financeiras para o Plano de Contas ITG 2002?')) {
+              if (confirm('Deseja configurar automaticamente o mapeamento das categorias financeiras e atualizar as contas de fornecedores?')) {
                 const { seedAccountingConfigAction } = await import('@/features/contabil/actions/seedAccountingConfig')
+                const { fixFornecedoresAccountsAction } = await import('@/features/contabil/actions/fixFornecedoresAccounts')
                 const res = await seedAccountingConfigAction()
-                if (res.success) alert('Mapeamento contábil configurado com sucesso!')
+                const fixRes = await fixFornecedoresAccountsAction()
+                if (res.success) alert(`Mapeamento configurado! ${fixRes.count ? fixRes.count + ' fornecedores atualizados.' : ''}`)
                 else alert(`Erro ao configurar: ${res.error}`)
               }
             }}
