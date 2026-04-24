@@ -311,6 +311,7 @@ export default function FinanceiroPage() {
     } finally { setIsProcessingBatch(false) }
   }
 
+  const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false)
   const handleCleanupDuplicates = async () => {
     if (!confirm('Deseja remover mensalidades duplicadas que ainda não foram conciliadas?')) return
     setIsCleaningDuplicates(true)
