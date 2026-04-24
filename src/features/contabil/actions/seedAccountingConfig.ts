@@ -12,26 +12,30 @@ export async function seedAccountingConfigAction() {
 
   const mappings = [
     // Ingressos
-    { categoria_nome: 'Mensalidade', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
-    { categoria_nome: 'Taxa de Adesão', conta_contabil_codigo: '3.1.1.01.002', conta_contabil_nome: 'Taxas de Adesão', tipo: 'ingresso' },
-    { categoria_nome: 'Doações', conta_contabil_codigo: '3.1.2.01.001', conta_contabil_nome: 'Doações de Pessoas Físicas', tipo: 'ingresso' },
-    { categoria_nome: 'Cursos / Eventos', conta_contabil_codigo: '3.2.1.01.001', conta_contabil_nome: 'Inscrições em Cursos Livres', tipo: 'ingresso' },
-    { categoria_nome: 'Inscrição Curso', conta_contabil_codigo: '3.2.1.01.001', conta_contabil_nome: 'Inscrições em Cursos Livres', tipo: 'ingresso' },
+    { categoria_nome: 'MENSALIDADES', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
+    { categoria_nome: 'ADESÃO', conta_contabil_codigo: '3.1.1.01.002', conta_contabil_nome: 'Taxas de Adesão de Novos Membros', tipo: 'ingresso' },
     
-    // Dispêndios
-    { categoria_nome: 'Salário', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados', tipo: 'dispendio' },
-    { categoria_nome: 'Folha de Pagamento', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados', tipo: 'dispendio' },
-    { categoria_nome: 'FGTS / INSS', conta_contabil_codigo: '4.1.1.01.002', conta_contabil_nome: 'Encargos Sociais', tipo: 'dispendio' },
-    { categoria_nome: 'Pró-Labore', conta_contabil_codigo: '4.2.1.01.001', conta_contabil_nome: 'Pró-Labore da Diretoria', tipo: 'dispendio' },
-    { categoria_nome: 'Diretoria', conta_contabil_codigo: '4.2.1.01.001', conta_contabil_nome: 'Pró-Labore da Diretoria', tipo: 'dispendio' },
-    { categoria_nome: 'Energia Elétrica', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica e Água', tipo: 'dispendio' },
-    { categoria_nome: 'Água e Esgoto', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica e Água', tipo: 'dispendio' },
-    { categoria_nome: 'Aluguel', conta_contabil_codigo: '4.2.2.01.002', conta_contabil_nome: 'Alugueis de Imóveis', tipo: 'dispendio' },
-    { categoria_nome: 'Software / SaaS', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Tecnologia (SaaS)', tipo: 'dispendio' },
-    { categoria_nome: 'Tarifas Bancárias', conta_contabil_codigo: '4.2.3.01.001', conta_contabil_nome: 'Tarifas e Comissões Bancárias', tipo: 'dispendio' },
-    { categoria_nome: 'Taxas Bancárias', conta_contabil_codigo: '4.2.3.01.001', conta_contabil_nome: 'Tarifas e Comissões Bancárias', tipo: 'dispendio' },
-    { categoria_nome: 'Cora', conta_contabil_codigo: '4.2.3.01.001', conta_contabil_nome: 'Tarifas e Comissões Bancárias', tipo: 'dispendio' },
-    { categoria_nome: 'Outros', conta_contabil_codigo: '4.2.4.01.001', conta_contabil_nome: 'Despesas Gerais de Pequeno Valor', tipo: 'dispendio' },
+    // Dispêndios com Pessoal
+    { categoria_nome: 'PRÓ-LABORE (DIRETORIA)', conta_contabil_codigo: '4.2.1.01.001', conta_contabil_nome: 'Pró-Labore da Diretoria Executiva', tipo: 'dispendio' },
+    { categoria_nome: 'BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: '13º BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'AUXÍLIOS ESTAGIÁRIO', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'FÉRIAS REMUNERADAS (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.001', conta_contabil_nome: 'Salários e Ordenados — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'IMPOSTOS TRABALHISTAS', conta_contabil_codigo: '4.1.1.01.002', conta_contabil_nome: 'Encargos Sociais s/ Folha — Ativ. Fim', tipo: 'dispendio' },
+    
+    // Manutenção e Serviços
+    { categoria_nome: 'CONTABILIDADE/JURÍDICO', conta_contabil_codigo: '2.1.3.01.002', conta_contabil_nome: 'Serviços de Terceiros a Pagar', tipo: 'dispendio' },
+    { categoria_nome: 'SERVIÇOS CONTRATADOS PJ', conta_contabil_codigo: '2.1.3.01.002', conta_contabil_nome: 'Serviços de Terceiros a Pagar', tipo: 'dispendio' },
+    { categoria_nome: 'SOFTWARE OPERACIONAL', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
+    { categoria_nome: 'INTERNET (WI-FI)', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
+    { categoria_nome: 'INFRAESTRUTURA', conta_contabil_codigo: '4.2.2.01.002', conta_contabil_nome: 'Água e Esgoto Sede', tipo: 'dispendio' },
+    
+    // Materiais e Outros
+    { categoria_nome: 'ARTIGOS DE GRÁFICA', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica Sede', tipo: 'dispendio' },
+    { categoria_nome: 'MATERIAIS DE ESCRITÓRIO', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica Sede', tipo: 'dispendio' },
+    { categoria_nome: 'MATERIAIS USO E CONSUMO DA SEDE', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica Sede', tipo: 'dispendio' },
+    { categoria_nome: 'RESERVA DE EMERGÊNCIA', conta_contabil_codigo: '1.1.1.03.001', conta_contabil_nome: 'Aplicações de Liquidez Imediata', tipo: 'dispendio' },
+    { categoria_nome: 'EMPRÉSTIMOS (DIRETORIA)', conta_contabil_codigo: '1.1.2.02.001', conta_contabil_nome: 'Adiantamentos a Empregados', tipo: 'dispendio' },
   ]
 
   const records = mappings.map(m => ({
