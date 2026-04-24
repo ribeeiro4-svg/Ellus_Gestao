@@ -19,18 +19,28 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   // 3. Buscar os IDs reais das contas contábeis no banco de dados
   let { data: contaCat } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', map.conta_contabil_codigo).maybeSingle()
   
-  // Se a conta mapeada não existir no banco (ex: foi excluída ou código antigo), usar fallback
+  // Se a conta mapeada não existir no banco, usar fallback forte
   if (!contaCat) {
-    const fallbackCodigo = fin.tipo === 'receita' ? '3.1.1.01.001' : '4.2.2.01.013' // Mensalidades ou Outros Dispêndios
-    const { data: fallback } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', fallbackCodigo).maybeSingle()
+    const fallbackCodigo = fin.tipo === 'receita' ? '3.1.1.01.001' : '4.2.2.01.013'
+    let { data: fallback } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', fallbackCodigo).maybeSingle()
+    if (!fallback) {
+      // Se até o fallback falhar, pega qualquer conta aceita_lancamentos que seja receita ou despesa
+      const prefix = fin.tipo === 'receita' ? '3.%' : '4.%'
+      const { data: anyFallback } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).like('codigo', prefix).eq('aceita_lancamentos', true).limit(1).maybeSingle()
+      fallback = anyFallback
+    }
     if (fallback) contaCat = fallback
   }
 
-  // Usa o Banco Cora como padrão provisório para a contrapartida de Caixa/Bancos
-  const { data: contaBanco } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', '1.1.1.02.001').maybeSingle()
+  // Usa o Banco Cora como padrão, ou qualquer conta de Caixa/Bancos (1.1.1) se não achar
+  let { data: contaBanco } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', '1.1.1.02.001').maybeSingle()
+  if (!contaBanco) {
+    const { data: fallbackBanco } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).like('codigo', '1.1.1.%').eq('aceita_lancamentos', true).limit(1).maybeSingle()
+    if (fallbackBanco) contaBanco = fallbackBanco
+  }
 
   if (!contaCat || !contaBanco) {
-    return { error: `As contas contábeis correspondentes (${map.conta_contabil_codigo} ou 1.1.1.02.001) não foram inicializadas no banco de dados.` }
+    return { error: `Erro fatal: Nenhuma conta contábil raiz (Caixa ou Resultado) encontrada para o tenant.` }
   }
 
   // 4. Verificar se já existe um lançamento contábil vinculado (origem_id)
