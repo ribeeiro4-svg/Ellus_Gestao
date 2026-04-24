@@ -96,8 +96,14 @@ export function useFinanceiro() {
     
     delete (finalInput as any).taxa 
 
-    const { error } = await sb.from('lancamentos').insert({ ...finalInput, tenant_id: tenantId })
-    if (!error) fetch()
+    const { data, error } = await sb.from('lancamentos').insert({ ...finalInput, tenant_id: tenantId }).select('id, status').single()
+    if (!error) {
+      if (data && data.status === 'pago') {
+        const { sincronizarLancamentoContabil } = await import('@/features/contabil/actions/accountingActions')
+        sincronizarLancamentoContabil(data.id)
+      }
+      fetch()
+    }
     return { error }
   }
 
@@ -236,8 +242,18 @@ export function useFinanceiro() {
 
     if (rows.length === 0) return { error: 'Todos os lançamentos deste lote já existem no sistema (Duplicatas detectadas).' }
 
-    const { error, count } = await sb.from('lancamentos').insert(rows)
-    if (!error) fetch()
+    const { data, error, count } = await sb.from('lancamentos').insert(rows).select('id, status')
+    if (!error) {
+      if (data) {
+        const { sincronizarLancamentoContabil } = await import('@/features/contabil/actions/accountingActions')
+        for (const item of data) {
+          if (item.status === 'pago') {
+            sincronizarLancamentoContabil(item.id)
+          }
+        }
+      }
+      fetch()
+    }
     return { error, count: rows.length }
   }
 

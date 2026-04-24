@@ -71,6 +71,9 @@ export const PLANO_CONTAS_ITG2002: PlanoContasItem[] = [
   { codigo:'2.1.1.02.001', descricao:'FGTS a Recolher', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
   { codigo:'2.1.1.02.002', descricao:'INSS a Recolher', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
   { codigo:'2.1.1.02.003', descricao:'PIS s/ Folha a Recolher', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.1.02.004', descricao:'IRRF a Recolher (Retenções)', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.1.02.005', descricao:'CSRF/PCC a Recolher (4,65%)', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
+  { codigo:'2.1.1.02.006', descricao:'ISS Retido a Recolher', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'passivo', aceita_lancamentos:true },
 
   { codigo:'2.1.3', descricao:'FORNECEDORES E CONTAS A PAGAR', nivel:3, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
   { codigo:'2.1.3.01', descricao:'Fornecedores de Bens e Serviços', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'passivo' },
