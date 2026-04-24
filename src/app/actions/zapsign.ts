@@ -254,8 +254,18 @@ export async function tempFixDatabaseAction() {
     $$ LANGUAGE plpgsql SECURITY DEFINER;
   `
 
-  // Tenta executar via RPC genérico se existir, ou via manipulação direta se o client permitir
-  return await sb.rpc('execute_sql', { sql })
+  // Tenta executar via RPC execute_sql (deve estar configurado no Supabase como SECURITY DEFINER)
+  try {
+    const { error } = await sb.rpc('execute_sql', { sql })
+    if (error) {
+      console.error('Erro ao executar tempFixDatabaseAction:', error)
+      return { error: error.message }
+    }
+    return { success: true }
+  } catch (err: any) {
+    console.error('Falha fatal em tempFixDatabaseAction:', err)
+    return { error: err.message }
+  }
 }
 
 /**

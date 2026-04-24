@@ -119,7 +119,15 @@ export default function FinanceiroPage() {
   }, [activeTab])
 
   useEffect(() => {
-    tempFixDatabaseAction()
+    tempFixDatabaseAction().then(res => {
+      if (res?.error) {
+        console.error('Falha na manutenção do banco:', res.error)
+        // Se o erro for que a função RPC não existe, avisamos o usuário
+        if (res.error.includes('function') && res.error.includes('does not exist')) {
+          alert('Atenção: Seu banco de dados precisa de uma atualização manual para suportar o histórico oculto. Entre em contato com o suporte ou execute o script de migração.')
+        }
+      }
+    })
   }, [])
 
   // Lógica de Processamento de Conciliação
