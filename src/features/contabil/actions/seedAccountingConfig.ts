@@ -17,6 +17,8 @@ export async function seedAccountingConfigAction() {
     
     // Dispêndios com Pessoal (Bolsas e Estagiários)
     { categoria_nome: 'PRÓ-LABORE (DIRETORIA)', conta_contabil_codigo: '4.2.1.01.001', conta_contabil_nome: 'Pró-Labore da Diretoria Executiva', tipo: 'dispendio' },
+    { categoria_nome: 'Verba Diretoria / Administrativo', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
+    { categoria_nome: 'VERBA DIRETORIA / ADMINISTRATIVO', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
     { categoria_nome: 'BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
     { categoria_nome: '13º BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
     { categoria_nome: '13° BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
