@@ -35,6 +35,7 @@ import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction } from '@/app/actions/financeiro_cleanup'
 import RemanejarModal from '@/components/ui/RemanejarModal'
 import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
+import { tempFixDatabaseAction } from '@/app/actions/zapsign'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -113,6 +114,10 @@ export default function FinanceiroPage() {
     setSelectedIds([])
   }, [activeTab])
 
+  useEffect(() => {
+    tempFixDatabaseAction()
+  }, [])
+
   // Lógica de Processamento de Conciliação
   const enhanceMemo = (name: string, originalMemo: string) => {
     const docRegex = /(\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2})|(\d{3}\.?\d{3}\.?\d{3}-?\d{2})|(\d{14})|(\d{11})/
@@ -174,7 +179,7 @@ export default function FinanceiroPage() {
 
       if (toInsert.length > 0) {
         const res = await inserirBulk(toInsert as any)
-        if (res.error) alert(`Erro: ${res.error}`)
+        if (res.error) alert(`Erro: ${(res.error as any)?.message || JSON.stringify(res.error)}`)
       }
 
       // Gerar Logs
@@ -249,7 +254,7 @@ export default function FinanceiroPage() {
 
       if (toInsert.length > 0) {
         const res = await inserirBulk(toInsert as any)
-        if (res.error) alert(`Erro Cora: ${res.error}`)
+        if (res.error) alert(`Erro Cora: ${(res.error as any)?.message || JSON.stringify(res.error)}`)
       }
 
       if (updateStatusBulk) await updateStatusBulk(rowsToProcess.map((i: any) => i.bank.fitid), 'sincronizado')
