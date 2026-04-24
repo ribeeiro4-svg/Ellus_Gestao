@@ -1,6 +1,6 @@
 'use client'
-import React from 'react'
-import { BookOpen, FileText, CheckCircle, TrendingUp, BarChart3 } from 'lucide-react'
+import React, { useState } from 'react'
+import { BookOpen, FileText, CheckCircle, TrendingUp, BarChart3, Download, Loader2 } from 'lucide-react'
 import { useConfiguracoesContabeis } from '@/features/contabil/hooks/useConfiguracoesContabeis'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
@@ -9,6 +9,34 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
   const { lancamentos, stats } = lancHook
   const { contas } = planoHook
   const { configuracoes } = useConfiguracoesContabeis()
+  const [gerandoECD, setGerandoECD] = useState(false)
+  const ano = new Date().getFullYear()
+
+  const handleGerarECD = async () => {
+    if (!confirm(`Gerar o arquivo ECD (SPED Contábil) para o exercício de ${ano}?\n\nO arquivo será baixado automaticamente no formato .txt compatível com o SPED da Receita Federal.`)) return
+    setGerandoECD(true)
+    try {
+      const { gerarECDAction } = await import('@/features/contabil/actions/spedContabil')
+      const res = await gerarECDAction(ano)
+      if (res.error) {
+        alert(`Erro ao gerar ECD: ${res.error}`)
+        return
+      }
+      // Download automático do arquivo
+      const blob = new Blob([res.conteudo!], { type: 'text/plain;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.nomeArquivo!
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      alert(`ECD gerado com sucesso!\n\n📄 Arquivo: ${res.nomeArquivo}\n📊 ${res.totalLinhas} linhas\n📒 ${res.totalLancamentos} lançamentos\n🏗️ ${res.totalContas} contas\n\nEncaminhe o arquivo ao seu contador para validação no PVA do SPED.`)
+    } finally {
+      setGerandoECD(false)
+    }
+  }
 
   const kpis = [
     { label: 'Lançamentos', value: stats.total, sub: 'no livro diário', icon: BookOpen, color: '#6366f1' },
@@ -119,9 +147,19 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
             </div>
           ))}
         </div>
-        <p className="text-[9px] text-indigo-500 font-medium mt-3">
-          ℹ️ A imunidade tributária (art. 150, VI, "c" da CF/88) não dispensa as associações das obrigações acessórias — ECD, ECF, SPED EFD são obrigatórios.
-        </p>
+        <div className="flex items-center justify-between mt-3">
+          <p className="text-[9px] text-indigo-500 font-medium">
+            ℹ️ A imunidade tributária (art. 150, VI, "c" da CF/88) não dispensa as associações das obrigações acessórias — ECD, ECF, SPED EFD são obrigatórios.
+          </p>
+          <button
+            onClick={handleGerarECD}
+            disabled={gerandoECD}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-black text-indigo-700 bg-white border border-indigo-200 hover:bg-indigo-50 rounded-xl transition-all disabled:opacity-50 shadow-sm flex-shrink-0 ml-4"
+          >
+            {gerandoECD ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+            {gerandoECD ? 'Gerando...' : `📥 Gerar ECD ${ano}`}
+          </button>
+        </div>
       </div>
     </div>
   )
