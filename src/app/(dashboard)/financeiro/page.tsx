@@ -192,7 +192,8 @@ export default function FinanceiroPage() {
         status: 'sucesso',
         mensagem: t.existingMatch ? 'Conciliado com lançamento existente' : 'Novo lançamento criado',
         id_bancario: t.bank.fitid,
-        atualizou_cpf: t.needsUpdate && !!t.newDocument
+        atualizou_cpf: t.needsUpdate && !!t.newDocument,
+        novo_cpf: t.newDocument
       }))
       
       setReconciliationLogs(logs)
@@ -269,7 +270,8 @@ export default function FinanceiroPage() {
         status: 'sucesso',
         mensagem: t.existingMatch ? 'Conciliado com provisão existente' : 'Novo lançamento via Cora',
         id_bancario: t.bank.fitid,
-        atualizou_cpf: t.needsUpdate && !!t.newDocument
+        atualizou_cpf: t.needsUpdate && !!t.newDocument,
+        novo_cpf: t.newDocument
       }))
 
       setReconciliationLogs(logs)

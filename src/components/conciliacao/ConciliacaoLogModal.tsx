@@ -15,6 +15,7 @@ interface LogEntry {
   mensagem: string
   id_bancario?: string
   atualizou_cpf?: boolean
+  novo_cpf?: string
 }
 
 interface ConciliacaoLogModalProps {
@@ -73,6 +74,35 @@ export default function ConciliacaoLogModal({ isOpen, onClose, logs }: Conciliac
       styles: { fontSize: 8 },
       alternateRowStyles: { fillColor: [245, 255, 250] }
     })
+
+    const updatedCpfLogs = logs.filter(l => l.atualizou_cpf && l.associado && l.novo_cpf)
+    if (updatedCpfLogs.length > 0) {
+      doc.addPage()
+      
+      // Header Nova Página
+      doc.setFillColor(79, 70, 229) // Indigo-600
+      doc.rect(0, 0, 210, 40, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(18)
+      doc.text('Auditoria de Cadastros (CPFs)', 14, 25)
+
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(12)
+      doc.text('Os seguintes associados tiveram seus CPFs atualizados automaticamente:', 14, 55)
+
+      const cpfTableRows = updatedCpfLogs.map(l => [
+        l.associado,
+        l.novo_cpf
+      ])
+
+      ;(doc as any).autoTable({
+        startY: 65,
+        head: [['Nome do Associado', 'CPF Extraído']],
+        body: cpfTableRows,
+        headStyles: { fillColor: [79, 70, 229] },
+        styles: { fontSize: 10 }
+      })
+    }
 
     doc.save(`conciliacao_log_${new Date().getTime()}.pdf`)
   }
@@ -154,8 +184,15 @@ export default function ConciliacaoLogModal({ isOpen, onClose, logs }: Conciliac
                           {log.mensagem}
                         </div>
                         {log.atualizou_cpf && (
-                          <div className="flex items-center gap-1.5 text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full w-fit">
-                            <ShieldCheck size={10} /> CPF ATUALIZADO
+                          <div className="flex flex-col gap-1 mt-1">
+                            <div className="flex items-center gap-1.5 text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full w-fit">
+                              <ShieldCheck size={10} /> CPF ATUALIZADO
+                            </div>
+                            {log.novo_cpf && (
+                              <span className="text-[10px] font-mono font-bold text-slate-400 ml-1">
+                                {log.novo_cpf}
+                              </span>
+                            )}
                           </div>
                         )}
                       </div>
