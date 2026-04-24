@@ -15,14 +15,13 @@ export async function fecharPeriodoAction(competencia: string) {
   const sb = await createServerSupabase()
   const { data: user } = await sb.auth.getUser()
   const { data: profile } = await sb.from('usuarios').select('tenant_id, nome').eq('id', user.user?.id).single()
-
-  // 1. Verificar se há lançamentos desbalanceados no mês
-  // (Idealmente chamaria a função de cálculo de balancete aqui)
+  const tenantId = profile?.tenant_id
+  if (!tenantId) return { error: 'Perfil não encontrado ou sem tenant' }
 
   const { data, error } = await sb
     .from('periodos_contabeis')
     .upsert({
-      tenant_id: profile?.tenant_id,
+      tenant_id: tenantId,
       competencia,
       status: 'fechado',
       data_fechamento: new Date().toISOString(),
