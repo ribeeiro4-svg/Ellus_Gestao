@@ -17,7 +17,15 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   }
 
   // 3. Buscar os IDs reais das contas contábeis no banco de dados
-  const { data: contaCat } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', map.conta_contabil_codigo).maybeSingle()
+  let { data: contaCat } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', map.conta_contabil_codigo).maybeSingle()
+  
+  // Se a conta mapeada não existir no banco (ex: foi excluída ou código antigo), usar fallback
+  if (!contaCat) {
+    const fallbackCodigo = fin.tipo === 'receita' ? '3.1.1.01.001' : '4.2.2.01.013' // Mensalidades ou Outros Dispêndios
+    const { data: fallback } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', fallbackCodigo).maybeSingle()
+    if (fallback) contaCat = fallback
+  }
+
   // Usa o Banco Cora como padrão provisório para a contrapartida de Caixa/Bancos
   const { data: contaBanco } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', '1.1.1.02.001').maybeSingle()
 
