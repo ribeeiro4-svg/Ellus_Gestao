@@ -36,6 +36,11 @@ export async function seedAccountingConfigAction() {
     { categoria_nome: 'SERVIÇOS DE DESENVOLVIMENTO DE SOLUÇÕES (SAAS)', conta_contabil_codigo: '4.2.2.01.006', conta_contabil_nome: 'Manutenção de Sistemas e Software', tipo: 'dispendio' },
     { categoria_nome: 'INTERNET (WI-FI)', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
     { categoria_nome: 'INFRAESTRUTURA', conta_contabil_codigo: '4.2.2.01.011', conta_contabil_nome: 'Manutenção de Infraestrutura e Reparos', tipo: 'dispendio' },
+    { categoria_nome: 'ALUGUEL', conta_contabil_codigo: '4.2.2.01.002', conta_contabil_nome: 'Aluguéis e Arrendamentos', tipo: 'dispendio' },
+    { categoria_nome: 'ENERGIA ELÉTRICA', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica', tipo: 'dispendio' },
+    { categoria_nome: 'ÁGUA E ESGOTO', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Água e Esgoto', tipo: 'dispendio' },
+    { categoria_nome: 'TELEFONE', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
+    { categoria_nome: 'MARKETING E PUBLICIDADE', conta_contabil_codigo: '4.2.2.01.010', conta_contabil_nome: 'Publicidade e Propaganda', tipo: 'dispendio' },
     
     // Materiais e Outros
     { categoria_nome: 'ARTIGOS DE GRÁFICA', conta_contabil_codigo: '4.2.2.01.009', conta_contabil_nome: 'Despesas com Gráfica e Impressos', tipo: 'dispendio' },
@@ -43,6 +48,11 @@ export async function seedAccountingConfigAction() {
     { categoria_nome: 'MATERIAIS USO E CONSUMO DA SEDE', conta_contabil_codigo: '4.2.2.01.005', conta_contabil_nome: 'Materiais de Limpeza e Consumo da Sede', tipo: 'dispendio' },
     { categoria_nome: 'RESERVA DE EMERGÊNCIA', conta_contabil_codigo: '1.1.1.03.001', conta_contabil_nome: 'Aplicações de Liquidez Imediata', tipo: 'dispendio' },
     { categoria_nome: 'EMPRÉSTIMOS (DIRETORIA)', conta_contabil_codigo: '1.1.2.02.001', conta_contabil_nome: 'Adiantamentos a Empregados', tipo: 'dispendio' },
+    { categoria_nome: 'TAXAS BANCÁRIAS', conta_contabil_codigo: '4.2.2.01.012', conta_contabil_nome: 'Taxas e Tarifas Bancárias', tipo: 'dispendio' },
+    { categoria_nome: 'TARIFAS BANCÁRIAS', conta_contabil_codigo: '4.2.2.01.012', conta_contabil_nome: 'Taxas e Tarifas Bancárias', tipo: 'dispendio' },
+    { categoria_nome: 'VIAGENS E HOSPEDAGENS', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
+    { categoria_nome: 'ALIMENTAÇÃO', conta_contabil_codigo: '4.1.1.01.004', conta_contabil_nome: 'Benefícios e Auxílios a Empregados', tipo: 'dispendio' },
+    { categoria_nome: 'IMPOSTOS E TAXAS', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
   ]
 
   const records = mappings.map(m => ({
