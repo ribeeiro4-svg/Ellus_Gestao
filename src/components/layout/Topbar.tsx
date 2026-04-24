@@ -47,27 +47,7 @@ export default function Topbar() {
       </div>
 
       <div className="topbar-right flex items-center gap-[10px]">
-        {/* Search and action buttons removed by user request */}
-
-        <div className="h-6 w-[1px] bg-slate-200 mx-2"></div>
-
-        <div className="flex items-center gap-3">
-           <button 
-             onClick={() => router.push('/importar')}
-             className="btn btn-secondary h-[38px] px-5 shadow-lg shadow-emerald-900/40"
-           >
-             <Download strokeWidth={2.5} className="w-4.5 h-4.5 min-w-[18px] min-h-[18px] flex-shrink-0 text-white" />
-             <span className="font-black">Importar</span>
-           </button>
-           
-           <button 
-             onClick={() => window.print()}
-             className="btn btn-primary h-[38px] px-5 shadow-lg shadow-emerald-900/40"
-           >
-             <FileText strokeWidth={2.5} className="w-4.5 h-4.5 min-w-[18px] min-h-[18px] flex-shrink-0 text-white" />
-             <span className="font-black">Exportar PDF</span>
-           </button>
-        </div>
+        {/* All action buttons removed by user request */}
       </div>
     </header>
   )
