@@ -63,6 +63,7 @@ export interface Lancamento {
   diretor_id?: string // ID do diretor vinculado (opcional)
   competencia_mes?: number // Mês de competência (0-11)
   competencia_ano?: number // Ano de competência
+  banco_original_memo?: string // Histórico oculto da transação bancária
   created_at: string
   updated_at: string
 }

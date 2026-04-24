@@ -205,6 +205,9 @@ export async function tempFixDatabaseAction() {
     -- 1. Garantir Coluna
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS zapsign_doc_token TEXT;
 
+    -- 3. Coluna para Histórico Bancário Oculto
+    ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS banco_original_memo TEXT;
+
     -- 2. Redefinir Função de Upsert para aceitar o NOVO CAMPO
     CREATE OR REPLACE FUNCTION upsert_associados_safe(rows JSONB)
     RETURNS VOID AS $$

@@ -124,33 +124,58 @@ export default function FinanceiroPage() {
     try {
       const enrichments = itemsToProcess.filter((t: any) => t.needsUpdate && t.assocMatch?.id && t.newDocument).map((t: any) => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument as string }))
       if (enrichments.length > 0) await Promise.all(enrichments)
-      const items = itemsToProcess.map((t: any) => {
-        const parts = t.bank.date.split('-').map(Number)
-        return {
-          tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
-          descricao: editedMemos[t.bank.fitid] || t.bank.memo,
-          categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
-          conta_id: selectedContaId,
-          valor: Math.abs(t.bank.amount),
-          data: t.bank.date,
-          status: 'pago',
-          forma_pagamento: t.bank.metodo_inferido || 'Transferência',
-          associado_id: t.assocMatch?.id || null,
-          fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
-          diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
-          conciliado: true,
-          data_conciliacao: new Date().toISOString(),
-          banco_transacao_id: t.bank.fitid,
-          competencia_mes: parts[1] - 1,
-          competencia_ano: parts[0]
+      
+      const toUpdate: any[] = []
+      const toInsert: any[] = []
+
+      itemsToProcess.forEach((t: any) => {
+        if (t.existingMatch) {
+          toUpdate.push({
+            id: t.existingMatch.id,
+            data: {
+              status: 'pago',
+              conciliado: true,
+              data_conciliacao: new Date().toISOString(),
+              banco_transacao_id: t.bank.fitid,
+              banco_original_memo: t.bank.memo,
+              forma_pagamento: t.bank.metodo_inferido || 'Transferência'
+            }
+          })
+        } else {
+          const parts = t.bank.date.split('-').map(Number)
+          toInsert.push({
+            tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+            descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+            categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
+            conta_id: selectedContaId,
+            valor: Math.abs(t.bank.amount),
+            data: t.bank.date,
+            status: 'pago',
+            forma_pagamento: t.bank.metodo_inferido || 'Transferência',
+            associado_id: t.assocMatch?.id || null,
+            fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
+            diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
+            conciliado: true,
+            data_conciliacao: new Date().toISOString(),
+            banco_transacao_id: t.bank.fitid,
+            banco_original_memo: t.bank.memo,
+            competencia_mes: parts[1] - 1,
+            competencia_ano: parts[0]
+          })
         }
       })
-      const res = await inserirBulk(items as any)
-      if (res.error) alert(`Erro: ${res.error}`)
-      else {
-        alert(`${items.length} lançamentos processados!`)
-        setProcessedIds(prev => { const next = new Set(prev); itemsToProcess.forEach((it: any) => next.add(it.bank.fitid)); return next; })
+
+      if (toUpdate.length > 0) {
+        await Promise.all(toUpdate.map(u => atualizar(u.id, u.data)))
       }
+
+      if (toInsert.length > 0) {
+        const res = await inserirBulk(toInsert as any)
+        if (res.error) alert(`Erro: ${res.error}`)
+      }
+
+      alert(`${itemsToProcess.length} lançamentos processados!`)
+      setProcessedIds(prev => { const next = new Set(prev); itemsToProcess.forEach((it: any) => next.add(it.bank.fitid)); return next; })
     } finally { setIsProcessingBatch(false) }
   }
 
@@ -161,32 +186,58 @@ export default function FinanceiroPage() {
     try {
       const enrichments = rowsToProcess.filter(t => t.needsUpdate && t.assocMatch?.id && t.newDocument).map(t => atualizarAssociado(t.assocMatch.id, { cpf: t.newDocument as string }))
       if (enrichments.length > 0) await Promise.all(enrichments)
-      const rows = rowsToProcess.map((t: any) => {
-        const parts = t.bank.date.split('-').map(Number)
-        return {
-          tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
-          descricao: editedMemos[t.bank.fitid] || t.bank.memo,
-          categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
-          conta_id: selectedContaId,
-          valor: Math.abs(t.bank.amount),
-          data: t.bank.date,
-          status: 'pago',
-          forma_pagamento: t.bank.metodo_inferido || 'Transferência',
-          conciliado: true,
-          associado_id: t.assocMatch?.id || null,
-          fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
-          diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
-          banco_transacao_id: t.bank.fitid,
-          competencia_mes: parts[1] - 1,
-          competencia_ano: parts[0]
+      
+      const toUpdate: any[] = []
+      const toInsert: any[] = []
+
+      rowsToProcess.forEach((t: any) => {
+        if (t.existingMatch) {
+          toUpdate.push({
+            id: t.existingMatch.id,
+            data: {
+              status: 'pago',
+              conciliado: true,
+              data_conciliacao: new Date().toISOString(),
+              banco_transacao_id: t.bank.fitid,
+              banco_original_memo: t.bank.memo,
+              forma_pagamento: t.bank.metodo_inferido || 'Transferência'
+            }
+          })
+        } else {
+          const parts = t.bank.date.split('-').map(Number)
+          toInsert.push({
+            tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+            descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+            categoria: editedCategories[t.bank.fitid] || t.suggestedCategory || (t.bank.type === 'CREDIT' ? 'Mensalidades' : 'Outros'),
+            conta_id: selectedContaId,
+            valor: Math.abs(t.bank.amount),
+            data: t.bank.date,
+            status: 'pago',
+            forma_pagamento: t.bank.metodo_inferido || 'Transferência',
+            conciliado: true,
+            associado_id: t.assocMatch?.id || null,
+            fornecedor_id: t.forMatch?.isDirector ? null : (t.forMatch?.id || null),
+            diretor_id: t.forMatch?.isDirector ? t.forMatch.id : null,
+            banco_transacao_id: t.bank.fitid,
+            banco_original_memo: t.bank.memo,
+            competencia_mes: parts[1] - 1,
+            competencia_ano: parts[0]
+          })
         }
       })
-      const res = await inserirBulk(rows as any)
-      if (!res.error) {
-        if (updateStatusBulk) await updateStatusBulk(rowsToProcess.map((i: any) => i.bank.fitid), 'sincronizado')
-        alert(`${rows.length} transações Cora sincronizadas!`)
-        setProcessedIds(prev => { const next = new Set(prev); rowsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
-      } else alert(`Erro Cora: ${res.error}`)
+
+      if (toUpdate.length > 0) {
+        await Promise.all(toUpdate.map(u => atualizar(u.id, u.data)))
+      }
+
+      if (toInsert.length > 0) {
+        const res = await inserirBulk(toInsert as any)
+        if (res.error) alert(`Erro Cora: ${res.error}`)
+      }
+
+      if (updateStatusBulk) await updateStatusBulk(rowsToProcess.map((i: any) => i.bank.fitid), 'sincronizado')
+      alert(`${rowsToProcess.length} transações Cora sincronizadas!`)
+      setProcessedIds(prev => { const next = new Set(prev); rowsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
     } finally { setIsProcessingBatch(false) }
   }
 

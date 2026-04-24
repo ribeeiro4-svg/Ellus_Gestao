@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, Calendar, DollarSign, Tag, Info, CheckCircle2, CreditCard, User, Building2, TrendingUp, ArrowUpRight, ArrowDownLeft, MoveRight, HelpCircle, Check, Loader2 } from 'lucide-react'
+import { X, Calendar, DollarSign, Tag, Info, CheckCircle2, CreditCard, User, Building2, TrendingUp, ArrowUpRight, ArrowDownLeft, MoveRight, HelpCircle, Check, Loader2, ShieldCheck } from 'lucide-react'
 import { Lancamento, Associado } from '@/lib/types'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 
@@ -135,6 +135,34 @@ export default function LaunchDetailsModal({ isOpen, onClose, launch, associados
                     {launch.descricao?.replace(matchTaxa?.[0] || '', '').trim()}
                   </p>
                 </div>
+
+                {launch.banco_original_memo && (
+                  <div className="p-5 bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <Building2 className="text-white" size={40} />
+                    </div>
+                    <div className="flex items-center gap-2 mb-3 text-indigo-400">
+                      <ShieldCheck className="text-indigo-400" size={14} />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em]">Histórico Bancário Oculto</span>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex flex-col">
+                        <span className="text-[9px] font-black text-slate-500 uppercase">Memo Original do Banco</span>
+                        <p className="text-xs font-bold text-slate-300 leading-relaxed font-mono">
+                          {launch.banco_original_memo}
+                        </p>
+                      </div>
+                      {launch.banco_transacao_id && (
+                        <div className="flex flex-col">
+                          <span className="text-[9px] font-black text-slate-500 uppercase">FITID / Transaction ID</span>
+                          <p className="text-[10px] font-black text-indigo-400 font-mono tracking-wider">
+                            {launch.banco_transacao_id}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {pagadorOriginal && (
                   <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3">

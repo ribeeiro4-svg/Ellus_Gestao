@@ -30,7 +30,7 @@ export function useConciliacaoAudit(
     return cnpjMatch ? cnpjMatch[0] : (cpfMatch ? cpfMatch[0] : null)
   }
 
-  const getAuditMatch = useMemo(() => (bankMemo: string, bankAmount: number, bankType: string) => {
+  const getAuditMatch = useMemo(() => (bankMemo: string, bankAmount: number, bankType: string, bankDateStr: string) => {
     const memo = bankMemo.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     const numbersInMemo = memo.replace(/\D/g, '')
     const extractedDoc = extractDocument(bankMemo)
@@ -68,6 +68,17 @@ export function useConciliacaoAudit(
     
     const assocExactMatch = associados.find(a => memo.includes(normalizeName(a.nome)))
     if (assocExactMatch) {
+      const bankDate = new Date(bankDateStr)
+      const m = bankDate.getMonth()
+      const y = bankDate.getFullYear()
+
+      const existingMatch = lancamentos.find(l => 
+        l.associado_id === assocExactMatch.id && 
+        l.status === 'aberto' && 
+        (l.categoria === 'Mensalidade' || l.categoria === 'Mensalidades') &&
+        ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+      )
+
       const hasAdesaoInSystem = lancamentos.some(l => l.associado_id === assocExactMatch.id && (l.categoria === 'ADESÃO' || l.descricao?.toUpperCase().includes('ADESAO')))
       const hasAnyPayment = lancamentos.some(l => l.associado_id === assocExactMatch.id && l.status === 'pago')
       
@@ -79,6 +90,7 @@ export function useConciliacaoAudit(
         suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', 
         warning: (isAdesao && !hasAdesaoInSystem) ? 'Adesão não lançada no sistema. Sincronize com ZapSign primeiro.' : undefined,
         isAdesao,
+        existingMatch,
         needsUpdate: !assocExactMatch.cpf && !!extractedDoc,
         newDocument: extractedDoc
       }
@@ -139,7 +151,7 @@ export function useConciliacaoAudit(
           newDocument: null
         }
       }
-      const audit = getAuditMatch(bank.memo, bank.amount, bank.type)
+      const audit = getAuditMatch(bank.memo, bank.amount, bank.type, bank.date)
       return { bank, ...audit }
     })
   }, [extrato, getAuditMatch])
@@ -163,13 +175,14 @@ export function useConciliacaoAudit(
           forMatch: bank.forMatch, 
           suggestedCategory: bank.suggestedCategory,
           warning: bank.warning,
+          existingMatch: bank.existingMatch,
           isAdesao: bank.isAdesao || false,
           needsUpdate: false,
           newDocument: null
         }
       }
 
-      const audit = getAuditMatch(bank.descricao, bank.valor, bank.tipo)
+      const audit = getAuditMatch(bank.descricao, bank.valor, bank.tipo, bank.data)
       return { bank: normalizedBank, ...audit }
     })
   }, [coraItems, getAuditMatch])
