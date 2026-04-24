@@ -77,9 +77,23 @@ export function useDashboardMetrics(
       return Math.round(((curr - prev) / Math.abs(prev)) * 100)
     }
 
-    // Associados
+    // ── Inadimplência Real-time do Mês Selecionado ──
+    const lancsMes = lancamentos.filter(l => 
+      getMesIdx(l.data) === selectedMonth && 
+      getAnoIdx(l.data) === selectedYear &&
+      (l.tipo || '').toLowerCase() === 'receita'
+    )
+
+    const valorTotalMes = lancsMes.reduce((sum, l) => sum + (l.valor || 0), 0)
+    const valorAtrasadoMes = lancsMes
+      .filter(l => l.status === 'atrasado' || (l.status === 'aberto' && new Date(l.data) < new Date()))
+      .reduce((sum, l) => sum + (l.valor || 0), 0)
+
+    const pctInadimpReal = valorTotalMes > 0 ? (valorAtrasadoMes / valorTotalMes) * 100 : 0
+
+    // Associados (Status Geral)
     const a = associados.filter(item => (item.status || '').toLowerCase().includes('ativ')).length
-    const i = associados.filter(item => (item.status || '').toLowerCase().includes('inadimp')).length
+    const i_status = associados.filter(item => (item.status || '').toLowerCase().includes('inadimp')).length
     const inat = associados.filter(item => (item.status || '').toLowerCase().includes('inat')).length
     const pend = associados.filter(item => (item.status || '').toLowerCase() === 'pendente').length
     const total = associados.length || 1
@@ -105,10 +119,10 @@ export function useDashboardMetrics(
       },
       associadosStats: {
         ativos: a,
-        inadimplentes: i,
+        inadimplentes: i_status,
         inativos: inat,
         zapsignPendentes: pend,
-        pctInadimp: (i / total) * 100
+        pctInadimp: pctInadimpReal
       },
       planejamentoStats: {
         planejado: planejadoTotal,
