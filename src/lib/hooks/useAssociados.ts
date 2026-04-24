@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { Associado, AssociadoInput } from '@/lib/types'
 import { useTenant } from './useTenant'
-import { fetchZapSignAssociatesAction, tempFixDatabaseAction } from '@/app/actions/zapsign'
+import { fetchZapSignAssociatesAction, tempFixDatabaseAction, syncAdesaoFinanceiraAction } from '@/app/actions/zapsign'
 
 export function useAssociados() {
   const tenantId = useTenantId()
@@ -134,6 +134,15 @@ export function useAssociados() {
 
       if (!finalMsg) finalMsg = 'Sincronização concluída: Todos os dados já estavam atualizados.'
       
+      // Nova Etapa: Lançar ADESÃO financeira para os novos e ativos
+      const { data: updatedAssocs } = await sb.from('associados').select('*').eq('tenant_id', tenantId)
+      if (updatedAssocs) {
+        const resAdesao = await syncAdesaoFinanceiraAction(updatedAssocs, tenantId)
+        if (resAdesao.count && resAdesao.count > 0) {
+          finalMsg += ` | ${resAdesao.count} adesões financeiras provisionadas.`
+        }
+      }
+
       fetch()
       return { message: finalMsg, count: novos.length + paraAtualizarStatus.length }
     } catch (err: any) {

@@ -242,3 +242,47 @@ export async function tempFixDatabaseAction() {
   // Tenta executar via RPC genérico se existir, ou via manipulação direta se o client permitir
   return await sb.rpc('execute_sql', { sql })
 }
+
+/**
+ * Verifica e lança a ADESÃO financeira para associados ativos vindos do ZapSign
+ */
+export async function syncAdesaoFinanceiraAction(associados: any[], tenantId: string) {
+  const { createServerSupabase } = await import('@/lib/supabase/server')
+  const sb = await createServerSupabase()
+
+  // 1. Busca lançamentos de ADESÃO existentes para este tenant
+  const { data: lancamentosExistentes } = await sb.from('lancamentos')
+    .select('associado_id, categoria, descricao')
+    .eq('tenant_id', tenantId)
+    .or('categoria.eq.ADESÃO,descricao.ilike.%ADESÃO%')
+
+  const associadosComAdesao = new Set(lancamentosExistentes?.map(l => l.associado_id).filter(Boolean))
+  const paraLancamento = []
+
+  for (const assoc of associados) {
+    if (assoc.status === 'ativo' && !associadosComAdesao.has(assoc.id)) {
+      paraLancamento.push({
+        tenant_id: tenantId,
+        associado_id: assoc.id,
+        tipo: 'receita',
+        descricao: `ADESÃO DE ASSOCIADO - ${assoc.nome.toUpperCase()}`,
+        categoria: 'ADESÃO',
+        valor: assoc.mensalidade || 50,
+        status: 'aberto',
+        data: assoc.data_ingresso || new Date().toISOString().split('T')[0],
+        forma_pagamento: 'Boleto'
+      })
+    }
+  }
+
+  if (paraLancamento.length > 0) {
+    const { error } = await sb.from('lancamentos').insert(paraLancamento)
+    if (error) {
+      console.error('[ZapSignAction] Erro ao lançar adesões:', error)
+      return { error: 'Erro ao gerar lançamentos de adesão.' }
+    }
+    return { count: paraLancamento.length }
+  }
+
+  return { count: 0 }
+}

@@ -41,8 +41,26 @@ export function useConciliacaoAudit(
 
     const assocCpfMatch = associados.find(a => a.cpf && numbersInMemo.includes(a.cpf.replace(/\D/g, '')))
     if (assocCpfMatch) {
-      const isAdesao = !lancamentos.some(l => l.associado_id === assocCpfMatch.id)
-      return { assocMatch: assocCpfMatch, forMatch: null, suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', isAdesao }
+      const hasAdesaoInSystem = lancamentos.some(l => l.associado_id === assocCpfMatch.id && (l.categoria === 'ADESÃO' || l.descricao?.toUpperCase().includes('ADESAO')))
+      const hasAnyPayment = lancamentos.some(l => l.associado_id === assocCpfMatch.id && l.status === 'pago')
+      
+      // Se não tem pagamento nenhum e não tem adesão lançada, é um problema
+      if (!hasAnyPayment && !hasAdesaoInSystem) {
+        return { 
+          assocMatch: assocCpfMatch, 
+          forMatch: null, 
+          suggestedCategory: 'ADESÃO', 
+          warning: 'Adesão não lançada no sistema. Sincronize com ZapSign primeiro.',
+          isAdesao: true 
+        }
+      }
+
+      return { 
+        assocMatch: assocCpfMatch, 
+        forMatch: null, 
+        suggestedCategory: !hasAnyPayment ? 'ADESÃO' : 'Mensalidades', 
+        isAdesao: !hasAnyPayment 
+      }
     }
 
     // 2. Prioridade Média: Nome Completo (Exato)
@@ -50,11 +68,16 @@ export function useConciliacaoAudit(
     
     const assocExactMatch = associados.find(a => memo.includes(normalizeName(a.nome)))
     if (assocExactMatch) {
-      const isAdesao = !lancamentos.some(l => l.associado_id === assocExactMatch.id)
+      const hasAdesaoInSystem = lancamentos.some(l => l.associado_id === assocExactMatch.id && (l.categoria === 'ADESÃO' || l.descricao?.toUpperCase().includes('ADESAO')))
+      const hasAnyPayment = lancamentos.some(l => l.associado_id === assocExactMatch.id && l.status === 'pago')
+      
+      const isAdesao = !hasAnyPayment
+
       return { 
         assocMatch: assocExactMatch, 
         forMatch: null, 
         suggestedCategory: isAdesao ? 'ADESÃO' : 'Mensalidades', 
+        warning: (isAdesao && !hasAdesaoInSystem) ? 'Adesão não lançada no sistema. Sincronize com ZapSign primeiro.' : undefined,
         isAdesao,
         needsUpdate: !assocExactMatch.cpf && !!extractedDoc,
         newDocument: extractedDoc
@@ -110,6 +133,7 @@ export function useConciliacaoAudit(
           assocMatch: bank.assocMatch, 
           forMatch: bank.forMatch, 
           suggestedCategory: bank.suggestedCategory,
+          warning: bank.warning,
           isAdesao: bank.isAdesao || false,
           needsUpdate: false,
           newDocument: null
@@ -138,6 +162,7 @@ export function useConciliacaoAudit(
           assocMatch: bank.assocMatch, 
           forMatch: bank.forMatch, 
           suggestedCategory: bank.suggestedCategory,
+          warning: bank.warning,
           isAdesao: bank.isAdesao || false,
           needsUpdate: false,
           newDocument: null

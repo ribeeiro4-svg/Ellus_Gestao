@@ -39,6 +39,7 @@ interface MatchItemProps {
   category?: string;
   allCategories?: any[];
   onEditCategory?: (newCat: string) => void;
+  warning?: string;
 }
 
 export default function MatchItem({ 
@@ -59,7 +60,8 @@ export default function MatchItem({
   memo,
   category,
   allCategories,
-  onEditCategory
+  onEditCategory,
+  warning
 }: MatchItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [localMemo, setLocalMemo] = useState(memo || bank.memo)
@@ -230,6 +232,12 @@ export default function MatchItem({
                   </span>
                 )}
               </div>
+              {warning && (
+                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 animate-bounce">
+                  <RefreshCw size={12} className="text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-[10px] font-black text-amber-700 leading-tight uppercase">{warning}</p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-2">
