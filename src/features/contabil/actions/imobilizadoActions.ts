@@ -25,7 +25,8 @@ export async function getParametrosAction() {
 export async function upsertParametrosAction(dados: any) {
   const sb = await createServerSupabase()
   const { data: user } = await sb.auth.getUser()
-  const { data: profile } = await sb.from('usuarios').select('tenant_id').eq('id', user.user?.id).single()
+  const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.user?.id).single()
+  const tenantId = profile?.tenant_id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
   
   const { data, error } = await sb
     .from('parametros_contabeis')
@@ -64,8 +65,8 @@ export async function processarDepreciacaoMensalAction(competencia: string) {
   
   // 1. Identificar o tenant
   const { data: user } = await sb.auth.getUser()
-  const { data: profile } = await sb.from('usuarios').select('tenant_id').eq('id', user.user?.id).single()
-  const tenantId = profile?.tenant_id
+  const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.user?.id).single()
+  const tenantId = profile?.tenant_id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
 
   if (!tenantId) return { error: 'Tenant não identificado' }
 

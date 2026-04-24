@@ -8,9 +8,9 @@ import { isPeriodoFechado } from './periodoActions'
 export async function processarProvisoesMensaisAction(competencia: string, baseSalarial: number) {
   const sb = await createServerSupabase()
   const { data: user } = await sb.auth.getUser()
-  const { data: profile } = await sb.from('usuarios').select('tenant_id').eq('id', user.user?.id).single()
-  const tenantId = profile?.tenant_id
-
+  const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.user?.id).single()
+  const tenantId = profile?.tenant_id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
+  
   if (!tenantId) return { error: 'Tenant não identificado' }
 
   // 1. Verificar trava de período

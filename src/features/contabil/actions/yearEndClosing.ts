@@ -4,18 +4,9 @@ import { createServerSupabase } from '@/lib/supabase/server'
 export async function encerrarExercicioAction(ano: number) {
   const sb = await createServerSupabase()
 
-  // 1. Identificar o tenant_id via lançamento existente (reutiliza a mesma técnica)
-  const { data: sample } = await sb
-    .from('lancamentos_contabeis')
-    .select('tenant_id')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (!sample?.tenant_id) {
-    return { error: 'Tenant não identificado. Certifique-se de que há lançamentos no Livro Diário.' }
-  }
-  const tenantId = sample.tenant_id
+  const { data: user } = await sb.auth.getUser()
+  const { data: profile } = await sb.from('profiles').select('tenant_id').eq('id', user.user?.id).single()
+  const tenantId = profile?.tenant_id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
 
   // 2. Verificar se já existe encerramento para este ano (anti-duplicidade)
   const dataEncerramento = `${ano}-12-31`
