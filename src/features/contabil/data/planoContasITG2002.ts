@@ -148,4 +148,9 @@ export const PLANO_CONTAS_ITG2002: PlanoContasItem[] = [
   { codigo:'4.2.3.01', descricao:'Tarifas e Comissões Bancárias', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
   { codigo:'4.2.3.01.001', descricao:'Taxas de Manutenção de Conta', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
   { codigo:'4.2.3.01.002', descricao:'Taxas s/ Boletos e Recebimentos', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  
+  { codigo:'4.2.4', descricao:'DEPRECIAÇÕES E AMORTIZAÇÕES', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.4.01', descricao:'Cotas de Depreciação do Exercício', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'4.2.4.01.001', descricao:'Depreciação de Edificações', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+  { codigo:'4.2.4.01.002', descricao:'Depreciação de Móveis e Equipamentos', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
 ]

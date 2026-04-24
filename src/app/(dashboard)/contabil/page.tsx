@@ -8,8 +8,11 @@ import LivroDiario from '@/features/contabil/components/LivroDiario'
 import PlanoContasTree from '@/features/contabil/components/PlanoContasTree'
 import Balancete from '@/features/contabil/components/Balancete'
 import Demonstracoes from '@/features/contabil/components/Demonstracoes'
+import Imobilizado from '@/features/contabil/components/Imobilizado'
+import FechamentoPeriodos from '@/features/contabil/components/FechamentoPeriodos'
+import CentrosCusto from '@/features/contabil/components/CentrosCusto'
 
-type Tab = 'dashboard' | 'lancamentos' | 'plano' | 'balancete' | 'demonstracoes'
+type Tab = 'dashboard' | 'lancamentos' | 'plano' | 'balancete' | 'demonstracoes' | 'imobilizado' | 'periodos' | 'centros_custo'
 
 export default function ContabilPage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
@@ -22,6 +25,9 @@ export default function ContabilPage() {
     { id: 'plano' as Tab, label: '🏗️ Plano de Contas' },
     { id: 'balancete' as Tab, label: '📈 Balancete' },
     { id: 'demonstracoes' as Tab, label: '📑 Demonstrações' },
+    { id: 'imobilizado' as Tab, label: '🏢 Imobilizado' },
+    { id: 'periodos' as Tab, label: '⚙️ Períodos' },
+    { id: 'centros_custo' as Tab, label: '🏷️ CCs' },
   ]
 
   return (
@@ -117,6 +123,9 @@ export default function ContabilPage() {
       {activeTab === 'plano' && <PlanoContasTree planoHook={planoHook} />}
       {activeTab === 'balancete' && <Balancete lancHook={lancHook} planoHook={planoHook} />}
       {activeTab === 'demonstracoes' && <Demonstracoes lancHook={lancHook} planoHook={planoHook} />}
+      {activeTab === 'imobilizado' && <Imobilizado planoHook={planoHook} />}
+      {activeTab === 'periodos' && <FechamentoPeriodos />}
+      {activeTab === 'centros_custo' && <CentrosCusto />}
     </div>
   )
 }

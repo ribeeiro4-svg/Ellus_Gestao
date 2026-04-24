@@ -1,0 +1,1176 @@
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ACPROBEC
+MÓDULOS COMPLEMENTARES
+Ativo Imobilizado · DFC · Períodos Contábeis · Centros de Custo · Alertas Inteligentes ·
+Provisões · Depreciação · Relatórios Completos
+─── Guia Técnico Definitivo de Implementação ───
+MÓDULO A
+Ativo Imobilizado
+Cadastro · Depreciação Auto ·
+Relatórios NBC TG 27
+MÓDULO B
+Períodos + Centros de
+Custo
+Controle de Competência ·
+Rubricas de Projetos
+MÓDULO C
+DFC + Provisões + Alertas
+Fluxo de Caixa · Férias · 13º ·
+Painel IA
+MÓDULO D
+Plano Referencial RFB (I052)
+De-Para SPED ECD · Registro I052
+MÓDULO E
+MROSC — Lei 13.019/2014
+Demonstração por Projeto ·
+Prestação de Contas
+MÓDULO F
+Dashboard + Assistente
+IA
+KPIs Gerenciais · Sugestão de
+Contas · Estoque
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ 🏗️	
+MÓDULO A — ATIVO IMOBILIZADO
+Cadastro completo · Depreciação mensal automática · Relatórios NBC TG 27 · Baixa e reavaliação
+O módulo de Ativo Imobilizado é a espinha dorsal do controle patrimonial de qualquer associação.
+Sem ele, é impossível gerar o Balanço Patrimonial correto, calcular a depreciação conforme a NBC
+TG 27 e cumprir as obrigações do SPED Contábil. Este módulo implementa o ciclo completo de
+vida de cada bem.
+A.1 Schema do Banco de Dados — Supabase PostgreSQL
+Tabela: ativos_imobilizados
+CREATE TABLE ativos_imobilizados (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+associacao_id UUID NOT NULL REFERENCES associacoes(id),
+-- Identificação
+codigo_patrimonio TEXT NOT NULL, -- ex: 'EQUIP-001'
+descricao TEXT NOT NULL,
+numero_serie TEXT,
+numero_nota_fiscal TEXT,
+fornecedor_id UUID REFERENCES fornecedores(id),
+-- Classificação contábil
+grupo TEXT NOT NULL CHECK (grupo IN (
+'moveis_utensilios','equipamentos_ti','maquinas_equipamentos',
+'veiculos','edificacoes','terrenos','instalacoes','outros'
+)),
+conta_ativo_id UUID NOT NULL REFERENCES plano_contas(id),
+conta_deprec_id UUID REFERENCES plano_contas(id), -- D: despesa depreciação
+conta_deprec_ac_id UUID REFERENCES plano_contas(id), -- C: deprec. acumulada
+-- Valores
+valor_aquisicao NUMERIC(15,2) NOT NULL,
+valor_residual NUMERIC(15,2) NOT NULL DEFAULT 0,
+valor_contabil NUMERIC(15,2), -- calculado: aquisição - deprec. acumulada
+-- Depreciação
+metodo_depreciacao TEXT NOT NULL DEFAULT 'linear' CHECK (metodo_depreciacao IN
+('linear','acelerado')),
+vida_util_meses INT NOT NULL, -- NBC TG 27: vida útil estimada
+taxa_anual_pct NUMERIC(6,4), -- calculada: 100 / (vida_util_meses/12)
+depreciacao_acumulada NUMERIC(15,2) NOT NULL DEFAULT 0,
+-- Datas
+data_aquisicao DATE NOT NULL,
+data_inicio_depreciacao DATE NOT NULL, -- geralmente = data_aquisicao ou 1o do mês
+seguinte
+data_baixa DATE,
+-- Localização e controle
+localizacao TEXT, -- ex: 'Sede - Sala de Reuniões'
+responsavel TEXT,
+projeto_id UUID REFERENCES projetos(id),
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+centro_custo_id UUID REFERENCES centros_custo(id),
+-- Status
+status TEXT NOT NULL DEFAULT 'ativo' CHECK (status IN (
+'ativo','baixado','alienado','perdido','em_manutencao'
+)),
+motivo_baixa TEXT,
+valor_baixa NUMERIC(15,2),
+-- Reavaliação (NBC TG 27, §§ 29-42)
+reavaliado BOOLEAN NOT NULL DEFAULT FALSE,
+data_reavaliacao DATE,
+valor_reavaliacao NUMERIC(15,2),
+-- Auditoria
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+created_by UUID REFERENCES auth.users(id)
+);
+-- Índices
+CREATE INDEX idx_imob_assoc ON ativos_imobilizados (associacao_id, status);
+CREATE INDEX idx_imob_grupo ON ativos_imobilizados (grupo, status);
+CREATE INDEX idx_imob_projeto ON ativos_imobilizados (projeto_id);
+Tabela: depreciacao_mensal (histórico imutável)
+CREATE TABLE depreciacao_mensal (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ativo_id UUID NOT NULL REFERENCES ativos_imobilizados(id),
+associacao_id UUID NOT NULL REFERENCES associacoes(id),
+competencia DATE NOT NULL, -- sempre o 1o dia do mês: '2025-04-01'
+-- Valores do mês
+valor_deprec_mes NUMERIC(15,2) NOT NULL, -- cota do mês
+deprec_acumulada_ap NUMERIC(15,2) NOT NULL, -- acumulada após este mês
+valor_contabil_ap NUMERIC(15,2) NOT NULL, -- valor líquido após este mês
+-- Vinculação contábil
+partida_id UUID REFERENCES livro_diario(id),
+lancamento_gerado BOOLEAN NOT NULL DEFAULT FALSE,
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+UNIQUE (ativo_id, competencia) -- 1 linha por bem por mês
+);
+A.2 Tabelas de Vida Útil Padrão — NBC TG 27 + RFB
+A NBC TG 27 exige que a vida útil seja estimada pela entidade com base no uso real. Porém, a
+Receita Federal publica uma tabela de referência (IN RFB 1.700/2017, Anexo III) amplamente
+usada. O sistema oferece ambas:
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+Grupo do Bem Vida Útil (NBC TG 27 /
+RFB)
+Taxa Anual Método Padrão
+Edificações e Construções 25 anos (300 meses) 4,00% a.a. Linear
+Máquinas e Equipamentos
+Industriais
+10 anos (120 meses) 10,00% a.a. Linear
+Equipamentos de TI
+(computadores, servidores)
+5 anos (60 meses) 20,00% a.a. Linear
+Móveis e Utensílios 10 anos (120 meses) 10,00% a.a. Linear
+Veículos (automóveis) 5 anos (60 meses) 20,00% a.a. Linear
+Veículos (caminhões, ônibus) 5 anos (60 meses) 20,00% a.a. Linear
+Instalações 10 anos (120 meses) 10,00% a.a. Linear
+Softwares / Intangíveis 5 anos (60 meses) 20,00% a.a. Linear
+Terrenos NUNCA deprecia 0,00% N/A — excluir do cálculo
+A.3 Server Action — Cálculo e Geração Automática de Depreciação
+Função executada automaticamente no fechamento de cada mês (ou disparada manualmente pelo
+Contador):
+// lib/actions/depreciacao.ts
+'use server'
+export async function processarDepreciacaoMensal(competencia: string) {
+// competencia = 'YYYY-MM-01'
+const supabase = createServerActionClient({ cookies })
+const { data: { user } } = await supabase.auth.getUser()
+// 1. Busca todos os bens ativos com depreciação pendente para a competência
+const { data: bens } = await supabase
+.from('ativos_imobilizados')
+.select('*')
+.eq('status', 'ativo')
+.lte('data_inicio_depreciacao', competencia) // iniciou antes ou no mês
+.not('grupo', 'eq', 'terrenos')
+const resultados = []
+for (const bem of bens ?? []) {
+// 2. Verifica se já foi processado neste mês (UNIQUE constraint)
+const { data: existe } = await supabase
+.from('depreciacao_mensal')
+.select('id').eq('ativo_id', bem.id).eq('competencia', competencia).single()
+if (existe) { resultados.push({ id: bem.id, status: 'ja_processado' }); continue }
+// 3. Calcula cota mensal (método linear)
+// Cota = (Valor Aquisição - Valor Residual) / Vida Útil em Meses
+const base = bem.valor_aquisicao - bem.valor_residual
+const cotaMensal = parseFloat((base / bem.vida_util_meses).toFixed(2))
+// 4. Verifica se já está totalmente depreciado
+const novaAcumulada = bem.depreciacao_acumulada + cotaMensal
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+if (bem.depreciacao_acumulada >= base) {
+resultados.push({ id: bem.id, status: 'totalmente_depreciado' }); continue
+}
+// 5. Ajusta a última cota (não pode ultrapassar a base depreciável)
+const cotaFinal = Math.min(cotaMensal, base - bem.depreciacao_acumulada)
+const acumuladaFinal = bem.depreciacao_acumulada + cotaFinal
+const valorContabil = bem.valor_aquisicao - acumuladaFinal
+// 6. Gera a partida contábil D: Despesa Deprec. / C: Deprec. Acumulada
+const { data: partida } = await supabase.from('livro_diario').insert({
+associacao_id: bem.associacao_id,
+competencia: competencia,
+historico: `Depreciação mensal — ${bem.descricao}
+(${bem.codigo_patrimonio})`,
+conta_debito_id: bem.conta_deprec_id, // D: Dispêndios com Depreciação
+conta_credito_id: bem.conta_deprec_ac_id, // C: Depreciação Acumulada
+valor: cotaFinal,
+tipo_origem: 'auto_depreciacao',
+usuario_id: user!.id,
+}).select().single()
+// 7. Registra na tabela depreciacao_mensal
+await supabase.from('depreciacao_mensal').insert({
+ativo_id: bem.id, associacao_id: bem.associacao_id,
+competencia, valor_deprec_mes: cotaFinal,
+deprec_acumulada_ap: acumuladaFinal,
+valor_contabil_ap: valorContabil,
+partida_id: partida?.id, lancamento_gerado: true,
+})
+// 8. Atualiza o bem com os novos saldos
+await supabase.from('ativos_imobilizados').update({
+depreciacao_acumulada: acumuladaFinal,
+valor_contabil: valorContabil,
+// Marca como totalmente depreciado se chegou ao fim
+status: acumuladaFinal >= base ? 'ativo' : 'ativo', // permanece ativo
+}).eq('id', bem.id)
+resultados.push({ id: bem.id, status: 'processado', cota: cotaFinal })
+}
+// 9. Registra na audit_trail
+const processados = resultados.filter(r => r.status === 'processado').length
+await supabase.rpc('registrar_auditoria', {
+p_modulo: 'contabil', p_acao: 'AUTO_DEPRECIACAO',
+p_descricao: `Depreciação automática ${competencia}: ${processados} bens
+processados.`,
+// ... demais campos
+})
+return resultados
+}
+A.4 Interface — Telas do Módulo de Imobilizado
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+Tela 1: Listagem do Inventário (app/imobilizado/page.tsx)
+• Tabela com: Cód. Patrimônio | Descrição | Grupo | Data Aquisição | Valor de Custo | Deprec.
+Acumulada | Valor Contábil | Status
+• Filtros: Grupo, Status (ativo/baixado/alienado), Localização, Centro de Custo, Projeto
+• Barra de resumo: Total de bens ativos | Valor bruto total | Deprec. acumulada total | Valor líquido
+total
+• Badge por status: 🏗️ Ativo | 🏗️ Baixado | 🏗️ Em manutenção | ⬛ Totalmente depreciado
+• Botão 'Processar Depreciação do Mês' → abre modal de confirmação com preview dos valores
+• Exportar: PDF (inventário completo) | Excel (todos os campos para auditoria)
+Tela 2: Formulário de Cadastro/Edição (app/imobilizado/[id]/page.tsx)
+• Seção: Identificação — código patrimônio (auto), descrição, número de série, NF, fornecedor
+• Seção: Classificação — grupo (select com ícones), conta do ativo, conta de depreciação (auto-
+sugerida pelo grupo)
+• Seção: Valores — valor de aquisição, valor residual (campo com tooltip explicando o conceito NBC
+TG 27)
+• Seção: Depreciação — método (linear padrão), vida útil em meses (auto-preenchida pelo grupo,
+editável), taxa anual calculada em tempo real
+• Seção: Localização — localização física, responsável, vinculação a Projeto e Centro de Custo
+• Preview dinâmico: linha do tempo de depreciação projetada (gráfico de barras) — mês a mês até o
+valor residual
+• Seção: Documentos — upload de NF-e XML vinculada (ou seleção da NF já importada no Fiscal)
+Tela 3: Ficha Individual do Bem (app/imobilizado/[id]/ficha)
+• Histórico completo de depreciações mensais lançadas (competência, cota, acumulada, partida
+vinculada)
+• Timeline de eventos: aquisição → reavaliação → manutenção → baixa
+• Gráfico de depreciação: linha de valor contábil decrescente ao longo do tempo
+• Aba 'Baixa do Bem': formulário com motivo (venda/perda/sucateamento), valor de realização,
+geração automática do lançamento de baixa
+• Baixa gera: D: Deprec. Acumulada + D: Perda na Baixa (se houver) / C: Ativo Imobilizado + C:
+Ganho na Baixa (se houver)
+• Impressão da Ficha de Tombamento (PDF com código QR do patrimônio)
+A.5 Relatórios do Módulo de Imobilizado
+Relatório Conteúdo Base Legal Formato
+Inventário Patrimonial Lista completa de todos os bens
+com valor de custo, depreciação
+acumulada e valor contábil por
+grupo
+NBC TG 27,
+§73
+PDF / Excel
+Ficha Individual de
+Tombamento
+Dados completos de cada bem
+com QR Code do código de
+patrimônio
+Controle interno PDF imprimível
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+Mapa de Depreciação Cronograma futuro de
+depreciação: mês a mês para
+cada bem ativo até o valor residual
+Planejamento Excel
+Depreciação por Período Total depreciado no mês/ano por
+grupo de ativo, com partidas
+contábeis vinculadas
+NBC TG 27,
+§73e
+PDF
+Bens por Projeto/Convênio Listagem de imobilizados
+vinculados a cada convênio (para
+prestação de contas MROSC)
+Lei
+13.019/2014
+PDF
+Reavaliação Patrimonial Bens reavaliados com valor
+anterior, valor novo e ajuste no
+Patrimônio Social
+NBC TG 27,
+§§29-42
+PDF
+Conciliação
+Imobilizado×Contábil
+Saldo contábil das contas de
+imobilizado vs. soma dos bens
+cadastrados — deve ser ZERO
+Auditoria
+interna
+PDF / Excel
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ 🏗️	
+MÓDULO B — PERÍODOS CONTÁBEIS + CENTROS DE
+CUSTO
+Controle de competência · Bloqueio de período · Rubricas de projetos · ITG 2000 (R1)
+B.1 Tabela periodos_contabeis
+CREATE TYPE periodo_status AS ENUM (
+'aberto', -- lançamentos permitidos
+'em_escrituracao', -- Contador sinalizou que está fechando — alertas, mas ainda permite
+'fechado', -- BLOQUEADO: nenhum lancamento novo permitido
+'ecd_transmitida' -- ECD enviada à RFB — bloqueio permanente
+);
+CREATE TABLE periodos_contabeis (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+associacao_id UUID NOT NULL REFERENCES associacoes(id),
+competencia DATE NOT NULL, -- sempre '1o dia do mês': 2025-01-01
+status periodo_status NOT NULL DEFAULT 'aberto',
+exercicio_ano INT NOT NULL, -- ano do exercício social
+-- Controle de fechamento
+fechado_em TIMESTAMPTZ,
+fechado_por UUID REFERENCES auth.users(id),
+justificativa_fechamento TEXT,
+-- Reabertura (requer auditoria)
+reaberto_em TIMESTAMPTZ,
+reaberto_por UUID REFERENCES auth.users(id),
+justificativa_reabertura TEXT,
+-- Pré-fechamento
+prefechamento_ok BOOLEAN NOT NULL DEFAULT FALSE,
+prefechamento_em TIMESTAMPTZ,
+alertas_pendentes JSONB, -- lista de alertas bloqueantes
+-- ECD
+ecd_transmitida_em TIMESTAMPTZ,
+ecd_protocolo TEXT,
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+UNIQUE (associacao_id, competencia)
+);
+-- Trigger: impede lançamento em período fechado ou ecd_transmitida
+CREATE OR REPLACE FUNCTION check_periodo_aberto()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE v_status periodo_status;
+BEGIN
+SELECT status INTO v_status FROM periodos_contabeis
+WHERE associacao_id = NEW.associacao_id
+AND competencia = DATE_TRUNC('month', NEW.competencia::DATE);
+IF v_status IN ('fechado','ecd_transmitida') THEN
+RAISE EXCEPTION 'Período % está %. Reabertura requer autorização do Contador.',
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+NEW.competencia, v_status;
+END IF;
+RETURN NEW;
+END; $$;
+CREATE TRIGGER trg_livro_diario_periodo
+BEFORE INSERT ON livro_diario
+FOR EACH ROW EXECUTE FUNCTION check_periodo_aberto();
+-- Aplicar o mesmo trigger em transacoes
+CREATE TRIGGER trg_transacoes_periodo
+BEFORE INSERT ON transacoes
+FOR EACH ROW EXECUTE FUNCTION check_periodo_aberto();
+B.2 Rotina de Pré-Fechamento (Server Action)
+// Verifica todos os requisitos antes de permitir o fechamento
+export async function executarPreFechamento(competencia: string) {
+const alertas: string[] = []
+// 1. Todos os lançamentos balanceados (D = C)?
+const { data: desbal } = await supabase.from('livro_diario')
+.select('id').neq('valor_debito', 'valor_credito')
+.eq('competencia_mes', competencia)
+if (desbal?.length) alertas.push(`${desbal.length} lançamentos desbalanceados (D ≠ C)`)
+// 2. Há lançamentos suspensos (rascunho)?
+const { data: susp } = await supabase.from('livro_diario')
+.select('id', {count:'exact'}).eq('status','rascunho').eq('competencia_mes',
+competencia)
+if ((susp?.length ?? 0) > 0) alertas.push(`${susp!.length} lançamentos em rascunho não
+confirmados`)
+// 3. Depreciação foi processada?
+const { data: deprec } = await supabase.from('depreciacao_mensal')
+.select('id', {count:'exact'}).eq('competencia', competencia)
+const { data: bensAtivos } = await supabase.from('ativos_imobilizados')
+.select('id', {count:'exact'}).eq('status','ativo').neq('grupo','terrenos')
+if ((deprec?.length ?? 0) < (bensAtivos?.length ?? 0))
+alertas.push('Depreciação mensal não processada para todos os bens ativos')
+// 4. Provisões lançadas (férias + 13o)?
+const { data: prov } = await supabase.from('provisoes_mensais')
+.select('id').eq('competencia', competencia).eq('status','lancado')
+if (!prov?.length) alertas.push('Provisões mensais (férias e 13o salário) não
+lançadas')
+// 5. Saldo de caixa negativo?
+// [consulta no balancete das contas de disponibilidades]
+// ...alertas.push('Conta Caixa com saldo negativo: R$ -X.XXX')
+// 6. Lançamentos de Financeiro não sincronizados?
+const { data: pend } = await supabase.from('transacoes')
+.select('id', {count:'exact'})
+.eq('status','pago').eq('contabil_sincronizado',false)
+.gte('competencia', competencia).lte('competencia', competencia)
+if ((pend?.length ?? 0) > 0)
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+alertas.push(`${pend!.length} transações financeiras pagas sem partida contábil`)
+const ok = alertas.length === 0
+await supabase.from('periodos_contabeis').update({
+prefechamento_ok: ok, prefechamento_em: new Date().toISOString(),
+alertas_pendentes: alertas,
+}).eq('competencia', competencia)
+return { ok, alertas }
+}
+B.3 Tabela centros_custo e vinculação
+CREATE TABLE centros_custo (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+associacao_id UUID NOT NULL REFERENCES associacoes(id),
+codigo TEXT NOT NULL, -- ex: 'CC001'
+nome TEXT NOT NULL, -- ex: 'Projeto Inclusão Digital 2025'
+tipo TEXT CHECK (tipo IN
+('projeto','atividade','administrativo','captacao')),
+projeto_id UUID REFERENCES projetos(id), -- vínculo ao módulo de convênios
+ativo BOOLEAN NOT NULL DEFAULT TRUE,
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+UNIQUE (associacao_id, codigo)
+);
+-- Vinculação nas partidas contábeis:
+ALTER TABLE livro_diario ADD COLUMN IF NOT EXISTS
+centro_custo_id UUID REFERENCES centros_custo(id);
+-- Vinculação nas transações financeiras:
+ALTER TABLE transacoes ADD COLUMN IF NOT EXISTS
+centro_custo_id UUID REFERENCES centros_custo(id);
+-- View para relatório de dispêndios por centro de custo
+CREATE OR REPLACE VIEW dispendios_por_cc AS
+SELECT
+cc.nome AS centro_custo,
+pc.codigo AS conta_codigo,
+pc.nome AS conta_nome,
+DATE_TRUNC('month', ld.competencia) AS mes,
+SUM(ld.valor) AS total_dispendio
+FROM livro_diario ld
+JOIN centros_custo cc ON cc.id = ld.centro_custo_id
+JOIN plano_contas pc ON pc.id = ld.conta_debito_id
+WHERE pc.codigo LIKE '4.%' -- Grupo Dispêndios (5.x também)
+GROUP BY cc.nome, pc.codigo, pc.nome, mes
+ORDER BY mes DESC, cc.nome;
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ 🏗️	
+MÓDULO C — DFC + PROVISÕES MENSAIS +
+ALERTAS AUTOMÁTICOS
+Demonstração dos Fluxos de Caixa (Método Direto) · Férias e 13o Automáticos · Painel de Alertas
+IA
+C.1 DFC — Demonstração dos Fluxos de Caixa (Método Direto)
+A ITG 2002 (R1), Item 28, exige o Método Direto para entidades sem fins lucrativos. Este método
+classifica as entradas e saídas efetivas de caixa e bancos por natureza, agrupadas em três
+atividades:
+Estrutura da DFC — Método Direto (ITG 2002 R1)
+• ATIVIDADES OPERACIONAIS: Recebimento de mensalidades, recebimento de doações,
+recebimento de subvenções, pagamento a fornecedores, pagamento de pessoal, pagamento de
+encargos, impostos pagos, IRRF recolhido
+• ATIVIDADES DE INVESTIMENTO: Aquisição de imobilizado, recebimento de alienação de bens,
+aplicações financeiras, resgates de aplicações, aquisição de intangíveis
+• ATIVIDADES DE FINANCIAMENTO: Empréstimos captados, amortização de empréstimos,
+doações patrimoniais recebidas
+• RECONCILIAÇÃO FINAL: Saldo inicial de caixa e bancos + Variação líquida = Saldo final de caixa e
+bancos
+• VERIFICAÇÃO: Saldo final da DFC deve ser EXATAMENTE igual ao saldo contábil das contas de
+disponibilidades
+Mapeamento das Contas do Plano para a DFC
+-- View para gerar a DFC automaticamente a partir do livro_diário
+-- Classifica cada movimento pela conta contábil movimentada
+CREATE OR REPLACE VIEW dfc_movimentos AS
+SELECT
+ld.competencia,
+ld.historico,
+ld.valor,
+CASE
+-- ATIVIDADES OPERACIONAIS
+WHEN pc_c.codigo LIKE '1.1.1%' AND pc_d.codigo LIKE '3.%'
+THEN 'op_recebimento_mensalidades'
+WHEN pc_c.codigo LIKE '1.1.1%' AND pc_d.codigo LIKE '3.1.2%'
+THEN 'op_recebimento_doacoes'
+WHEN pc_c.codigo LIKE '1.1.1%' AND pc_d.codigo LIKE '3.1.3%'
+THEN 'op_recebimento_subvencoes'
+WHEN pc_d.codigo LIKE '1.1.1%' AND pc_c.codigo LIKE '2.1.1%'
+THEN 'op_pagamento_fornecedores'
+WHEN pc_d.codigo LIKE '1.1.1%' AND pc_c.codigo LIKE '2.1.2%'
+THEN 'op_pagamento_pessoal'
+WHEN pc_d.codigo LIKE '1.1.1%' AND pc_c.codigo LIKE '2.1.3%'
+THEN 'op_pagamento_encargos'
+-- ATIVIDADES DE INVESTIMENTO
+WHEN pc_d.codigo LIKE '1.2.1%' AND pc_c.codigo LIKE '1.1.1%'
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+THEN 'inv_aquisicao_imobilizado'
+WHEN pc_d.codigo LIKE '1.1.3%' AND pc_c.codigo LIKE '1.1.1%'
+THEN 'inv_aplicacao_financeira'
+WHEN pc_d.codigo LIKE '1.1.1%' AND pc_c.codigo LIKE '1.1.3%'
+THEN 'inv_resgate_aplicacao'
+-- ATIVIDADES DE FINANCIAMENTO
+WHEN pc_d.codigo LIKE '1.1.1%' AND pc_c.codigo LIKE '2.2.1%'
+THEN 'fin_emprestimo_captado'
+WHEN pc_d.codigo LIKE '2.2.1%' AND pc_c.codigo LIKE '1.1.1%'
+THEN 'fin_amortizacao_emprestimo'
+-- TRANSFERÊNCIA INTERNA (não aparece na DFC — movimentos entre disponibilidades)
+WHEN pc_d.codigo LIKE '1.1.1%' AND pc_c.codigo LIKE '1.1.1%'
+THEN 'transferencia_interna'
+ELSE 'op_outros'
+END AS classificacao_dfc,
+-- Sinal: positivo = entrada de caixa; negativo = saída
+CASE
+WHEN pc_d.codigo LIKE '1.1.1%' THEN -ld.valor -- saída
+WHEN pc_c.codigo LIKE '1.1.1%' THEN ld.valor -- entrada
+ELSE 0
+END AS fluxo_caixa
+FROM livro_diario ld
+JOIN plano_contas pc_d ON pc_d.id = ld.conta_debito_id
+JOIN plano_contas pc_c ON pc_c.id = ld.conta_credito_id
+WHERE (pc_d.codigo LIKE '1.1.1%' OR pc_c.codigo LIKE '1.1.1%') -- envolve
+disponibilidades
+AND ld.status = 'confirmado'
+AND classificacao_dfc != 'transferencia_interna';
+C.2 Provisões Mensais — Férias e 13o Salário
+⚠ OBRIGAÇÃO PELO PRINCÍPIO DA COMPETÊNCIA
+A ITG 2002 (R1), Item 8, exige que as provisões de férias e 13o salário sejam reconhecidas
+mensalmente pelo regime de competência — não apenas quando pagas. O sistema deve gerar
+esses lançamentos automaticamente ao fechar o mês.
+CREATE TABLE provisoes_mensais (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+associacao_id UUID NOT NULL REFERENCES associacoes(id),
+competencia DATE NOT NULL,
+tipo TEXT NOT NULL CHECK (tipo IN
+('ferias','decimo_terceiro','encargos_ferias','encargos_13')),
+-- Valores calculados
+base_calculo NUMERIC(15,2) NOT NULL, -- total de salários do mês
+percentual NUMERIC(6,4) NOT NULL, -- 1/12 = 8,333%, +1/3 de férias
+valor_provisao NUMERIC(15,2) NOT NULL,
+-- Contas contábeis
+conta_despesa_id UUID NOT NULL REFERENCES plano_contas(id),
+conta_passivo_id UUID NOT NULL REFERENCES plano_contas(id),
+-- Status
+status TEXT NOT NULL DEFAULT 'calculado' CHECK (status IN
+('calculado','lancado','revertido')),
+partida_id UUID REFERENCES livro_diario(id),
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+UNIQUE (associacao_id, competencia, tipo)
+);
+-- Server Action: gera provisão automática
+export async function gerarProvisoesMensais(competencia: string, totalSalarios: number) {
+const provisoes = [
+{ tipo: 'ferias', pct: 1/12, label: 'Provisão para Férias' },
+{ tipo: 'encargos_ferias', pct: (1/12)*1/3, label: 'Provisão FGTS/Enc. sobre Férias'
+},
+{ tipo: 'decimo_terceiro', pct: 1/12, label: 'Provisão para 13o Salário' },
+{ tipo: 'encargos_13', pct: (1/12)*0.08, label: 'Provisão FGTS sobre 13o' },
+]
+for (const prov of provisoes) {
+const valor = parseFloat((totalSalarios * prov.pct).toFixed(2))
+// Busca contas configuradas nos parâmetros
+// Gera partida: D: Dispêndios Pessoal / C: Provisões a Pagar
+// Registra em provisoes_mensais
+}
+}
+C.3 Painel de Alertas Automáticos
+Barra de alertas persistente no topo do módulo Contábil e no Dashboard principal. Categorizada
+por severidade:
+Nível Alerta Regra de Disparo Ação Sugerida
+🔴
+CRÍTICO
+Saldo negativo em conta de
+Disponibilidades
+saldo_conta < 0 em
+qualquer conta do grupo
+1.1.1
+Ver conciliação bancária
+🔴
+CRÍTICO
+Lançamento Desbalanceado valor_debito ≠ valor_credito
+em qualquer partida
+confirmada
+Corrigir lançamento
+imediatamente
+🔴
+CRÍTICO
+Conta de Passivo com saldo
+devedor anormal
+Conta 2.x com saldo < 0
+(exceto adiantamentos)
+Revisar lançamentos do
+período
+🔴
+ATENÇÃO
+Limite ECD de R$ 4,8 milhões
+próximo
+receita_bruta_anual >
+R$4.000.000
+Preparar para entrega do ECD
+obrigatório
+🔴
+ATENÇÃO
+Depreciação do mês não
+processada
+Hoje > dia 10 do mês e
+depreciacao_mensal do
+mês ausente
+Processar depreciação
+automática
+🔴
+ATENÇÃO
+Provisões mensais não
+lançadas
+Hoje > dia 10 e
+provisoes_mensais do mês
+= 0
+Executar geração de provisões
+🔴
+ATENÇÃO
+Período anterior não fechado status = 'aberto' para mês
+anterior ao mês vigente
+Revisar e fechar o período
+ 🏗️	
+INFO Bem totalmente depreciado
+sem baixa registrada
+deprec_acumulada >=
+valor_aquisicao -
+valor_residual
+Registrar destino do bem
+(baixa/alienação)
+ 🏗️	
+INFO N transações financeiras
+pagas sem partida contábil
+contabil_sincronizado =
+false AND status = 'pago'
+Executar Retro-Sync
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ 🏗️	
+INFO Obrigação fiscal com
+vencimento próximo
+agenda_fiscal.vencimento
+<= HOJE + 7 dias
+Ver agenda fiscal
+Componente AlertPanel — Implementação
+// components/shared/AlertPanel.tsx
+// Executado via Server Component — sem re-render desnecessário
+export async function AlertPanel({ associacaoId }: { associacaoId: string }) {
+const alertas = await calcularAlertas(associacaoId) // Server Action
+if (!alertas.length) return null
+return (
+<div className='space-y-2 mb-6'>
+{alertas.map(a => (
+<div key={a.id} className={`
+flex items-start gap-3 p-3 rounded-lg border text-sm
+${a.nivel === 'critico' ? 'bg-red-500/10 border-red-500/30 text-red-300' :
+''}
+${a.nivel === 'atencao' ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+: ''}
+${a.nivel === 'info' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-
+300' : ''}
+`}>
+<span className='text-lg'>{a.icone}</span>
+<div className='flex-1'>
+<span className='font-semibold'>{a.titulo}</span>
+<span className='ml-2 text-xs opacity-70'>{a.descricao}</span>
+</div>
+{a.link && <Button size='xs' variant='ghost' asChild>
+<Link href={a.link}>{a.acao}</Link>
+</Button>}
+</div>
+))}
+</div>
+)
+}
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ 🏗️	
+MÓDULO D — PLANO REFERENCIAL DA RFB —
+REGISTRO I052
+De-Para entre o Plano da Associação e o Plano de Contas da Receita Federal para o SPED ECD
+O ECD (Escrituração Contábil Digital / SPED Contábil) é obrigatório para entidades do terceiro
+setor com receita bruta anual acima de R$ 4,8 milhões ou que recebam subvenções/convênios
+governamentais (IN RFB 1.420/2013). O registro I052 mapeia cada conta do plano da entidade
+para o Plano de Referência da RFB.
+D.1 Schema da Tabela
+-- Tabela de mapeamento De-Para para o registro I052 do ECD
+CREATE TABLE plano_referencial_rfb (
+id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+associacao_id UUID NOT NULL REFERENCES associacoes(id),
+conta_propria_id UUID NOT NULL REFERENCES plano_contas(id),
+-- Código do Plano Referencial da RFB (tabela publicada na IN RFB 1.420/2013, Anexo I)
+-- Formato: X.XX.XX.XX.XX (5 níveis alfanuméricos)
+codigo_referencial TEXT NOT NULL, -- ex: '1.01.01.01.01' = Caixa e Equivalentes
+nome_referencial TEXT NOT NULL, -- nome na tabela da RFB
+-- Validação: conta_propria deve ser conta analítica (folha), não sintética
+ativo BOOLEAN NOT NULL DEFAULT TRUE,
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+UNIQUE (associacao_id, conta_propria_id) -- 1 conta própria → 1 referencial
+);
+D.2 Interface — Tela de Mapeamento I052
+UX da Tela de Mapeamento (app/configuracoes/plano-referencial)
+• Listagem de todas as contas analíticas do plano próprio (5o nível) com status de mapeamento
+• Badge por status: ✅ Mapeada | 🏗️ Pendente | ❌ Sem correspondência na RFB
+• Combobox de busca no Plano Referencial: digitar nome ou código da RFB para filtrar
+• Auto-sugestão: o sistema sugere o código referencial com base no nome e código da conta própria
+(ex: conta que começa com '1.1.1' sugere o grupo '1.01.01' da RFB)
+• Importar mapeamento base: botão que pré-preenche sugestões automáticas para aprovação do
+Contador
+• Exportar I052: gera o bloco I052 do arquivo SPED ECD formatado para revisão antes da entrega
+• Indicador de completude: barra de progresso 'X de Y contas analíticas mapeadas'
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ 🏗️	
+MÓDULO E — MROSC — DEMONSTRAÇÃO POR
+PROJETO
+Lei 13.019/2014 · Prestação de Contas de Parcerias Governamentais · Execução Físico-Financeira
+A Lei 13.019/2014 (Marco Regulatório das Organizações da Sociedade Civil — MROSC) exige que
+associações parceiras do poder público apresentem prestação de contas financeira com
+demonstração por rubrica orçamentária do convênio. Este relatório é obrigatório e pode bloquear
+renovação de parcerias se não for entregue corretamente.
+E.1 Estrutura do Relatório de Prestação de Contas (MROSC)
+Seção do Relatório Conteúdo Fonte no Sistema Obrigatório pela Lei
+Identificação da Parceria Número do Termo,
+Objeto, Parceiro Público,
+Vigência, Valor total
+Cadastro do Projeto Art. 64, §1o
+Plano de Trabalho x
+Execução
+Tabela de metas físicas:
+Meta Prevista vs. Meta
+Executada vs. %
+atingimento
+Módulo de Projetos Art. 64, §1o, II
+Execução Financeira por
+Rubrica
+Por rubrica do orçamento
+aprovado: Valor
+Aprovado | Valor
+Executado | Saldo | %
+execução
+Centro de Custo × Plano
+de Trabalho
+Art. 64, §1o, III
+Documentos
+Comprobatórios
+Lista de NF-e e NFS-e
+vinculadas à parceria,
+com dados completos
+Módulo Fiscal Art. 65
+Conciliação Bancária da
+Parceria
+Extrato da conta corrente
+específica do convênio
+vs. lançamentos
+Financeiro (conta
+vinculada)
+Art. 51, §2o
+Bens Adquiridos /
+Imobilizados
+Lista de imobilizados
+adquiridos com recursos
+da parceria e localização
+atual
+Módulo Imobilizado Art. 35, V
+Devolução de Recursos Valores não aplicados
+devolvidos ao parceiro
+público
+Financeiro (saída) Art. 52
+E.2 Query de Execução Financeira por Rubrica
+-- Relatório de execução por rubrica do convênio
+-- Cruza: plano de trabalho (orçado) × transações vinculadas ao projeto (realizado)
+SELECT
+cc.codigo AS rubrica_codigo,
+cc.nome AS rubrica_nome,
+ptp.valor_previsto AS valor_aprovado,
+COALESCE(SUM(t.valor), 0) AS valor_realizado,
+ptp.valor_previsto - COALESCE(SUM(t.valor), 0) AS saldo,
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ROUND(
+COALESCE(SUM(t.valor), 0) / NULLIF(ptp.valor_previsto, 0) * 100, 2
+) AS pct_execucao
+FROM centros_custo cc
+JOIN plano_trabalho_projeto ptp ON ptp.centro_custo_id = cc.id
+AND ptp.projeto_id = $1 -- :projeto_id
+LEFT JOIN transacoes t
+ON t.centro_custo_id = cc.id
+AND t.projeto_id = $1
+AND t.status = 'pago'
+AND t.data_pagamento BETWEEN $2 AND $3 -- :data_ini, :data_fim
+WHERE cc.projeto_id = $1
+GROUP BY cc.codigo, cc.nome, ptp.valor_previsto
+ORDER BY cc.codigo;
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ 🏗️	
+MÓDULO F — DASHBOARD CONTÁBIL GERENCIAL +
+ASSISTENTE IA
+KPIs em tempo real · Assistente de Lançamentos com IA · Integração com Estoque
+F.1 Dashboard Contábil — KPIs em Tempo Real
+KPI Cálculo Visualização Alerta
+Ingressos vs. Dispêndios
+(MTD)
+SUM contas 3.x vs. SUM
+contas 4.x+5.x no mês
+atual
+Gauge + valores
+absolutos
+Déficit: vermelho
+Disponibilidades SUM saldo contas 1.1.1.xx Card com variação vs.
+mês anterior
+< 30 dias de operação:
+âmbar
+Inadimplência (%) (Mensalidades vencidas /
+Total a receber) × 100
+Donut chart % > 20%: alerta
+Execução de Projetos (Realizado / Aprovado) ×
+100 por convênio
+Barras horizontais por
+projeto
+< 50% em >75% do
+prazo: alerta
+Patrimônio Social Saldo contábil das contas
+2.3.x
+Linha de tendência 12
+meses
+Queda 3 meses
+consecutivos: alerta
+Índice de Sincronização (Sincronizados / Total
+pagos) × 100
+Badge
+verde/âmbar/vermelho
+< 100%: âmbar
+persistente
+Bens Totalmente
+Depreciados
+COUNT ativos com
+deprec_acumulada >= base
+Card com lista
+expansível
+> 0 sem baixa: aviso
+Superávit / Déficit do
+Exercício
+SUM Ingressos - SUM
+Dispêndios (YTD)
+Número grande central
++ sinal
+Déficit: fundo vermelho
+suave
+F.2 Assistente IA de Lançamentos (Sugestão de Contas)
+Ao digitar o histórico de um lançamento manual no Livro Diário, o sistema usa embeddings
+semânticos para sugerir as contas de débito e crédito mais prováveis — aprendendo com o
+histórico de lançamentos da própria associação:
+// Implementação via Supabase pgvector + função de similaridade
+-- 1. Extensão de vetores (habilitar no Supabase Dashboard)
+CREATE EXTENSION IF NOT EXISTS vector;
+-- 2. Tabela de embeddings dos históricos
+CREATE TABLE lancamentos_embeddings (
+id UUID PRIMARY KEY,
+lancamento_id UUID REFERENCES livro_diario(id) ON DELETE CASCADE,
+historico_text TEXT NOT NULL,
+embedding vector(1536), -- dimensão do text-embedding-3-small da OpenAI
+conta_debito_id UUID REFERENCES plano_contas(id),
+conta_credito_id UUID REFERENCES plano_contas(id),
+created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+CREATE INDEX ON lancamentos_embeddings USING ivfflat (embedding vector_cosine_ops)
+WITH (lists = 100);
+-- 3. Função de busca por similaridade
+CREATE OR REPLACE FUNCTION sugerir_contas_lancamento(
+p_historico_embedding vector(1536),
+p_associacao_id UUID,
+p_limit INT DEFAULT 3
+) RETURNS TABLE (
+conta_debito_id UUID, conta_debito_nome TEXT,
+conta_credito_id UUID, conta_credito_nome TEXT,
+similaridade FLOAT, exemplos_historico TEXT[]
+) LANGUAGE sql AS $$
+SELECT
+le.conta_debito_id, pd.nome, le.conta_credito_id, pc.nome,
+1 - (le.embedding <=> p_historico_embedding) AS sim,
+ARRAY_AGG(le.historico_text ORDER BY sim DESC) AS exemplos
+FROM lancamentos_embeddings le
+JOIN livro_diario ld ON ld.id = le.lancamento_id
+JOIN plano_contas pd ON pd.id = le.conta_debito_id
+JOIN plano_contas pc ON pc.id = le.conta_credito_id
+WHERE ld.associacao_id = p_associacao_id
+GROUP BY le.conta_debito_id, pd.nome, le.conta_credito_id, pc.nome
+ORDER BY AVG(1 - (le.embedding <=> p_historico_embedding)) DESC
+LIMIT p_limit;
+$$;
+// Server Action — chamado ao digitar no campo Histórico (debounce 500ms)
+export async function sugerirContasIA(historico: string, associacaoId: string) {
+// 1. Gera embedding do texto digitado
+const emb = await openai.embeddings.create({
+model: 'text-embedding-3-small', input: historico
+})
+// 2. Busca contas similares no banco
+const { data } = await supabase.rpc('sugerir_contas_lancamento', {
+p_historico_embedding: emb.data[0].embedding,
+p_associacao_id: associacaoId,
+})
+return data ?? []
+}
+F.3 Integração com Estoque — Lançamento de Baixa
+// Trigger: ao registrar uma baixa de consumo no módulo de estoque,
+// gera automaticamente o lançamento contábil
+export async function processarBaixaEstoque({
+produto_id, quantidade, competencia, centro_custo_id, projeto_id
+}: BaixaEstoqueInput) {
+const supabase = createServerActionClient({ cookies })
+// 1. Busca o produto e seu custo médio ponderado
+const { data: produto } = await supabase
+.from('produtos').select('*, conta_estoque_id, custo_medio').eq('id',
+produto_id).single()
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+const valorBaixa = produto.custo_medio * quantidade
+// 2. Busca a conta de dispêndio configurada para o tipo de baixa
+// 'consumo_interno' → 'Dispêndios com Material de Consumo'
+// 'distribuicao_beneficiarios' → 'Dispêndios com Atividade Assistencial'
+const { data: cfg } = await supabase.from('configuracoes_contabeis')
+.select('conta_dispendio_id').eq('tipo', 'baixa_estoque_consumo').single()
+// 3. Gera a partida contábil
+// D: 5.x.x Dispêndios com Material de Consumo
+// C: 1.1.4.xx Estoques
+await supabase.from('livro_diario').insert({
+conta_debito_id: cfg.conta_dispendio_id,
+conta_credito_id: produto.conta_estoque_id,
+valor: valorBaixa,
+competencia,
+centro_custo_id,
+projeto_id,
+historico: `Baixa de estoque — ${produto.nome} — ${quantidade} un. ×
+R$${produto.custo_medio}`,
+tipo_origem: 'auto_estoque',
+})
+}
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+ 🏗️	
+RELATÓRIOS — CATÁLOGO COMPLETO DE
+RELATÓRIOS CONTÁBEIS
+Todos os relatórios obrigatórios, gerenciais e legais do sistema ACPROBEC
+A tabela abaixo cataloga todos os relatórios que o sistema deve gerar. Os marcados com ✅já
+estão implementados ou em processo. Os marcados com 🏗️ são os que faltam implementar nesta
+fase complementar.
+Relatórios Obrigatórios — ITG 2002 (R1) / CFC
+Relatório Norma Status Periodicidade Formato
+Balanço Patrimonial (BP) ITG 2002 R1, Item 24	 🏗️	 A implementar Anual (e sob
+demanda)
+PDF + Excel
+DSD — Demonstração do
+Superávit ou Déficit
+ITG 2002 R1, Item 26	 🏗️	 A implementar Anual + Mensal PDF + Excel
+DFC — Fluxo de Caixa (Método
+Direto)
+ITG 2002 R1, Item 28	 🏗️	 A implementar Anual + Mensal PDF + Excel
+DMPS — Mutações do Patrimônio
+Social
+ITG 2002 R1, Item 27	 🏗️	 A implementar Anual PDF
+Notas Explicativas ITG 2002 R1, Item 29	 🏗️	 A implementar Anual PDF (editável)
+Balancete de Verificação ITG 2000 R1 ✅ Implementado Mensal PDF + Excel
+Livro Diário ITG 2000 R1	 🏗️	 A implementar Mensal (por
+mês)
+PDF numerado
+Livro Razão (por conta) ITG 2000 R1	 🏗️	 A implementar Mensal / Anual PDF + Excel
+ECD — SPED Contábil IN RFB 1.420/2013	 🏗️	 Fase 5 Anual (até
+jun/ano+1)
+Arquivo .txt
+Relatórios Fiscais e Patrimoniais
+Relatório Norma / Finalidade Formato
+Inventário Patrimonial de Imobilizado NBC TG 27 — controle de bens PDF + Excel
+Ficha de Tombamento Individual (com
+QR Code)
+Controle interno — por bem PDF imprimível
+Mapa de Depreciação Futura Planejamento — projeção de cotas
+futuras
+Excel
+Bens adquiridos com recursos de
+convênio
+Lei 13.019/2014 — MROSC PDF
+Mapa de Classificação I052 (De-Para
+RFB)
+SPED ECD — Registro I052 PDF + arquivo txt
+Registro de NF-e e NFS-e por período Fiscal — escrituração de entradas PDF + Excel
+Retenções na Fonte (IRRF, ISS, PIS,
+COFINS, CSLL)
+Guias de recolhimento + conferência PDF + Excel
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+Livro de Entrada de Mercadorias Fiscal — movimentações de estoque PDF
+Relatórios Gerenciais e de Análise
+Relatório Finalidade Destino
+Dashboard de KPIs Gerenciais Ingressos × Dispêndios ×
+Patrimônio × Inadimplência em
+tempo real
+Diretoria
+Previsão de Fluxo de Caixa
+(30/60/90 dias)
+Projeção de recebimentos e
+pagamentos futuros por títulos em
+aberto
+Gestão financeira
+Inadimplência por Associado Cobrança: vencidos, valor, dias
+em aberto, botão WhatsApp
+Financeiro
+Execução Físico-Financeira por
+Convênio
+Orçado × Realizado × Saldo por
+rubrica — para prestação de
+contas MROSC
+Diretoria + Parceiro Público
+Demonstração por Projeto (com
+comprovantes)
+NF-e e NFS-e vinculadas +
+execução financeira por projeto
+Financiadores
+Dispêndios por Centro de Custo Classificação analítica de gastos
+por atividade / projeto
+Contabilidade
+Trabalho Voluntário por Programa
+(Nota Explicativa)
+ITG 2002 R1, Item 19 — horas,
+valor justo, metodologia
+Auditoria / Publicação
+Renúncia Fiscal (Imunidade/Isenção) IRPJ, CSLL, ISS objeto de
+benefício fiscal — para notas
+explicativas
+Contador
+Análise de Aging (Contas a
+Receber/Pagar)
+Vencimentos futuros e vencidos
+por faixa de dias
+Gestão
+Conciliação Bancária Extrato OFX × lançamentos
+financeiros × saldo contábil
+Contador
+Auditoria de Lançamentos (Audit
+Trail)
+Log imutável de todas as ações no
+sistema
+Auditoria externa
+Checklist de Conformidade ITG 2002 Verificação automática de todos os
+itens obrigatórios
+Contador / CRC
+ACPROBEC │ Módulos Complementares — Guia Técnico
+Completo
+ITG 2002 (R1) · NBC TG 27 · Lei 13.019/2014 ·
+SPED ECD
+PLANO DE IMPLEMENTAÇÃO DOS MÓDULOS
+COMPLEMENTARES
+Sequência de implementação otimizada para maximizar o impacto operacional a cada sprint:
+Sprint Módulo Entregáveis Principais Impacto
+Sprint 1 (2
+semanas)
+Módulo A — Ativo Imobilizado
++ Depreciação Automática
+Schema completo, CRUD de bens,
+cálculo de depreciação, Server Action
+processarDepreciacaoMensal()
+MÁXIMO — elimina
+trabalho manual
+mensal do contador
+Sprint 2 (2
+semanas)
+Módulo B — Períodos
+Contábeis + Centros de Custo
+Tabela periodos_contabeis, trigger de
+bloqueio, rotina de pré-fechamento,
+tabela centros_custo
+ALTO —
+conformidade e
+controle de
+escrituração
+Sprint 3 (2
+semanas)
+Módulo C — DFC (Método
+Direto) + Painel de Alertas
+View dfc_movimentos, gerador de
+relatório PDF, AlertPanel com 10
+alertas automáticos
+ALTO — relatório
+obrigatório +
+segurança contábil
+Sprint 4 (1
+semana)
+Módulo C — Provisões
+Mensais
+Schema provisoes_mensais, Server
+Action gerarProvisoesMensais(),
+integração com pré-fechamento
+MÉDIO-ALTO —
+conformidade com
+competência
+Sprint 5 (2
+semanas)
+Relatórios Obrigatórios (BP +
+DSD + DFC + DMPS)
+Geradores PDF de todas as
+demonstrações contábeis exigidas
+pela ITG 2002 (R1)
+ALTO — obrigação
+legal e auditoria
+Sprint 6 (2
+semanas)
+Módulo E — MROSC +
+Prestação de Contas
+Query de execução por rubrica,
+relatório PDF de prestação de contas
+Lei 13.019/2014
+MÉDIO — obrigação
+para convênios
+Sprint 7 (2
+semanas)
+Módulo D — Plano
+Referencial RFB + ECD
+básico
+Tabela plano_referencial_rfb, tela de
+mapeamento I052, gerador de blocos
+do SPED ECD
+MÉDIO — para
+entidades com receita >
+R$4,8M
+Sprint 8 (2
+semanas)
+Módulo F — Dashboard + IA
++ Estoque
+KPIs gerenciais, sugestão IA via
+pgvector, lançamento automático de
+baixa de estoque
+MÉDIO — diferencial
+competitivo e UX
+COM ESTES MÓDULOS COMPLEMENTARES, O ACPROBEC COBRE:
+✅ 100% da ITG 2002 (R1) · ✅ NBC TG 27 (Imobilizado) · ✅ Lei 13.019/2014 (MROSC) · ✅ IN
+RFB 1.420/2013 (ECD)
+O sistema mais completo do mercado para gestão contábil, fiscal e financeira de associações sem
+fins lucrativos.

@@ -1,6 +1,7 @@
 'use server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { PLANO_CONTAS_ITG2002 } from '../data/planoContasITG2002'
+import { isPeriodoFechado } from './periodoActions'
 
 export async function sincronizarLancamentoContabil(financialId: string) {
   const sb = await createServerSupabase()
@@ -8,6 +9,10 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   // 1. Buscar o lançamento financeiro
   const { data: fin, error: finErr } = await sb.from('lancamentos').select('*').eq('id', financialId).maybeSingle()
   if (finErr || !fin || fin.status !== 'pago') return { error: 'Lançamento não elegível para integração contábil' }
+
+  // 1.1 Verificar se o período contábil está fechado
+  const fechado = await isPeriodoFechado(fin.data, fin.tenant_id)
+  if (fechado) return { error: `O período contábil (${fin.data.slice(0,7)}) está FECHADO. Reabra o período para sincronizar.` }
 
   // 2. Buscar o mapeamento para a categoria
   const { data: map, error: mapErr } = await sb.from('configuracoes_contabeis').select('*').eq('tenant_id', fin.tenant_id).eq('categoria_nome', fin.categoria).maybeSingle()
