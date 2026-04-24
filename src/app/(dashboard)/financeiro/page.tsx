@@ -34,6 +34,7 @@ import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
 import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction } from '@/app/actions/financeiro_cleanup'
 import RemanejarModal from '@/components/ui/RemanejarModal'
+import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -86,6 +87,8 @@ export default function FinanceiroPage() {
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [isCompModalOpen, setIsCompModalOpen] = useState(false)
   const [isRemanejarModalOpen, setIsRemanejarModalOpen] = useState(false)
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false)
+  const [reconciliationLogs, setReconciliationLogs] = useState<any[]>([])
   const [compTarget, setCompTarget] = useState<any>(null)
   const [remanejarTarget, setRemanejarTarget] = useState<any>(null)
   const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
@@ -174,7 +177,21 @@ export default function FinanceiroPage() {
         if (res.error) alert(`Erro: ${res.error}`)
       }
 
-      alert(`${itemsToProcess.length} lançamentos processados!`)
+      // Gerar Logs
+      const logs = itemsToProcess.map((t: any) => ({
+        data: t.bank.date,
+        descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+        valor: Math.abs(t.bank.amount),
+        tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+        associado: t.assocMatch?.nome,
+        status: 'sucesso',
+        mensagem: t.existingMatch ? 'Conciliado com lançamento existente' : 'Novo lançamento criado',
+        id_bancario: t.bank.fitid,
+        atualizou_cpf: t.needsUpdate && !!t.newDocument
+      }))
+      
+      setReconciliationLogs(logs)
+      setIsLogModalOpen(true)
       setProcessedIds(prev => { const next = new Set(prev); itemsToProcess.forEach((it: any) => next.add(it.bank.fitid)); return next; })
     } finally { setIsProcessingBatch(false) }
   }
@@ -236,7 +253,22 @@ export default function FinanceiroPage() {
       }
 
       if (updateStatusBulk) await updateStatusBulk(rowsToProcess.map((i: any) => i.bank.fitid), 'sincronizado')
-      alert(`${rowsToProcess.length} transações Cora sincronizadas!`)
+      
+      // Gerar Logs Cora
+      const logs = rowsToProcess.map((t: any) => ({
+        data: t.bank.date,
+        descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+        valor: Math.abs(t.bank.amount),
+        tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+        associado: t.assocMatch?.nome,
+        status: 'sucesso',
+        mensagem: t.existingMatch ? 'Conciliado com provisão existente' : 'Novo lançamento via Cora',
+        id_bancario: t.bank.fitid,
+        atualizou_cpf: t.needsUpdate && !!t.newDocument
+      }))
+
+      setReconciliationLogs(logs)
+      setIsLogModalOpen(true)
       setProcessedIds(prev => { const next = new Set(prev); rowsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
     } finally { setIsProcessingBatch(false) }
   }
@@ -802,6 +834,12 @@ export default function FinanceiroPage() {
         original={remanejarTarget}
         associados={associados}
         onConfirm={remanejar}
+      />
+
+      <ConciliacaoLogModal 
+        isOpen={isLogModalOpen}
+        onClose={() => setIsLogModalOpen(false)}
+        logs={reconciliationLogs}
       />
     </div>
   )
