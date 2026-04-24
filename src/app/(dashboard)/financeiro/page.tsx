@@ -32,7 +32,7 @@ import BatchActionBar from '@/components/ui/BatchActionBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
 import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
-import { cleanupDuplicateMensalidadesAction } from '@/app/actions/financeiro_cleanup'
+import { cleanupDuplicateMensalidadesAction, cleanupConciliacaoDuplicatesAction } from '@/app/actions/financeiro_cleanup'
 import RemanejarModal from '@/components/ui/RemanejarModal'
 import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
 import ConciliacaoHistoryModal from '@/components/conciliacao/ConciliacaoHistoryModal'
@@ -311,7 +311,6 @@ export default function FinanceiroPage() {
     } finally { setIsProcessingBatch(false) }
   }
 
-  const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false)
   const handleCleanupDuplicates = async () => {
     if (!confirm('Deseja remover mensalidades duplicadas que ainda não foram conciliadas?')) return
     setIsCleaningDuplicates(true)
@@ -324,6 +323,18 @@ export default function FinanceiroPage() {
           : ''
         alert(`${res.message}${namesStr}`)
       }
+    } finally {
+      setIsCleaningDuplicates(false)
+    }
+  }
+
+  const handleCleanupConciliacao = async () => {
+    if (!confirm('Deseja remover lançamentos conciliados duplicados (mesma data, valor e descrição)? Esta ação manterá apenas um registro de cada importação repetida.')) return
+    setIsCleaningDuplicates(true)
+    try {
+      const res = await cleanupConciliacaoDuplicatesAction()
+      if (res.error) alert(`Erro: ${res.error}`)
+      else alert(res.message)
     } finally {
       setIsCleaningDuplicates(false)
     }
@@ -696,9 +707,13 @@ export default function FinanceiroPage() {
               {[...new Set(categorias.map(c => c.nome))].sort().map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
             <div className="flex gap-2">
-              <button onClick={handleCleanupDuplicates} disabled={isCleaningDuplicates} className="px-4 py-4 bg-rose-50 text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-2 transition-all hover:bg-rose-100 disabled:opacity-50" title="Remover lançamentos duplicados não conciliados">
+              <button onClick={handleCleanupDuplicates} disabled={isCleaningDuplicates} className="px-4 py-4 bg-rose-50 text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-2 transition-all hover:bg-rose-100 disabled:opacity-50" title="Remover mensalidades duplicadas não conciliadas">
                 <Trash2 size={14} className={isCleaningDuplicates ? 'animate-spin' : ''} />
-                Limpar Duplicados
+                Limpar Provisões
+              </button>
+              <button onClick={handleCleanupConciliacao} disabled={isCleaningDuplicates} className="px-4 py-4 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-2 transition-all hover:bg-amber-100 disabled:opacity-50" title="Remover conciliações duplicadas (importação repetida)">
+                <RefreshCw size={14} className={isCleaningDuplicates ? 'animate-spin' : ''} />
+                Limpar Extrato
               </button>
               <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100">
                 <RefreshCw size={14} /> Recorrência em Lote

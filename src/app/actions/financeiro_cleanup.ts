@@ -191,3 +191,69 @@ export async function cleanupDuplicateMensalidadesAction() {
     message: `${idsToDelete.length} mensalidades duplicadas removidas de ${namesList.length} associados.` 
   }
 }
+
+/**
+ * Remove duplicatas de conciliação (itens com mesma data, valor e descrição)
+ * que foram importados múltiplas vezes.
+ */
+export async function cleanupConciliacaoDuplicatesAction() {
+  const sb = await createServerSupabase()
+
+  // 1. Buscar todos os lançamentos conciliados
+  const { data, error } = await sb
+    .from('lancamentos')
+    .select('id, data, valor, descricao, banco_transacao_id, conciliado')
+    .eq('conciliado', true)
+    .order('data', { ascending: false })
+
+  if (error) return { error: error.message }
+  if (!data || data.length === 0) return { count: 0, message: 'Nenhum lançamento conciliado encontrado.' }
+
+  // 2. Agrupar por data_valor_descricao
+  const groups: Record<string, any[]> = {}
+  data.forEach(l => {
+    const key = `${l.data}_${l.valor}_${l.descricao.trim().toUpperCase()}`
+    if (!groups[key]) groups[key] = []
+    groups[key].push(l)
+  })
+
+  const idsToDelete: string[] = []
+  
+  // 3. Identificar duplicatas
+  Object.entries(groups).forEach(([key, group]) => {
+    if (group.length <= 1) return
+
+    // Se houver duplicatas, mantemos apenas uma.
+    // Priorizamos manter o que tem banco_transacao_id (fitid) se houver.
+    const sorted = [...group].sort((a, b) => {
+      if (a.banco_transacao_id && !b.banco_transacao_id) return -1
+      if (!a.banco_transacao_id && b.banco_transacao_id) return 1
+      return 0
+    })
+
+    // Remove todos exceto o primeiro
+    for (let i = 1; i < sorted.length; i++) {
+      idsToDelete.push(sorted[i].id)
+    }
+  })
+
+  if (idsToDelete.length === 0) return { count: 0, message: 'Nenhuma duplicata de conciliação encontrada.' }
+
+  // 4. Deletar em lotes
+  const chunkSize = 50
+  for (let i = 0; i < idsToDelete.length; i += chunkSize) {
+    const chunk = idsToDelete.slice(i, i + chunkSize)
+    const { error: deleteError } = await sb
+      .from('lancamentos')
+      .delete()
+      .in('id', chunk)
+
+    if (deleteError) return { error: `Erro ao excluir lote: ${deleteError.message}` }
+  }
+
+  return {
+    success: true,
+    count: idsToDelete.length,
+    message: `${idsToDelete.length} lançamentos duplicados removidos com sucesso.`
+  }
+}
