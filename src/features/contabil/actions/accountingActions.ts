@@ -6,27 +6,27 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   const sb = await createServerSupabase()
   
   // 1. Buscar o lançamento financeiro
-  const { data: fin, error: finErr } = await sb.from('lancamentos').select('*').eq('id', financialId).single()
+  const { data: fin, error: finErr } = await sb.from('lancamentos').select('*').eq('id', financialId).maybeSingle()
   if (finErr || !fin || fin.status !== 'pago') return { error: 'Lançamento não elegível para integração contábil' }
 
   // 2. Buscar o mapeamento para a categoria
-  const { data: map, error: mapErr } = await sb.from('configuracoes_contabeis').select('*').eq('tenant_id', fin.tenant_id).eq('categoria_nome', fin.categoria).single()
+  const { data: map, error: mapErr } = await sb.from('configuracoes_contabeis').select('*').eq('tenant_id', fin.tenant_id).eq('categoria_nome', fin.categoria).maybeSingle()
   if (mapErr || !map) {
     console.warn(`[AccountingSync] Sem mapeamento para categoria: ${fin.categoria}`)
     return { error: `Categoria '${fin.categoria}' não mapeada no Plano de Contas ITG 2002.` }
   }
 
   // 3. Buscar os IDs reais das contas contábeis no banco de dados
-  const { data: contaCat } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', map.conta_contabil_codigo).single()
+  const { data: contaCat } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', map.conta_contabil_codigo).maybeSingle()
   // Usa o Banco Cora como padrão provisório para a contrapartida de Caixa/Bancos
-  const { data: contaBanco } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', '1.1.1.02.001').single()
+  const { data: contaBanco } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', '1.1.1.02.001').maybeSingle()
 
   if (!contaCat || !contaBanco) {
-    return { error: 'As contas contábeis correspondentes não foram inicializadas no banco de dados.' }
+    return { error: `As contas contábeis correspondentes (${map.conta_contabil_codigo} ou 1.1.1.02.001) não foram inicializadas no banco de dados.` }
   }
 
   // 4. Verificar se já existe um lançamento contábil vinculado (origem_id)
-  const { data: existing } = await sb.from('lancamentos_contabeis').select('id').eq('origem_id', financialId).single()
+  const { data: existing } = await sb.from('lancamentos_contabeis').select('id').eq('origem_id', financialId).maybeSingle()
   if (existing) return { error: 'Lançamento já sincronizado' }
 
   // 5. Gerar número do lançamento

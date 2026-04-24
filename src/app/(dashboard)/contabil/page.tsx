@@ -52,7 +52,11 @@ export default function ContabilPage() {
                 const { sincronizarPeriodoContabil } = await import('@/features/contabil/actions/accountingActions')
                 const res = await sincronizarPeriodoContabil('2026-01-01')
                 if (res.success) {
-                  alert(`Sucesso! ${res.count} de ${res.total} lançamentos foram sincronizados.`)
+                  if (res.errors && res.errors.length > 0) {
+                    alert(`Sucesso Parcial! ${res.count} de ${res.total} lançamentos foram sincronizados.\n\nPrimeiro Erro: ${res.errors[0]}`)
+                  } else {
+                    alert(`Sucesso! ${res.count} de ${res.total} lançamentos foram sincronizados.`)
+                  }
                   window.location.reload()
                 } else alert(`Erro na sincronização: ${res.error}`)
               }
