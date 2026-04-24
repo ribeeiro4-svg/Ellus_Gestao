@@ -11,8 +11,11 @@ import Demonstracoes from '@/features/contabil/components/Demonstracoes'
 import Imobilizado from '@/features/contabil/components/Imobilizado'
 import FechamentoPeriodos from '@/features/contabil/components/FechamentoPeriodos'
 import CentrosCusto from '@/features/contabil/components/CentrosCusto'
+import DFC from '@/features/contabil/components/DFC'
+import PreFechamento from '@/features/contabil/components/PreFechamento'
+import RelatoriosExport from '@/features/contabil/components/RelatoriosExport'
 
-type Tab = 'dashboard' | 'lancamentos' | 'plano' | 'balancete' | 'demonstracoes' | 'imobilizado' | 'periodos' | 'centros_custo'
+type Tab = 'dashboard' | 'lancamentos' | 'plano' | 'balancete' | 'demonstracoes' | 'imobilizado' | 'periodos' | 'centros_custo' | 'dfc' | 'pre_fechamento' | 'relatorios'
 
 export default function ContabilPage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
@@ -28,6 +31,9 @@ export default function ContabilPage() {
     { id: 'imobilizado' as Tab, label: '🏢 Imobilizado' },
     { id: 'periodos' as Tab, label: '⚙️ Períodos' },
     { id: 'centros_custo' as Tab, label: '🏷️ CCs' },
+    { id: 'dfc' as Tab, label: '💸 DFC' },
+    { id: 'pre_fechamento' as Tab, label: '🏁 Pré-Fechamento' },
+    { id: 'relatorios' as Tab, label: '📄 Relatórios' },
   ]
 
   return (
@@ -126,6 +132,9 @@ export default function ContabilPage() {
       {activeTab === 'imobilizado' && <Imobilizado planoHook={planoHook} />}
       {activeTab === 'periodos' && <FechamentoPeriodos />}
       {activeTab === 'centros_custo' && <CentrosCusto />}
+      {activeTab === 'dfc' && <DFC lancHook={lancHook} planoHook={planoHook} />}
+      {activeTab === 'pre_fechamento' && <PreFechamento />}
+      {activeTab === 'relatorios' && <RelatoriosExport lancHook={lancHook} planoHook={planoHook} />}
     </div>
   )
 }

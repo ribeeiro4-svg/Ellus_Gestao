@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { BookOpen, FileText, CheckCircle, TrendingUp, BarChart3, Download, Loader2 } from 'lucide-react'
 import { useConfiguracoesContabeis } from '@/features/contabil/hooks/useConfiguracoesContabeis'
+import ComplianceAlerts from './ComplianceAlerts'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
@@ -129,6 +130,8 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
           )}
         </div>
       </div>
+
+      <ComplianceAlerts lancHook={lancHook} planoHook={planoHook} configuracoes={configuracoes} />
 
       {/* Compliance panel */}
       <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5">

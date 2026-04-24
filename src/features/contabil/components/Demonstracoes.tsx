@@ -1,12 +1,24 @@
 'use client'
 import React, { useState } from 'react'
-import { Loader2, Lock } from 'lucide-react'
+import { Loader2, Lock, Printer } from 'lucide-react'
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
 export default function Demonstracoes({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
   const { contas } = planoHook
   const { calcularBalancete, refresh } = lancHook
   const [demo, setDemo] = useState<'dsd' | 'bp' | 'dmps'>('dsd')
+  
+  const handlePrint = (titulo: string, id: string) => {
+    const conteudo = document.getElementById(id)
+    if (!conteudo) return
+    const janela = window.open('', '', 'width=900,height=700')
+    if (!janela) return
+    janela.document.write(`<html><head><title>${titulo}</title><style>body{font-family:sans-serif;padding:40px}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:12px}.text-right{text-align:right}.indent{padding-left:30px}.font-bold{font-weight:bold}</style></head><body><h1>${titulo} - ACPROBEC</h1>${conteudo.innerHTML}</body></html>`)
+    janela.document.close()
+    janela.print()
+    janela.close()
+  }
+
   const [saldos, setSaldos] = useState<Record<string, { debitos: number; creditos: number }>>({})
   const [loading, setLoading] = useState(false)
   const [encerrando, setEncerrando] = useState(false)
@@ -54,10 +66,19 @@ export default function Demonstracoes({ lancHook, planoHook }: { lancHook: any; 
     
     return (
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="bg-emerald-600 px-6 py-4">
-          <h3 className="text-white font-black text-sm">DEMONSTRAÇÃO DO SUPERÁVIT OU DÉFICIT DO PERÍODO</h3>
-          <p className="text-emerald-100 text-xs mt-0.5">Exercício findo em 31/12/{ano} • Conforme ITG 2002 (R1)</p>
+        <div className="bg-emerald-600 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h3 className="text-white font-black text-sm">DEMONSTRAÇÃO DO SUPERÁVIT OU DÉFICIT DO PERÍODO</h3>
+            <p className="text-emerald-100 text-xs mt-0.5">Exercício findo em 31/12/{ano} • Conforme ITG 2002 (R1)</p>
+          </div>
+          <button 
+            onClick={() => handlePrint('DSD - Demonstração do Resultado', 'dsd-table')}
+            className="p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all"
+          >
+            <Printer size={16} />
+          </button>
         </div>
+        <div id="dsd-table">
         <table className="w-full text-xs">
           <tbody>
             {[
@@ -95,6 +116,7 @@ export default function Demonstracoes({ lancHook, planoHook }: { lancHook: any; 
             * Os valores acima são calculados automaticamente com base nos lançamentos contábeis do Livro Diário.
             Lançar os lançamentos na aba "Livro Diário" para que os valores sejam refletidos aqui.
           </p>
+        </div>
         </div>
       </div>
     )

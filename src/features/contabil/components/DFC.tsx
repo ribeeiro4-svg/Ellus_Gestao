@@ -1,6 +1,5 @@
-'use client'
 import React, { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, Loader2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Loader2, Printer } from 'lucide-react'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
@@ -10,6 +9,17 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
   const [fluxos, setFluxos] = useState<any>({ operacionais: [], investimentos: [], financiamentos: [] })
   const [loading, setLoading] = useState(true)
   const ano = new Date().getFullYear()
+
+  const handlePrint = (titulo: string, id: string) => {
+    const conteudo = document.getElementById(id)
+    if (!conteudo) return
+    const janela = window.open('', '', 'width=900,height=700')
+    if (!janela) return
+    janela.document.write(`<html><head><title>${titulo}</title><style>body{font-family:sans-serif;padding:40px}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:12px}.text-right{text-align:right}.indent{padding-left:30px}.font-bold{font-weight:bold}.bg-slate-50{background-color:#f8fafc}</style></head><body><h1>${titulo} - ACPROBEC</h1>${conteudo.innerHTML}</body></html>`)
+    janela.document.close()
+    janela.print()
+    janela.close()
+  }
 
   useEffect(() => {
     // Cálculo simplificado do DFC Direto baseado nos lançamentos do Livro Diário
@@ -76,11 +86,20 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="bg-indigo-600 px-6 py-4">
-          <h3 className="text-white font-black text-sm">DEMONSTRAÇÃO DOS FLUXOS DE CAIXA (DFC) — MÉTODO DIRETO</h3>
-          <p className="text-indigo-100 text-xs mt-0.5">Exercício de {ano} • Conforme ITG 2002 (R1)</p>
+        <div className="bg-indigo-600 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h3 className="text-white font-black text-sm">DEMONSTRAÇÃO DOS FLUXOS DE CAIXA (DFC) — MÉTODO DIRETO</h3>
+            <p className="text-indigo-100 text-xs mt-0.5">Exercício de {ano} • Conforme ITG 2002 (R1)</p>
+          </div>
+          <button 
+            onClick={() => handlePrint('DFC - Demonstração dos Fluxos de Caixa', 'dfc-table')}
+            className="p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all"
+          >
+            <Printer size={16} />
+          </button>
         </div>
 
+        <div id="dfc-table">
         <table className="w-full text-xs">
           <tbody className="divide-y divide-slate-50">
             {/* Atividades Operacionais */}
@@ -133,6 +152,7 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
