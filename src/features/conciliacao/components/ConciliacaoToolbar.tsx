@@ -1,5 +1,5 @@
 import React from 'react'
-import { RefreshCw, Zap, Search } from 'lucide-react'
+import { RefreshCw, Zap, Search, History, FileText } from 'lucide-react'
 import { fmtR } from '@/lib/utils/formatters'
 
 interface ConciliacaoToolbarProps {
@@ -19,6 +19,8 @@ interface ConciliacaoToolbarProps {
   onExecute: () => void
   isProcessingBatch: boolean
   hasFilteredItems: boolean
+  onShowHistory: () => void
+  onExportCurrent: () => void
 }
 
 export default function ConciliacaoToolbar({
@@ -37,7 +39,9 @@ export default function ConciliacaoToolbar({
   isAuditingBatch,
   onExecute,
   isProcessingBatch,
-  hasFilteredItems
+  hasFilteredItems,
+  onShowHistory,
+  onExportCurrent
 }: ConciliacaoToolbarProps) {
   return (
     <div className="sticky top-[20px] z-[40] flex items-center justify-between gap-6 bg-[#0e2d22] backdrop-blur-xl py-2.5 px-10 rounded-[32px] border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.4)] animate-in slide-in-from-top-4 mb-8">
@@ -110,6 +114,25 @@ export default function ConciliacaoToolbar({
         >
           {isAuditingBatch ? <RefreshCw size={12} className="animate-spin" /> : <Search size={12} />}
           {isAuditingBatch ? 'Auditando...' : 'Auditar'}
+        </button>
+
+        <button 
+          onClick={onShowHistory}
+          className="flex items-center gap-2.5 px-6 py-3 bg-emerald-900/60 text-emerald-400 border border-emerald-500/20 rounded-xl font-black text-[10px] uppercase tracking-[1px] shadow-xl hover:bg-emerald-800 transition-all active:scale-95 group"
+          title="Ver histórico de conciliações"
+        >
+          <History size={12} className="group-hover:rotate-[-12deg] transition-transform" />
+          Histórico
+        </button>
+
+        <button 
+          onClick={onExportCurrent}
+          disabled={!hasFilteredItems}
+          className="flex items-center gap-2.5 px-6 py-3 bg-emerald-900/60 text-emerald-400 border border-emerald-500/20 rounded-xl font-black text-[10px] uppercase tracking-[1px] shadow-xl hover:bg-emerald-800 transition-all active:scale-95 disabled:opacity-50 group"
+          title="Exportar prévia da conciliação"
+        >
+          <FileText size={12} />
+          Exportar
         </button>
 
         <button 

@@ -35,6 +35,8 @@ import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction } from '@/app/actions/financeiro_cleanup'
 import RemanejarModal from '@/components/ui/RemanejarModal'
 import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
+import ConciliacaoHistoryModal from '@/components/conciliacao/ConciliacaoHistoryModal'
+import { useConciliacaoLogs } from '@/lib/hooks/useConciliacaoLogs'
 import { tempFixDatabaseAction } from '@/app/actions/zapsign'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
@@ -89,7 +91,9 @@ export default function FinanceiroPage() {
   const [isCompModalOpen, setIsCompModalOpen] = useState(false)
   const [isRemanejarModalOpen, setIsRemanejarModalOpen] = useState(false)
   const [isLogModalOpen, setIsLogModalOpen] = useState(false)
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
   const [reconciliationLogs, setReconciliationLogs] = useState<any[]>([])
+  const { logsHistory, saveLog } = useConciliacaoLogs()
   const [compTarget, setCompTarget] = useState<any>(null)
   const [remanejarTarget, setRemanejarTarget] = useState<any>(null)
   const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
@@ -197,9 +201,27 @@ export default function FinanceiroPage() {
       }))
       
       setReconciliationLogs(logs)
+      saveLog(logs)
       setIsLogModalOpen(true)
       setProcessedIds(prev => { const next = new Set(prev); itemsToProcess.forEach((it: any) => next.add(it.bank.fitid)); return next; })
     } finally { setIsProcessingBatch(false) }
+  }
+
+  const handleExportCurrent = () => {
+    const logs = filteredItemsConciliacao.map((t: any) => ({
+      data: t.bank.date,
+      descricao: editedMemos[t.bank.fitid] || t.bank.memo,
+      valor: Math.abs(t.bank.amount),
+      tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
+      associado: t.assocMatch?.nome,
+      status: 'sucesso' as const,
+      mensagem: t.existingMatch ? 'Vínculo Identificado' : 'Aguardando Lançamento',
+      id_bancario: t.bank.fitid,
+      atualizou_cpf: t.needsUpdate && !!t.newDocument,
+      novo_cpf: t.newDocument
+    }))
+    setReconciliationLogs(logs)
+    setIsLogModalOpen(true)
   }
 
   const handleCoraBatch = async () => {
@@ -275,6 +297,7 @@ export default function FinanceiroPage() {
       }))
 
       setReconciliationLogs(logs)
+      saveLog(logs)
       setIsLogModalOpen(true)
       setProcessedIds(prev => { const next = new Set(prev); rowsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
     } finally { setIsProcessingBatch(false) }
@@ -616,6 +639,8 @@ export default function FinanceiroPage() {
                 totalEntradas={conciliacaoStats.entries}
                 totalSaidas={conciliacaoStats.outings}
                 duplicatesCount={conciliacaoStats.duplicates}
+                onShowHistory={() => setIsHistoryModalOpen(true)}
+                onExportCurrent={handleExportCurrent}
               />
             )}
 
@@ -847,6 +872,16 @@ export default function FinanceiroPage() {
         isOpen={isLogModalOpen}
         onClose={() => setIsLogModalOpen(false)}
         logs={reconciliationLogs}
+      />
+
+      <ConciliacaoHistoryModal 
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        history={logsHistory}
+        onSelect={(logs) => {
+          setReconciliationLogs(logs)
+          setIsLogModalOpen(true)
+        }}
       />
     </div>
   )

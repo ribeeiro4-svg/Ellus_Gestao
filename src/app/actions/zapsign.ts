@@ -208,6 +208,15 @@ export async function tempFixDatabaseAction() {
     -- 3. Coluna para Histórico Bancário Oculto
     ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS banco_original_memo TEXT;
 
+    -- 4. Tabela de Histórico de Conciliação
+    CREATE TABLE IF NOT EXISTS conciliacao_logs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      tenant_id UUID NOT NULL,
+      data_processamento TIMESTAMP WITH TIME ZONE DEFAULT now(),
+      logs JSONB NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    );
+
     -- Forçar recarga do cache do PostgREST
     NOTIFY pgrst, 'reload schema';
 
