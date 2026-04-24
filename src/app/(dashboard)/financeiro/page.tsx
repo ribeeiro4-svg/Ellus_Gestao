@@ -661,6 +661,7 @@ export default function FinanceiroPage() {
                 duplicatesCount={conciliacaoStats.duplicates}
                 onShowHistory={() => setIsHistoryModalOpen(true)}
                 onExportCurrent={handleExportCurrent}
+                onCleanupConciliacao={handleCleanupConciliacao}
               />
             )}
 

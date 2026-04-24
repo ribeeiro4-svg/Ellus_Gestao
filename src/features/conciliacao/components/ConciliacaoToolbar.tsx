@@ -21,6 +21,7 @@ interface ConciliacaoToolbarProps {
   hasFilteredItems: boolean
   onShowHistory: () => void
   onExportCurrent: () => void
+  onCleanupConciliacao?: () => void
 }
 
 export default function ConciliacaoToolbar({
@@ -41,7 +42,8 @@ export default function ConciliacaoToolbar({
   isProcessingBatch,
   hasFilteredItems,
   onShowHistory,
-  onExportCurrent
+  onExportCurrent,
+  onCleanupConciliacao
 }: ConciliacaoToolbarProps) {
   return (
     <div className="sticky top-[20px] z-[40] flex items-center justify-between gap-6 bg-[#0e2d22] backdrop-blur-xl py-2.5 px-10 rounded-[32px] border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.4)] animate-in slide-in-from-top-4 mb-8">
@@ -82,11 +84,22 @@ export default function ConciliacaoToolbar({
 
           <div className="flex flex-col">
             <span className="text-amber-400 font-black uppercase tracking-[1.5px] text-[8px] mb-1">Segurança</span>
-            <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border transition-all ${duplicatesCount > 0 ? 'bg-amber-400/10 border-amber-400/30' : 'bg-emerald-400/10 border-emerald-400/30'}`}>
-              <div className={`w-1.5 h-1.5 rounded-full ${duplicatesCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
-              <span className={`text-[8px] font-black uppercase tracking-widest ${duplicatesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                {duplicatesCount > 0 ? `${duplicatesCount} DUPLICADOS` : 'SEGURO'}
-              </span>
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-2 px-2.5 py-1 rounded-lg border transition-all ${duplicatesCount > 0 ? 'bg-amber-400/10 border-amber-400/30' : 'bg-emerald-400/10 border-emerald-400/30'}`}>
+                <div className={`w-1.5 h-1.5 rounded-full ${duplicatesCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+                <span className={`text-[8px] font-black uppercase tracking-widest ${duplicatesCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {duplicatesCount > 0 ? `${duplicatesCount} DUPLICADOS` : 'SEGURO'}
+                </span>
+              </div>
+              {duplicatesCount > 0 && onCleanupConciliacao && (
+                <button 
+                  onClick={onCleanupConciliacao}
+                  className="px-2 py-1 bg-amber-400/20 text-amber-400 border border-amber-400/40 rounded text-[7px] font-black uppercase tracking-widest hover:bg-amber-400/40 transition-all flex items-center gap-1.5"
+                  title="Remover duplicatas do banco de dados"
+                >
+                  <RefreshCw size={8} /> Limpar Banco
+                </button>
+              )}
             </div>
           </div>
         </div>
