@@ -6,7 +6,7 @@ export interface CFOP {
   categoria: string
 }
 
-export const TABELA_CFOP: CFOP[] = [
+const LISTA_BRUTA_CFOP: CFOP[] = [
   // ESTADUAIS (1.000)
   { codigo: '1.101', descricao: 'Compra para industrialização ou produção rural', tipo: 'estadual', categoria: 'Compras' },
   { codigo: '1.102', descricao: 'Compra para comercialização', tipo: 'estadual', categoria: 'Compras' },
@@ -42,7 +42,7 @@ export const TABELA_CFOP: CFOP[] = [
   // INTERESTADUAIS (2.000)
   { codigo: '2.101', descricao: 'Compra para industrialização ou produção rural', tipo: 'interestadual', categoria: 'Compras' },
   { codigo: '2.102', descricao: 'Compra para comercialização', tipo: 'interestadual', categoria: 'Compras' },
-  { codigo: '2.201', descricao: 'Devolução de venda de produção do estabelecimento', tipo: 'interestadual', categoria: 'Devoluções' },
+  { codigo: '2.201', descricao: 'Devolução de venda de production do estabelecimento', tipo: 'interestadual', categoria: 'Devoluções' },
   { codigo: '2.202', descricao: 'Devolução de venda de mercadoria adquirida ou recebida de terceiros', tipo: 'interestadual', categoria: 'Devoluções' },
   { codigo: '2.401', descricao: 'Compras para o ativo permanente/imobilizado', tipo: 'interestadual', categoria: 'Ativo Imobilizado' },
   { codigo: '2.403', descricao: 'Compra de mercadoria para uso e consumo', tipo: 'interestadual', categoria: 'Consumo' },
@@ -59,7 +59,9 @@ export const TABELA_CFOP: CFOP[] = [
   { codigo: '3.102', descricao: 'Compra para comercialização (importação)', tipo: 'importacao', categoria: 'Importação' },
   { codigo: '3.401', descricao: 'Compras para o ativo permanente/imobilizado (importação)', tipo: 'importacao', categoria: 'Ativo Imobilizado' },
   { codigo: '3.403', descricao: 'Compra de mercadoria para uso e consumo (importação)', tipo: 'importacao', categoria: 'Consumo' },
-].sort((a, b) => a.codigo.localeCompare(b.codigo))
+]
+
+export const TABELA_CFOP: CFOP[] = [...LISTA_BRUTA_CFOP].sort((a, b) => a.codigo.localeCompare(b.codigo))
 
 export const CATEGORIAS_CFOP = [...new Set(TABELA_CFOP.map(c => c.categoria))].sort()
 
