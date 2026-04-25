@@ -89,7 +89,12 @@ export default function NFSePage() {
       {/* Content */}
       <div className="min-h-[500px]">
         {activeTab === 'dashboard' && <NFSeDashboard nfseHook={nfseHook} onEscriturar={handleEscriturar} />}
-        {activeTab === 'importar' && <NFSeImportZone onImported={() => setActiveTab('lista')} />}
+        {activeTab === 'importar' && (
+          <NFSeImportZone onImported={() => {
+            nfseHook.refresh()
+            setActiveTab('lista')
+          }} />
+        )}
         {activeTab === 'lista' && (
           <div className="flex flex-col gap-4">
              <NFSeDashboard nfseHook={nfseHook} onEscriturar={handleEscriturar} />
