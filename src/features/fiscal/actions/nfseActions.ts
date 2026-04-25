@@ -81,7 +81,7 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
       }
     }
 
-    // C. Se não encontrou globalmente, insere como nova nota
+    // C. Se não encontrou globalmente, tenta inserir como nova nota
     if (!nfseId) {
       const { data: nova, error: insertErr } = await sbAdmin
         .from('nfse_entradas')
@@ -108,8 +108,28 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
         .select('id')
         .single()
 
-      if (insertErr) throw new Error(`Erro ao salvar nota (insert): ${insertErr.message}`)
-      nfseId = nova.id
+      if (insertErr) {
+        // Erro 23505 = Unique Violation (A nota já existe sob outra posse)
+        if (insertErr.code === '23505' && parsed.nota.chave_nacional) {
+          const { data: existing } = await sbAdmin
+            .from('nfse_entradas')
+            .select('id')
+            .eq('chave_nacional', parsed.nota.chave_nacional)
+            .maybeSingle()
+          
+          if (existing) {
+            await sbAdmin.from('nfse_entradas').update({ 
+              tenant_id: tenantId,
+              prestador_id: prestador.id 
+            }).eq('id', existing.id)
+            nfseId = existing.id
+          }
+        }
+
+        if (!nfseId) throw new Error(`Erro ao salvar nota: ${insertErr.message}`)
+      } else {
+        nfseId = nova.id
+      }
     }
 
     return { 
