@@ -128,10 +128,23 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
       </div>
 
       {/* Diagnostic Badge (Remover após resolver) */}
-      <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 opacity-50">
+      <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 opacity-50 flex items-center justify-between">
         <p className="text-[10px] text-slate-400 font-mono">
           DIAGNOSTIC: Tenant={nfseHook.tenantId} | Count={nfseHook.nfses.length} | Periodo={nfseHook.periodo}
         </p>
+        <button 
+          onClick={async () => {
+            const { cleanProblematicNotesAction } = await import('../../actions/nfseActions')
+            if (confirm('Deseja limpar as notas 17 e 573168 para reimportar?')) {
+              const r = await cleanProblematicNotesAction()
+              alert(r.success ? `Limpeza concluída! ${r.count} notas removidas.` : `Erro: ${r.error?.message}`)
+              nfseHook.refresh()
+            }
+          }}
+          className="px-2 py-1 bg-red-50 text-red-600 text-[10px] font-black rounded border border-red-100 hover:bg-red-100 transition-all"
+        >
+          LIMPAR NOTAS (DIAG)
+        </button>
       </div>
     </div>
   )

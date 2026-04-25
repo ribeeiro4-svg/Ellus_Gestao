@@ -373,3 +373,14 @@ export async function getNFSeListAction(tenantIdParam?: string, periodo?: string
   return { error: null, data: enrichedData }
 }
 
+
+export async function cleanProblematicNotesAction() {
+  const sbAdmin = createAdminSupabase()
+  const { data, error } = await sbAdmin
+    .from('nfse_entradas')
+    .delete()
+    .in('numero_nfse', ['17', '573168'])
+    .select('id')
+  
+  return { success: !error, count: data?.length || 0, error }
+}
