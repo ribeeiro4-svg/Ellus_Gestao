@@ -44,7 +44,7 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
     if (parsed.nota.chave_nacional) {
       const { data: global } = await sbAdmin
         .from('nfse_entradas')
-        .select('id, tenant_id')
+        .select('id, tenant_id, prestador_id')
         .eq('chave_nacional', parsed.nota.chave_nacional)
         .maybeSingle()
       existente = global;
@@ -53,7 +53,7 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
     if (!existente) {
       const { data: local } = await sbAdmin
         .from('nfse_entradas')
-        .select('id, tenant_id')
+        .select('id, tenant_id, prestador_id')
         .eq('tenant_id', tenantId)
         .eq('numero_nfse', parsed.nota.numero_nfse)
         .eq('prestador_id', prestador.id)
@@ -65,9 +65,15 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
 
     if (existente) {
       // Se a nota já existe mas está vinculada a outro tenant (ex: fallback), 
-      // vinculamos ela ao tenant atual para que apareça na lista do usuário.
+      // vinculamos ela ao tenant atual e também corrigimos o vínculo do prestador.
       if (existente.tenant_id && existente.tenant_id !== tenantId) {
-        await sbAdmin.from('nfse_entradas').update({ tenant_id: tenantId }).eq('id', existente.id)
+        // Garante que o prestador exista no tenant alvo
+        const prestadorAlvo = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social, tenantId)
+        
+        await sbAdmin.from('nfse_entradas').update({ 
+          tenant_id: tenantId,
+          prestador_id: prestadorAlvo.id || existente.prestador_id
+        }).eq('id', existente.id)
       }
       nfseId = existente.id
     } else {
@@ -136,10 +142,11 @@ export async function identificarPrestadorAction(cnpj: string, razaoSocial: stri
   const sb = await createServerSupabase()
   const cleanedCnpj = cnpj.replace(/\D/g, '')
 
-  // 1. Buscar existente
+  // 1. Buscar existente (Scopo por Tenant)
   const { data: existente, error: findErr } = await sb
     .from('fornecedores')
     .select('id, is_prestador_servicos')
+    .eq('tenant_id', tenantId)
     .eq('cpf_cnpj', cleanedCnpj)
     .maybeSingle()
 
