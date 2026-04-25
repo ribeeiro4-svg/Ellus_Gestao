@@ -158,9 +158,23 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   if (existing) return { error: 'Lançamento já sincronizado' }
 
   // 5. Gerar número do lançamento
-  const { count } = await sb.from('lancamentos_contabeis').select('*', { count: 'exact', head: true }).eq('tenant_id', fin.tenant_id)
-  const seq = ((count || 0) + 1).toString().padStart(6, '0')
   const ano = fin.data.slice(0, 4)
+  const { data: ultimosLancs } = await sb
+    .from('lancamentos_contabeis')
+    .select('numero_lancamento')
+    .eq('tenant_id', fin.tenant_id)
+    .like('numero_lancamento', `${ano}/%`)
+    .order('numero_lancamento', { ascending: false })
+    .limit(1)
+
+  let maxSeq = 0
+  if (ultimosLancs && ultimosLancs.length > 0) {
+    const parts = ultimosLancs[0].numero_lancamento.split('/')
+    if (parts.length === 2) {
+      maxSeq = parseInt(parts[1], 10)
+    }
+  }
+  const seq = (maxSeq + 1).toString().padStart(6, '0')
   const numero = `${ano}/${seq}`
 
   // 6. Inserir Header (Livro Diário - Capa)

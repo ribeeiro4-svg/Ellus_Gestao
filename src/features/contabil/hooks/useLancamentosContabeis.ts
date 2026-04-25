@@ -90,10 +90,24 @@ export function useLancamentosContabeis() {
     const totalC = dados.partidas.filter(p => p.tipo === 'C').reduce((s, p) => s + p.valor, 0)
     if (Math.abs(totalD - totalC) > 0.01) return { error: `Lançamento não balanceado: Débitos R$ ${totalD.toFixed(2)} ≠ Créditos R$ ${totalC.toFixed(2)}` }
 
-    // Número sequencial
-    const { count } = await sb.from('lancamentos_contabeis').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId)
-    const seq = ((count || 0) + 1).toString().padStart(6, '0')
+    // Número sequencial - Calcula baseado no maior número existente do ano para evitar duplicidades
     const ano = dados.data.slice(0, 4)
+    const { data: ultimosLancs } = await sb
+      .from('lancamentos_contabeis')
+      .select('numero_lancamento')
+      .eq('tenant_id', tenantId)
+      .like('numero_lancamento', `${ano}/%`)
+      .order('numero_lancamento', { ascending: false })
+      .limit(1)
+
+    let maxSeq = 0
+    if (ultimosLancs && ultimosLancs.length > 0) {
+      const parts = ultimosLancs[0].numero_lancamento.split('/')
+      if (parts.length === 2) {
+        maxSeq = parseInt(parts[1], 10)
+      }
+    }
+    const seq = (maxSeq + 1).toString().padStart(6, '0')
     const numero = `${ano}/${seq}`
 
     const { data: lanc, error: lancError } = await sb.from('lancamentos_contabeis').insert({
