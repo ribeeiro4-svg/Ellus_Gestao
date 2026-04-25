@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { Loader2, Download } from 'lucide-react'
+import { Loader2, Download, Calendar } from 'lucide-react'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -10,18 +10,18 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
   const { contas } = planoHook
   const ano = new Date().getFullYear()
   const mesAtual = new Date().getMonth() + 1
-  const [periodo, setPeriodo] = useState(`${ano}-${mesAtual.toString().padStart(2, '0')}`)
+  const currentPeriod = lancHook.periodo || `${ano}-${mesAtual.toString().padStart(2, '0')}`
   const [saldos, setSaldos] = useState<Record<string, { debitos: number; creditos: number }>>({})
   const [loading, setLoading] = useState(false)
 
   const carregar = async () => {
     setLoading(true)
-    const data = await calcularBalancete(periodo)
+    const data = await calcularBalancete(currentPeriod)
     setSaldos(data)
     setLoading(false)
   }
 
-  useEffect(() => { if (contas.length > 0) carregar() }, [periodo, contas.length])
+  useEffect(() => { if (contas.length > 0) carregar() }, [currentPeriod, contas.length])
 
   // Calcular saldo por conta
   const getSaldo = (conta: any) => {
@@ -80,7 +80,7 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
         <body>
           <div class="header">
             <h1>ACPROBEC — BALANCETE DE VERIFICAÇÃO</h1>
-            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${periodo}</p>
+            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${currentPeriod}</p>
           </div>
           <table>
             <thead>
@@ -150,12 +150,9 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-        <div>
-          <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">Período</label>
-          <select value={periodo} onChange={e => setPeriodo(e.target.value)}
-            className="px-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-bold outline-none">
-            {MESES.map((m, i) => <option key={i} value={`${ano}-${(i+1).toString().padStart(2,'0')}`}>{m}/{ano}</option>)}
-          </select>
+        <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl">
+          <Calendar size={14} className="text-slate-400" />
+          <span className="text-xs font-bold text-slate-600">Período: {currentPeriod}</span>
         </div>
         <button onClick={carregar} disabled={loading}
           className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-indigo-600 rounded-xl transition-all disabled:opacity-50">

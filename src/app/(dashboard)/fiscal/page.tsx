@@ -77,7 +77,6 @@ export default function FiscalPage() {
           )}
         </div>
       </div>
-
       {/* Filtro de Período Global - Visível em todas as abas */}
       <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
         <div className="flex items-center gap-3">

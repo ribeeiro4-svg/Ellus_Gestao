@@ -13,7 +13,6 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
   const { contasAnaliticas } = planoHook
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
-  const [filterMes, setFilterMes] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [partidasCache, setPartidasCache] = useState<Record<string, any[]>>({})
   const [saving, setSaving] = useState(false)
@@ -85,7 +84,7 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
         <body>
           <div class="header">
             <h1>ACPROBEC — LIVRO DIÁRIO</h1>
-            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${filterMes || 'GERAL'}</p>
+            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${lancHook.periodo || 'GERAL'}</p>
           </div>
           <table>
             <thead>
@@ -195,14 +194,10 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
     }
   }
 
-  const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-  const ano = new Date().getFullYear()
-
   const filtered = useMemo(() => lancamentos.filter((l: any) => {
-    const matchSearch = !search || l.historico?.toLowerCase().includes(search.toLowerCase()) || l.numero_lancamento?.includes(search)
-    const matchMes = !filterMes || l.data_competencia?.startsWith(filterMes)
-    return matchSearch && matchMes
-  }), [lancamentos, search, filterMes])
+    const matchesSearch = !search || l.historico.toLowerCase().includes(search.toLowerCase()) || l.numero_lancamento.includes(search)
+    return matchesSearch
+  }), [lancamentos, search])
 
   const getTipoDisplay = (l: any) => {
     const h = l.historico?.toUpperCase() || ''
@@ -220,11 +215,6 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
           <input type="text" placeholder="Buscar lançamentos..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-medium outline-none" />
         </div>
-        <select value={filterMes} onChange={e => setFilterMes(e.target.value)}
-          className="bg-slate-50 px-3 py-2.5 rounded-xl text-xs font-bold border-none outline-none">
-          <option value="">Todos os meses</option>
-          {MESES.map((m, i) => <option key={i} value={`${ano}-${(i+1).toString().padStart(2,'0')}`}>{m}/{ano}</option>)}
-        </select>
         <button onClick={fetchLogs}
           className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">
           {loadingLogs ? <Loader2 size={14} className="animate-spin" /> : <History size={14} />}

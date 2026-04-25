@@ -34,6 +34,7 @@ export function useLancamentosContabeis() {
   const tenantId = useTenantId()
   const [lancamentos, setLancamentos] = useState<LancamentoContabil[]>([])
   const [loading, setLoading] = useState(true)
+  const [periodo, setPeriodo] = useState<string>('')
   const [stats, setStats] = useState({ total: 0, confirmados: 0, estornados: 0 })
   const sb = createClient()
 
@@ -78,7 +79,9 @@ export function useLancamentosContabeis() {
     setLoading(false)
   }, [tenantId])
 
-  useEffect(() => { fetch() }, [fetch])
+  useEffect(() => { 
+    fetch(periodo) 
+  }, [fetch, periodo])
 
   const buscarPartidas = async (lancamentoId: string): Promise<Partida[]> => {
     const { data } = await sb.from('lancamentos_partidas')
@@ -225,5 +228,5 @@ export function useLancamentosContabeis() {
     return saldos
   }
 
-  return { lancamentos, loading, stats, inserir, estornar, excluir, buscarPartidas, calcularBalancete, refresh: fetch }
+  return { lancamentos, loading, stats, inserir, estornar, excluir, buscarPartidas, calcularBalancete, refresh: fetch, periodo, setPeriodo }
 }

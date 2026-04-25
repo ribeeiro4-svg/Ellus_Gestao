@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { BookOpen, BarChart3, List, TreePine, FileBarChart, FolderOpen } from 'lucide-react'
+import { BookOpen, BarChart3, List, TreePine, FileBarChart, FolderOpen, Calendar } from 'lucide-react'
 import { usePlanoContas } from '@/features/contabil/hooks/usePlanoContas'
 import { useLancamentosContabeis } from '@/features/contabil/hooks/useLancamentosContabeis'
 import ContabilDashboard from '@/features/contabil/components/ContabilDashboard'
@@ -37,6 +37,20 @@ export default function ContabilPage() {
     { id: 'relatorios' as Tab, label: '📄 Relatórios' },
     { id: 'execucao' as Tab, label: '🎯 MROSC' },
   ]
+
+  const periodosOpcoes = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - i)
+    const val = d.toISOString().slice(0, 7)
+    const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    return { value: val, label: label.charAt(0).toUpperCase() + label.slice(1) }
+  })
+
+  const currentPeriod = lancHook.periodo || 'all'
+
+  const handlePeriodoChange = (val: string) => {
+    lancHook.setPeriodo(val === 'all' ? '' : val)
+  }
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
@@ -112,6 +126,30 @@ export default function ContabilPage() {
           </div>
         </div>
       )}
+
+      {/* Filtro de Período Global - Visível em todas as abas */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <Calendar size={18} />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-slate-800">Período Contábil</h3>
+            <p className="text-[10px] font-bold text-slate-400">Dados oficiais sincronizados para todo o exercício</p>
+          </div>
+        </div>
+        
+        <select 
+          value={currentPeriod} 
+          onChange={(e) => handlePeriodoChange(e.target.value)}
+          className="px-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-black text-slate-700 outline-none hover:bg-slate-100 transition-all cursor-pointer min-w-[220px]"
+        >
+          <option value="all">Visão Consolidada (Exercício)</option>
+          {periodosOpcoes.map(p => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl w-fit flex-wrap">
