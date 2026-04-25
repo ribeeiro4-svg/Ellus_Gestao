@@ -15,7 +15,15 @@ export function useTenantId() {
     async function resolveTenant() {
       const { data: { user } } = await sb.auth.getUser()
       if (user) {
-        const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+        // Prioridade 1: Metadados do JWT (Mais rápido e evita erro 406)
+        const metaTenant = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id
+        if (metaTenant) {
+          setTenantId(metaTenant)
+          return
+        }
+
+        // Prioridade 2: Tabela de usuários (Fallback)
+        const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).maybeSingle()
         if (userData?.tenant_id) {
           setTenantId(userData.tenant_id)
         }

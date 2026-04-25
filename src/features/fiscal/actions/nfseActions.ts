@@ -27,11 +27,18 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
     const fallbackId = '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
     let tenantId = clientTenantId || fallbackId
     
-    // Prioriza descobrir o tenant real via sessão do servidor se o cliente mandou o fallback
+    // Prioriza descobrir o tenant real via sessão do servidor
     if (tenantId === fallbackId || !clientTenantId) {
       if (user) {
-        const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
-        if (userData?.tenant_id) tenantId = userData.tenant_id
+        // 1. JWT Metadata
+        const metaTenant = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id
+        if (metaTenant) {
+          tenantId = metaTenant
+        } else {
+          // 2. Database Fallback
+          const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).maybeSingle()
+          if (userData?.tenant_id) tenantId = userData.tenant_id
+        }
       }
     }
 
