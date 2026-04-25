@@ -42,8 +42,12 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
       }
     }
 
-    // 1. Identificar/Criar Prestador (Usando admin para evitar RLS)
-    const prestador = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social, tenantId)
+    // 1. Identificar/Criar Prestador (Garante fornecedor e conta contábil)
+    const prestador = await garantirFornecedorAction({
+      cnpj: parsed.prestador.cnpj,
+      razaoSocial: parsed.prestador.razao_social,
+      tenantId
+    })
     if (prestador.error) throw new Error(prestador.error)
 
     // 2. Persistir no Banco de Dados - Padrão FIND → CLAIM → INSERT
@@ -159,42 +163,93 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
 }
 
 /**
- * Busca ou cria um prestador baseado no CNPJ
+ * Garante que um fornecedor/prestador exista no sistema.
+ * Se não existir, cria o fornecedor e gera automaticamente sua conta contábil (ITG 2002).
  */
-export async function identificarPrestadorAction(cnpj: string, razaoSocial: string, tenantId: string) {
+export async function garantirFornecedorAction(params: {
+  cnpj: string;
+  razaoSocial: string;
+  tenantId: string;
+  isPrestador?: boolean;
+}) {
+  const { cnpj, razaoSocial, tenantId, isPrestador = true } = params
   const sbAdmin = createAdminSupabase()
   const cleanedCnpj = cnpj.replace(/\D/g, '')
 
-  // 1. Buscar existente (Scopo por Tenant)
+  // 1. Buscar existente
   const { data: existente } = await sbAdmin
     .from('fornecedores')
-    .select('id, is_prestador_servicos')
+    .select('id, nome, conta_contabil_id, is_prestador_servicos')
     .eq('tenant_id', tenantId)
     .eq('cpf_cnpj', cleanedCnpj)
     .maybeSingle()
 
   if (existente) {
-    if (!existente.is_prestador_servicos) {
+    // Se existe mas não estava marcado como prestador, atualiza
+    if (isPrestador && !existente.is_prestador_servicos) {
       await sbAdmin.from('fornecedores').update({ is_prestador_servicos: true }).eq('id', existente.id)
     }
-    return { id: existente.id }
+    return { id: existente.id, data: existente }
   }
 
-  // 2. Criar novo (Admin bypasses RLS)
+  // 2. Criar novo Fornecedor com Conta Contábil automática
+  console.log(`Auto-cadastrando fornecedor: ${razaoSocial} para o tenant ${tenantId}`)
+  
+  let contaContabilId = null
+  try {
+    // Lógica para gerar código sequencial no grupo 2.1.3.01 (Fornecedores Nacionais)
+    const { data: ultimasContas } = await sbAdmin.from('plano_contas')
+      .select('codigo')
+      .eq('tenant_id', tenantId)
+      .like('codigo', '2.1.3.01.%')
+      .order('codigo', { ascending: false })
+      .limit(1)
+
+    let novoCodigo = '2.1.3.01.100'
+    if (ultimasContas && ultimasContas.length > 0) {
+      const ultimo = ultimasContas[0].codigo
+      const partes = ultimo.split('.')
+      const sequencial = parseInt(partes[partes.length - 1], 10)
+      if (!isNaN(sequencial) && sequencial >= 100) {
+        novoCodigo = `2.1.3.01.${String(sequencial + 1).padStart(3, '0')}`
+      }
+    }
+
+    const { data: pai } = await sbAdmin.from('plano_contas').select('id').eq('tenant_id', tenantId).eq('codigo', '2.1.3.01').single()
+
+    const { data: novaConta } = await sbAdmin.from('plano_contas').insert({
+      tenant_id: tenantId,
+      codigo: novoCodigo,
+      descricao: `Fornecedor: ${razaoSocial}`,
+      nivel: 5,
+      tipo: 'analitica',
+      natureza: 'credora',
+      classificacao: 'passivo',
+      aceita_lancamentos: true,
+      ativa: true,
+      conta_pai_id: pai?.id || null
+    }).select('id').single()
+
+    if (novaConta) contaContabilId = novaConta.id
+  } catch (err) {
+    console.error('Erro ao auto-gerar conta do fornecedor:', err)
+  }
+
   const { data: novo, error: insErr } = await sbAdmin
     .from('fornecedores')
     .insert({
       tenant_id: tenantId,
       nome: razaoSocial,
       cpf_cnpj: cleanedCnpj,
-      is_prestador_servicos: true,
-      status: 'ativo'
+      is_prestador_servicos: isPrestador,
+      status: 'ativo',
+      conta_contabil_id: contaContabilId
     })
-    .select('id')
+    .select('*')
     .single()
 
-  if (insErr) return { error: `Erro ao criar prestador: ${insErr.message}` }
-  return { id: novo.id }
+  if (insErr) return { error: `Erro ao criar fornecedor: ${insErr.message}` }
+  return { id: novo.id, data: novo }
 }
 
 /**

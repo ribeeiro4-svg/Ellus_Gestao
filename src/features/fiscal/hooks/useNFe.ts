@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from '@/lib/hooks/useTenantId'
+import { garantirFornecedorAction } from '../actions/nfseActions'
 
 export interface NFe {
   id: string
@@ -111,7 +112,19 @@ export function useNFe() {
   const importarNFe = async (nfeData: Omit<NFe, 'id' | 'created_at'>, itens: Omit<NFeItem, 'id' | 'nfe_entrada_id'>[]) => {
     if (!tenantId) return { error: 'Tenant não identificado' }
 
-    // Verificar duplicidade pela chave de acesso
+    // 1. Verificar/Cadastrar Fornecedor automaticamente (Garante fornecedor e conta contábil)
+    const resForn = await garantirFornecedorAction({
+      cnpj: nfeData.cnpj_emitente,
+      razaoSocial: nfeData.nome_emitente,
+      tenantId,
+      isPrestador: false // NFe Modelo 55 é fornecedor de mercadoria
+    })
+    
+    if (resForn.error) {
+      console.error('Erro no auto-cadastro de fornecedor:', resForn.error)
+    }
+
+    // 2. Verificar duplicidade pela chave de acesso
     if (nfeData.chave_acesso) {
       const { data: existing } = await sb.from('nfe_entradas')
         .select('id, numero_nf')
@@ -124,6 +137,7 @@ export function useNFe() {
       }
     }
 
+    // 3. Inserir Nota
     const { data: nfeInserted, error: nfeError } = await sb.from('nfe_entradas')
       .insert({ ...nfeData, tenant_id: tenantId })
       .select()
@@ -131,6 +145,7 @@ export function useNFe() {
 
     if (nfeError) return { error: nfeError.message }
 
+    // 4. Inserir Itens
     if (itens.length > 0) {
       const itensComId = itens.map(item => ({
         ...item,

@@ -9,7 +9,7 @@ import { useIntegracaoFiscalContabil } from '@/features/fiscal/hooks/useIntegrac
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
-import { getFornecedorByCpfCnpjAction } from '@/features/fiscal/actions/nfseActions'
+import { getFornecedorByCpfCnpjAction, garantirFornecedorAction } from '@/features/fiscal/actions/nfseActions'
 import { getTributacaoPresetsAction, salvarTributacaoPresetAction, excluirTributacaoPresetAction } from '@/features/fiscal/actions/fiscalActions'
 import NFSeEscrituracaoModal from './nfse/NFSeEscrituracaoModal'
 
@@ -154,13 +154,18 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   const finalizar = async () => {
     if (!selectedNfeId || !nfeSelecionada) return
     
-    // 1. Buscar Fornecedor pelo CNPJ da nota
+    // 1. Garantir que o fornecedor existe (Garante fornecedor e conta contábil)
     setSaving(true)
-    const resFor = await getFornecedorByCpfCnpjAction(nfeSelecionada.cnpj_emitente)
+    const resFor = await garantirFornecedorAction({
+      cnpj: nfeSelecionada.cnpj_emitente,
+      razaoSocial: nfeSelecionada.nome_emitente,
+      tenantId,
+      isPrestador: false
+    })
     setSaving(false)
 
-    if (!resFor.data) {
-      alert('Fornecedor (Emitente) não encontrado no sistema. Por favor, cadastre o fornecedor antes de escriturar a nota.')
+    if (resFor.error || !resFor.data) {
+      alert(`Erro ao processar fornecedor: ${resFor.error || 'Não identificado'}`)
       return
     }
 
