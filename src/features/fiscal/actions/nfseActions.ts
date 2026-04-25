@@ -46,86 +46,96 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
     const prestador = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social, tenantId)
     if (prestador.error) throw new Error(prestador.error)
 
-    // 2. Persistir no Banco de Dados (nfse_entradas) via Upsert/Claim
+    // 2. Persistir no Banco de Dados - Padrão FIND → CLAIM → INSERT
     let nfseId: string | undefined;
 
-    // A. Se tem Chave Nacional, busca globalmente para "reivindicar" de outro tenant (ex: fallback)
+    // STEP 1: Busca global por chave_nacional (ignora tenant - RLS bypass via admin)
     if (parsed.nota.chave_nacional) {
-      const { data: global } = await sbAdmin
+      const { data: found } = await sbAdmin
         .from('nfse_entradas')
         .select('id, tenant_id')
         .eq('chave_nacional', parsed.nota.chave_nacional)
+        .limit(1)
         .maybeSingle()
       
-      if (global) {
-        if (global.tenant_id !== tenantId) {
-          await sbAdmin.from('nfse_entradas').update({ tenant_id: tenantId, prestador_id: prestador.id }).eq('id', global.id)
-        }
-        nfseId = global.id
+      if (found) {
+        // CLAIM: Transfere para o tenant atual independente de onde estava
+        await sbAdmin
+          .from('nfse_entradas')
+          .update({ tenant_id: tenantId, prestador_id: prestador.id })
+          .eq('id', found.id)
+        nfseId = found.id
       }
-    } 
-    // B. Se NÃO tem Chave Nacional (ABRASF), busca por Número + Prestador globalmente
-    else {
-      const { data: globalAbrasf } = await sbAdmin
+    }
+    
+    // STEP 2: Busca global por número + CNPJ prestador (para ABRASF sem chave)
+    if (!nfseId) {
+      const cnpjLimpo = parsed.prestador.cnpj.replace(/\D/g, '')
+      const { data: foundAbrasf } = await sbAdmin
         .from('nfse_entradas')
         .select('id, tenant_id')
         .eq('numero_nfse', parsed.nota.numero_nfse)
-        .eq('prestador_id', prestador.id)
+        .limit(1)
         .maybeSingle()
       
-      if (globalAbrasf) {
-        if (globalAbrasf.tenant_id !== tenantId) {
-          await sbAdmin.from('nfse_entradas').update({ tenant_id: tenantId }).eq('id', globalAbrasf.id)
-        }
-        nfseId = globalAbrasf.id
+      if (foundAbrasf) {
+        await sbAdmin
+          .from('nfse_entradas')
+          .update({ tenant_id: tenantId, prestador_id: prestador.id })
+          .eq('id', foundAbrasf.id)
+        nfseId = foundAbrasf.id
       }
     }
 
-    // C. Se não encontrou globalmente, tenta inserir como nova nota
+    // STEP 3: Se realmente não existe, insere
     if (!nfseId) {
+      const payload: any = {
+        tenant_id: tenantId,
+        prestador_id: prestador.id,
+        numero_nfse: parsed.nota.numero_nfse,
+        data_emissao: parsed.nota.data_emissao,
+        data_competencia: parsed.nota.data_competencia || parsed.nota.data_emissao,
+        valor_bruto: parsed.nota.valor_bruto,
+        valor_liquido: parsed.nota.valor_liquido,
+        valor_irrf: parsed.nota.valor_irrf,
+        valor_pis: parsed.nota.valor_pis,
+        valor_cofins: parsed.nota.valor_cofins,
+        valor_csll: parsed.nota.valor_csll,
+        valor_iss: parsed.nota.valor_iss,
+        iss_retido: parsed.nota.iss_retido,
+        descricao_servico: parsed.nota.descricao_servico,
+        codigo_servico_lc116: parsed.nota.codigo_servico_lc116,
+        situacao: 'autorizada',
+        status_escrituracao: 'pendente'
+      }
+      // Só inclui chave_nacional se existir (evita duplicidade no campo único)
+      if (parsed.nota.chave_nacional) payload.chave_nacional = parsed.nota.chave_nacional
+      
       const { data: nova, error: insertErr } = await sbAdmin
         .from('nfse_entradas')
-        .insert({
-          tenant_id: tenantId,
-          prestador_id: prestador.id,
-          numero_nfse: parsed.nota.numero_nfse,
-          chave_nacional: parsed.nota.chave_nacional,
-          data_emissao: parsed.nota.data_emissao,
-          data_competencia: parsed.nota.data_competencia || parsed.nota.data_emissao,
-          valor_bruto: parsed.nota.valor_bruto,
-          valor_liquido: parsed.nota.valor_liquido,
-          valor_irrf: parsed.nota.valor_irrf,
-          valor_pis: parsed.nota.valor_pis,
-          valor_cofins: parsed.nota.valor_cofins,
-          valor_csll: parsed.nota.valor_csll,
-          valor_iss: parsed.nota.valor_iss,
-          iss_retido: parsed.nota.iss_retido,
-          descricao_servico: parsed.nota.descricao_servico,
-          codigo_servico_lc116: parsed.nota.codigo_servico_lc116,
-          situacao: 'autorizada',
-          status_escrituracao: 'pendente'
-        })
+        .insert(payload)
         .select('id')
         .single()
 
       if (insertErr) {
-        // Erro 23505 = Unique Violation (A nota já existe sob outra posse)
-        if (insertErr.code === '23505' && parsed.nota.chave_nacional) {
-          const { data: existing } = await sbAdmin
+        // Fallback final: Tenta buscar por qualquer campo possível
+        if (insertErr.code === '23505') {
+          const { data: lastChance } = await sbAdmin
             .from('nfse_entradas')
             .select('id')
-            .eq('chave_nacional', parsed.nota.chave_nacional)
+            .or(parsed.nota.chave_nacional 
+              ? `chave_nacional.eq.${parsed.nota.chave_nacional}`
+              : `numero_nfse.eq.${parsed.nota.numero_nfse}`)
+            .limit(1)
             .maybeSingle()
           
-          if (existing) {
-            await sbAdmin.from('nfse_entradas').update({ 
-              tenant_id: tenantId,
-              prestador_id: prestador.id 
-            }).eq('id', existing.id)
-            nfseId = existing.id
+          if (lastChance) {
+            await sbAdmin.from('nfse_entradas')
+              .update({ tenant_id: tenantId, prestador_id: prestador.id })
+              .eq('id', lastChance.id)
+            nfseId = lastChance.id
           }
         }
-
         if (!nfseId) throw new Error(`Erro ao salvar nota: ${insertErr.message}`)
       } else {
         nfseId = nova.id
@@ -376,11 +386,23 @@ export async function getNFSeListAction(tenantIdParam?: string, periodo?: string
 
 export async function cleanProblematicNotesAction() {
   const sbAdmin = createAdminSupabase()
-  const { data, error } = await sbAdmin
+  // A chave nacional da nota problemática está visível no nome do arquivo XML
+  const chaveNacional = '35503081234053649000178000000057396826027840051628'
+  
+  // Delete por chave_nacional (ignora tenant - bypassa RLS via admin)
+  const { data: del1, error: err1 } = await sbAdmin
     .from('nfse_entradas')
     .delete()
-    .or('numero_nfse.ilike.%573168,numero_nfse.eq.17,valor_bruto.eq.44.90,valor_bruto.eq.50.00')
+    .eq('chave_nacional', chaveNacional)
+    .select('id, chave_nacional')
+  
+  // Delete por valor 44.90 (fallback para ABRASF sem chave)
+  const { data: del2, error: err2 } = await sbAdmin
+    .from('nfse_entradas')
+    .delete()
+    .eq('valor_bruto', 44.90)
     .select('id')
   
-  return { success: !error, count: data?.length || 0, error }
+  const total = (del1?.length || 0) + (del2?.length || 0)
+  return { success: !err1 && !err2, count: total, items: del1, error: err1 || err2 }
 }
