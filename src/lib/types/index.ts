@@ -64,6 +64,13 @@ export interface Lancamento {
   competencia_mes?: number // Mês de competência (0-11)
   competencia_ano?: number // Ano de competência
   banco_original_memo?: string // Histórico oculto da transação bancária
+  nfse_vinculo?: {
+    nfse_id: string
+    nfse: {
+      numero_nfse: string
+      xml_url?: string
+    }
+  }[]
   created_at: string
   updated_at: string
 }

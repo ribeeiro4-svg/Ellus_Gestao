@@ -25,7 +25,7 @@ import SupplierCreateModal from '@/components/conciliacao/SupplierCreateModal'
 import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToolbar'
 import { useFechamento } from '@/lib/hooks/useFechamento'
 import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
-import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, CloudLightning, Trash2, Target, ArrowRightLeft } from 'lucide-react'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, FileText, CloudLightning, Trash2, Target, ArrowRightLeft } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
@@ -496,6 +496,34 @@ export default function FinanceiroPage() {
     { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={i.status} type="lancamento" /> },
     { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
     { header: 'Conciliação', key: 'data_conciliacao', render: (l: any) => (l.conciliado ? (<div className="flex flex-col"><span className="text-[10px] font-bold text-emerald-600">{fmtData(l.data_conciliacao)}</span><span className="text-[8px] text-emerald-400 font-medium uppercase tracking-tighter">Liquidado</span></div>) : (<span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Pendente</span>))},
+    { 
+      header: 'Nota Fiscal', 
+      key: 'nfse', 
+      render: (l: any) => {
+        const vinculo = l.nfse_vinculo?.[0]
+        if (!vinculo) return <span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Não emitida</span>
+        
+        return (
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-indigo-600 uppercase">NFS-e {vinculo.nfse?.numero_nfse}</span>
+              <span className="text-[8px] text-indigo-400 font-bold uppercase tracking-tighter">Escriturada</span>
+            </div>
+            {vinculo.nfse?.xml_url && (
+              <a 
+                href={vinculo.nfse.xml_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="p-1.5 text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+                title="Ver/Baixar Nota Fiscal"
+              >
+                <FileText size={12} />
+              </a>
+            )}
+          </div>
+        )
+      }
+    },
     { header: 'Data Lançamento', key: 'created_at', filterValue: (l: any) => l.created_at ? fmtData(l.created_at) : '--', render: (l: any) => <span className="text-[10px] font-bold text-slate-500">{l.created_at ? fmtData(l.created_at) : '--'}</span> },
     { 
       header: '', 
