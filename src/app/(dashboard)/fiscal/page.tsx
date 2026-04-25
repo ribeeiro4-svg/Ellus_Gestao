@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { FileText, Package, Calendar, BarChart3, Upload, BookOpen, AlertTriangle, CheckCircle, Clock, TrendingUp, FileCheck, ArrowRight } from 'lucide-react'
+import { FileText, Package, Calendar, BarChart3, Upload, BookOpen, AlertTriangle, CheckCircle, Clock, TrendingUp, FileCheck, ArrowRight, Printer } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useNFe } from '@/features/fiscal/hooks/useNFe'
 import { useProdutosEstoque } from '@/features/fiscal/hooks/useProdutosEstoque'
@@ -12,8 +12,9 @@ import EscrituracaoNFe from '@/features/fiscal/components/EscrituracaoNFe'
 import PeriodosFiscais from '@/features/fiscal/components/PeriodosFiscais'
 import EstoqueTab from '@/features/fiscal/components/EstoqueTab'
 import NFSeModuleTab from '@/features/fiscal/components/nfse/NFSeModuleTab'
+import RelatoriosFiscais from '@/features/fiscal/components/RelatoriosFiscais'
 
-type Tab = 'dashboard' | 'importar' | 'notas' | 'escrituracao' | 'estoque' | 'periodos' | 'nfse'
+type Tab = 'dashboard' | 'importar' | 'notas' | 'escrituracao' | 'estoque' | 'periodos' | 'nfse' | 'relatorios'
 
 export default function FiscalPage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
@@ -30,6 +31,7 @@ export default function FiscalPage() {
     { id: 'estoque' as Tab, label: '📦 Estoque', icon: Package, badge: estoqueHook.stats.produtosAbaixoMinimo > 0 ? estoqueHook.stats.produtosAbaixoMinimo : undefined },
     { id: 'periodos' as Tab, label: '📅 Períodos', icon: Calendar },
     { id: 'nfse' as Tab, label: '🏢 NFS-e (Serviços)', icon: FileCheck },
+    { id: 'relatorios' as Tab, label: '🖨️ Relatórios', icon: Printer },
   ]
 
   const handleEscriturar = (nfeId: string) => {
@@ -88,6 +90,7 @@ export default function FiscalPage() {
       {activeTab === 'estoque' && <EstoqueTab estoqueHook={estoqueHook} />}
       {activeTab === 'periodos' && <PeriodosFiscais nfeHook={nfeHook} />}
       {activeTab === 'nfse' && <NFSeModuleTab nfseHook={nfseHook} />}
+      {activeTab === 'relatorios' && <RelatoriosFiscais nfeHook={nfeHook} nfseHook={nfseHook} estoqueHook={estoqueHook} />}
     </div>
   )
 }
