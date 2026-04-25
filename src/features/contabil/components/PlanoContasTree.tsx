@@ -1,8 +1,7 @@
 'use client'
 import React, { useState } from 'react'
-import { ChevronRight, ChevronDown, Plus, Loader2 } from 'lucide-react'
+import { ChevronRight, ChevronDown, Plus, Loader2, Printer } from 'lucide-react'
 
-const NIVEL_INDENT: Record<number, string> = { 1: '', 2: 'ml-4', 3: 'ml-8', 4: 'ml-12', 5: 'ml-16' }
 const CLS_COLOR: Record<string, string> = {
   ativo: 'text-blue-700 bg-blue-50 border-blue-100',
   passivo: 'text-rose-700 bg-rose-50 border-rose-100',
@@ -11,8 +10,132 @@ const CLS_COLOR: Record<string, string> = {
   despesa: 'text-orange-700 bg-orange-50 border-orange-100',
 }
 const CLS_LABEL: Record<string, string> = {
-  ativo: 'Ativo', passivo: 'Passivo', patrimonio_social: 'Patrimônio Social', ingresso: 'Ingresso', despesa: 'Despesa'
+  ativo: 'Ativo', passivo: 'Passivo', patrimonio_social: 'Patrimônio Social', ingresso: 'Ingresso', despesa: 'Despesa/Dispêndio'
 }
+const NIVEL_INDENT: Record<number, string> = { 1: '', 2: 'ml-4', 3: 'ml-8', 4: 'ml-12', 5: 'ml-16' }
+
+const CLS_PRINT_COLOR: Record<string, string> = {
+  ativo: '#1d4ed8',
+  passivo: '#be123c',
+  patrimonio_social: '#7e22ce',
+  ingresso: '#15803d',
+  despesa: '#c2410c',
+}
+const CLS_PRINT_BG: Record<string, string> = {
+  ativo: '#eff6ff',
+  passivo: '#fff1f2',
+  patrimonio_social: '#faf5ff',
+  ingresso: '#f0fdf4',
+  despesa: '#fff7ed',
+}
+
+function imprimirPlanoPDF(contas: any[]) {
+  const now = new Date()
+  const dataStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  const sorted = [...contas].sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
+
+  const rows = sorted.map(c => {
+    const indent = (c.nivel - 1) * 20
+    const isSintetica = c.tipo === 'sintetica'
+    const clsColor = CLS_PRINT_COLOR[c.classificacao] || '#334155'
+    const clsBg = CLS_PRINT_BG[c.classificacao] || '#f8fafc'
+    const clsLabel = CLS_LABEL[c.classificacao] || c.classificacao
+
+    return `
+      <tr style="background:${isSintetica ? '#f8fafc' : '#ffffff'}; border-bottom:1px solid #e2e8f0;">
+        <td style="padding:7px 10px; font-family:monospace; font-size:11px; color:#64748b; white-space:nowrap; border-right:1px solid #e2e8f0;">${c.codigo}</td>
+        <td style="padding:7px 10px; padding-left:${10 + indent}px; font-size:${isSintetica ? '11px' : '11px'}; font-weight:${isSintetica ? '800' : '500'}; color:${isSintetica ? '#1e293b' : '#334155'}; text-transform:${isSintetica ? 'uppercase' : 'none'};">
+          ${c.descricao}
+        </td>
+        <td style="padding:7px 10px; text-align:center; border-left:1px solid #e2e8f0;">
+          <span style="display:inline-block; padding:2px 8px; background:${clsBg}; color:${clsColor}; font-size:9px; font-weight:800; border-radius:999px; border:1px solid ${clsColor}30; text-transform:uppercase; letter-spacing:0.04em;">${clsLabel}</span>
+        </td>
+        <td style="padding:7px 10px; text-align:center; font-size:10px; font-weight:700; color:${c.natureza === 'devedora' ? '#1d4ed8' : '#7e22ce'}; border-left:1px solid #e2e8f0;">
+          ${c.natureza === 'devedora' ? 'D' : 'C'}
+        </td>
+        <td style="padding:7px 10px; text-align:center; font-size:10px; font-weight:700; color:${c.tipo === 'analitica' ? '#334155' : '#94a3b8'}; border-left:1px solid #e2e8f0;">
+          ${c.tipo === 'analitica' ? 'Analítica' : 'Sintética'}
+        </td>
+        <td style="padding:7px 10px; text-align:center; border-left:1px solid #e2e8f0;">
+          ${c.aceita_lancamentos ? '<span style="font-size:9px;font-weight:800;color:#15803d;background:#f0fdf4;padding:2px 8px;border-radius:999px;border:1px solid #bbf7d0;">✓ SIM</span>' : '<span style="font-size:9px;color:#94a3b8;">—</span>'}
+        </td>
+      </tr>`
+  }).join('')
+
+  const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Plano de Contas — ACPROBEC — ITG 2002</title>
+  <style>
+    @page { size: A4 landscape; margin: 1.5cm 1.8cm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #fff; color: #1e293b; }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; border-bottom: 3px solid #4f46e5; padding-bottom: 16px; }
+    .logo-area { display: flex; align-items: center; gap: 14px; }
+    .logo-box { width: 48px; height: 48px; background: #4f46e5; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; }
+    .org-name { font-size: 20px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px; }
+    .org-sub { font-size: 10px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 2px; }
+    .doc-info { text-align: right; }
+    .doc-title { font-size: 16px; font-weight: 900; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
+    .doc-date { font-size: 10px; color: #64748b; font-weight: 600; margin-top: 4px; }
+    .doc-norm { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+    thead { background: #4f46e5; }
+    thead th { padding: 10px 10px; text-align: left; font-size: 9px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px; }
+    thead th:not(:first-child) { border-left: 1px solid #ffffff30; }
+    .footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; font-size: 9px; color: #94a3b8; }
+    .itg-badge { display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 999px; font-size: 9px; font-weight: 800; border: 1px solid #bfdbfe; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-box">📒</div>
+      <div>
+        <div class="org-name">ACPROBEC</div>
+        <div class="org-sub">Contabilidade ITG 2002 (R1)</div>
+      </div>
+    </div>
+    <div class="doc-info">
+      <div class="doc-title">Plano de Contas</div>
+      <div class="doc-date">Emitido em: ${dataStr}</div>
+      <div class="doc-norm">NBC TG 1000 • ITG 2002 (R1) • Entidade sem Fins Lucrativos</div>
+    </div>
+  </div>
+  
+  <table>
+    <thead>
+      <tr>
+        <th style="width:120px;">Código</th>
+        <th>Descrição da Conta</th>
+        <th style="width:140px;text-align:center;">Classificação</th>
+        <th style="width:50px;text-align:center;">N.</th>
+        <th style="width:90px;text-align:center;">Tipo</th>
+        <th style="width:80px;text-align:center;">Lança</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div class="footer">
+    <div>Total de contas: <strong>${contas.length}</strong> | Analíticas: <strong>${contas.filter(c => c.tipo === 'analitica').length}</strong> | Sintéticas: <strong>${contas.filter(c => c.tipo === 'sintetica').length}</strong></div>
+    <div class="itg-badge">📘 Norma ITG 2002 (R1) — CFC — Entidades sem Finalidade de Lucro</div>
+    <div>Gerado pelo InovacontACPROBEC</div>
+  </div>
+</body>
+</html>`
+
+  const win = window.open('', '_blank', 'width=1200,height=800')
+  if (!win) return alert('Habilite popups para imprimir.')
+  win.document.write(html)
+  win.document.close()
+  win.focus()
+  setTimeout(() => { win.print(); win.close() }, 400)
+}
+
 
 export default function PlanoContasTree({ planoHook }: { planoHook: any }) {
   const { contas, loading, inicializarPlanoContas, adicionarConta } = planoHook
@@ -105,6 +228,12 @@ export default function PlanoContasTree({ planoHook }: { planoHook: any }) {
           ))}
         </div>
         <span className="text-xs font-bold text-slate-400 ml-auto">{filtered.length} contas</span>
+        <button
+          onClick={() => imprimirPlanoPDF(contas)}
+          className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-white bg-indigo-600 hover:bg-indigo-700 border border-indigo-700 rounded-xl transition-all active:scale-95 shadow-sm"
+        >
+          <Printer size={11} /> Imprimir PDF
+        </button>
         <button onClick={() => setShowAddForm(!showAddForm)}
           className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-xl">
           <Plus size={11} /> Adicionar Conta
