@@ -298,6 +298,7 @@ export function useNFe() {
 
   return {
     nfes, loading, stats,
+    tenantId,
     filterPeriodo, setFilterPeriodo,
     importarNFe, buscarItens, salvarClassificacao,
     atualizarStatus, remover, removerLote,
