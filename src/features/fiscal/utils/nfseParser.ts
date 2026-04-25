@@ -21,9 +21,10 @@ export function parseNFSeXML(xml: string): NFSeParserResult {
 }
 
 function extractTag(xml: string, tag: string): string {
-  const regex = new RegExp(`<${tag}[^>]*>(.*?)<\/${tag}>`, 'i');
+  // Suporta namespaces (ex: <ns2:vServ>) e garante boundary (\b) para evitar match parcial (ex: Valor em ValorServicos)
+  const regex = new RegExp(`<([\\w\\d]+:)?${tag}\\b[^>]*>(.*?)<\\/([\\w\\d]+:)?${tag}>`, 'i');
   const match = xml.match(regex);
-  return match ? match[1].trim() : '';
+  return match ? match[2].trim() : '';
 }
 
 /**
@@ -33,8 +34,15 @@ function extractValue(xml: string, tags: string[]): number {
   for (const tag of tags) {
     const val = extractTag(xml, tag);
     if (val) {
-      // Remove pontos de milhar e converte vírgula decimal para ponto
-      const normalized = val.replace(/\./g, '').replace(',', '.');
+      let normalized = val.trim();
+      
+      // Se tem vírgula, assume formato brasileiro 1.234,56 ou 1234,56
+      if (normalized.includes(',')) {
+        normalized = normalized.replace(/\./g, '').replace(',', '.');
+      } 
+      // Se não tem vírgula mas tem ponto, o parseFloat tratará como decimal padrão (XML)
+      // Antigamente aqui fazíamos replace de ponto por vazio incondicionalmente, o que causava erro de escala 100x
+      
       const num = parseFloat(normalized);
       if (!isNaN(num)) return num;
     }
@@ -65,7 +73,7 @@ function parseAbrasf(xml: string): NFSeParserResult {
   const valorIss = extractValue(xml, ['ValorIss', 'vISS']);
   const issRetido = extractTag(xml, 'IssRetido') === '1' || extractTag(xml, 'indISS') === '1' || extractTag(xml, 'ISSRetido') === 'S';
 
-  const valorLiquido = extractValue(xml, ['ValorLiquido', 'vLiquido']) || (valorBruto - valorIrrf - valorPis - valorCofins - valorCsll - (issRetido ? valorIss : 0));
+  const valorLiquido = extractValue(xml, ['ValorLiquido', 'vLiquido', 'vLiq', 'ValorLiq']) || (valorBruto - valorIrrf - valorPis - valorCofins - valorCsll - (issRetido ? valorIss : 0));
 
   return {
     nota: {
@@ -112,7 +120,7 @@ function parseADN(xml: string): NFSeParserResult {
   const valorIss = extractValue(xml, ['vISS']);
   const issRetido = extractTag(xml, 'indISS') === '1';
 
-  const valorLiquido = extractValue(xml, ['vLiq', 'ValorLiquido']) || (valorBruto - valorIrrf - valorPis - valorCofins - valorCsll - (issRetido ? valorIss : 0));
+  const valorLiquido = extractValue(xml, ['vLiq', 'ValorLiquido', 'vLiquido', 'ValorLiq']) || (valorBruto - valorIrrf - valorPis - valorCofins - valorCsll - (issRetido ? valorIss : 0));
 
   return {
     nota: {
