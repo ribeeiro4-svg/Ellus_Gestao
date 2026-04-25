@@ -15,61 +15,64 @@ export async function seedAccountingConfigAction(providedTenantId?: string) {
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '').trim()
 
   const mappings = [
-    // Ingressos (Receitas)
-    { categoria_nome: 'MENSALIDADES', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
-    { categoria_nome: 'MENSALIDADE', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
-    { categoria_nome: 'MENSALIDADE DE ASSOCIADO', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
-    { categoria_nome: 'ADESÃO', conta_contabil_codigo: '3.1.1.01.002', conta_contabil_nome: 'Taxas de Adesão de Novos Membros', tipo: 'ingresso' },
-    { categoria_nome: 'OUTROS', conta_contabil_codigo: '3.1.1.01.003', conta_contabil_nome: 'Outras Receitas Operacionais', tipo: 'ingresso' },
-    
-    // Dispêndios com Pessoal (Bolsas e Estagiários)
-    { categoria_nome: 'PRÓ-LABORE (DIRETORIA)', conta_contabil_codigo: '4.2.1.01.001', conta_contabil_nome: 'Pró-Labore da Diretoria Executiva', tipo: 'dispendio' },
-    { categoria_nome: 'Verba Diretoria / Administrativo', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
-    { categoria_nome: 'VERBA DIRETORIA / ADMINISTRATIVO', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
-    { categoria_nome: 'BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
-    { categoria_nome: '13º BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
-    { categoria_nome: '13° BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
-    { categoria_nome: 'AUXÍLIOS ESTAGIÁRIO', conta_contabil_codigo: '4.1.1.01.004', conta_contabil_nome: 'Auxílio Transporte e Benefícios (Estagiários)', tipo: 'dispendio' },
-    { categoria_nome: 'FÉRIAS REMUNERADAS (ESTAGIÁRIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
-    { categoria_nome: 'ESTAGIÁRIO - FUNDO DE RESERVA (FÉRIAS E 13º AUXÍLIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
-    { categoria_nome: 'ESTAGIÁRIO – FUNDO DE RESERVA (FÉRIAS E 13º AUXÍLIO)', conta_contabil_codigo: '4.1.1.01.003', conta_contabil_nome: 'Bolsa-Auxílio (Estagiários)', tipo: 'dispendio' },
-    { categoria_nome: 'IMPOSTOS TRABALHISTAS', conta_contabil_codigo: '4.1.1.01.002', conta_contabil_nome: 'Encargos Sociais s/ Folha — Ativ. Fim', tipo: 'dispendio' },
-    
-    // Manutenção e Serviços
-    { categoria_nome: 'CONTABILIDADE/JURÍDICO', conta_contabil_codigo: '4.2.2.01.008', conta_contabil_nome: 'Assessoria Contábil e Jurídica', tipo: 'dispendio' },
-    { categoria_nome: 'CONTABILIDADE', conta_contabil_codigo: '4.2.2.01.008', conta_contabil_nome: 'Assessoria Contábil e Jurídica', tipo: 'dispendio' },
-    { categoria_nome: 'JURÍDICO', conta_contabil_codigo: '4.2.2.01.008', conta_contabil_nome: 'Assessoria Contábil e Jurídica', tipo: 'dispendio' },
-    { categoria_nome: 'SERVIÇOS CONTRATADOS PJ', conta_contabil_codigo: '4.2.2.01.007', conta_contabil_nome: 'Serviços de Terceiros - Pessoa Jurídica', tipo: 'dispendio' },
-    { categoria_nome: 'SERVIÇOS TOMADOS', conta_contabil_codigo: '4.2.2.01.007', conta_contabil_nome: 'Serviços de Terceiros - Pessoa Jurídica', tipo: 'dispendio' },
-    { categoria_nome: 'SOFTWARE OPERACIONAL', conta_contabil_codigo: '4.2.2.01.006', conta_contabil_nome: 'Manutenção de Sistemas e Software', tipo: 'dispendio' },
-    { categoria_nome: 'PLANO PRÓ DE GESTÃO NO APP', conta_contabil_codigo: '4.2.2.01.006', conta_contabil_nome: 'Manutenção de Sistemas e Software', tipo: 'dispendio' },
-    { categoria_nome: 'SERVIÇOS DE DESENVOLVIMENTO DE SOLUÇÕES (SAAS)', conta_contabil_codigo: '4.2.2.01.006', conta_contabil_nome: 'Manutenção de Sistemas e Software', tipo: 'dispendio' },
-    { categoria_nome: 'INTERNET (WI-FI)', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
-    { categoria_nome: 'INTERNET', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
-    { categoria_nome: 'INFRAESTRUTURA', conta_contabil_codigo: '4.2.2.01.011', conta_contabil_nome: 'Manutenção de Infraestrutura e Reparos', tipo: 'dispendio' },
-    { categoria_nome: 'ALUGUEL', conta_contabil_codigo: '4.2.2.01.002', conta_contabil_nome: 'Aluguéis e Arrendamentos', tipo: 'dispendio' },
-    { categoria_nome: 'ENERGIA ELÉTRICA', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Energia Elétrica', tipo: 'dispendio' },
-    { categoria_nome: 'ÁGUA E ESGOTO', conta_contabil_codigo: '4.2.2.01.001', conta_contabil_nome: 'Água e Esgoto', tipo: 'dispendio' },
-    { categoria_nome: 'TELEFONE', conta_contabil_codigo: '4.2.2.01.003', conta_contabil_nome: 'Serviços de Telecomunicações', tipo: 'dispendio' },
-    { categoria_nome: 'MARKETING E PUBLICIDADE', conta_contabil_codigo: '4.2.2.01.010', conta_contabil_nome: 'Publicidade e Propaganda', tipo: 'dispendio' },
-    
-    // Materiais e Outros
-    { categoria_nome: 'ARTIGOS DE GRÁFICA', conta_contabil_codigo: '4.2.2.01.009', conta_contabil_nome: 'Despesas com Gráfica e Impressos', tipo: 'dispendio' },
-    { categoria_nome: 'MATERIAIS DE ESCRITÓRIO', conta_contabil_codigo: '4.2.2.01.004', conta_contabil_nome: 'Materiais de Escritório e Expediente', tipo: 'dispendio' },
-    { categoria_nome: 'MATERIAIS DE ESCRITÓRIO (PAPELARIA)', conta_contabil_codigo: '4.2.2.01.004', conta_contabil_nome: 'Materiais de Escritório e Expediente', tipo: 'dispendio' },
-    { categoria_nome: 'MATERIAIS USO E CONSUMO DA SEDE', conta_contabil_codigo: '4.2.2.01.005', conta_contabil_nome: 'Materiais de Limpeza e Consumo da Sede', tipo: 'dispendio' },
-    { categoria_nome: 'USO E CONSUMO', conta_contabil_codigo: '4.2.2.01.005', conta_contabil_nome: 'Materiais de Limpeza e Consumo da Sede', tipo: 'dispendio' },
-    { categoria_nome: 'SUPRIMENTOS', conta_contabil_codigo: '4.2.2.01.005', conta_contabil_nome: 'Materiais de Limpeza e Consumo da Sede', tipo: 'dispendio' },
-    { categoria_nome: 'RESERVA DE EMERGÊNCIA', conta_contabil_codigo: '1.1.1.03.001', conta_contabil_nome: 'Aplicações de Liquidez Imediata', tipo: 'dispendio' },
-    { categoria_nome: 'EMPRÉSTIMOS (DIRETORIA)', conta_contabil_codigo: '1.1.2.02.001', conta_contabil_nome: 'Adiantamentos a Empregados', tipo: 'dispendio' },
-    { categoria_nome: 'TAXAS BANCÁRIAS', conta_contabil_codigo: '4.2.2.01.012', conta_contabil_nome: 'Taxas e Tarifas Bancárias', tipo: 'dispendio' },
-    { categoria_nome: 'TARIFAS BANCÁRIAS', conta_contabil_codigo: '4.2.2.01.012', conta_contabil_nome: 'Taxas e Tarifas Bancárias', tipo: 'dispendio' },
-    { categoria_nome: 'VIAGENS E HOSPEDAGENS', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
-    { categoria_nome: 'ALIMENTAÇÃO', conta_contabil_codigo: '4.1.1.01.004', conta_contabil_nome: 'Benefícios e Auxílios a Empregados', tipo: 'dispendio' },
-    { categoria_nome: 'IMPOSTOS E TAXAS', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
-    { categoria_nome: 'OUTROS (DESPESA)', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
-    { categoria_nome: 'TRANSPORTE', conta_contabil_codigo: '4.1.1.01.004', conta_contabil_nome: 'Benefícios e Auxílios a Empregados', tipo: 'dispendio' },
-    { categoria_nome: 'TROCO', conta_contabil_codigo: '1.1.1.01.001', conta_contabil_nome: 'Caixa Geral', tipo: 'dispendio' },
+    // ── INGRESSOS ──────────────────────────────────────────────────────────
+    // Pai correto: 4.1.1 (CONTRIBUIÇÕES E MENSALIDADES) — nunca Patrimônio Social
+    { categoria_nome: 'MENSALIDADES', conta_contabil_codigo: '4.1.1.01', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
+    { categoria_nome: 'MENSALIDADE', conta_contabil_codigo: '4.1.1.01', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
+    { categoria_nome: 'MENSALIDADE DE ASSOCIADO', conta_contabil_codigo: '4.1.1.01', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
+    { categoria_nome: 'ADESÃO', conta_contabil_codigo: '4.1.1.02', conta_contabil_nome: 'Taxa de Adesão', tipo: 'ingresso' },
+    { categoria_nome: 'OUTROS', conta_contabil_codigo: '4.3.1.02', conta_contabil_nome: 'Ingressos Eventuais', tipo: 'ingresso' },
+    { categoria_nome: 'DOAÇÕES', conta_contabil_codigo: '4.1.2.02', conta_contabil_nome: 'Doações de Pessoas Físicas', tipo: 'ingresso' },
+    { categoria_nome: 'SUBVENÇÕES', conta_contabil_codigo: '4.1.2.01', conta_contabil_nome: 'Subvenções Governamentais', tipo: 'ingresso' },
+    { categoria_nome: 'EVENTOS', conta_contabil_codigo: '4.1.3.01', conta_contabil_nome: 'Receita de Eventos', tipo: 'ingresso' },
+    { categoria_nome: 'RENDIMENTOS', conta_contabil_codigo: '4.2.1.01', conta_contabil_nome: 'Rendimentos de Aplicações Financeiras', tipo: 'ingresso' },
+
+    // ── DISPÊNDIOS COM PESSOAL ─────────────────────────────────────────────
+    { categoria_nome: 'PRÓ-LABORE (DIRETORIA)', conta_contabil_codigo: '5.2.1.02', conta_contabil_nome: 'Pró-Labore da Diretoria', tipo: 'dispendio' },
+    { categoria_nome: 'Verba Diretoria / Administrativo', conta_contabil_codigo: '5.2.1.05', conta_contabil_nome: 'Verba de Representação — Diretoria', tipo: 'dispendio' },
+    { categoria_nome: 'VERBA DIRETORIA / ADMINISTRATIVO', conta_contabil_codigo: '5.2.1.05', conta_contabil_nome: 'Verba de Representação — Diretoria', tipo: 'dispendio' },
+    { categoria_nome: 'BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '5.1.1.03', conta_contabil_nome: 'Bolsas de Estágio — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: '13º BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '5.1.1.03', conta_contabil_nome: 'Bolsas de Estágio — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: '13° BOLSA AUXÍLIO (ESTAGIÁRIO)', conta_contabil_codigo: '5.1.1.03', conta_contabil_nome: 'Bolsas de Estágio — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'AUXÍLIOS ESTAGIÁRIO', conta_contabil_codigo: '5.1.1.03', conta_contabil_nome: 'Bolsas de Estágio — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'FÉRIAS REMUNERADAS (ESTAGIÁRIO)', conta_contabil_codigo: '5.1.1.03', conta_contabil_nome: 'Bolsas de Estágio — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'ESTAGIÁRIO - FUNDO DE RESERVA (FÉRIAS E 13º AUXÍLIO)', conta_contabil_codigo: '5.1.1.03', conta_contabil_nome: 'Bolsas de Estágio — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'ESTAGIÁRIO – FUNDO DE RESERVA (FÉRIAS E 13º AUXÍLIO)', conta_contabil_codigo: '5.1.1.03', conta_contabil_nome: 'Bolsas de Estágio — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'IMPOSTOS TRABALHISTAS', conta_contabil_codigo: '5.1.1.02', conta_contabil_nome: 'Encargos Sociais — Ativ. Fim', tipo: 'dispendio' },
+
+    // ── DISPÊNDIOS OPERACIONAIS ────────────────────────────────────────────
+    { categoria_nome: 'CONTABILIDADE/JURÍDICO', conta_contabil_codigo: '5.2.2.05', conta_contabil_nome: 'Serviços Contábeis', tipo: 'dispendio' },
+    { categoria_nome: 'CONTABILIDADE', conta_contabil_codigo: '5.2.2.05', conta_contabil_nome: 'Serviços Contábeis', tipo: 'dispendio' },
+    { categoria_nome: 'JURÍDICO', conta_contabil_codigo: '5.2.2.06', conta_contabil_nome: 'Serviços Jurídicos', tipo: 'dispendio' },
+    { categoria_nome: 'SERVIÇOS CONTRATADOS PJ', conta_contabil_codigo: '5.2.2.11', conta_contabil_nome: 'Outros Serviços de Terceiros — Admin.', tipo: 'dispendio' },
+    { categoria_nome: 'SERVIÇOS TOMADOS', conta_contabil_codigo: '5.1.3.02', conta_contabil_nome: 'Serviços Tomados — Ativ. Fim', tipo: 'dispendio' },
+    { categoria_nome: 'SOFTWARE OPERACIONAL', conta_contabil_codigo: '5.2.2.09', conta_contabil_nome: 'Serviços de TI e Assinaturas de Software', tipo: 'dispendio' },
+    { categoria_nome: 'PLANO PRÓ DE GESTÃO NO APP', conta_contabil_codigo: '5.2.2.09', conta_contabil_nome: 'Serviços de TI e Assinaturas de Software', tipo: 'dispendio' },
+    { categoria_nome: 'SERVIÇOS DE DESENVOLVIMENTO DE SOLUÇÕES (SAAS)', conta_contabil_codigo: '5.2.2.09', conta_contabil_nome: 'Serviços de TI e Assinaturas de Software', tipo: 'dispendio' },
+    { categoria_nome: 'INTERNET (WI-FI)', conta_contabil_codigo: '5.2.2.03', conta_contabil_nome: 'Telefone e Internet', tipo: 'dispendio' },
+    { categoria_nome: 'INTERNET', conta_contabil_codigo: '5.2.2.03', conta_contabil_nome: 'Telefone e Internet', tipo: 'dispendio' },
+    { categoria_nome: 'INFRAESTRUTURA', conta_contabil_codigo: '5.2.2.08', conta_contabil_nome: 'Manutenção Predial e Equipamentos', tipo: 'dispendio' },
+    { categoria_nome: 'ALUGUEL', conta_contabil_codigo: '5.2.2.01', conta_contabil_nome: 'Aluguel e Condomínio', tipo: 'dispendio' },
+    { categoria_nome: 'ENERGIA ELÉTRICA', conta_contabil_codigo: '5.2.2.02', conta_contabil_nome: 'Energia Elétrica', tipo: 'dispendio' },
+    { categoria_nome: 'ÁGUA E ESGOTO', conta_contabil_codigo: '5.2.2.02', conta_contabil_nome: 'Energia Elétrica', tipo: 'dispendio' },
+    { categoria_nome: 'TELEFONE', conta_contabil_codigo: '5.2.2.03', conta_contabil_nome: 'Telefone e Internet', tipo: 'dispendio' },
+    { categoria_nome: 'MARKETING E PUBLICIDADE', conta_contabil_codigo: '5.2.2.11', conta_contabil_nome: 'Outros Serviços de Terceiros — Admin.', tipo: 'dispendio' },
+    { categoria_nome: 'ARTIGOS DE GRÁFICA', conta_contabil_codigo: '5.2.2.04', conta_contabil_nome: 'Materiais de Escritório e Consumo', tipo: 'dispendio' },
+    { categoria_nome: 'MATERIAIS DE ESCRITÓRIO', conta_contabil_codigo: '5.2.2.04', conta_contabil_nome: 'Materiais de Escritório e Consumo', tipo: 'dispendio' },
+    { categoria_nome: 'MATERIAIS DE ESCRITÓRIO (PAPELARIA)', conta_contabil_codigo: '5.2.2.04', conta_contabil_nome: 'Materiais de Escritório e Consumo', tipo: 'dispendio' },
+    { categoria_nome: 'MATERIAIS USO E CONSUMO DA SEDE', conta_contabil_codigo: '5.2.2.04', conta_contabil_nome: 'Materiais de Escritório e Consumo', tipo: 'dispendio' },
+    { categoria_nome: 'USO E CONSUMO', conta_contabil_codigo: '5.2.2.04', conta_contabil_nome: 'Materiais de Escritório e Consumo', tipo: 'dispendio' },
+    { categoria_nome: 'SUPRIMENTOS', conta_contabil_codigo: '5.2.2.04', conta_contabil_nome: 'Materiais de Escritório e Consumo', tipo: 'dispendio' },
+    { categoria_nome: 'RESERVA DE EMERGÊNCIA', conta_contabil_codigo: '1.1.1.03', conta_contabil_nome: 'Aplicações de Liquidez Imediata', tipo: 'dispendio' },
+    { categoria_nome: 'EMPRÉSTIMOS (DIRETORIA)', conta_contabil_codigo: '1.1.2.04', conta_contabil_nome: 'Adiantamentos a Empregados', tipo: 'dispendio' },
+    { categoria_nome: 'TAXAS BANCÁRIAS', conta_contabil_codigo: '5.2.3.02', conta_contabil_nome: 'Tarifas Bancárias', tipo: 'dispendio' },
+    { categoria_nome: 'TARIFAS BANCÁRIAS', conta_contabil_codigo: '5.2.3.02', conta_contabil_nome: 'Tarifas Bancárias', tipo: 'dispendio' },
+    { categoria_nome: 'VIAGENS E HOSPEDAGENS', conta_contabil_codigo: '5.2.2.11', conta_contabil_nome: 'Outros Serviços de Terceiros — Admin.', tipo: 'dispendio' },
+    { categoria_nome: 'ALIMENTAÇÃO', conta_contabil_codigo: '5.2.2.11', conta_contabil_nome: 'Outros Serviços de Terceiros — Admin.', tipo: 'dispendio' },
+    { categoria_nome: 'IMPOSTOS E TAXAS', conta_contabil_codigo: '5.2.3.02', conta_contabil_nome: 'Tarifas Bancárias', tipo: 'dispendio' },
+    { categoria_nome: 'OUTROS (DESPESA)', conta_contabil_codigo: '5.2.2.11', conta_contabil_nome: 'Outros Serviços de Terceiros — Admin.', tipo: 'dispendio' },
+    { categoria_nome: 'TRANSPORTE', conta_contabil_codigo: '5.2.2.10', conta_contabil_nome: 'Serviços de Transporte e Mobilidade', tipo: 'dispendio' },
+    { categoria_nome: 'TROCO', conta_contabil_codigo: '1.1.1.01', conta_contabil_nome: 'Caixa Geral', tipo: 'dispendio' },
   ]
 
   // 1. Upsert mapeamentos padrão
@@ -105,7 +108,7 @@ export async function seedAccountingConfigAction(providedTenantId?: string) {
 
     if (!mappedNorms.includes(key)) {
       // Criar nova conta e mapeamento
-      const parentCodigo = targetTipo === 'ingresso' ? '3.1.1.01' : '4.2.2.01'
+      const parentCodigo = targetTipo === 'ingresso' ? '4.1.1' : '5.2.2'
       
       // Acha o próximo código sequencial
       const { data: lastAccounts } = await sb
