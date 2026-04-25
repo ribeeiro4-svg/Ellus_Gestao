@@ -95,15 +95,15 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     }
 
     if (accountId && finalCodigo) {
-      // Cria o mapeamento
-      const { data: newMap, error: errMap } = await sb.from('configuracoes_contabeis').insert({
+      // Cria ou atualiza o mapeamento (Upsert para evitar erro de concorrência/duplicidade)
+      const { data: newMap, error: errMap } = await sb.from('configuracoes_contabeis').upsert({
         tenant_id: fin.tenant_id,
         categoria_nome: fin.categoria,
         conta_contabil_codigo: finalCodigo,
         conta_contabil_nome: fin.categoria,
         tipo: targetTipo,
         updated_at: new Date().toISOString()
-      }).select('*').single()
+      }, { onConflict: 'tenant_id,categoria_nome' }).select('*').single()
       
       if (newMap) map = newMap
       else if (errMap) return { error: `Erro ao mapear '${fin.categoria}': ${errMap.message}` }
