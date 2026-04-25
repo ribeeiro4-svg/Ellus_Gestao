@@ -123,7 +123,8 @@ function parseAbrasf(xml: string): NFSeParserResult {
 }
 
 function parseADN(xml: string): NFSeParserResult {
-  const chave = extractTag(xml, 'chNFSe');
+  const chaveRaw = extractTag(xml, 'chNFSe');
+  const chave = chaveRaw && chaveRaw.length > 10 ? chaveRaw : undefined; // NÃO inserir string vazia no campo UNIQUE
   const numero = extractTag(xml, 'nNFSe');
   const rawDate = extractTag(xml, 'dhEmi');
   const dataEmissao = normalizeDate(rawDate);
@@ -147,7 +148,7 @@ function parseADN(xml: string): NFSeParserResult {
   return {
     nota: {
       numero_nfse: numero,
-      chave_nacional: chave,
+      chave_nacional: chave || undefined, // undefined = não será inserido no payload
       data_emissao: dataEmissao,
       data_competencia: dataEmissao.split('T')[0],
       valor_bruto: valorBruto,
