@@ -1,6 +1,9 @@
 'use client'
 import React, { useState, useMemo } from 'react'
-import { Plus, Save, Loader2, Trash2, RotateCcw, Search, ChevronRight } from 'lucide-react'
+import { Plus, Save, Loader2, Trash2, RotateCcw, Search, ChevronRight, History, Activity, Link as LinkIcon, FileText, Printer, X } from 'lucide-react'
+import { useConfiguracoesContabeis } from '@/features/contabil/hooks/useConfiguracoesContabeis'
+import VincularDocumentoModal from './VincularDocumentoModal'
+import { getContabilLogsAction } from '../actions/documentLinkActions'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtData = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
@@ -14,6 +17,11 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [partidasCache, setPartidasCache] = useState<Record<string, any[]>>({})
   const [saving, setSaving] = useState(false)
+  const [showLinkModal, setShowLinkModal] = useState(false)
+  const [selectedLanc, setSelectedLanc] = useState<any>(null)
+  const [showLogs, setShowLogs] = useState(false)
+  const [logs, setLogs] = useState<any[]>([])
+  const [loadingLogs, setLoadingLogs] = useState(false)
   const [form, setForm] = useState({
     data: new Date().toISOString().split('T')[0],
     historico: '',
@@ -121,6 +129,63 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
     setTimeout(() => win?.print(), 500)
   }
 
+  const fetchLogs = async () => {
+    setLoadingLogs(true)
+    const res = await getContabilLogsAction()
+    setLogs(res.data || [])
+    setLoadingLogs(false)
+    setShowLogs(true)
+  }
+
+  const imprimirLogsPDF = () => {
+    const html = `
+      <html>
+        <head>
+          <title>Logs de Integração e Vínculo - ACPROBEC</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
+            .header { border-bottom: 2px solid #4f46e5; padding-bottom: 15px; margin-bottom: 30px; }
+            .header h1 { margin: 0; font-size: 22px; color: #4f46e5; text-transform: uppercase; font-weight: 900; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { text-align: left; background: #f8fafc; padding: 12px; font-size: 10px; text-transform: uppercase; border: 1px solid #e2e8f0; font-weight: 900; }
+            td { padding: 12px; border: 1px solid #e2e8f0; font-size: 11px; }
+            .timestamp { color: #64748b; font-weight: bold; }
+            .badge { background: #e0e7ff; color: #4338ca; padding: 2px 6px; border-radius: 4px; font-weight: 900; font-size: 9px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>ACPROBEC — HISTÓRICO DE INTEGRAÇÃO</h1>
+            <p>RELATÓRIO DE AUDITORIA E REPROCESSAMENTO CONTÁBIL</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th width="150">Data/Hora</th>
+                <th width="100">Ação</th>
+                <th>Detalhes do Reprocessamento</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${logs.map(l => `
+                <tr>
+                  <td class="timestamp">${new Date(l.created_at).toLocaleString()}</td>
+                  <td><span class="badge">${l.acao}</span></td>
+                  <td>${l.detalhes}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `
+    const win = window.open('', '_blank')
+    win?.document.write(html)
+    win?.document.close()
+    setTimeout(() => win?.print(), 500)
+  }
+
   const toggleExpand = async (id: string) => {
     if (expandedId === id) { setExpandedId(null); return }
     setExpandedId(id)
@@ -160,9 +225,15 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
           <option value="">Todos os meses</option>
           {MESES.map((m, i) => <option key={i} value={`${ano}-${(i+1).toString().padStart(2,'0')}`}>{m}/{ano}</option>)}
         </select>
+        <button onClick={fetchLogs}
+          className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">
+          {loadingLogs ? <Loader2 size={14} className="animate-spin" /> : <History size={14} />}
+          Logs
+        </button>
         <button onClick={imprimirDiarioPDF}
           className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all">
-          🖨️ Imprimir PDF
+          <FileText size={14} />
+          Imprimir PDF
         </button>
         <button onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all">
@@ -274,11 +345,24 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
                 const tipo = getTipoDisplay(l)
                 return (
                   <React.Fragment key={l.id}>
-                    <tr className={`border-t border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${l.status === 'estornado' ? 'opacity-50' : ''}`}
+                    <tr className={`group border-t border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${l.status === 'estornado' ? 'opacity-50' : ''}`}
                       onClick={() => toggleExpand(l.id)}>
                       <td className="px-4 py-3 font-mono text-[10px] text-indigo-600 font-black">{l.numero_lancamento}</td>
                       <td className="px-4 py-3 text-slate-600 font-bold whitespace-nowrap">{fmtData(l.data_lancamento)}</td>
-                      <td className="px-4 py-3 text-slate-400 font-bold">{l.documento_tipo === 'NF' ? l.documento_numero : '-'}</td>
+                      <td className="px-4 py-3">
+                        {l.documento_numero && l.documento_tipo === 'NF' ? (
+                          <span className="text-emerald-600 font-black tracking-tighter flex items-center gap-1">
+                            <FileText size={10} /> {l.documento_numero}
+                          </span>
+                        ) : (
+                          <button 
+                            onClick={e => { e.stopPropagation(); setSelectedLanc(l); setShowLinkModal(true); }}
+                            className="w-full text-left text-slate-300 hover:text-indigo-500 font-black transition-colors"
+                          >
+                            — <span className="text-[9px] uppercase opacity-0 group-hover:opacity-100 ml-1">Vincular</span>
+                          </button>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <p className="font-bold text-slate-800 max-w-xs truncate">{l.historico}</p>
                         {l.documento_numero && l.documento_tipo !== 'NF' && <p className="text-[9px] text-slate-400">{l.documento_tipo} {l.documento_numero}</p>}
@@ -348,6 +432,57 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
           </table>
         )}
       </div>
+      {/* Modais */}
+      {showLinkModal && selectedLanc && (
+        <VincularDocumentoModal 
+          lancamento={selectedLanc} 
+          onClose={() => { setShowLinkModal(false); setSelectedLanc(null); }}
+          onSuccess={() => { setShowLinkModal(false); setSelectedLanc(null); lancHook.refresh(); }}
+        />
+      )}
+
+      {/* Painel de Logs Lateral */}
+      {showLogs && (
+        <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-[110] p-6 animate-in slide-in-from-right duration-300 border-l border-slate-100">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-sm font-black text-slate-800 uppercase flex items-center gap-2">
+              <Activity size={16} className="text-indigo-600" /> Histórico de Integração
+            </h3>
+            <button onClick={() => setShowLogs(false)} className="p-1.5 hover:bg-slate-100 rounded-full">
+              <X size={18} className="text-slate-400" />
+            </button>
+          </div>
+          
+          <div className="space-y-3 max-h-[calc(100vh-180px)] overflow-y-auto pr-2 custom-scrollbar">
+            {logs.length === 0 ? (
+              <p className="text-center py-20 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nenhum log registrado</p>
+            ) : (
+              logs.map((log: any) => (
+                <div key={log.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-[9px] font-black text-indigo-600 uppercase tracking-tighter bg-indigo-50 px-2 py-0.5 rounded-lg">
+                      {log.acao}
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-bold">
+                      {new Date(log.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-700 font-medium leading-relaxed">{log.detalhes}</p>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="absolute bottom-6 left-6 right-6">
+            <button 
+              onClick={imprimirLogsPDF}
+              className="w-full py-3 bg-indigo-600 text-white rounded-2xl text-[10px] font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 uppercase tracking-widest"
+            >
+              <Printer size={14} /> Imprimir Relatório de Logs
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
