@@ -1,469 +1,249 @@
 'use server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { PLANO_CONTAS_ITG2002 } from '../data/planoContasITG2002'
-import { isPeriodoFechado } from './periodoActions'
+import { createAdminSupabase } from '@/lib/supabase/admin'
+import { repararNumeracaoAction } from './documentLinkActions'
 
+/**
+ * Sincroniza um lançamento individual (Financeiro -> Contábil)
+ */
 export async function sincronizarLancamentoContabil(financialId: string) {
   const sb = await createServerSupabase()
-  
-  // 1. Buscar o lançamento financeiro
-  const { data: fin, error: finErr } = await sb.from('lancamentos').select('*').eq('id', financialId).maybeSingle()
-  if (finErr || !fin) return { error: 'Lançamento não encontrado' }
-  
-  const isElegivel = fin.status === 'pago' || fin.conciliado === true
-  if (!isElegivel) return { error: 'Lançamento não elegível para integração contábil (deve estar pago ou conciliado)' }
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return { error: 'Sessão expirada' }
 
-  // 1.1 Verificar se o período contábil está fechado
-  const fechado = await isPeriodoFechado(fin.data, fin.tenant_id)
-  if (fechado) return { error: `O período contábil (${fin.data.slice(0,7)}) está FECHADO. Reabra o período para sincronizar.` }
+  const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+  const tenantId = userData?.tenant_id
 
-  // 2. Buscar o mapeamento para a categoria (Normalizado/Fuzzy)
-  const { data: allMaps } = await sb
-    .from('configuracoes_contabeis')
-    .select('*')
-    .eq('tenant_id', fin.tenant_id)
-  
-  const normalize = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '').trim()
-  const finCatNorm = normalize(fin.categoria)
-  
-  const targetTipo = fin.tipo === 'receita' ? 'ingresso' : 'dispendio'
-  
-  // 2.1 Busca Exata (Normalizada)
-  let map = allMaps?.find(m => 
-    normalize(m.categoria_nome) === finCatNorm && 
-    m.tipo === targetTipo
-  )
+  try {
+    // 1. Buscar dados do financeiro
+    const { data: l, error: lErr } = await sb
+      .from('lancamentos')
+      .select('*, associados(nome)')
+      .eq('id', financialId)
+      .single()
 
-  // 2.2 Busca Fuzzy (se não achou exata, tenta remover 's' final para lidar com plural/singular)
-  if (!map && finCatNorm.length > 3) {
-    const finCatFuzzy = finCatNorm.endsWith('s') ? finCatNorm.slice(0, -1) : finCatNorm
-    map = allMaps?.find(m => {
-      const mNorm = normalize(m.categoria_nome)
-      const mFuzzy = mNorm.endsWith('s') ? mNorm.slice(0, -1) : mNorm
-      return mFuzzy === finCatFuzzy && m.tipo === targetTipo
-    })
-  }
+    if (lErr || !l) throw new Error('Lançamento não encontrado')
 
-  if (!map) {
-    console.info(`[AccountingSync] Criando mapeamento automático para: ${fin.categoria}`)
-    // 3. Verificar se a conta já existe (por descrição) para evitar duplicatas se o mapeamento sumiu mas a conta ficou
-    const { data: existingConta } = await sb
-      .from('plano_contas')
-      .select('id, codigo')
-      .eq('tenant_id', fin.tenant_id)
-      .eq('descricao', fin.categoria)
+    // 2. Verificar se já existe (para evitar duplicidade se chamado avulso)
+    const { data: existing } = await sb.from('lancamentos_contabeis').select('id, numero_lancamento').eq('origem_id', financialId).maybeSingle()
+    if (existing) return { success: true, numero: existing.numero_lancamento, error: 'Lançamento já sincronizado' }
+
+    // 3. Buscar mapeamento de categoria
+    const { data: map } = await sb
+      .from('contabil_mapeamento_categorias')
+      .select('conta_debito_id, conta_credito_id')
+      .eq('tenant_id', tenantId)
+      .eq('categoria_nome', l.categoria)
       .maybeSingle()
 
-    let finalCodigo = existingConta?.codigo
-    let accountId = existingConta?.id
+    const contaDebito = map?.conta_debito_id
+    const contaCredito = map?.conta_credito_id
 
-    const parentCodigo = targetTipo === 'ingresso' ? '3.1.1.01' : '4.2.2.01'
-    
-    if (!existingConta) {
-      // Acha o próximo código sequencial
-      const { data: lastAccounts } = await sb
-        .from('plano_contas')
-        .select('codigo')
-        .eq('tenant_id', fin.tenant_id)
-        .like('codigo', `${parentCodigo}.%`)
-        .order('codigo', { ascending: false })
-        .limit(1)
-
-      let nextSeq = 100
-      if (lastAccounts && lastAccounts.length > 0) {
-        const lastPart = lastAccounts[0].codigo.split('.').pop()
-        const lastNum = parseInt(lastPart || '0', 10)
-        if (!isNaN(lastNum) && lastNum >= 100) nextSeq = lastNum + 1
-      }
-
-      finalCodigo = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
-      const { data: pai } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', parentCodigo).single()
-
-      // Cria a conta
-      const { data: novaConta, error: errConta } = await sb.from('plano_contas').insert({
-        tenant_id: fin.tenant_id,
-        codigo: finalCodigo,
-        descricao: fin.categoria,
-        nivel: 5,
-        tipo: 'analitica',
-        natureza: targetTipo === 'ingresso' ? 'credora' : 'devedora',
-        classificacao: targetTipo === 'ingresso' ? 'ingresso' : 'despesa',
-        aceita_lancamentos: true,
-        ativa: true,
-        conta_pai_id: pai?.id || null
-      }).select('id').single()
-
-      if (errConta) {
-        // Se deu erro de duplicidade (23505), busca a conta existente
-        if (errConta.code === '23505') {
-          const { data: ec } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', finalCodigo).single()
-          accountId = ec?.id
-        } else {
-          return { error: `Erro ao criar conta para '${fin.categoria}': ${errConta.message}` }
-        }
-      } else {
-        accountId = novaConta?.id
-      }
+    if (!contaDebito || !contaCredito) {
+      return { error: `Mapeamento incompleto para a categoria "${l.categoria}"` }
     }
 
-    if (accountId && finalCodigo) {
-      // Cria ou atualiza o mapeamento (Upsert para evitar erro de concorrência/duplicidade)
-      const { data: newMap, error: errMap } = await sb.from('configuracoes_contabeis').upsert({
-        tenant_id: fin.tenant_id,
-        categoria_nome: fin.categoria,
-        conta_contabil_codigo: finalCodigo,
-        conta_contabil_nome: fin.categoria,
-        tipo: targetTipo,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'tenant_id,categoria_nome' }).select('*').single()
-      
-      if (newMap) map = newMap
-      else if (errMap) return { error: `Erro ao mapear '${fin.categoria}': ${errMap.message}` }
-    }
+    // 4. Gerar número sequencial para o ano
+    const ano = new Date(l.data).getFullYear()
+    const { data: maxSeq } = await sb.rpc('get_next_contabil_seq', { p_tenant_id: tenantId, p_ano: ano })
+    const seqStr = String(maxSeq || 1).padStart(4, '0')
+    const numeroLancamento = `${ano}/${seqStr}`
 
-    if (!map) {
-      return { error: `Categoria '${fin.categoria}' não mapeada no Plano de Contas ITG 2002.` }
-    }
-  }
-
-  // 3. Buscar os IDs reais das contas contábeis no banco de dados
-  let { data: contaCat } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', map.conta_contabil_codigo).maybeSingle()
-  
-  // Se a conta mapeada não existir no banco, usar fallback forte
-  if (!contaCat) {
-    const fallbackCodigo = fin.tipo === 'receita' ? '3.1.1.01.001' : '4.2.2.01.013'
-    let { data: fallback } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', fallbackCodigo).maybeSingle()
-    if (!fallback) {
-      // Se até o fallback falhar, pega qualquer conta aceita_lancamentos que seja receita ou despesa
-      const prefix = fin.tipo === 'receita' ? '3.%' : '4.%'
-      const { data: anyFallback } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).like('codigo', prefix).eq('aceita_lancamentos', true).limit(1).maybeSingle()
-      fallback = anyFallback
-    }
-    if (fallback) contaCat = fallback
-  }
-
-  // Usa o Banco Cora como padrão, ou qualquer conta de Caixa/Bancos (1.1.1) se não achar
-  let { data: contaBanco } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', '1.1.1.02.001').maybeSingle()
-  if (!contaBanco) {
-    const { data: fallbackBanco } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).like('codigo', '1.1.1.%').eq('aceita_lancamentos', true).limit(1).maybeSingle()
-    if (fallbackBanco) contaBanco = fallbackBanco
-  }
-
-  if (!contaCat || !contaBanco) {
-    return { error: `Erro fatal: Nenhuma conta contábil raiz (Caixa ou Resultado) encontrada para o tenant.` }
-  }
-
-  // 3.1 Verificar se é um pagamento de Nota Fiscal (Escrituração Prévia)
-  // Se for, o Débito deve ser em Fornecedores (2.1.3.01.002) e não na Despesa
-  const { data: vinculoNfse } = await sb.from('nfse_financeiro_vinculo').select('id').eq('financeiro_id', financialId).maybeSingle()
-  const { data: vinculoNfe } = await sb.from('nfe_entradas').select('id, numero_nf').eq('lancamento_financeiro_id', financialId).maybeSingle()
-
-  let contaDebitoEfetiva = contaCat
-  let historicoEfetivo = `${fin.tipo === 'receita' ? 'REC' : 'PAG'} — ${fin.descricao}`
-
-  if ((vinculoNfse || vinculoNfe) && fin.tipo === 'despesa') {
-    const { data: contaFornecedor } = await sb
-      .from('plano_contas')
-      .select('id')
-      .eq('tenant_id', fin.tenant_id)
-      .eq('codigo', '2.1.3.01.002')
-      .maybeSingle()
-    
-    if (contaFornecedor) {
-      contaDebitoEfetiva = contaFornecedor
-      const refNota = vinculoNfe ? `NF ${vinculoNfe.numero_nf}` : 'NFS-e'
-      historicoEfetivo = `PAG — Liq. obrigação ${refNota} — ${fin.descricao}`
-    }
-  }
-
-  // 4. Verificar e limpar lançamento contábil anterior (Permite Re-sincronização)
-  const { data: existing } = await sb.from('lancamentos_contabeis').select('id, numero_lancamento').eq('origem_id', financialId).maybeSingle()
-  
-  let numero = existing?.numero_lancamento
-
-  if (existing) {
-    // Remove apenas as partidas antigas (preserva a capa se possível, mas aqui vamos atualizar a capa)
-    await sb.from('lancamentos_partidas').delete().eq('lancamento_id', existing.id)
-  }
-
-  // 5. Gerar número do lançamento se não existir
-  if (!numero) {
-    const ano = fin.data.slice(0, 4)
-    const { data: ultimosLancs } = await sb
+    // 5. Inserir Capa
+    const { data: lancContabil, error: cErr } = await sb
       .from('lancamentos_contabeis')
-      .select('numero_lancamento')
-      .eq('tenant_id', fin.tenant_id)
-      .like('numero_lancamento', `${ano}/%`)
-      .order('numero_lancamento', { ascending: false })
-      .limit(1)
+      .insert({
+        tenant_id: tenantId,
+        data_lancamento: l.data,
+        numero_lancamento,
+        historico: `${l.tipo === 'receita' ? 'REC' : 'PAG'} - ${l.descricao}`,
+        valor_total: l.valor,
+        origem_id: l.id,
+        origem_tipo: 'financeiro',
+        usuario_id: user.id
+      })
+      .select()
+      .single()
 
-    let maxSeq = 0
-    if (ultimosLancs && ultimosLancs.length > 0) {
-      const parts = ultimosLancs[0].numero_lancamento.split('/')
-      if (parts.length === 2) {
-        maxSeq = parseInt(parts[1], 10)
+    if (cErr) throw cErr
+
+    // 6. Inserir Partidas (Débito e Crédito)
+    const partidas = [
+      {
+        tenant_id: tenantId,
+        lancamento_id: lancContabil.id,
+        conta_id: contaDebito,
+        tipo_partida: 'D',
+        valor: l.valor,
+        historico: l.descricao
+      },
+      {
+        tenant_id: tenantId,
+        lancamento_id: lancContabil.id,
+        conta_id: contaCredito,
+        tipo_partida: 'C',
+        valor: l.valor,
+        historico: l.descricao
       }
-    }
-    const seq = (maxSeq + 1).toString().padStart(4, '0')
-    numero = `${ano}/${seq}`
+    ]
+
+    await sb.from('lancamentos_partidas').insert(partidas)
+
+    return { success: true, numero: numeroLancamento }
+  } catch (err: any) {
+    return { error: err.message }
   }
-
-  // 6. Inserir ou Atualizar Header (Livro Diário - Capa)
-  let lancId = existing?.id
-  let insErr = null
-
-  if (existing) {
-    const { error } = await sb.from('lancamentos_contabeis').update({
-      data_lancamento: fin.data,
-      data_competencia: fin.data,
-      historico: historicoEfetivo,
-    }).eq('id', existing.id)
-    insErr = error
-  } else {
-    const { data, error } = await sb.from('lancamentos_contabeis').insert({
-      tenant_id: fin.tenant_id,
-      numero_lancamento: numero,
-      data_lancamento: fin.data,
-      data_competencia: fin.data,
-      tipo: 'normal',
-      historico: historicoEfetivo,
-      origem_tipo: 'financeiro',
-      origem_id: financialId,
-      status: 'confirmado',
-    }).select('id').single()
-    lancId = data?.id
-    insErr = error
-  }
-
-  if (insErr || !lancId) return { error: insErr?.message || 'Erro ao criar/atualizar capa do lançamento contábil' }
-
-  // 7. Criar as Partidas (Débito e Crédito)
-  const valor = Number(fin.valor)
-  const partidas = []
-
-  if (fin.tipo === 'receita') {
-    partidas.push({ lancamento_id: lancId, conta_id: contaBanco.id, tipo_partida: 'D', valor, ordem: 1, historico_partida: `Vlr. recebido ref. ${fin.categoria}` })
-    partidas.push({ lancamento_id: lancId, conta_id: contaCat.id, tipo_partida: 'C', valor, ordem: 2, historico_partida: `Vlr. recebido ref. ${fin.categoria}` })
-  } else {
-    partidas.push({ lancamento_id: lancId, conta_id: contaDebitoEfetiva.id, tipo_partida: 'D', valor, ordem: 1, historico_partida: (vinculoNfse || vinculoNfe) ? `Liq. obrigação fiscal vinculada` : `Vlr. pago ref. ${fin.categoria}` })
-    partidas.push({ lancamento_id: lancId, conta_id: contaBanco.id, tipo_partida: 'C', valor, ordem: 2, historico_partida: `Vlr. pago ref. ${fin.categoria}` })
-  }
-
-  const { error: partErr } = await sb.from('lancamentos_partidas').insert(partidas)
-
-  return { error: partErr?.message || null }
 }
 
 /**
- * Sincroniza a PROVISÃO de uma Nota Fiscal (Escrituração Fiscal)
- * D: Despesa/Estoque / C: Fornecedores a Pagar
+ * Sincroniza uma nota fiscal individual (Fiscal -> Contábil)
  */
-export async function sincronizarNotaFiscalContabil(notaId: string, tipo: 'nfse' | 'nfe') {
+export async function sincronizarNotaFiscalContabil(docId: string, type: 'nfse' | 'nfe') {
   const sb = await createServerSupabase()
-  
-  // 1. Buscar dados da nota
-  let nota: any
-  if (tipo === 'nfse') {
-    const { data } = await sb.from('nfse_entradas').select('*, fornecedor:fornecedores(*)').eq('id', notaId).single()
-    nota = data
-  } else {
-    const { data } = await sb.from('nfe_entradas').select('*').eq('id', notaId).single()
-    nota = data
-  }
-  if (!nota) return { error: 'Nota não encontrada' }
-
-  // 2. Definir contas
-  const { data: config } = await sb.from('configuracoes_contabeis').select('conta_fornecedores_id').eq('tenant_id', nota.tenant_id).single()
-  const contaFornecedorId = config?.conta_fornecedores_id || (await sb.from('plano_contas').select('id').eq('tenant_id', nota.tenant_id).eq('codigo', '2.1.3.01.002').maybeSingle()).data?.id
-
-  // Conta de Débito (Despesa)
-  // Para NFe, agrupamos os itens por conta contábil para gerar partidas precisas
-  const partidasDebito: any[] = []
-  if (tipo === 'nfe') {
-    const { data: itens } = await sb.from('nfe_entradas_itens').select('conta_contabil_id, valor_produto').eq('nfe_entrada_id', notaId)
-    if (itens && itens.length > 0) {
-      // Agrupar por conta
-      const agrupado = itens.reduce((acc: any, it: any) => {
-        const cid = it.conta_contabil_id || 'PENDENTE'
-        acc[cid] = (acc[cid] || 0) + Number(it.valor_produto || 0)
-        return acc
-      }, {})
-
-      for (const [cid, vlr] of Object.entries(agrupado)) {
-        const valorItem = Number(vlr)
-        if (valorItem > 0) {
-          partidasDebito.push({
-            conta_id: cid === 'PENDENTE' ? (await sb.from('plano_contas').select('id').eq('tenant_id', nota.tenant_id).eq('codigo', '4.2.2.01.013').maybeSingle()).data?.id : cid,
-            valor: valorItem,
-            historico: 'Vlr. ref. produtos tomados'
-          })
-        }
-      }
-    }
-  } else {
-    // Para NFSe
-    if (nota.conta_despesa_id && Number(nota.valor_bruto) > 0) {
-      partidasDebito.push({
-        conta_id: nota.conta_despesa_id,
-        valor: Number(nota.valor_bruto),
-        historico: 'Vlr. ref. serviço tomado'
-      })
-    }
-  }
-
-  if (partidasDebito.length === 0 || !contaFornecedorId) {
-    return { error: 'Contas contábeis ou valores não identificados para a nota. Verifique a escrituração.' }
-  }
-
-  // 3. Verificar e preservar lançamento contábil anterior (Permite Re-sincronização)
-  const { data: existing } = await sb.from('lancamentos_contabeis').select('id, numero_lancamento').eq('origem_id', notaId).maybeSingle()
-  
-  let numero = existing?.numero_lancamento
-
-  if (existing) {
-    // Remove apenas as partidas antigas
-    await sb.from('lancamentos_partidas').delete().eq('lancamento_id', existing.id)
-  }
-
-  // 4. Criar Capa (ou usar existente)
-  const valorTotal = tipo === 'nfse' ? Number(nota.valor_bruto) : Number(nota.valor_total)
-  const numeroDoc = tipo === 'nfse' ? nota.numero_nfse : nota.numero_nf
-  const emitente = tipo === 'nfse' ? nota.fornecedor?.nome : nota.nome_emitente
-  const historicoCapa = `Escrituração Fiscal ${tipo.toUpperCase()} ${numeroDoc} — ${emitente}`
-
-  if (!numero) {
-    const ano = nota.data_emissao.slice(0, 4)
-    const { data: ultimosLancs } = await sb
-      .from('lancamentos_contabeis')
-      .select('numero_lancamento')
-      .eq('tenant_id', nota.tenant_id)
-      .like('numero_lancamento', `${ano}/%`)
-      .order('numero_lancamento', { ascending: false })
-      .limit(1)
-
-    let maxSeq = 0
-    if (ultimosLancs && ultimosLancs.length > 0) {
-      const parts = ultimosLancs[0].numero_lancamento.split('/')
-      if (parts.length === 2) {
-        maxSeq = parseInt(parts[1], 10)
-      }
-    }
-    const seq = (maxSeq + 1).toString().padStart(4, '0')
-    numero = `${ano}/${seq}`
-  }
-
-  let lancId = existing?.id
-  let insErr = null
-
-  if (existing) {
-    const { error } = await sb.from('lancamentos_contabeis').update({
-      data_lancamento: nota.data_emissao,
-      data_competencia: nota.data_competencia || nota.data_emissao,
-      historico: historicoCapa,
-    }).eq('id', existing.id)
-    insErr = error
-  } else {
-    const { data, error } = await sb.from('lancamentos_contabeis').insert({
-      tenant_id: nota.tenant_id,
-      numero_lancamento: numero,
-      data_lancamento: nota.data_emissao,
-      data_competencia: nota.data_competencia || nota.data_emissao,
-      tipo: 'normal',
-      historico: historicoCapa,
-      origem_tipo: tipo === 'nfse' ? 'fiscal_nfse' : 'fiscal',
-      origem_id: notaId,
-      status: 'confirmado'
-    }).select('id').single()
-    lancId = data?.id
-    insErr = error
-  }
-
-  if (insErr || !lancId) return { error: insErr?.message || 'Erro ao criar/atualizar capa do lançamento' }
-
-  // 5. Inserir Partidas
-  const finalPartidas = [
-    ...partidasDebito.map((p, i) => ({
-      lancamento_id: lancId,
-      conta_id: p.conta_id,
-      tipo_partida: 'D',
-      valor: p.valor,
-      ordem: i + 1,
-      historico_partida: p.historico
-    })),
-    {
-      lancamento_id: lancId,
-      conta_id: contaFornecedorId,
-      tipo_partida: 'C',
-      valor: valorTotal,
-      ordem: partidasDebito.length + 1,
-      historico_partida: 'Vlr. provisão para pagamento (Passivo)'
-    }
-  ]
-
-  await sb.from('lancamentos_partidas').insert(finalPartidas)
-
-  return { success: true }
-}
-
-export async function sincronizarPeriodoContabil(dataInicio: string) {
-  const sb = await createServerSupabase()
-  
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'Sessão expirada' }
   const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
   const tenantId = userData?.tenant_id
 
-  // 1. Buscar todos os lançamentos pagos ou conciliados desde a data de início (ORDENADO POR DATA)
-  let query = sb.from('lancamentos')
-    .select('id, data')
-    .or('status.eq.pago,conciliado.eq.true')
+  try {
+    const table = type === 'nfse' ? 'nfse_entradas' : 'nfe_entradas'
+    const { data: doc } = await sb.from(table).select('*').eq('id', docId).single()
+    if (!doc) throw new Error('Documento não encontrado')
+
+    // Verificar se já existe
+    const { data: existing } = await sb.from('lancamentos_contabeis').select('id').eq('origem_id', docId).maybeSingle()
+    if (existing) return { success: true, error: 'Documento já sincronizado' }
+
+    // No fiscal, geralmente usamos categorias fixas ou mapeadas por CFOP/Serviço
+    // Para simplificar, buscaremos se há um mapeamento para "FISCAL_NFSE" ou "FISCAL_NFE"
+    const catNome = type === 'nfse' ? 'SERVIÇOS PRESTADOS' : 'COMPRA DE MERCADORIAS'
+    const { data: map } = await sb.from('contabil_mapeamento_categorias')
+      .select('conta_debito_id, conta_credito_id')
+      .eq('tenant_id', tenantId)
+      .eq('categoria_nome', catNome)
+      .maybeSingle()
+
+    if (!map) return { error: `Mapeamento contábil para "${catNome}" não configurado.` }
+
+    const ano = new Date(doc.data_emissao).getFullYear()
+    const { data: maxSeq } = await sb.rpc('get_next_contabil_seq', { p_tenant_id: tenantId, p_ano: ano })
+    const seqStr = String(maxSeq || 1).padStart(4, '0')
+    const numeroLancamento = `${ano}/${seqStr}`
+
+    const { data: lancContabil, error: cErr } = await sb.from('lancamentos_contabeis').insert({
+      tenant_id: tenantId,
+      data_lancamento: doc.data_emissao,
+      numero_lancamento,
+      historico: `FISCAL - ${type.toUpperCase()} ${doc.numero_nfse || doc.numero_nfe || ''} - ${doc.prestador_nome || doc.emitente_nome || ''}`,
+      valor_total: doc.valor_servicos || doc.valor_total || 0,
+      origem_id: doc.id,
+      origem_tipo: type,
+      usuario_id: user.id
+    }).select().single()
+
+    if (cErr) throw cErr
+
+    const v = doc.valor_servicos || doc.valor_total || 0
+    await sb.from('lancamentos_partidas').insert([
+      { tenant_id: tenantId, lancamento_id: lancContabil.id, conta_id: map.conta_debito_id, tipo_partida: 'D', valor: v, historico: 'Vlr ref. nota fiscal' },
+      { tenant_id: tenantId, lancamento_id: lancContabil.id, conta_id: map.conta_credito_id, tipo_partida: 'C', valor: v, historico: 'Vlr ref. nota fiscal' }
+    ])
+
+    return { success: true, numero: numeroLancamento }
+  } catch (err: any) {
+    return { error: err.message }
+  }
+}
+
+/**
+ * Sincroniza todos os lançamentos de um período (Financeiro -> Contábil)
+ * Agora com diagnóstico detalhado.
+ */
+export async function sincronizarPeriodoContabil(dataInicio: string) {
+  const sb = await createServerSupabase()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return { error: 'Sessão expirada' }
+
+  const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+  const tenantId = userData?.tenant_id
+
+  // Buscar todos os lançamentos do período (ORDENADO CRONOLOGICAMENTE)
+  let query = sb
+    .from('lancamentos')
+    .select('id, data, status, descricao, categoria')
     .gte('data', dataInicio)
     .order('data', { ascending: true })
     .order('created_at', { ascending: true })
   
   if (tenantId) query = query.eq('tenant_id', tenantId)
   
-  const { data: lancs, error } = await query
+  const { data: items, error } = await query
   
   if (error) return { error: error.message }
-  if (!lancs || lancs.length === 0) return { success: true, count: 0, total: 0 }
+  if (!items || items.length === 0) return { success: true, count: 0, total: 0 }
 
-  let count = 0
-  let alreadySynced = 0
-  let errors = []
+  const results = {
+    total: 0,
+    success: 0,
+    alreadySync: 0,
+    skippedStatus: 0,
+    skippedMapping: 0,
+    errors: [] as string[]
+  }
 
-  for (const l of lancs) {
+  for (const l of items) {
+    results.total++
+    
+    // 1. Verificar se já existe
+    const { data: existing } = await sb
+      .from('lancamentos_contabeis')
+      .select('id')
+      .eq('origem_id', l.id)
+      .maybeSingle()
+
+    if (existing) {
+      results.alreadySync++
+      continue
+    }
+
+    // 2. Verificar Status (Trava solicitada pelo usuário)
+    const status = (l.status || '').toLowerCase()
+    if (status !== 'pago' && status !== 'conciliado') {
+      results.skippedStatus++
+      continue
+    }
+
+    // 3. Sincronizar
     const res = await sincronizarLancamentoContabil(l.id)
-    if (!res.error) count++
-    else if (res.error === 'Lançamento já sincronizado') {
-      alreadySynced++
+    if (res.error) {
+      if (res.error.includes('Mapeamento incompleto')) {
+        results.skippedMapping++
+      } else {
+        results.errors.push(`${l.descricao}: ${res.error}`)
+      }
     } else {
-      errors.push(`${l.id}: ${res.error}`)
+      results.success++
     }
   }
 
-  // 2. Registrar LOG da operação
+  // 4. Auto-reparo de numeração (Garante a sequência correta após inserções)
+  try {
+    await repararNumeracaoAction()
+  } catch (err) {
+    console.error('Erro no auto-reparo:', err)
+  }
+
+  // 5. Registrar Log Detalhado
   await sb.from('contabil_logs').insert({
     tenant_id: tenantId,
-    acao: 'SINCRONIZAÇÃO EM MASSA',
-    detalhes: `Processados ${lancs.length} itens. Sucesso: ${count}. Já sincronizados: ${alreadySynced}. Erros: ${errors.length}. Período: ${dataInicio}`,
+    acao: 'SINCRONIZAÇÃO FINANCEIRO',
+    detalhes: `Período desde ${dataInicio}. Total: ${results.total} | Sucesso: ${results.success} | Já Sinc: ${results.alreadySync} | Pulados (Status): ${results.skippedStatus} | Pulados (Mapeamento): ${results.skippedMapping}.`,
     usuario_id: user.id
   })
 
-  // 3. Auto-reparo de numeração bagunçada (Opcional, mas ajuda a manter a ordem)
-  try {
-    const { repararNumeracaoAction } = await import('./documentLinkActions')
-    await repararNumeracaoAction()
-  } catch (err) {
-    console.error('Erro no auto-reparo de numeração:', err)
-  }
-
   return { 
     success: true, 
-    count, 
-    total: lancs.length, 
-    alreadySynced,
-    errors: errors.length > 0 ? errors : null 
+    ...results
   }
 }
 
@@ -502,6 +282,7 @@ export async function excluirLancamentosLoteAction(ids: string[], senha: string)
     return { error: err.message }
   }
 }
+
 /**
  * Sincroniza todas as notas fiscais (NFSe e NFe) do período
  */
@@ -564,13 +345,14 @@ export async function integracaoFiscalContabilTotalAction(dataInicio: string = '
   await sb.from('contabil_logs').insert({
     tenant_id: tenantId,
     acao: 'INTEGRAÇÃO TOTAL (FISCAL+CONTÁBIL)',
-    detalhes: `Sincronização iniciada em ${dataInicio}. Financeiro: ${resFin.count} novos. Fiscal: ${resFis.nfseCount} NFS-e e ${resFis.nfeCount} NF-e integradas.`,
+    detalhes: `Sincronização total desde ${dataInicio}. Resumo: ${resFin.success} financeiros e ${resFis.nfseCount + resFis.nfeCount} fiscais integrados.`,
     usuario_id: user.id
   })
 
   return {
     success: true,
     financeiro: resFin,
-    fiscal: resFis
+    fiscal: resFis,
+    resumo: `Financeiro: ${resFin.success} novos, ${resFin.skippedStatus} pulados por status, ${resFin.skippedMapping} sem mapeamento. Fiscal: ${resFis.nfseCount + resFis.nfeCount} notas.`
   }
 }
