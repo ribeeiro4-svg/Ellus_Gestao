@@ -81,11 +81,11 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
       }
     }
 
-    // C. Se não encontrou globalmente, insere ou faz upsert local
+    // C. Se não encontrou globalmente, insere como nova nota
     if (!nfseId) {
-      const { data: nova, error: upsertErr } = await sbAdmin
+      const { data: nova, error: insertErr } = await sbAdmin
         .from('nfse_entradas')
-        .upsert({
+        .insert({
           tenant_id: tenantId,
           prestador_id: prestador.id,
           numero_nfse: parsed.nota.numero_nfse,
@@ -104,13 +104,11 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
           codigo_servico_lc116: parsed.nota.codigo_servico_lc116,
           situacao: 'autorizada',
           status_escrituracao: 'pendente'
-        }, {
-          onConflict: parsed.nota.chave_nacional ? 'chave_nacional' : 'tenant_id,numero_nfse,prestador_id'
         })
         .select('id')
         .single()
 
-      if (upsertErr) throw new Error(`Erro ao salvar nota: ${upsertErr.message}`)
+      if (insertErr) throw new Error(`Erro ao salvar nota (insert): ${insertErr.message}`)
       nfseId = nova.id
     }
 
