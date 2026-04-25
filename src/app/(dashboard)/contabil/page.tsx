@@ -84,8 +84,8 @@ export default function ContabilPage() {
               if (confirm('Deseja configurar automaticamente o mapeamento das categorias financeiras e atualizar as contas de fornecedores?')) {
                 const { seedAccountingConfigAction } = await import('@/features/contabil/actions/seedAccountingConfig')
                 const { fixFornecedoresAccountsAction } = await import('@/features/contabil/actions/fixFornecedoresAccounts')
-                const res = await seedAccountingConfigAction()
-                const fixRes = await fixFornecedoresAccountsAction()
+                const res = await seedAccountingConfigAction(planoHook.tenantId)
+                const fixRes = await fixFornecedoresAccountsAction(planoHook.tenantId)
                 if (res.success) alert(`Mapeamento configurado! ${fixRes.count ? fixRes.count + ' fornecedores atualizados.' : ''}`)
                 else alert(`Erro ao configurar: ${res.error}`)
               }

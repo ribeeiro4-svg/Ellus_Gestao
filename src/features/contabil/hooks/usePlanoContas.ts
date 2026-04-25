@@ -16,7 +16,24 @@ export interface ContaCodigo {
   conta_pai_id: string | null
 }
 
-export function usePlanoContas() {
+export function usePlanoContas(): {
+  tenantId: string
+  contas: ContaCodigo[]
+  loading: boolean
+  contasAnaliticas: ContaCodigo[]
+  porClassificacao: {
+    ativo: ContaCodigo[]
+    passivo: ContaCodigo[]
+    patrimonio_social: ContaCodigo[]
+    ingresso: ContaCodigo[]
+    despesa: ContaCodigo[]
+  }
+  inicializarPlanoContas: () => Promise<{ error: string | null }>
+  adicionarConta: (data: Omit<ContaCodigo, 'id'>) => Promise<{ error: any }>
+  editarConta: (id: string, data: Partial<ContaCodigo>) => Promise<{ error: any }>
+  desativarConta: (id: string) => Promise<{ error: any }>
+  refresh: () => Promise<void>
+} {
   const tenantId = useTenantId()
   const [contas, setContas] = useState<ContaCodigo[]>([])
   const [loading, setLoading] = useState(true)
@@ -102,5 +119,5 @@ export function usePlanoContas() {
     despesa: contas.filter(c => c.classificacao === 'despesa'),
   }
 
-  return { contas, loading, contasAnaliticas, porClassificacao, inicializarPlanoContas, adicionarConta, editarConta, desativarConta, refresh: fetch }
+  return { tenantId, contas, loading, contasAnaliticas, porClassificacao, inicializarPlanoContas, adicionarConta, editarConta, desativarConta, refresh: fetch }
 }

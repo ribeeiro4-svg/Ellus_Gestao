@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from 'react'
-import { FileText, Package, Calendar, BarChart3, Upload, BookOpen, AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react'
+import { FileText, Package, Calendar, BarChart3, Upload, BookOpen, AlertTriangle, CheckCircle, Clock, TrendingUp, FileCheck, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 import { useNFe } from '@/features/fiscal/hooks/useNFe'
 import { useProdutosEstoque } from '@/features/fiscal/hooks/useProdutosEstoque'
 import FiscalDashboard from '@/features/fiscal/components/FiscalDashboard'
@@ -10,7 +11,7 @@ import EscrituracaoNFe from '@/features/fiscal/components/EscrituracaoNFe'
 import PeriodosFiscais from '@/features/fiscal/components/PeriodosFiscais'
 import EstoqueTab from '@/features/fiscal/components/EstoqueTab'
 
-type Tab = 'dashboard' | 'importar' | 'notas' | 'escrituracao' | 'estoque' | 'periodos'
+type Tab = 'dashboard' | 'importar' | 'notas' | 'escrituracao' | 'estoque' | 'periodos' | 'nfse'
 
 export default function FiscalPage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
@@ -25,6 +26,7 @@ export default function FiscalPage() {
     { id: 'escrituracao' as Tab, label: '✍️ Escrituração', icon: BookOpen },
     { id: 'estoque' as Tab, label: '📦 Estoque', icon: Package, badge: estoqueHook.stats.produtosAbaixoMinimo > 0 ? estoqueHook.stats.produtosAbaixoMinimo : undefined },
     { id: 'periodos' as Tab, label: '📅 Períodos', icon: Calendar },
+    { id: 'nfse' as Tab, label: '🏢 NFS-e (Serviços)', icon: FileCheck },
   ]
 
   const handleEscriturar = (nfeId: string) => {
@@ -82,6 +84,16 @@ export default function FiscalPage() {
       {activeTab === 'escrituracao' && <EscrituracaoNFe nfeHook={nfeHook} nfeIdInicial={nfeParaEscriturar} />}
       {activeTab === 'estoque' && <EstoqueTab estoqueHook={estoqueHook} />}
       {activeTab === 'periodos' && <PeriodosFiscais nfeHook={nfeHook} />}
+      {activeTab === 'nfse' && (
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-blue-200">
+           <FileCheck size={48} className="text-blue-100 mb-4" />
+           <h3 className="text-lg font-black text-slate-800">Módulo de NFS-e (Serviços Tomados)</h3>
+           <p className="text-sm text-slate-400 mb-6 text-center max-w-md">O módulo de serviços agora possui uma área dedicada para gestão de retenções e integração contábil.</p>
+           <Link href="/fiscal/nfse" className="px-8 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-2">
+             Acessar Gestão de NFS-e <ArrowRight size={16} />
+           </Link>
+        </div>
+      )}
     </div>
   )
 }

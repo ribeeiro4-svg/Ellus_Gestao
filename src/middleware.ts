@@ -34,9 +34,8 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Redireciona para login se não autenticado (DISABLED FOR DEMO/TESTING)
-  /*
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  // Redireciona para login se não autenticado
+  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/auth')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -44,7 +43,6 @@ export async function middleware(request: NextRequest) {
   if (user && request.nextUrl.pathname.startsWith('/login')) {
     return NextResponse.redirect(new URL('/', request.url))
   }
-  */
 
   return response
 }

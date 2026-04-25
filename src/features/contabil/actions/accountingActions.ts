@@ -14,10 +14,23 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   const fechado = await isPeriodoFechado(fin.data, fin.tenant_id)
   if (fechado) return { error: `O período contábil (${fin.data.slice(0,7)}) está FECHADO. Reabra o período para sincronizar.` }
 
-  // 2. Buscar o mapeamento para a categoria
-  const { data: map, error: mapErr } = await sb.from('configuracoes_contabeis').select('*').eq('tenant_id', fin.tenant_id).eq('categoria_nome', fin.categoria).maybeSingle()
-  if (mapErr || !map) {
-    console.warn(`[AccountingSync] Sem mapeamento para categoria: ${fin.categoria}`)
+  // 2. Buscar o mapeamento para a categoria (Normalizado/Fuzzy)
+  const { data: allMaps } = await sb
+    .from('configuracoes_contabeis')
+    .select('*')
+    .eq('tenant_id', fin.tenant_id)
+  
+  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '').trim()
+  const finCatNorm = normalize(fin.categoria)
+  
+  const targetTipo = fin.tipo === 'receita' ? 'ingresso' : 'dispendio'
+  const map = allMaps?.find(m => 
+    normalize(m.categoria_nome) === finCatNorm && 
+    m.tipo === targetTipo
+  )
+
+  if (!map) {
+    console.warn(`[AccountingSync] Sem mapeamento para categoria: ${fin.categoria} (Norm: ${finCatNorm})`)
     return { error: `Categoria '${fin.categoria}' não mapeada no Plano de Contas ITG 2002.` }
   }
 

@@ -217,6 +217,137 @@ export async function tempFixDatabaseAction() {
       created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
     );
 
+    -- 5. Liberar Acesso (Seguindo padrão das outras tabelas)
+    ALTER TABLE conciliacao_logs DISABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS "conciliacao_logs_tenant" ON conciliacao_logs;
+
+    -- ============================================================
+    -- MÓDULO NFS-e (SERVIÇOS TOMADOS) - FASE 1
+    -- ============================================================
+
+    -- 6. Atualização de Fornecedores
+    ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS is_fornecedor_mercadorias BOOLEAN DEFAULT TRUE;
+    ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS is_prestador_servicos BOOLEAN DEFAULT FALSE;
+    ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS cnae_principal TEXT;
+    ALTER TABLE fornecedores ADD COLUMN IF NOT EXISTS inscricao_municipal TEXT;
+
+    -- 7. Mapeamento de Contas por Operação
+    CREATE TABLE IF NOT EXISTS fornecedor_conta_contabil_map (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        fornecedor_id UUID NOT NULL REFERENCES fornecedores(id) ON DELETE CASCADE,
+        tipo_operacao TEXT NOT NULL CHECK (tipo_operacao IN ('mercadoria', 'servico')),
+        conta_contabil_id UUID NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(tenant_id, fornecedor_id, tipo_operacao)
+    );
+    ALTER TABLE fornecedor_conta_contabil_map ENABLE ROW LEVEL SECURITY;
+
+    -- 8. Tabela de NFS-e
+    CREATE TABLE IF NOT EXISTS nfse_entradas (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        numero_nfse TEXT NOT NULL,
+        codigo_verificacao TEXT,
+        chave_nacional TEXT UNIQUE,
+        data_emissao TIMESTAMPTZ NOT NULL,
+        data_competencia DATE NOT NULL,
+        situacao TEXT NOT NULL DEFAULT 'autorizada',
+        prestador_id UUID NOT NULL REFERENCES fornecedores(id),
+        municipio_prestacao_ibge TEXT,
+        municipio_incidencia_ibge TEXT,
+        valor_bruto NUMERIC(12,2) NOT NULL DEFAULT 0,
+        valor_deducoes NUMERIC(12,2) DEFAULT 0,
+        base_calculo NUMERIC(12,2) NOT NULL DEFAULT 0,
+        aliquota_iss NUMERIC(5,2),
+        valor_iss NUMERIC(12,2) DEFAULT 0,
+        iss_retido BOOLEAN DEFAULT FALSE,
+        valor_irrf NUMERIC(12,2) DEFAULT 0,
+        valor_pis NUMERIC(12,2) DEFAULT 0,
+        valor_cofins NUMERIC(12,2) DEFAULT 0,
+        valor_csll NUMERIC(12,2) DEFAULT 0,
+        valor_pcc_total NUMERIC(12,2) DEFAULT 0,
+        valor_liquido NUMERIC(12,2) NOT NULL,
+        descricao_servico TEXT,
+        codigo_servico_lc116 TEXT,
+        codigo_nbs TEXT,
+        conta_despesa_id UUID,
+        centro_custo_id UUID,
+        projeto_id UUID,
+        status_escrituracao TEXT NOT NULL DEFAULT 'pendente',
+        lancamento_contabil_id UUID,
+        xml_url TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    ALTER TABLE nfse_entradas ENABLE ROW LEVEL SECURITY;
+
+    -- 9. Detalhamento de Retenções
+    CREATE TABLE IF NOT EXISTS nfse_retencoes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        nfse_id UUID NOT NULL REFERENCES nfse_entradas(id) ON DELETE CASCADE,
+        tipo_retencao TEXT NOT NULL CHECK (tipo_retencao IN ('IRRF', 'PIS', 'COFINS', 'CSLL', 'PCC', 'ISS')),
+        valor NUMERIC(12,2) NOT NULL,
+        aliquota NUMERIC(5,2),
+        data_vencimento_darf DATE,
+        conta_passivo_id UUID,
+        status_recolhimento TEXT DEFAULT 'pendente',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    ALTER TABLE nfse_retencoes ENABLE ROW LEVEL SECURITY;
+
+    -- 10. Vínculos Financeiros
+    CREATE TABLE IF NOT EXISTS nfse_financeiro_vinculo (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        nfse_id UUID NOT NULL REFERENCES nfse_entradas(id) ON DELETE CASCADE,
+        transacao_id UUID NOT NULL REFERENCES lancamentos(id) ON DELETE CASCADE,
+        tipo_vinculo TEXT DEFAULT 'manual',
+        data_vinculo TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(nfse_id, transacao_id)
+    );
+    ALTER TABLE nfse_financeiro_vinculo ENABLE ROW LEVEL SECURITY;
+
+    -- 11. Motor de Memorização NFS-e
+    CREATE TABLE IF NOT EXISTS motor_memorizacao_nfse (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        prestador_id UUID NOT NULL REFERENCES fornecedores(id),
+        codigo_servico TEXT NOT NULL,
+        conta_contabil_id UUID NOT NULL,
+        confianca INTEGER DEFAULT 100,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(tenant_id, prestador_id, codigo_servico)
+    );
+    ALTER TABLE motor_memorizacao_nfse ENABLE ROW LEVEL SECURITY;
+
+    -- 12. Políticas de RLS
+    DO $$ 
+    BEGIN
+        -- Mapeamento
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'fornecedor_conta_contabil_map') THEN
+            CREATE POLICY "fornecedor_map_tenant" ON fornecedor_conta_contabil_map FOR ALL USING (tenant_id IN (SELECT tenant_id FROM usuarios WHERE id = auth.uid()));
+        END IF;
+        -- NFSe
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'nfse_entradas') THEN
+            CREATE POLICY "nfse_tenant" ON nfse_entradas FOR ALL USING (tenant_id IN (SELECT tenant_id FROM usuarios WHERE id = auth.uid()));
+        END IF;
+        -- Retencoes
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'nfse_retencoes') THEN
+            CREATE POLICY "nfse_retencoes_tenant" ON nfse_retencoes FOR ALL USING (tenant_id IN (SELECT tenant_id FROM usuarios WHERE id = auth.uid()));
+        END IF;
+        -- Vinculos
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'nfse_financeiro_vinculo') THEN
+            CREATE POLICY "nfse_vinculo_tenant" ON nfse_financeiro_vinculo FOR ALL USING (tenant_id IN (SELECT tenant_id FROM usuarios WHERE id = auth.uid()));
+        END IF;
+        -- Memorizacao
+        IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'motor_memorizacao_nfse') THEN
+            CREATE POLICY "nfse_memo_tenant" ON motor_memorizacao_nfse FOR ALL USING (tenant_id IN (SELECT tenant_id FROM usuarios WHERE id = auth.uid()));
+        END IF;
+    END $$;
+
     -- Forçar recarga do cache do PostgREST
     NOTIFY pgrst, 'reload schema';
 

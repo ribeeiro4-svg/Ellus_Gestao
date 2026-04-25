@@ -1,26 +1,18 @@
-'use server'
-import { createServerSupabase } from '@/lib/supabase/server'
 
-export async function seedAccountingConfigAction(providedTenantId?: string) {
-  const sb = await createServerSupabase()
-  const { data: { user } } = await sb.auth.getUser()
-  
-  let tenantId = providedTenantId || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
+const { createClient } = require('@supabase/supabase-js')
 
-  if (user) {
-    const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
-    if (userData?.tenant_id) tenantId = userData.tenant_id
-  }
+const supabaseUrl = "https://ukfgrjcflhlgeuarxtmt.supabase.co"
+const supabaseKey = "sb_publishable_ANxkicVQPt2SxrkjxH35jg_rifD9CGb" // Anon key
+const tenantId = '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
 
-  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '').trim()
+const sb = createClient(supabaseUrl, supabaseKey)
 
-  const mappings = [
-    // Ingressos (Receitas)
+const mappings = [
+    // Ingressos
     { categoria_nome: 'MENSALIDADES', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
     { categoria_nome: 'MENSALIDADE', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
     { categoria_nome: 'MENSALIDADE DE ASSOCIADO', conta_contabil_codigo: '3.1.1.01.001', conta_contabil_nome: 'Mensalidades de Associados', tipo: 'ingresso' },
     { categoria_nome: 'ADESÃO', conta_contabil_codigo: '3.1.1.01.002', conta_contabil_nome: 'Taxas de Adesão de Novos Membros', tipo: 'ingresso' },
-    { categoria_nome: 'OUTROS', conta_contabil_codigo: '3.1.1.01.003', conta_contabil_nome: 'Outras Receitas Operacionais', tipo: 'ingresso' },
     
     // Dispêndios com Pessoal (Bolsas e Estagiários)
     { categoria_nome: 'PRÓ-LABORE (DIRETORIA)', conta_contabil_codigo: '4.2.1.01.001', conta_contabil_nome: 'Pró-Labore da Diretoria Executiva', tipo: 'dispendio' },
@@ -67,97 +59,81 @@ export async function seedAccountingConfigAction(providedTenantId?: string) {
     { categoria_nome: 'VIAGENS E HOSPEDAGENS', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
     { categoria_nome: 'ALIMENTAÇÃO', conta_contabil_codigo: '4.1.1.01.004', conta_contabil_nome: 'Benefícios e Auxílios a Empregados', tipo: 'dispendio' },
     { categoria_nome: 'IMPOSTOS E TAXAS', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
-    { categoria_nome: 'OUTROS (DESPESA)', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
+    { categoria_nome: 'OUTROS', conta_contabil_codigo: '4.2.2.01.013', conta_contabil_nome: 'Outros Dispêndios Administrativos', tipo: 'dispendio' },
     { categoria_nome: 'TRANSPORTE', conta_contabil_codigo: '4.1.1.01.004', conta_contabil_nome: 'Benefícios e Auxílios a Empregados', tipo: 'dispendio' },
     { categoria_nome: 'TROCO', conta_contabil_codigo: '1.1.1.01.001', conta_contabil_nome: 'Caixa Geral', tipo: 'dispendio' },
-  ]
+];
 
-  // 1. Upsert mapeamentos padrão
-  const records = mappings.map(m => ({
-    tenant_id: tenantId,
-    ...m,
-    updated_at: new Date().toISOString()
-  }))
-
-  await sb.from('configuracoes_contabeis').upsert(records, { onConflict: 'tenant_id,categoria_nome' })
-
-  // 2. Busca categorias existentes nos lançamentos que não estão mapeadas
-  const { data: categoriasFinanceiras } = await sb
-    .from('lancamentos')
-    .select('categoria, tipo')
-    .eq('tenant_id', tenantId)
-
-  if (!categoriasFinanceiras) return { success: true }
-
-  // Deduplica e normaliza
-  const uniqueCats = Array.from(new Set(categoriasFinanceiras.map(c => JSON.stringify({ n: normalize(c.categoria), t: c.tipo, original: c.categoria }))))
-    .map(s => JSON.parse(s))
-
-  // Busca mapeamentos atuais para comparar
-  const { data: currentMaps } = await sb.from('configuracoes_contabeis').select('categoria_nome, tipo').eq('tenant_id', tenantId)
-  const mappedNorms = (currentMaps || []).map(m => `${normalize(m.categoria_nome)}|${m.tipo}`)
-
-  let createdCount = 0
-
-  for (const cat of uniqueCats) {
-    const targetTipo = cat.t === 'receita' ? 'ingresso' : 'dispendio'
-    const key = `${cat.n}|${targetTipo}`
-
-    if (!mappedNorms.includes(key)) {
-      // Criar nova conta e mapeamento
-      const parentCodigo = targetTipo === 'ingresso' ? '3.1.1.01' : '4.2.2.01'
-      
-      // Acha o próximo código sequencial
-      const { data: lastAccounts } = await sb
-        .from('plano_contas')
-        .select('codigo')
-        .eq('tenant_id', tenantId)
-        .like('codigo', `${parentCodigo}.%`)
-        .order('codigo', { ascending: false })
-        .limit(1)
-
-      let nextSeq = 100
-      if (lastAccounts && lastAccounts.length > 0) {
-        const lastPart = lastAccounts[0].codigo.split('.').pop()
-        const lastNum = parseInt(lastPart || '0', 10)
-        if (!isNaN(lastNum) && lastNum >= 100) nextSeq = lastNum + 1
-      } else {
-        // Se não houver subcontas, começa do .001 se for o caso, mas aqui estamos usando o padrão .100+ para dinâmicas
-        nextSeq = 100 
-      }
-
-      const novoCodigo = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
-      const { data: pai } = await sb.from('plano_contas').select('id').eq('tenant_id', tenantId).eq('codigo', parentCodigo).single()
-
-      // Cria a conta
-      const { data: novaConta } = await sb.from('plano_contas').insert({
+async function setup() {
+    console.log("Seeding configuracoes_contabeis...");
+    const records = mappings.map(m => ({
         tenant_id: tenantId,
-        codigo: novoCodigo,
-        descricao: cat.original,
-        nivel: 5,
-        tipo: 'analitica',
-        natureza: targetTipo === 'ingresso' ? 'credora' : 'devedora',
-        classificacao: targetTipo === 'ingresso' ? 'ingresso' : 'despesa',
-        aceita_lancamentos: true,
-        ativa: true,
-        conta_pai_id: pai?.id || null
-      }).select('id').single()
+        ...m,
+        updated_at: new Date().toISOString()
+    }));
 
-      if (novaConta) {
-        // Cria o mapeamento
-        await sb.from('configuracoes_contabeis').insert({
-          tenant_id: tenantId,
-          categoria_nome: cat.original,
-          conta_contabil_codigo: novoCodigo,
-          conta_contabil_nome: cat.original,
-          tipo: targetTipo,
-          updated_at: new Date().toISOString()
-        })
-        createdCount++
-        mappedNorms.push(key) // Evita duplicados no mesmo loop
-      }
+    const { error: seedError } = await sb
+        .from('configuracoes_contabeis')
+        .upsert(records, { onConflict: 'tenant_id,categoria_nome' });
+
+    if (seedError) {
+        console.error("Error seeding mappings:", seedError);
+    } else {
+        console.log("Mappings seeded successfully!");
     }
-  }
 
-  return { success: true, createdCount }
+    console.log("\nFixing fornecedores accounts...");
+    const { data: fornecedores } = await sb.from('fornecedores').select('id, nome').eq('tenant_id', tenantId).is('conta_contabil_id', null);
+    
+    if (!fornecedores || fornecedores.length === 0) {
+        console.log("No vendors without account found.");
+    } else {
+        console.log(`Found ${fornecedores.length} vendors without account.`);
+        for (const f of fornecedores) {
+            const { data: ultimasContas } = await sb.from('plano_contas')
+                .select('codigo')
+                .eq('tenant_id', tenantId)
+                .like('codigo', '2.1.3.01.%')
+                .order('codigo', { ascending: false })
+                .limit(1);
+
+            let novoCodigo = '2.1.3.01.100';
+            if (ultimasContas && ultimasContas.length > 0) {
+                const ultimo = ultimasContas[0].codigo;
+                const partes = ultimo.split('.');
+                const sequencial = parseInt(partes[partes.length - 1], 10);
+                if (!isNaN(sequencial) && sequencial >= 100) {
+                    novoCodigo = `2.1.3.01.${String(sequencial + 1).padStart(3, '0')}`;
+                }
+            }
+
+            const { data: pai } = await sb.from('plano_contas').select('id').eq('tenant_id', tenantId).eq('codigo', '2.1.3.01').single();
+
+            const { data: novaConta, error: accError } = await sb.from('plano_contas').insert({
+                tenant_id: tenantId,
+                codigo: novoCodigo,
+                descricao: `Fornecedor: ${f.nome}`,
+                nivel: 5,
+                tipo: 'analitica',
+                natureza: 'credora',
+                classificacao: 'passivo',
+                aceita_lancamentos: true,
+                ativa: true,
+                conta_pai_id: pai?.id || null
+            }).select('id').single();
+
+            if (accError) {
+                console.error(`Error creating account for ${f.nome}:`, accError);
+            } else if (novaConta) {
+                const { error: updError } = await sb.from('fornecedores').update({ conta_contabil_id: novaConta.id }).eq('id', f.id);
+                if (updError) {
+                    console.error(`Error linking account for ${f.nome}:`, updError);
+                } else {
+                    console.log(`Created and linked account ${novoCodigo} for ${f.nome}`);
+                }
+            }
+        }
+    }
 }
+
+setup();

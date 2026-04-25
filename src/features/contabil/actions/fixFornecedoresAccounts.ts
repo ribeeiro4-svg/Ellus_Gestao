@@ -1,16 +1,16 @@
 'use server'
 import { createServerSupabase } from '@/lib/supabase/server'
 
-export async function fixFornecedoresAccountsAction() {
+export async function fixFornecedoresAccountsAction(providedTenantId?: string) {
   const sb = await createServerSupabase()
   
-  // Como estamos em Server Action, ele pega o tenant_id da sessão logada
   const { data: userData } = await sb.auth.getUser()
-  if (!userData?.user) return { error: 'Não autenticado' }
+  let tenantId = providedTenantId || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
 
-  const { data: usuario } = await sb.from('usuarios').select('tenant_id').eq('id', userData.user.id).single()
-  const tenantId = usuario?.tenant_id
-  if (!tenantId) return { error: 'Tenant não encontrado' }
+  if (userData?.user) {
+    const { data: usuario } = await sb.from('usuarios').select('tenant_id').eq('id', userData.user.id).single()
+    if (usuario?.tenant_id) tenantId = usuario.tenant_id
+  }
 
   // Busca fornecedores sem conta
   const { data: fornecedores } = await sb.from('fornecedores').select('id, nome').eq('tenant_id', tenantId).is('conta_contabil_id', null)

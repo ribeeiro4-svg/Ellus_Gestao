@@ -209,7 +209,7 @@ export default function FinanceiroPage() {
       }))
       
       setReconciliationLogs(logs)
-      saveLog(logs)
+      await saveLog(logs)
       setIsLogModalOpen(true)
       setProcessedIds(prev => { const next = new Set(prev); itemsToProcess.forEach((it: any) => next.add(it.bank.fitid)); return next; })
     } finally { setIsProcessingBatch(false) }
@@ -305,7 +305,7 @@ export default function FinanceiroPage() {
       }))
 
       setReconciliationLogs(logs)
-      saveLog(logs)
+      await saveLog(logs)
       setIsLogModalOpen(true)
       setProcessedIds(prev => { const next = new Set(prev); rowsToProcess.forEach(it => next.add(it.bank.fitid)); return next; })
     } finally { setIsProcessingBatch(false) }

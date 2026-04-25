@@ -66,6 +66,7 @@ const MENU = [
     section: 'Fiscal & Contábil', 
     items: [
       { href: '/fiscal', icon: FileText, label: 'Escrituração Fiscal' },
+      { href: '/fiscal/nfse', icon: FileCheck, label: 'NFS-e (Serviços)' },
       { href: '/contabil', icon: BookOpen, label: 'Contabilidade' },
     ]
   },

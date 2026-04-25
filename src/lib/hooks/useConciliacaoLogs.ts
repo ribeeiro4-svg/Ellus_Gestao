@@ -34,9 +34,14 @@ export function useConciliacaoLogs() {
         tenant_id: tenantId,
         logs: logs
       })
-      if (!error) fetchLogs()
-      return { error }
+      if (error) {
+        console.error('Erro Supabase ao salvar log:', error)
+        return { error: error.message }
+      }
+      fetchLogs()
+      return { success: true }
     } catch (err: any) {
+      console.error('Erro fatal ao salvar log:', err)
       return { error: err.message }
     }
   }

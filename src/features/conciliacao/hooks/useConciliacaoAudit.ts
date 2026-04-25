@@ -48,7 +48,12 @@ export function useConciliacaoAudit(
       const existingMatch = lancamentos.find(l => 
         l.associado_id === assocCpfMatch.id && 
         l.status === 'aberto' && 
-        (l.categoria === 'Mensalidade' || l.categoria === 'Mensalidades') &&
+        (
+          l.categoria === 'Mensalidade' || 
+          l.categoria === 'Mensalidades' || 
+          l.categoria === 'ADESÃO' || 
+          l.descricao?.toUpperCase().includes('ADESAO')
+        ) &&
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
 
@@ -88,7 +93,12 @@ export function useConciliacaoAudit(
       const existingMatch = lancamentos.find(l => 
         l.associado_id === assocExactMatch.id && 
         l.status === 'aberto' && 
-        (l.categoria === 'Mensalidade' || l.categoria === 'Mensalidades') &&
+        (
+          l.categoria === 'Mensalidade' || 
+          l.categoria === 'Mensalidades' || 
+          l.categoria === 'ADESÃO' || 
+          l.descricao?.toUpperCase().includes('ADESAO')
+        ) &&
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
 
@@ -128,7 +138,12 @@ export function useConciliacaoAudit(
       const existingMatch = lancamentos.find(l => 
         l.associado_id === assocFuzzy.id && 
         l.status === 'aberto' && 
-        (l.categoria === 'Mensalidade' || l.categoria === 'Mensalidades') &&
+        (
+          l.categoria === 'Mensalidade' || 
+          l.categoria === 'Mensalidades' || 
+          l.categoria === 'ADESÃO' || 
+          l.descricao?.toUpperCase().includes('ADESAO')
+        ) &&
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
 
