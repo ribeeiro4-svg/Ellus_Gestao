@@ -8,6 +8,12 @@ import { useProdutosEstoque } from '@/features/fiscal/hooks/useProdutosEstoque'
 import { useIntegracaoFiscalContabil } from '@/features/fiscal/hooks/useIntegracaoFiscalContabil'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+const fmtCFOP = (c: string | null) => {
+  if (!c) return ''
+  const clean = c.replace(/\D/g, '')
+  if (clean.length === 4) return `${clean[0]}.${clean.substring(1)}`
+  return c
+}
 
 import { getFornecedorByCpfCnpjAction, garantirFornecedorAction } from '@/features/fiscal/actions/nfseActions'
 import { getTributacaoPresetsAction, salvarTributacaoPresetAction, excluirTributacaoPresetAction } from '@/features/fiscal/actions/fiscalActions'
@@ -406,7 +412,7 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
 
                         <td className="px-3 py-4 align-top">
                           <select
-                            value={item.cfop_escrituracao || ''}
+                            value={fmtCFOP(item.cfop_escrituracao)}
                             onChange={e => updateItem(idx, 'cfop_escrituracao', e.target.value)}
                             className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold outline-none focus:border-blue-400 transition-all"
                           >

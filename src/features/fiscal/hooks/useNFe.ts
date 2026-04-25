@@ -177,12 +177,13 @@ export function useNFe() {
         // Função auxiliar para pegar apenas o código antes do " - " ou limitar o tamanho
         const limparCodigo = (val: string | null, max: number) => {
           if (!val) return null
-          const soCodigo = val.split(' ')[0].split('-')[0].trim()
+          // Remove pontos e pega apenas a primeira parte antes de qualquer espaço ou hífen
+          const soCodigo = val.split(' ')[0].split('-')[0].replace(/\./g, '').trim()
           return soCodigo.substring(0, max)
         }
 
         const updateData: any = {
-          cfop_escrituracao: limparCodigo(item.cfop_escrituracao, 5),
+          cfop_escrituracao: limparCodigo(item.cfop_escrituracao, 4),
           cst_icms: limparCodigo(item.cst_icms, 3),
           cst_ipi: limparCodigo(item.cst_ipi, 2),
           cst_pis: limparCodigo(item.cst_pis, 2),
