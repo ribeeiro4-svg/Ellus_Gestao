@@ -21,6 +21,7 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
   const [showLogs, setShowLogs] = useState(false)
   const [logs, setLogs] = useState<any[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [form, setForm] = useState({
     data: new Date().toISOString().split('T')[0],
     historico: '',
@@ -215,6 +216,22 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
           <input type="text" placeholder="Buscar lançamentos..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-medium outline-none" />
         </div>
+        {selectedIds.length > 0 && (
+          <button 
+            onClick={async () => {
+              const senha = prompt(`Digite a senha para excluir permanentemente ${selectedIds.length} lançamentos:`)
+              if (senha) {
+                const res = await excluir(selectedIds, senha)
+                if (res.error) alert(res.error)
+                else setSelectedIds([])
+              }
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all shadow-lg animate-in zoom-in-95"
+          >
+            <Trash2 size={14} />
+            Excluir {selectedIds.length} Lançamentos
+          </button>
+        )}
         <button onClick={fetchLogs}
           className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all">
           {loadingLogs ? <Loader2 size={14} className="animate-spin" /> : <History size={14} />}
@@ -341,17 +358,42 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
         ) : (
           <table className="w-full text-xs">
             <thead className="bg-slate-50">
-              <tr>{['Nº Lanç.', 'Data', 'NF', 'Histórico', 'Débito', 'Crédito', 'Tipo', 'Status', 'Ações'].map(h => (
-                <th key={h} className={`px-4 py-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider ${h === 'Débito' || h === 'Crédito' ? 'text-right' : ''}`}>{h}</th>
-              ))}</tr>
+              <tr>
+                <th className="px-4 py-3 text-left">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    checked={selectedIds.length === filtered.length && filtered.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedIds(filtered.map((l: any) => l.id))
+                      else setSelectedIds([])
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </th>
+                {['Nº Lanç.', 'Data', 'NF', 'Histórico', 'Débito', 'Crédito', 'Tipo', 'Status', 'Ações'].map(h => (
+                  <th key={h} className={`px-4 py-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider ${h === 'Débito' || h === 'Crédito' ? 'text-right' : ''}`}>{h}</th>
+                ))}
+              </tr>
             </thead>
             <tbody>
               {filtered.map((l: any) => {
                 const tipo = getTipoDisplay(l)
                 return (
                   <React.Fragment key={l.id}>
-                    <tr className={`group border-t border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${l.status === 'estornado' ? 'opacity-50' : ''}`}
+                    <tr className={`group border-t border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${l.status === 'estornado' ? 'opacity-50' : ''} ${selectedIds.includes(l.id) ? 'bg-indigo-50/50' : ''}`}
                       onClick={() => toggleExpand(l.id)}>
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input 
+                          type="checkbox" 
+                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          checked={selectedIds.includes(l.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) setSelectedIds(prev => [...prev, l.id])
+                            else setSelectedIds(prev => prev.filter(id => id !== l.id))
+                          }}
+                        />
+                      </td>
                       <td className="px-4 py-3 font-mono text-[10px] text-indigo-600 font-black">{l.numero_lancamento}</td>
                       <td className="px-4 py-3 text-slate-600 font-bold whitespace-nowrap">{fmtData(l.data_lancamento)}</td>
                       <td className="px-4 py-3">

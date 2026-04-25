@@ -536,6 +536,20 @@ export default function FinanceiroPage() {
     },
     { header: 'Data Lançamento', key: 'created_at', filterValue: (l: any) => l.created_at ? fmtData(l.created_at) : '--', render: (l: any) => <span className="text-[10px] font-bold text-slate-500">{l.created_at ? fmtData(l.created_at) : '--'}</span> },
     { 
+      header: 'Contabilizado', 
+      key: 'contabil', 
+      render: (l: any) => {
+        const numero = l.contabil?.[0]?.numero_lancamento
+        if (!numero) return <span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Não integrado</span>
+        return (
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black text-emerald-600 uppercase">{numero}</span>
+            <span className="text-[8px] text-emerald-400 font-bold uppercase tracking-tighter">Livro Diário</span>
+          </div>
+        )
+      }
+    },
+    { 
       header: '', 
       key: 'acoes', 
       className: 'text-right', 
@@ -757,6 +771,30 @@ export default function FinanceiroPage() {
               </button>
               <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100">
                 <RefreshCw size={14} /> Recorrência em Lote
+              </button>
+              <button 
+                onClick={async () => {
+                  if (!confirm('Deseja realizar a Integração Total (Fiscal e Contábil) de todo o exercício?')) return
+                  setIsProcessingBatch(true)
+                  try {
+                    const { integracaoFiscalContabilTotalAction } = await import('@/features/contabil/actions/accountingActions')
+                    const res = await integracaoFiscalContabilTotalAction(`${filterYear}-01-01`)
+                    if (res.success) {
+                      alert('Integração concluída com sucesso! Verifique os logs no módulo contábil.')
+                      refresh()
+                    } else {
+                      alert(`Erro na integração: ${res.error}`)
+                    }
+                  } catch (err: any) {
+                    alert(`Erro inesperado: ${err.message}`)
+                  } finally {
+                    setIsProcessingBatch(true) // Forçar refresh visual se necessário
+                    setIsProcessingBatch(false)
+                  }
+                }}
+                className="px-6 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-100"
+              >
+                <CloudLightning size={14} /> Integração Fiscal e Contábil
               </button>
             </div>
           </div>

@@ -183,20 +183,12 @@ export function useLancamentosContabeis() {
     return r
   }
 
-  const excluir = async (id: string, senha: string) => {
-    if (senha !== '19072425') return { error: 'Senha de exclusão incorreta.' }
-    const original = lancamentos.find(l => l.id === id)
-    if (!original) return { error: 'Lançamento não encontrado' }
-
-    // Excluir as partidas (caso não haja ON DELETE CASCADE configurado)
-    const { error: partErr } = await sb.from('lancamentos_partidas').delete().eq('lancamento_id', id)
-    if (partErr) return { error: partErr.message }
-
-    const { error: lancErr } = await sb.from('lancamentos_contabeis').delete().eq('id', id)
-    if (lancErr) return { error: lancErr.message }
-
-    fetch()
-    return { error: null }
+  const excluir = async (ids: string[] | string, senha: string) => {
+    const idArray = Array.isArray(ids) ? ids : [ids]
+    const { excluirLancamentosLoteAction } = await import('../actions/accountingActions')
+    const res = await excluirLancamentosLoteAction(idArray, senha)
+    if (!res.error) fetch()
+    return res
   }
 
   // Balancete de verificação por período

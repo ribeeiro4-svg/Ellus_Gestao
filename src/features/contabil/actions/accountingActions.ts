@@ -204,7 +204,7 @@ export async function sincronizarLancamentoContabil(financialId: string) {
         maxSeq = parseInt(parts[1], 10)
       }
     }
-    const seq = (maxSeq + 1).toString().padStart(6, '0')
+    const seq = (maxSeq + 1).toString().padStart(4, '0')
     numero = `${ano}/${seq}`
   }
 
@@ -348,7 +348,7 @@ export async function sincronizarNotaFiscalContabil(notaId: string, tipo: 'nfse'
         maxSeq = parseInt(parts[1], 10)
       }
     }
-    const seq = (maxSeq + 1).toString().padStart(6, '0')
+    const seq = (maxSeq + 1).toString().padStart(4, '0')
     numero = `${ano}/${seq}`
   }
 
@@ -413,11 +413,13 @@ export async function sincronizarPeriodoContabil(dataInicio: string) {
   const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
   const tenantId = userData?.tenant_id
 
-  // 1. Buscar todos os lançamentos pagos ou conciliados desde a data de início
+  // 1. Buscar todos os lançamentos pagos ou conciliados desde a data de início (ORDENADO POR DATA)
   let query = sb.from('lancamentos')
-    .select('id')
+    .select('id, data')
     .or('status.eq.pago,conciliado.eq.true')
     .gte('data', dataInicio)
+    .order('data', { ascending: true })
+    .order('created_at', { ascending: true })
   
   if (tenantId) query = query.eq('tenant_id', tenantId)
   
@@ -462,5 +464,113 @@ export async function sincronizarPeriodoContabil(dataInicio: string) {
     total: lancs.length, 
     alreadySynced,
     errors: errors.length > 0 ? errors : null 
+  }
+}
+
+/**
+ * Exclui lançamentos contábeis em lote e registra no log
+ */
+export async function excluirLancamentosLoteAction(ids: string[], senha: string) {
+  if (senha !== '19072425') return { error: 'Senha de exclusão incorreta.' }
+  
+  const sb = await createServerSupabase()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return { error: 'Sessão expirada' }
+
+  // 1. Buscar tenant_id do usuário
+  const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+  const tenantId = userData?.tenant_id
+
+  try {
+    // 2. Excluir partidas primeiro (Importante para integridade)
+    await sb.from('lancamentos_partidas').delete().in('lancamento_id', ids)
+
+    // 3. Excluir capas
+    const { error: delErr } = await sb.from('lancamentos_contabeis').delete().in('id', ids)
+    if (delErr) throw delErr
+
+    // 4. Registrar LOG
+    await sb.from('contabil_logs').insert({
+      tenant_id: tenantId,
+      acao: 'EXCLUSÃO EM LOTE',
+      detalhes: `Usuário excluiu permanentemente ${ids.length} lançamentos do Livro Diário.`,
+      usuario_id: user.id
+    })
+
+    return { success: true }
+  } catch (err: any) {
+    return { error: err.message }
+  }
+}
+/**
+ * Sincroniza todas as notas fiscais (NFSe e NFe) do período
+ */
+export async function sincronizarFiscalContabilLote(dataInicio: string) {
+  const sb = await createServerSupabase()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return { error: 'Sessão expirada' }
+  const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+  const tenantId = userData?.tenant_id
+
+  // 1. NFSe (ORDENADO POR DATA)
+  const { data: nfses } = await sb.from('nfse_entradas')
+    .select('id, data_emissao')
+    .eq('tenant_id', tenantId)
+    .gte('data_emissao', dataInicio)
+    .order('data_emissao', { ascending: true })
+  
+  let nfseCount = 0
+  if (nfses) {
+    for (const n of nfses) {
+      const res = await sincronizarNotaFiscalContabil(n.id, 'nfse')
+      if (!res.error) nfseCount++
+    }
+  }
+
+  // 2. NFe (ORDENADO POR DATA)
+  const { data: nfes } = await sb.from('nfe_entradas')
+    .select('id, data_emissao')
+    .eq('tenant_id', tenantId)
+    .gte('data_emissao', dataInicio)
+    .order('data_emissao', { ascending: true })
+  let nfeCount = 0
+  if (nfes) {
+    for (const n of nfes) {
+      const res = await sincronizarNotaFiscalContabil(n.id, 'nfe')
+      if (!res.error) nfeCount++
+    }
+  }
+
+  return { nfseCount, nfeCount }
+}
+
+/**
+ * AÇÃO COMBINADA: Integração Fiscal + Contábil
+ */
+export async function integracaoFiscalContabilTotalAction(dataInicio: string = '2026-01-01') {
+  const sb = await createServerSupabase()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return { error: 'Sessão expirada' }
+  const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+  const tenantId = userData?.tenant_id
+
+  // 1. Integrar Financeiro (Lançamentos Pagos)
+  const resFin = await sincronizarPeriodoContabil(dataInicio)
+  
+  // 2. Integrar Fiscal (Notas Fiscais)
+  const resFis = await sincronizarFiscalContabilLote(dataInicio)
+
+  // 3. Registrar no LOG Central
+  await sb.from('contabil_logs').insert({
+    tenant_id: tenantId,
+    acao: 'INTEGRAÇÃO TOTAL (FISCAL+CONTÁBIL)',
+    detalhes: `Sincronização iniciada em ${dataInicio}. Financeiro: ${resFin.count} novos. Fiscal: ${resFis.nfseCount} NFS-e e ${resFis.nfeCount} NF-e integradas.`,
+    usuario_id: user.id
+  })
+
+  return {
+    success: true,
+    financeiro: resFin,
+    fiscal: resFis
   }
 }
