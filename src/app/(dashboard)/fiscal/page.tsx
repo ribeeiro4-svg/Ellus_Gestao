@@ -1,9 +1,10 @@
 'use client'
 import React, { useState } from 'react'
 import { FileText, Package, Calendar, BarChart3, Upload, BookOpen, AlertTriangle, CheckCircle, Clock, TrendingUp, FileCheck, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useNFe } from '@/features/fiscal/hooks/useNFe'
 import { useProdutosEstoque } from '@/features/fiscal/hooks/useProdutosEstoque'
+import { useNFSe } from '@/features/fiscal/hooks/useNFSe'
 import FiscalDashboard from '@/features/fiscal/components/FiscalDashboard'
 import ImportarNFe from '@/features/fiscal/components/ImportarNFe'
 import ListaNFe from '@/features/fiscal/components/ListaNFe'
@@ -18,6 +19,8 @@ export default function FiscalPage() {
   const [nfeParaEscriturar, setNfeParaEscriturar] = useState<string | null>(null)
   const nfeHook = useNFe()
   const estoqueHook = useProdutosEstoque()
+  const nfseHook = useNFSe()
+  const router = useRouter()
 
   const tabs = [
     { id: 'dashboard' as Tab, label: '📊 Dashboard', icon: BarChart3 },
@@ -62,7 +65,13 @@ export default function FiscalPage() {
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              if (tab.id === 'nfse') {
+                router.push('/fiscal/nfse')
+              } else {
+                setActiveTab(tab.id)
+              }
+            }}
             className={`relative px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
               activeTab === tab.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
@@ -78,22 +87,12 @@ export default function FiscalPage() {
       </div>
 
       {/* Content */}
-      {activeTab === 'dashboard' && <FiscalDashboard nfeHook={nfeHook} estoqueHook={estoqueHook} />}
+      {activeTab === 'dashboard' && <FiscalDashboard nfeHook={nfeHook} estoqueHook={estoqueHook} nfseHook={nfseHook} />}
       {activeTab === 'importar' && <ImportarNFe nfeHook={nfeHook} onImported={() => setActiveTab('notas')} />}
       {activeTab === 'notas' && <ListaNFe nfeHook={nfeHook} onEscriturar={handleEscriturar} />}
       {activeTab === 'escrituracao' && <EscrituracaoNFe nfeHook={nfeHook} nfeIdInicial={nfeParaEscriturar} />}
       {activeTab === 'estoque' && <EstoqueTab estoqueHook={estoqueHook} />}
       {activeTab === 'periodos' && <PeriodosFiscais nfeHook={nfeHook} />}
-      {activeTab === 'nfse' && (
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-blue-200">
-           <FileCheck size={48} className="text-blue-100 mb-4" />
-           <h3 className="text-lg font-black text-slate-800">Módulo de NFS-e (Serviços Tomados)</h3>
-           <p className="text-sm text-slate-400 mb-6 text-center max-w-md">O módulo de serviços agora possui uma área dedicada para gestão de retenções e integração contábil.</p>
-           <Link href="/fiscal/nfse" className="px-8 py-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-2">
-             Acessar Gestão de NFS-e <ArrowRight size={16} />
-           </Link>
-        </div>
-      )}
     </div>
   )
 }
