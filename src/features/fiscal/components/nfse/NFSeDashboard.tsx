@@ -1,7 +1,7 @@
 
 'use client'
 import React, { useState } from 'react'
-import { FileText, Clock, CheckCircle, TrendingUp, DollarSign, BarChart3, Trash2, Lock, X } from 'lucide-react'
+import { FileText, Clock, CheckCircle, TrendingUp, DollarSign, BarChart3, Trash2, Lock, X, Printer, Eye, PenLine } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
@@ -110,6 +110,84 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
     setModalTarget(null)
   }
 
+  const visualizarDanfse = (nfe: any) => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    const prestador = nfe.prestador || {}
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>DANFSE - NFS-e ${nfe.numero_nfse}</title>
+          <style>
+            @page { size: A4 portrait; margin: 1cm; }
+            body { font-family: 'Arial Narrow', Arial, sans-serif; margin: 0; padding: 0; font-size: 10px; color: #1e293b; }
+            .box { border: 1px solid #cbd5e1; padding: 8px; margin-bottom: 12px; border-radius: 4px; }
+            .label { font-size: 8px; font-weight: bold; text-transform: uppercase; color: #64748b; }
+            .value { font-size: 12px; font-weight: black; margin-top: 2px; }
+            .header-title { font-size: 16px; font-weight: black; text-align: center; margin-bottom: 4px; color: #0f172a; }
+            .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+            .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+            .section-title { background: #f1f5f9; padding: 6px; font-weight: black; font-size: 10px; text-align: center; border-bottom: 1px solid #cbd5e1; margin: -8px -8px 8px -8px; border-radius: 4px 4px 0 0; color: #334155; }
+          </style>
+        </head>
+        <body>
+          <div class="box" style="text-align: center; border: 2px solid #94a3b8;">
+            <div class="header-title">PREFEITURA MUNICIPAL</div>
+            <div style="font-size: 14px; font-weight: bold; color: #475569;">NOTA FISCAL DE SERVIÇOS ELETRÔNICA - NFS-e</div>
+            <div class="grid-3" style="margin-top: 12px; text-align: left; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+              <div><span class="label">Número da Nota</span><br><span class="value" style="font-size: 16px; color: #dc2626;">${nfe.numero_nfse}</span></div>
+              <div><span class="label">Data de Emissão</span><br><span class="value">${fmtData(nfe.data_emissao)}</span></div>
+              <div><span class="label">Código de Verificação</span><br><span class="value">${nfe.codigo_verificacao || 'N/A'}</span></div>
+            </div>
+          </div>
+
+          <div class="box">
+            <div class="section-title">PRESTADOR DE SERVIÇOS</div>
+            <div class="grid-2">
+              <div><span class="label">Razão Social / Nome</span><br><span class="value">${prestador.nome || prestador.razao_social || 'N/A'}</span></div>
+              <div><span class="label">CPF/CNPJ</span><br><span class="value">${prestador.cpf_cnpj || prestador.cnpj || 'N/A'}</span></div>
+            </div>
+          </div>
+
+          <div class="box" style="min-height: 180px;">
+            <div class="section-title">DISCRIMINAÇÃO DOS SERVIÇOS</div>
+            <div style="font-size: 12px; font-weight: 500; white-space: pre-wrap; line-height: 1.5; color: #334155;">${nfe.descricao_servico || 'Serviços prestados conforme arquivo original.'}</div>
+          </div>
+
+          <div class="box">
+            <div class="section-title">VALORES E IMPOSTOS</div>
+            <div class="grid-4" style="margin-bottom: 12px;">
+              <div><span class="label">Valor Bruto (R$)</span><br><span class="value">${fmtR(nfe.valor_bruto)}</span></div>
+              <div><span class="label">Deduções (R$)</span><br><span class="value">${fmtR(nfe.valor_deducoes)}</span></div>
+              <div><span class="label">Base de Cálculo (R$)</span><br><span class="value">${fmtR(nfe.base_calculo)}</span></div>
+              <div><span class="label">Alíquota (%)</span><br><span class="value">${nfe.aliquota_iss || 0}%</span></div>
+            </div>
+            <div class="grid-4" style="border-top: 1px dashed #cbd5e1; padding-top: 12px;">
+              <div><span class="label">Valor ISS (R$)</span><br><span class="value">${fmtR(nfe.valor_iss)}</span></div>
+              <div><span class="label">ISS Retido</span><br><span class="value" style="color: ${nfe.iss_retido ? '#dc2626' : '#16a34a'}">${nfe.iss_retido ? 'SIM' : 'NÃO'}</span></div>
+              <div><span class="label">IRRF (R$)</span><br><span class="value">${fmtR(nfe.valor_irrf)}</span></div>
+              <div><span class="label">PCC - PIS/COFINS/CSLL (R$)</span><br><span class="value">${fmtR(nfe.valor_pcc_total)}</span></div>
+            </div>
+            <div style="margin-top: 12px; border-top: 2px solid #e2e8f0; padding-top: 12px; text-align: right;">
+              <span class="label" style="font-size: 11px;">Valor Líquido da Nota</span>
+              <div class="value" style="font-size: 20px; color: #059669;">${fmtR(nfe.valor_liquido)}</div>
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin-top: 20px; font-size: 9px; color: #94a3b8;">
+            Documento Auxiliar da Nota Fiscal de Serviço Eletrônica gerado via Plataforma ACPROBEC
+          </div>
+
+          <script>window.print();</script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
   const kpis = [
     { label: 'Total NFS-e', value: stats.total, icon: FileText, color: '#6366f1', sub: 'Serviços Tomados' },
     { label: 'Pendentes', value: stats.pendentes, icon: Clock, color: '#f59e0b', sub: 'Aguardando Escrituração' },
@@ -165,12 +243,29 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
       render: (n: any) => (
         <div className="flex items-center gap-1">
           <button 
-            onClick={() => onEscriturar(n.id)}
-            className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
-            title="Escriturar Nota"
+            onClick={() => visualizarDanfse(n)} 
+            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" 
+            title="Ver DANFSE"
           >
-            <FileText size={15} />
+            <Printer size={15} />
           </button>
+          {n.status_escrituracao !== 'concluida' ? (
+            <button 
+              onClick={() => onEscriturar(n.id)}
+              className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
+              title="Escriturar Nota"
+            >
+              <PenLine size={15} />
+            </button>
+          ) : (
+            <button 
+              onClick={() => onEscriturar(n.id)}
+              className="p-2 hover:bg-emerald-50 rounded-lg text-slate-400 hover:text-emerald-600 transition-colors"
+              title="Revisar"
+            >
+              <Eye size={15} />
+            </button>
+          )}
           <button 
             onClick={() => pedirExclusao([n.id])}
             className="p-2 hover:bg-red-50 rounded-lg text-slate-300 hover:text-red-500 transition-colors"
