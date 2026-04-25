@@ -384,25 +384,23 @@ export async function getNFSeListAction(tenantIdParam?: string, periodo?: string
 }
 
 
-export async function cleanProblematicNotesAction() {
+/**
+ * Exclui uma ou mais NFS-e por ID (requer senha validada no cliente)
+ */
+export async function deletarNFSeAction(ids: string[]) {
+  if (!ids || ids.length === 0) return { success: false, error: 'Nenhuma nota selecionada' }
+  
   const sbAdmin = createAdminSupabase()
-  // A chave nacional da nota problemática está visível no nome do arquivo XML
-  const chaveNacional = '35503081234053649000178000000057396826027840051628'
   
-  // Delete por chave_nacional (ignora tenant - bypassa RLS via admin)
-  const { data: del1, error: err1 } = await sbAdmin
+  // Primeiro remove vínculos financeiros e contábeis relacionados
+  await sbAdmin.from('nfse_financeiro_vinculo').delete().in('nfse_id', ids)
+  
+  // Depois exclui as notas
+  const { error } = await sbAdmin
     .from('nfse_entradas')
     .delete()
-    .eq('chave_nacional', chaveNacional)
-    .select('id, chave_nacional')
-  
-  // Delete por valor 44.90 (fallback para ABRASF sem chave)
-  const { data: del2, error: err2 } = await sbAdmin
-    .from('nfse_entradas')
-    .delete()
-    .eq('valor_bruto', 44.90)
-    .select('id')
-  
-  const total = (del1?.length || 0) + (del2?.length || 0)
-  return { success: !err1 && !err2, count: total, items: del1, error: err1 || err2 }
+    .in('id', ids)
+
+  if (error) return { success: false, error: error.message }
+  return { success: true, count: ids.length }
 }

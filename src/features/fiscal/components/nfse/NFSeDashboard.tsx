@@ -1,13 +1,125 @@
 
 'use client'
-import React from 'react'
-import { FileText, Clock, CheckCircle, AlertTriangle, TrendingUp, DollarSign, BarChart3, Search } from 'lucide-react'
+import React, { useState } from 'react'
+import { FileText, Clock, CheckCircle, TrendingUp, DollarSign, BarChart3, Trash2, Lock, X } from 'lucide-react'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
+import { deletarNFSeAction } from '../../actions/nfseActions'
+
+const SENHA_EXCLUSAO = '19072425'
+
+function ModalSenha({ 
+  onConfirm, 
+  onCancel, 
+  count 
+}: { 
+  onConfirm: () => void
+  onCancel: () => void
+  count: number 
+}) {
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleConfirm = async () => {
+    if (senha !== SENHA_EXCLUSAO) {
+      setErro('Senha incorreta. Operação não autorizada.')
+      return
+    }
+    setLoading(true)
+    await onConfirm()
+    setLoading(false)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-[380px] flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
+              <Lock size={18} className="text-red-500" />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-800 text-sm">Confirmar Exclusão</h3>
+              <p className="text-[11px] text-slate-400">{count} nota{count > 1 ? 's' : ''} será{count > 1 ? 'ão' : ''} excluída{count > 1 ? 's' : ''}</p>
+            </div>
+          </div>
+          <button onClick={onCancel} className="p-1 hover:bg-slate-100 rounded-lg transition-colors">
+            <X size={16} className="text-slate-400" />
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-500">
+          Esta operação é <strong>irreversível</strong>. Digite a senha de administrador para confirmar.
+        </p>
+
+        <div className="flex flex-col gap-1">
+          <input
+            type="password"
+            placeholder="Senha de administrador"
+            value={senha}
+            onChange={(e) => { setSenha(e.target.value); setErro('') }}
+            onKeyDown={(e) => e.key === 'Enter' && handleConfirm()}
+            autoFocus
+            className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-50 transition-all"
+          />
+          {erro && <p className="text-[11px] text-red-500 font-bold px-1">{erro}</p>}
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2.5 border border-slate-200 rounded-xl text-xs font-black text-slate-500 hover:bg-slate-50 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={loading || !senha}
+            className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 disabled:opacity-50 rounded-xl text-xs font-black text-white transition-all"
+          >
+            {loading ? 'Excluindo...' : 'Excluir'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: any; onEscriturar: (id: string) => void }) {
   const { stats, nfses, loading } = nfseHook
+
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [modalTarget, setModalTarget] = useState<string[] | null>(null) // IDs a excluir
+
+  const allSelected = nfses.length > 0 && selected.size === nfses.length
+  const someSelected = selected.size > 0
+
+  const toggleAll = () => {
+    if (allSelected) setSelected(new Set())
+    else setSelected(new Set(nfses.map((n: any) => n.id)))
+  }
+
+  const toggleOne = (id: string) => {
+    const next = new Set(selected)
+    next.has(id) ? next.delete(id) : next.add(id)
+    setSelected(next)
+  }
+
+  const pedirExclusao = (ids: string[]) => setModalTarget(ids)
+
+  const confirmarExclusao = async () => {
+    if (!modalTarget) return
+    const result = await deletarNFSeAction(modalTarget)
+    if (result.success) {
+      setSelected(new Set())
+      nfseHook.refresh()
+    } else {
+      alert(`Erro ao excluir: ${result.error}`)
+    }
+    setModalTarget(null)
+  }
 
   const kpis = [
     { label: 'Total NFS-e', value: stats.total, icon: FileText, color: '#6366f1', sub: 'Serviços Tomados' },
@@ -18,6 +130,27 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
   ]
 
   const columns = [
+    {
+      header: (
+        <input
+          type="checkbox"
+          checked={allSelected}
+          onChange={toggleAll}
+          className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+          title="Selecionar todas"
+        />
+      ),
+      key: 'select',
+      render: (n: any) => (
+        <input
+          type="checkbox"
+          checked={selected.has(n.id)}
+          onChange={() => toggleOne(n.id)}
+          className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
+        />
+      )
+    },
     { 
       header: 'Data', 
       key: 'data_emissao', 
@@ -62,19 +195,36 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
       header: 'Ações',
       key: 'acoes',
       render: (n: any) => (
-        <button 
-          onClick={() => onEscriturar(n.id)}
-          className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
-          title="Escriturar Nota"
-        >
-          <FileText size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={() => onEscriturar(n.id)}
+            className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
+            title="Escriturar Nota"
+          >
+            <FileText size={15} />
+          </button>
+          <button 
+            onClick={() => pedirExclusao([n.id])}
+            className="p-2 hover:bg-red-50 rounded-lg text-slate-300 hover:text-red-500 transition-colors"
+            title="Excluir Nota"
+          >
+            <Trash2 size={15} />
+          </button>
+        </div>
       )
     }
   ]
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {modalTarget && (
+        <ModalSenha
+          count={modalTarget.length}
+          onConfirm={confirmarExclusao}
+          onCancel={() => setModalTarget(null)}
+        />
+      )}
+
       {/* KPIs */}
       <div className="flex flex-row flex-nowrap gap-3 overflow-x-auto pb-2 scrollbar-hide">
         {kpis.map((kpi, i) => {
@@ -103,6 +253,15 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
           </h2>
           
           <div className="flex items-center gap-2">
+            {someSelected && (
+              <button
+                onClick={() => pedirExclusao(Array.from(selected))}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-black rounded-xl transition-all shadow-sm"
+              >
+                <Trash2 size={13} />
+                Excluir {selected.size} selecionada{selected.size > 1 ? 's' : ''}
+              </button>
+            )}
             <select 
               value={nfseHook.periodo} 
               onChange={(e) => nfseHook.setPeriodo(e.target.value)}
@@ -119,32 +278,13 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
             </select>
           </div>
         </div>
+
         <DataTable 
           columns={columns} 
           data={nfses} 
           loading={loading}
           getRowClassName={(n: any) => n.status_escrituracao === 'concluida' ? 'opacity-60' : ''}
         />
-      </div>
-
-      {/* Diagnostic Badge (Remover após resolver) */}
-      <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 opacity-50 flex items-center justify-between">
-        <p className="text-[10px] text-slate-400 font-mono">
-          DIAGNOSTIC: Tenant={nfseHook.tenantId} | Count={nfseHook.nfses.length} | Periodo={nfseHook.periodo}
-        </p>
-        <button 
-          onClick={async () => {
-            const { cleanProblematicNotesAction } = await import('../../actions/nfseActions')
-            if (confirm('Deseja limpar as notas 17 e 573168 para reimportar?')) {
-              const r = await cleanProblematicNotesAction()
-              alert(r.success ? `Limpeza concluída! ${r.count} notas removidas.` : `Erro: ${r.error?.message}`)
-              nfseHook.refresh()
-            }
-          }}
-          className="px-2 py-1 bg-red-50 text-red-600 text-[10px] font-black rounded border border-red-100 hover:bg-red-100 transition-all"
-        >
-          LIMPAR NOTAS (DIAG)
-        </button>
       </div>
     </div>
   )
