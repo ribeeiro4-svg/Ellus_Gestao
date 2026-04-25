@@ -11,6 +11,7 @@ import ListaNFe from '@/features/fiscal/components/ListaNFe'
 import EscrituracaoNFe from '@/features/fiscal/components/EscrituracaoNFe'
 import PeriodosFiscais from '@/features/fiscal/components/PeriodosFiscais'
 import EstoqueTab from '@/features/fiscal/components/EstoqueTab'
+import NFSeModuleTab from '@/features/fiscal/components/nfse/NFSeModuleTab'
 
 type Tab = 'dashboard' | 'importar' | 'notas' | 'escrituracao' | 'estoque' | 'periodos' | 'nfse'
 
@@ -20,7 +21,6 @@ export default function FiscalPage() {
   const nfeHook = useNFe()
   const estoqueHook = useProdutosEstoque()
   const nfseHook = useNFSe()
-  const router = useRouter()
 
   const tabs = [
     { id: 'dashboard' as Tab, label: '📊 Dashboard', icon: BarChart3 },
@@ -65,13 +65,7 @@ export default function FiscalPage() {
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => {
-              if (tab.id === 'nfse') {
-                router.push('/fiscal/nfse')
-              } else {
-                setActiveTab(tab.id)
-              }
-            }}
+            onClick={() => setActiveTab(tab.id)}
             className={`relative px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
               activeTab === tab.id ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
             }`}
@@ -93,6 +87,7 @@ export default function FiscalPage() {
       {activeTab === 'escrituracao' && <EscrituracaoNFe nfeHook={nfeHook} nfeIdInicial={nfeParaEscriturar} />}
       {activeTab === 'estoque' && <EstoqueTab estoqueHook={estoqueHook} />}
       {activeTab === 'periodos' && <PeriodosFiscais nfeHook={nfeHook} />}
+      {activeTab === 'nfse' && <NFSeModuleTab nfseHook={nfseHook} />}
     </div>
   )
 }
