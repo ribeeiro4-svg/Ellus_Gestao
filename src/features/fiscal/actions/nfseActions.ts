@@ -289,6 +289,26 @@ export async function getNFSeListAction(tenantIdParam?: string) {
     return { error: error.message, data: null }
   }
 
-  return { error: null, data }
+  // Fetch prestadores separately to avoid PostgREST relationship errors
+  let enrichedData = data;
+  if (data && data.length > 0) {
+    const prestadorIds = [...new Set(data.map(n => n.prestador_id).filter(Boolean))];
+    if (prestadorIds.length > 0) {
+      const { data: prestadores } = await sbAdmin
+        .from('fornecedores')
+        .select('id, nome, cpf_cnpj')
+        .in('id', prestadorIds);
+        
+      if (prestadores) {
+        const prestadorMap = Object.fromEntries(prestadores.map(p => [p.id, p]));
+        enrichedData = data.map(n => ({
+          ...n,
+          prestador: prestadorMap[n.prestador_id] || null
+        }));
+      }
+    }
+  }
+
+  return { error: null, data: enrichedData }
 }
 
