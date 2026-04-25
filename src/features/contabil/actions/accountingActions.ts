@@ -153,9 +153,38 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     return { error: `Erro fatal: Nenhuma conta contábil raiz (Caixa ou Resultado) encontrada para o tenant.` }
   }
 
-  // 4. Verificar se já existe um lançamento contábil vinculado (origem_id)
+  // 3.1 Verificar se é um pagamento de NFS-e (Escrituração Prévia)
+  // Se for, o Débito deve ser em Fornecedores (2.1.3.01.002) e não na Despesa
+  const { data: vinculo } = await sb
+    .from('nfse_financeiro_vinculo')
+    .select('id, nfse_id')
+    .eq('financeiro_id', financialId)
+    .maybeSingle()
+
+  let contaDebitoEfetiva = contaCat
+  let historicoEfetivo = `${fin.tipo === 'receita' ? 'REC' : 'PAG'} — ${fin.descricao}`
+
+  if (vinculo && fin.tipo === 'despesa') {
+    const { data: contaFornecedor } = await sb
+      .from('plano_contas')
+      .select('id')
+      .eq('tenant_id', fin.tenant_id)
+      .eq('codigo', '2.1.3.01.002')
+      .maybeSingle()
+    
+    if (contaFornecedor) {
+      contaDebitoEfetiva = contaFornecedor
+      historicoEfetivo = `PAG — Liq. NFS-e vinculada — ${fin.descricao}`
+    }
+  }
+
+  // 4. Verificar e limpar lançamento contábil anterior (Permite Re-sincronização)
   const { data: existing } = await sb.from('lancamentos_contabeis').select('id').eq('origem_id', financialId).maybeSingle()
-  if (existing) return { error: 'Lançamento já sincronizado' }
+  if (existing) {
+    // Remove as partidas antigas primeiro (CASCATA manual ou via DB)
+    await sb.from('lancamentos_partidas').delete().eq('lancamento_id', existing.id)
+    await sb.from('lancamentos_contabeis').delete().eq('id', existing.id)
+  }
 
   // 5. Gerar número do lançamento
   const ano = fin.data.slice(0, 4)
@@ -184,7 +213,7 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     data_lancamento: fin.data,
     data_competencia: fin.data,
     tipo: 'normal',
-    historico: `${fin.tipo === 'receita' ? 'REC' : 'PAG'} — ${fin.descricao}`,
+    historico: historicoEfetivo,
     origem_tipo: 'financeiro',
     origem_id: financialId,
     status: 'confirmado',
@@ -200,7 +229,7 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     partidas.push({ lancamento_id: lanc.id, conta_id: contaBanco.id, tipo_partida: 'D', valor, ordem: 1, historico_partida: `Vlr. recebido ref. ${fin.categoria}` })
     partidas.push({ lancamento_id: lanc.id, conta_id: contaCat.id, tipo_partida: 'C', valor, ordem: 2, historico_partida: `Vlr. recebido ref. ${fin.categoria}` })
   } else {
-    partidas.push({ lancamento_id: lanc.id, conta_id: contaCat.id, tipo_partida: 'D', valor, ordem: 1, historico_partida: `Vlr. pago ref. ${fin.categoria}` })
+    partidas.push({ lancamento_id: lanc.id, conta_id: contaDebitoEfetiva.id, tipo_partida: 'D', valor, ordem: 1, historico_partida: vinculo ? `Liq. obrigação NFS-e` : `Vlr. pago ref. ${fin.categoria}` })
     partidas.push({ lancamento_id: lanc.id, conta_id: contaBanco.id, tipo_partida: 'C', valor, ordem: 2, historico_partida: `Vlr. pago ref. ${fin.categoria}` })
   }
 
