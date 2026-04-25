@@ -101,6 +101,23 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
             <BarChart3 size={16} className="text-blue-500" />
             Notas Fiscais de Serviços Recentes
           </h2>
+          
+          <div className="flex items-center gap-2">
+            <select 
+              value={nfseHook.periodo} 
+              onChange={(e) => nfseHook.setPeriodo(e.target.value)}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-600 outline-none hover:border-blue-300 transition-all cursor-pointer shadow-sm"
+            >
+              <option value="all">Ver Todas</option>
+              {Array.from({ length: 12 }).map((_, i) => {
+                const d = new Date()
+                d.setMonth(d.getMonth() - i)
+                const val = d.toISOString().slice(0, 7)
+                const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+                return <option key={val} value={val}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>
+              })}
+            </select>
+          </div>
         </div>
         <DataTable 
           columns={columns} 

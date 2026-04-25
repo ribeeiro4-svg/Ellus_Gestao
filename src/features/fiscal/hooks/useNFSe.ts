@@ -8,13 +8,14 @@ import { getNFSeListAction } from '../actions/nfseActions';
 export function useNFSe() {
   const [nfses, setNfses] = useState<NFSeEntrada[]>([]);
   const [loading, setLoading] = useState(true);
+  const [periodo, setPeriodo] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const tenantId = useTenantId();
 
   const fetchNfses = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
-      const { data, error } = await getNFSeListAction(tenantId);
+      const { data, error } = await getNFSeListAction(tenantId, periodo);
       
       if (!error && data) {
         setNfses(data as any);
@@ -22,7 +23,7 @@ export function useNFSe() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, periodo]);
 
   const stats = {
     total: nfses.length,
@@ -36,5 +37,5 @@ export function useNFSe() {
     fetchNfses();
   }, [fetchNfses]);
 
-  return { nfses, loading, stats, refresh: fetchNfses };
+  return { nfses, loading, stats, refresh: fetchNfses, periodo, setPeriodo };
 }
