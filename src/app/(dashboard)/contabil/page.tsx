@@ -78,13 +78,15 @@ export default function ContabilPage() {
             onClick={async () => {
               if (confirm('Deseja integrar todos os lançamentos pagos de Janeiro/2026 até hoje ao Livro Diário?')) {
                 const { sincronizarPeriodoContabil } = await import('@/features/contabil/actions/accountingActions')
-                const res = await sincronizarPeriodoContabil('2026-01-01')
+                const res: any = await sincronizarPeriodoContabil('2026-01-01')
                 if (res.success) {
                   const msg = `Sincronização concluída!\n\n` +
-                    `✅ Novos: ${res.count}\n` +
-                    `ℹ️ Já sincronizados: ${res.alreadySynced || 0}\n` +
+                    `✅ Novos: ${res.success}\n` +
+                    `ℹ️ Já sincronizados: ${res.alreadySync || 0}\n` +
+                    `🚫 Pulados (Atrasados): ${res.skippedStatus || 0}\n` +
+                    `⚠️ Pulados (Sem Mapeamento): ${res.skippedMapping || 0}\n` +
                     `📊 Total processado: ${res.total}\n` +
-                    (res.errors ? `\n⚠️ Primeiro erro encontrado: ${res.errors[0]}` : '')
+                    (res.errors && res.errors.length > 0 ? `\n❌ Erros críticos: ${res.errors.length}` : '')
                   
                   alert(msg)
                   window.location.reload()

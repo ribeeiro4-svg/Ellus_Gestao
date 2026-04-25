@@ -813,7 +813,7 @@ export default function FinanceiroPage() {
                   setIsProcessingBatch(true)
                   try {
                     const { integracaoFiscalContabilTotalAction } = await import('@/features/contabil/actions/accountingActions')
-                    const res = await integracaoFiscalContabilTotalAction(`${filterYear}-01-01`)
+                    const res: any = await integracaoFiscalContabilTotalAction(`${filterYear}-01-01`)
                     if (res.success) {
                       alert('Integração concluída com sucesso! Verifique os logs no módulo contábil.')
                       fetchContabilMap()
