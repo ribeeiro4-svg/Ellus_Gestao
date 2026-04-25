@@ -176,3 +176,42 @@ export async function salvarEscrituracaoNFSeAction(payload: any) {
     return { error: err.message || 'Erro ao finalizar escrituração' }
   }
 }
+
+/**
+ * Vincula uma NFS-e existente a um lançamento financeiro já existente
+ */
+export async function vincularNFSeALancamentoAction(nfseId: string, lancamentoId: string) {
+  const sb = await createServerSupabase()
+
+  try {
+    // 1. Buscar dados
+    const { data: nfse } = await sb.from('nfse_entradas').select('*').eq('id', nfseId).single()
+    const { data: lanc } = await sb.from('lancamentos').select('*').eq('id', lancamentoId).single()
+
+    if (!nfse || !lanc) throw new Error('NFS-e ou Lançamento não encontrado')
+
+    // 2. Criar Vínculo
+    const { error: vinculoErr } = await sb.from('nfse_financeiro_vinculo').insert({
+      tenant_id: lanc.tenant_id,
+      nfse_id: nfseId,
+      financeiro_id: lancamentoId,
+      tipo_vinculo: 'vinculo_manual',
+      data_vinculo: new Date().toISOString()
+    })
+
+    if (vinculoErr) throw new Error(`Erro ao criar vínculo: ${vinculoErr.message}`)
+
+    // 3. Atualizar Status da Nota
+    await sb.from('nfse_entradas').update({
+      status_escrituracao: 'concluida'
+    }).eq('id', nfseId)
+
+    // 4. Re-integrar com Contabilidade
+    const { sincronizarLancamentoContabil } = await import('@/features/contabil/actions/accountingActions')
+    await sincronizarLancamentoContabil(lancamentoId)
+
+    return { success: true }
+  } catch (err: any) {
+    return { error: err.message }
+  }
+}

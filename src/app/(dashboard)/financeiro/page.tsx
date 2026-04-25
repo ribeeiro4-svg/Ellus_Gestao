@@ -38,6 +38,7 @@ import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
 import ConciliacaoHistoryModal from '@/components/conciliacao/ConciliacaoHistoryModal'
 import { useConciliacaoLogs } from '@/lib/hooks/useConciliacaoLogs'
 import { tempFixDatabaseAction } from '@/app/actions/zapsign'
+import NFSeLinkModal from '@/features/fiscal/components/nfse/NFSeLinkModal'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -45,7 +46,7 @@ export default function FinanceiroPage() {
   // Ganchos Financeiros
   const { 
     lancamentos, loading, inserir, atualizar, remover, 
-    removerBulk, inserirBulk, atualizarBulk, conciliar, remanejar 
+    removerBulk, inserirBulk, atualizarBulk, conciliar, remanejar, refresh 
   } = useFinanceiro()
   const { contas } = useContas()
   const { associados, atualizar: atualizarAssociado } = useAssociados()
@@ -101,6 +102,8 @@ export default function FinanceiroPage() {
   const [isSupplierCreateOpen, setIsSupplierCreateOpen] = useState(false)
   const [parentSetFormData, setParentSetFormData] = useState<any>(null)
   const [currentEditMemo, setCurrentEditMemo] = useState('')
+  const [isNFSeLinkModalOpen, setIsNFSeLinkModalOpen] = useState(false)
+  const [selectedLancamentoNF, setSelectedLancamentoNF] = useState<any>(null)
 
   // Novos Estados para Ações em Lote
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -501,11 +504,18 @@ export default function FinanceiroPage() {
       key: 'nfse', 
       render: (l: any) => {
         const vinculo = l.nfse_vinculo?.[0]
-        if (!vinculo) return <span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Não emitida</span>
+        if (!vinculo) return (
+          <button 
+            onClick={() => { setSelectedLancamentoNF(l); setIsNFSeLinkModalOpen(true) }}
+            className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter hover:text-indigo-400 transition-colors"
+          >
+            Não emitida
+          </button>
+        )
         
         return (
           <div className="flex items-center gap-2">
-            <div className="flex flex-col">
+            <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedLancamentoNF(l); setIsNFSeLinkModalOpen(true) }}>
               <span className="text-[10px] font-black text-indigo-600 uppercase">NFS-e {vinculo.nfse?.numero_nfse}</span>
               <span className="text-[8px] text-indigo-400 font-bold uppercase tracking-tighter">Escriturada</span>
             </div>
@@ -783,6 +793,15 @@ export default function FinanceiroPage() {
           if (parentSetFormData) {
             parentSetFormData((prev: any) => ({ ...prev, fornecedor_id: sup.id }))
           }
+        }}
+      />
+
+      <NFSeLinkModal 
+        isOpen={isNFSeLinkModalOpen} 
+        onClose={() => setIsNFSeLinkModalOpen(false)} 
+        lancamento={selectedLancamentoNF}
+        onSuccess={() => {
+          refresh()
         }}
       />
 
