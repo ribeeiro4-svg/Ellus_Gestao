@@ -137,7 +137,7 @@ export default function NFSeEscrituracaoModal({
                   className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500 transition-all"
                 >
                   <option value="">Selecione uma conta...</option>
-                  {planoHook.contasAnaliticas.filter((c: any) => c.classificacao === 'despesa').map((c: any) => (
+                  {planoHook.contasAnaliticas.filter((c: any) => c.codigo.startsWith('4') || c.codigo.startsWith('5')).map((c: any) => (
                     <option key={c.id} value={c.id}>{c.codigo} — {c.descricao}</option>
                   ))}
                 </select>
