@@ -46,6 +46,81 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
     else { setShowForm(false); setForm({ data: new Date().toISOString().split('T')[0], historico: '', documentoTipo: '', documentoNumero: '', partidas: [{ contaId: '', tipo: 'D', valor: '', historico: '' }, { contaId: '', tipo: 'C', valor: '', historico: '' }] }) }
   }
 
+  const imprimirDiarioPDF = async () => {
+    const html = `
+      <html>
+        <head>
+          <title>Livro Diário - ACPROBEC</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 20px; color: #1e293b; }
+            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
+            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; }
+            th { background: #f8fafc; color: #64748b; text-transform: uppercase; padding: 8px; text-align: left; border: 1px solid #e2e8f0; font-weight: 900; }
+            td { padding: 8px; border: 1px solid #e2e8f0; vertical-align: top; }
+            .row-main { background: #fdfdfd; font-weight: bold; }
+            .row-partida { background: #fff; font-size: 8px; color: #475569; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .badge { padding: 2px 6px; border-radius: 4px; font-size: 8px; font-weight: 900; }
+            .bg-blue { background: #eff6ff; color: #2563eb; }
+            .bg-purple { background: #faf5ff; color: #9333ea; }
+            .footer { margin-top: 30px; text-align: right; font-size: 8px; color: #94a3b8; }
+            @media print {
+              @page { size: A4 landscape; margin: 1cm; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>ACPROBEC — LIVRO DIÁRIO</h1>
+            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${filterMes || 'GERAL'}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th width="80">Lançamento</th>
+                <th width="70">Data</th>
+                <th width="50">NF</th>
+                <th>Histórico / Contas</th>
+                <th width="80" class="text-right">Débito</th>
+                <th width="80" class="text-right">Crédito</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map((l: any) => `
+                <tr class="row-main">
+                  <td class="text-center">${l.numero_lancamento}</td>
+                  <td class="text-center">${fmtData(l.data_lancamento)}</td>
+                  <td class="text-center">${l.documento_tipo === 'NF' ? l.documento_numero : '-'}</td>
+                  <td>${l.historico}</td>
+                  <td class="text-right">${fmtR(l.valor_total)}</td>
+                  <td class="text-right">${fmtR(l.valor_total)}</td>
+                </tr>
+                ${(l.lancamentos_partidas || []).map((p: any) => `
+                  <tr class="row-partida">
+                    <td colspan="3"></td>
+                    <td> &nbsp;&nbsp; └ ${p.tipo_partida}: ${p.conta?.codigo || '---'} — ${p.conta?.descricao || 'Conta'}</td>
+                    <td class="text-right">${p.tipo_partida === 'D' ? fmtR(p.valor) : ''}</td>
+                    <td class="text-right">${p.tipo_partida === 'C' ? fmtR(p.valor) : ''}</td>
+                  </tr>
+                `).join('')}
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+        </body>
+      </html>
+    `
+    const win = window.open('', '_blank')
+    win?.document.write(html)
+    win?.document.close()
+    setTimeout(() => win?.print(), 500)
+  }
+
   const toggleExpand = async (id: string) => {
     if (expandedId === id) { setExpandedId(null); return }
     setExpandedId(id)
@@ -64,6 +139,13 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
     return matchSearch && matchMes
   }), [lancamentos, search, filterMes])
 
+  const getTipoDisplay = (l: any) => {
+    const h = l.historico?.toUpperCase() || ''
+    if (h.startsWith('REC') || h.includes('RECEBIMENTO') || l.tipo === 'ingresso') return { label: 'Ingresso', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' }
+    if (h.startsWith('PAG') || h.includes('PAGAMENTO') || l.tipo === 'dispendio') return { label: 'Dispêndio', color: 'bg-red-50 text-red-600 border-red-100' }
+    return { label: l.tipo || 'Normal', color: 'bg-slate-50 text-slate-600 border-slate-200' }
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {/* Toolbar */}
@@ -78,6 +160,10 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
           <option value="">Todos os meses</option>
           {MESES.map((m, i) => <option key={i} value={`${ano}-${(i+1).toString().padStart(2,'0')}`}>{m}/{ano}</option>)}
         </select>
+        <button onClick={imprimirDiarioPDF}
+          className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all">
+          🖨️ Imprimir PDF
+        </button>
         <button onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all">
           <Plus size={14} /> Novo Lançamento
@@ -179,79 +265,85 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
         ) : (
           <table className="w-full text-xs">
             <thead className="bg-slate-50">
-              <tr>{['Nº Lanç.', 'Data', 'Histórico', 'Tipo', 'Status', 'Ações'].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider">{h}</th>
+              <tr>{['Nº Lanç.', 'Data', 'NF', 'Histórico', 'Débito', 'Crédito', 'Tipo', 'Status', 'Ações'].map(h => (
+                <th key={h} className={`px-4 py-3 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider ${h === 'Débito' || h === 'Crédito' ? 'text-right' : ''}`}>{h}</th>
               ))}</tr>
             </thead>
             <tbody>
-              {filtered.map((l: any) => (
-                <React.Fragment key={l.id}>
-                  <tr className={`border-t border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${l.status === 'estornado' ? 'opacity-50' : ''}`}
-                    onClick={() => toggleExpand(l.id)}>
-                    <td className="px-4 py-3 font-mono text-[10px] text-indigo-600 font-black">{l.numero_lancamento}</td>
-                    <td className="px-4 py-3 text-slate-600 font-bold whitespace-nowrap">{fmtData(l.data_lancamento)}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-bold text-slate-800 max-w-xs truncate">{l.historico}</p>
-                      {l.documento_numero && <p className="text-[9px] text-slate-400">{l.documento_tipo} {l.documento_numero}</p>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-bold capitalize">{l.tipo}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${l.status === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : l.status === 'estornado' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                        {l.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <ChevronRight size={12} className={`text-slate-400 transition-transform ${expandedId === l.id ? 'rotate-90' : ''}`} />
-                        {l.status === 'confirmado' && (
-                          <>
-                            <button onClick={e => { e.stopPropagation(); confirm('Estornar este lançamento?') && estornar(l.id) }}
-                              className="p-1 text-orange-500 hover:bg-orange-50 rounded-lg" title="Estornar">
-                              <RotateCcw size={12} />
-                            </button>
-                            <button onClick={async e => { 
-                              e.stopPropagation(); 
-                              const senha = prompt('Digite a senha de exclusão para remover este lançamento permanentemente:')
-                              if (senha) {
-                                const res = await excluir(l.id, senha)
-                                if (res?.error) alert(res.error)
-                              }
-                            }}
-                              className="p-1 text-red-500 hover:bg-red-50 rounded-lg" title="Excluir Definitivamente">
-                              <Trash2 size={12} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedId === l.id && (
-                    <tr className="bg-indigo-50/30">
-                      <td colSpan={6} className="px-6 py-3">
-                        {partidasCache[l.id] ? (
-                          <table className="w-full text-[10px]">
-                            <thead><tr className="text-slate-400 font-black uppercase text-[8px]">
-                              {['D/C', 'Conta', 'Descrição', 'Valor'].map(h => <th key={h} className="py-1 text-left pr-4">{h}</th>)}
-                            </tr></thead>
-                            <tbody>
-                              {partidasCache[l.id].map((p: any) => (
-                                <tr key={p.id} className="border-t border-indigo-100">
-                                  <td className={`py-1.5 pr-4 font-black ${p.tipo_partida === 'D' ? 'text-blue-600' : 'text-purple-600'}`}>{p.tipo_partida}</td>
-                                  <td className="py-1.5 pr-4 font-mono text-indigo-700">{p.conta?.codigo ?? '--'}</td>
-                                  <td className="py-1.5 pr-4 text-slate-700">{p.conta?.descricao ?? '--'}</td>
-                                  <td className="py-1.5 font-black text-slate-800">{fmtR(p.valor)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        ) : <p className="text-[10px] text-slate-400">Carregando partidas...</p>}
+              {filtered.map((l: any) => {
+                const tipo = getTipoDisplay(l)
+                return (
+                  <React.Fragment key={l.id}>
+                    <tr className={`border-t border-slate-50 hover:bg-slate-50 cursor-pointer transition-colors ${l.status === 'estornado' ? 'opacity-50' : ''}`}
+                      onClick={() => toggleExpand(l.id)}>
+                      <td className="px-4 py-3 font-mono text-[10px] text-indigo-600 font-black">{l.numero_lancamento}</td>
+                      <td className="px-4 py-3 text-slate-600 font-bold whitespace-nowrap">{fmtData(l.data_lancamento)}</td>
+                      <td className="px-4 py-3 text-slate-400 font-bold">{l.documento_tipo === 'NF' ? l.documento_numero : '-'}</td>
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-slate-800 max-w-xs truncate">{l.historico}</p>
+                        {l.documento_numero && l.documento_tipo !== 'NF' && <p className="text-[9px] text-slate-400">{l.documento_tipo} {l.documento_numero}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-right text-blue-600 font-black">{fmtR(l.valor_total)}</td>
+                      <td className="px-4 py-3 text-right text-purple-600 font-black">{fmtR(l.valor_total)}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black border uppercase tracking-tighter ${tipo.color}`}>{tipo.label}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border ${l.status === 'confirmado' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : l.status === 'estornado' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                          {l.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight size={12} className={`text-slate-400 transition-transform ${expandedId === l.id ? 'rotate-90' : ''}`} />
+                          {l.status === 'confirmado' && (
+                            <>
+                              <button onClick={e => { e.stopPropagation(); confirm('Estornar este lançamento?') && estornar(l.id) }}
+                                className="p-1 text-orange-500 hover:bg-orange-50 rounded-lg" title="Estornar">
+                                <RotateCcw size={12} />
+                              </button>
+                              <button onClick={async e => { 
+                                e.stopPropagation(); 
+                                const senha = prompt('Digite a senha de exclusão para remover este lançamento permanentemente:')
+                                if (senha) {
+                                  const res = await excluir(l.id, senha)
+                                  if (res?.error) alert(res.error)
+                                }
+                              }}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded-lg" title="Excluir Definitivamente">
+                                <Trash2 size={12} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                    {expandedId === l.id && (
+                      <tr className="bg-indigo-50/30">
+                        <td colSpan={9} className="px-6 py-3">
+                          {partidasCache[l.id] ? (
+                            <table className="w-full text-[10px]">
+                              <thead><tr className="text-slate-400 font-black uppercase text-[8px]">
+                                {['D/C', 'Conta', 'Descrição', 'Valor'].map(h => <th key={h} className="py-1 text-left pr-4">{h}</th>)}
+                              </tr></thead>
+                              <tbody>
+                                {partidasCache[l.id].map((p: any) => (
+                                  <tr key={p.id} className="border-t border-indigo-100">
+                                    <td className={`py-1.5 pr-4 font-black ${p.tipo_partida === 'D' ? 'text-blue-600' : 'text-purple-600'}`}>{p.tipo_partida}</td>
+                                    <td className="py-1.5 pr-4 font-mono text-indigo-700">{p.conta?.codigo ?? '--'}</td>
+                                    <td className="py-1.5 pr-4 text-slate-700">{p.conta?.descricao ?? '--'}</td>
+                                    <td className="py-1.5 font-black text-slate-800">{fmtR(p.valor)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          ) : <p className="text-[10px] text-slate-400">Carregando partidas...</p>}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                )
+              })}
             </tbody>
           </table>
         )}

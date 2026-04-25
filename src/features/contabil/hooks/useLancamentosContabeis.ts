@@ -15,6 +15,7 @@ export interface LancamentoContabil {
   status: string
   usuario_nome: string
   created_at: string
+  valor_total?: number // Adicionado para facilitar exibição
   partidas?: Partida[]
 }
 
@@ -40,14 +41,28 @@ export function useLancamentosContabeis() {
     if (!tenantId) return
     setLoading(true)
     
-    // 1. Buscar Lista (Aumentado limite para visibilidade, e ordenado pelo NÚMERO do lançamento)
-    let q = sb.from('lancamentos_contabeis').select('*').eq('tenant_id', tenantId).order('numero_lancamento', { ascending: false }).limit(1000)
+    // 1. Buscar Lista com as partidas para calcular o valor total
+    let q = sb.from('lancamentos_contabeis')
+      .select('*, lancamentos_partidas(valor, tipo_partida, conta:conta_id(codigo, descricao))')
+      .eq('tenant_id', tenantId)
+      .order('numero_lancamento', { ascending: false })
+      .limit(1000)
+
     if (competencia) {
       const [ano, mes] = competencia.split('-')
       q = q.gte('data_competencia', `${ano}-${mes}-01`).lte('data_competencia', `${ano}-${mes}-31`)
     }
     const { data } = await q
-    setLancamentos(data ?? [])
+    
+    // Processar para adicionar valor_total (soma dos Débitos)
+    const processed = (data ?? []).map((l: any) => {
+      const total = (l.lancamentos_partidas ?? [])
+        .filter((p: any) => p.tipo_partida === 'D')
+        .reduce((sum: number, p: any) => sum + Number(p.valor), 0)
+      return { ...l, valor_total: total }
+    })
+
+    setLancamentos(processed)
 
     // 2. Buscar Estatísticas Reais (Sem Limite)
     const { count: total } = await sb.from('lancamentos_contabeis').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId)
