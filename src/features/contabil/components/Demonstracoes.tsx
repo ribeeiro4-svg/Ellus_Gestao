@@ -63,15 +63,17 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
   const [encerrando, setEncerrando] = useState(false)
   const ano = new Date().getFullYear()
 
+  const currentPeriod = lancHook.periodo || ano.toString()
+
   React.useEffect(() => {
     async function load() {
       setLoading(true)
-      const res = await calcularBalancete(ano.toString())
+      const res = await calcularBalancete(currentPeriod)
       setSaldos(res)
       setLoading(false)
     }
     load()
-  }, [calcularBalancete, ano])
+  }, [calcularBalancete, currentPeriod])
 
   const getSaldoGrupo = (prefixo: string) => {
     return Object.entries(saldos).reduce((acc, [id, saldo]) => {
