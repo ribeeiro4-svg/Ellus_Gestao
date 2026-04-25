@@ -28,7 +28,10 @@ export default function NFSePage() {
     if (nota) {
       setSelectedNFSe({
         nota: nota,
-        prestador: nota.prestador || { razao_social: 'N/A', cnpj: 'N/A' }
+        prestador: {
+          razao_social: (nota.prestador as any)?.razao_social || (nota.prestador as any)?.nome || 'N/A',
+          cnpj: (nota.prestador as any)?.cnpj || (nota.prestador as any)?.cpf_cnpj || 'N/A'
+        }
       })
       setIsModalOpen(true)
     }
