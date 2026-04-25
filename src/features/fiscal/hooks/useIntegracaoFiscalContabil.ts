@@ -82,12 +82,15 @@ export function useIntegracaoFiscalContabil() {
       await sincronizarNotaFiscalContabil(nfeId, 'nfe')
       const resSync = await sincronizarLancamentoContabil(financeiroId)
 
-      // 5. Atualizar status da NF-e
-      await sb.from('nfe_entradas').update({ 
-        status_escrituracao: 'concluida',
+      // 5. Atualizar status da NF-e para 'escriturada' (Finalizado)
+      const { error: upErr } = await sb.from('nfe_entradas').update({ 
+        status_escrituracao: 'escriturada',
         status_conciliacao: 'conciliado',
-        lancamento_financeiro_id: financeiroId
+        lancamento_financeiro_id: financeiroId,
+        data_escrituracao: new Date().toISOString()
       }).eq('id', nfeId)
+
+      if (upErr) throw new Error(`Erro ao finalizar nota: ${upErr.message}`)
 
       return { error: resSync.error || null, success: true }
     } catch (err: any) {

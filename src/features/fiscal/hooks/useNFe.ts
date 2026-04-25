@@ -204,13 +204,13 @@ export function useNFe() {
       }
 
       // 2. Atualizar status global da nota
-      const todosClassificados = itens.every(i => !!(i.cfop_escrituracao && i.destinacao_item))
+      // IMPORTANTE: Nunca marcar como 'escriturada' aqui. Esse status é reservado para a FINALIZAÇÃO com vínculo financeiro e estoque.
       const algumClassificado = itens.some(i => !!(i.cfop_escrituracao || i.destinacao_item))
 
       const { error: nfeError } = await sb.from('nfe_entradas')
         .update({
-          status_escrituracao: todosClassificados ? 'escriturada' : (algumClassificado ? 'em_andamento' : 'pendente'),
-          data_escrituracao: todosClassificados ? new Date().toISOString() : null,
+          status_escrituracao: algumClassificado ? 'em_andamento' : 'pendente',
+          // data_escrituracao: null // Mantemos nulo até finalizar de fato
         })
         .eq('id', nfeId)
 

@@ -220,10 +220,10 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
             <button
               onClick={salvar}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 text-xs font-black text-white bg-blue-600 hover:bg-blue-700 rounded-2xl transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 text-xs font-black text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-all disabled:opacity-50"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-              {saving ? 'Salvando...' : 'Salvar Escrituração'}
+              {saving ? 'Salvando...' : 'Salvar Progresso'}
             </button>
           )}
         </div>
@@ -521,10 +521,10 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
             <button
               onClick={salvar}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 text-sm font-black text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 text-sm font-black text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-2xl transition-all disabled:opacity-50 border border-slate-100"
             >
               <Save size={16} />
-              {saving ? 'Processando...' : 'Apenas Salvar'}
+              {saving ? 'Processando...' : 'Apenas Salvar Progresso'}
             </button>
             <button
               onClick={finalizar}
