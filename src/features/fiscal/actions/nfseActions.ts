@@ -45,7 +45,7 @@ export async function importarNFSeAction(xmlContent: string) {
           numero_nfse: parsed.nota.numero_nfse,
           chave_nacional: parsed.nota.chave_nacional,
           data_emissao: parsed.nota.data_emissao,
-          data_competencia: parsed.nota.data_competencia,
+          data_competencia: parsed.nota.data_competencia || parsed.nota.data_emissao,
           valor_bruto: parsed.nota.valor_bruto,
           valor_liquido: parsed.nota.valor_liquido,
           valor_irrf: parsed.nota.valor_irrf,
@@ -56,7 +56,7 @@ export async function importarNFSeAction(xmlContent: string) {
           iss_retido: parsed.nota.iss_retido,
           descricao_servico: parsed.nota.descricao_servico,
           codigo_servico_lc116: parsed.nota.codigo_servico_lc116,
-          status_fiscal: 'autorizada',
+          situacao: 'autorizada',
           status_escrituracao: 'pendente'
         })
         .select('id')
