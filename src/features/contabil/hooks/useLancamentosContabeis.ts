@@ -33,18 +33,33 @@ export function useLancamentosContabeis() {
   const tenantId = useTenantId()
   const [lancamentos, setLancamentos] = useState<LancamentoContabil[]>([])
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ total: 0, confirmados: 0, estornados: 0 })
   const sb = createClient()
 
   const fetch = useCallback(async (competencia?: string) => {
     if (!tenantId) return
     setLoading(true)
-    let q = sb.from('lancamentos_contabeis').select('*').eq('tenant_id', tenantId).order('data_lancamento', { ascending: false }).limit(200)
+    
+    // 1. Buscar Lista (Aumentado limite para visibilidade)
+    let q = sb.from('lancamentos_contabeis').select('*').eq('tenant_id', tenantId).order('data_lancamento', { ascending: false }).limit(1000)
     if (competencia) {
       const [ano, mes] = competencia.split('-')
       q = q.gte('data_competencia', `${ano}-${mes}-01`).lte('data_competencia', `${ano}-${mes}-31`)
     }
     const { data } = await q
     setLancamentos(data ?? [])
+
+    // 2. Buscar Estatísticas Reais (Sem Limite)
+    const { count: total } = await sb.from('lancamentos_contabeis').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId)
+    const { count: confirmados } = await sb.from('lancamentos_contabeis').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'confirmado')
+    const { count: estornados } = await sb.from('lancamentos_contabeis').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId).eq('status', 'estornado')
+
+    setStats({ 
+      total: total || 0, 
+      confirmados: confirmados || 0, 
+      estornados: estornados || 0 
+    })
+    
     setLoading(false)
   }, [tenantId])
 
@@ -88,10 +103,10 @@ export function useLancamentosContabeis() {
       data_competencia: dados.data,
       tipo: dados.tipo || 'normal',
       historico: dados.historico,
-      documento_tipo: dados.documentoTipo || null,
-      documento_numero: dados.documentoNumero || null,
-      origem_tipo: dados.origemTipo || null,
-      origem_id: dados.origemId || null,
+      documento_tipo: dados.documento_tipo || dados.documentoTipo || null,
+      documento_numero: dados.documento_numero || dados.documentoNumero || null,
+      origem_tipo: dados.origem_tipo || dados.origemTipo || null,
+      origem_id: dados.origem_id || dados.origemId || null,
       status: 'confirmado',
     }).select().single()
 
@@ -179,13 +194,6 @@ export function useLancamentosContabeis() {
     })
 
     return saldos
-  }
-
-  // Estatísticas simples
-  const stats = {
-    total: lancamentos.length,
-    confirmados: lancamentos.filter(l => l.status === 'confirmado').length,
-    estornados: lancamentos.filter(l => l.status === 'estornado').length,
   }
 
   return { lancamentos, loading, stats, inserir, estornar, excluir, buscarPartidas, calcularBalancete, refresh: fetch }
