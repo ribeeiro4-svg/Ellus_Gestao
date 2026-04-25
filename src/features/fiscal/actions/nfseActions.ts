@@ -198,100 +198,93 @@ export async function identificarPrestadorAction(cnpj: string, razaoSocial: stri
 }
 
 /**
- * Server Action para salvar a escrituração de uma NFS-e
- * Fluxo A: Escrituração -> Financeiro + Contábil
+ * Busca um fornecedor/prestador pelo CPF ou CNPJ
  */
-export async function salvarEscrituracaoNFSeAction(payload: any) {
+export async function getFornecedorByCpfCnpjAction(cpfCnpj: string) {
+  const sb = await createServerSupabase()
+  // Limpar formatação
+  const clean = cpfCnpj.replace(/\D/g, '')
+  const { data, error } = await sb.from('fornecedores')
+    .select('id, nome, cpf_cnpj')
+    .or(`cpf_cnpj.eq.${clean},cpf_cnpj.eq.${cpfCnpj}`)
+    .maybeSingle()
+  return { data, error: error?.message }
+}
+
+/**
+ * Busca lançamentos financeiros candidatos a vínculo com uma NFS-e
+ */
+export async function buscarLancamentosParaVinculoAction(prestadorId: string, periodo?: string) {
+  const sb = await createServerSupabase()
+  
+  let query = sb.from('lancamentos')
+    .select('*')
+    .eq('fornecedor_id', prestadorId)
+    .eq('tipo', 'despesa')
+    .order('data', { ascending: false })
+
+  if (periodo && periodo !== 'all') {
+    query = query.gte('data', `${periodo}-01`).lte('data', `${periodo}-31`)
+  }
+
+  const { data, error } = await query.limit(50)
+  return { data: data || [], error: error?.message }
+}
+
+/**
+ * Server Action para salvar a escrituração de uma NFS-e vinculando a um financeiro existente
+ */
+export async function salvarEscrituracaoNFSeAction(payload: { 
+  nfseId: string; 
+  financeiroId: string;
+}) {
   const sb = await createServerSupabase()
   const sbAdmin = createAdminSupabase()
-  const { id, conta_despesa_id, centro_custo_id, projeto_id } = payload
+  const { nfseId, financeiroId } = payload
 
   try {
-    // 1. Buscar a nota original (admin para garantir que acha, independente de RLS)
+    // 1. Buscar a nota original
     const { data: nfse, error: fetchErr } = await sbAdmin
       .from('nfse_entradas')
       .select('*, prestador:fornecedores(*)')
-      .eq('id', id)
+      .eq('id', nfseId)
       .single()
 
     if (fetchErr || !nfse) throw new Error('NFS-e não encontrada')
 
-    // 2. Verificar período contábil
-    const { isPeriodoFechado } = await import('@/features/contabil/actions/periodoActions')
-    const fechado = await isPeriodoFechado(nfse.data_emissao, nfse.tenant_id)
-    if (fechado) throw new Error('Período contábil FECHADO para esta data.')
-
-    // --- INÍCIO DA TRANSAÇÃO (Via Promise.all ou lógica sequencial se não houver suporte a transações complexas via RPC) ---
-    // Nota: Como não temos um endpoint de RPC para transações multi-tabela complexas aqui, 
-    // faremos de forma sequencial com rollback manual se necessário, ou assumindo atomicidade do Supabase em operações únicas.
-
-    // 3. Criar Lançamento Financeiro (Título a Pagar - Valor Líquido)
+    // 2. Buscar o lançamento financeiro
     const { data: fin, error: finErr } = await sb
       .from('lancamentos')
-      .insert({
-        tenant_id: nfse.tenant_id,
-        data: nfse.data_emissao,
-        descricao: `NFS-e ${nfse.numero_nfse} — ${nfse.prestador?.nome}`,
-        categoria: 'Serviços de Terceiros',
-        tipo: 'despesa',
-        valor: nfse.valor_liquido,
-        status: 'aberto',
-        fornecedor_id: nfse.prestador_id
-      })
-      .select('id')
+      .select('*')
+      .eq('id', financeiroId)
       .single()
 
-    if (finErr) throw new Error(`Erro ao criar financeiro: ${finErr.message}`)
+    if (finErr || !fin) throw new Error('Lançamento financeiro não encontrado')
 
-    // 4. Criar Vínculo Bidirecional
+    // 3. Criar Vínculo
     await sb.from('nfse_financeiro_vinculo').insert({
       tenant_id: nfse.tenant_id,
       nfse_id: nfse.id,
       financeiro_id: fin.id,
-      tipo_vinculo: 'escrituracao_direta'
+      tipo_vinculo: 'escrituracao_vinculo'
     })
 
-    // 5. Gerar Lançamento Contábil (ITG 2002)
-    // D: Despesa (conta_despesa_id)
-    // C: Fornecedores a Pagar (2.1.3.01.002)
-    const { data: contaPassivo } = await sb.from('plano_contas').select('id').eq('tenant_id', nfse.tenant_id).eq('codigo', '2.1.3.01.002').maybeSingle()
-    
-    const { count } = await sb.from('lancamentos_contabeis').select('*', { count: 'exact', head: true }).eq('tenant_id', nfse.tenant_id)
-    const seq = ((count || 0) + 1).toString().padStart(6, '0')
-    const numeroContabil = `${nfse.data_emissao.slice(0, 4)}/${seq}`
-
-    const { data: lancContabil, error: lcErr } = await sb.from('lancamentos_contabeis').insert({
-      tenant_id: nfse.tenant_id,
-      numero_lancamento: numeroContabil,
-      data_lancamento: nfse.data_emissao,
-      data_competencia: nfse.data_competencia || nfse.data_emissao,
-      tipo: 'normal',
-      historico: `Escrituração NFS-e ${nfse.numero_nfse} — ${nfse.prestador?.nome}`,
-      origem_tipo: 'fiscal_nfse',
-      origem_id: nfse.id,
-      status: 'confirmado'
-    }).select('id').single()
-
-    if (!lcErr && lancContabil && contaPassivo) {
-      await sb.from('lancamentos_partidas').insert([
-        { lancamento_id: lancContabil.id, conta_id: conta_despesa_id, tipo_partida: 'D', valor: nfse.valor_bruto, ordem: 1, historico_partida: 'Vlr. ref. serviço tomado' },
-        { lancamento_id: lancContabil.id, conta_id: contaPassivo.id, tipo_partida: 'C', valor: nfse.valor_liquido, ordem: 2, historico_partida: 'Vlr. líquido a pagar' },
-        // Lógica simplificada: Impostos retidos iriam aqui como Crédito em contas de Passivo
-      ])
-    }
-
-    // 6. Atualizar Nota como Concluída
+    // 4. Marcar nota como concluída e vincular ao financeiro
     await sb.from('nfse_entradas').update({
       status_escrituracao: 'concluida',
-      conta_despesa_id,
-      centro_custo_id,
-      projeto_id,
-      lancamento_contabil_id: lancContabil?.id
-    }).eq('id', id)
+      lancamento_financeiro_id: fin.id // Se existir este campo, se não usamos o vínculo
+    }).eq('id', nfse.id)
 
-    return { success: true, createdCount: 1, error: null }
+    // 5. Re-sincronizar Contabilidade
+    // Sincroniza a Provisão da Nota e a Liquidação do Financeiro
+    const { sincronizarLancamentoContabil, sincronizarNotaFiscalContabil } = await import('@/features/contabil/actions/accountingActions')
+    
+    await sincronizarNotaFiscalContabil(nfseId, 'nfse')
+    const resSync = await sincronizarLancamentoContabil(financeiroId)
+
+    return { success: true, syncError: resSync.error }
   } catch (err: any) {
-    return { error: err.message || 'Erro ao finalizar escrituração' }
+    return { success: false, error: err.message }
   }
 }
 

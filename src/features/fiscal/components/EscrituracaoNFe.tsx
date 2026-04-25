@@ -9,6 +9,9 @@ import { useIntegracaoFiscalContabil } from '@/features/fiscal/hooks/useIntegrac
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
+import { getFornecedorByCpfCnpjAction } from '@/features/fiscal/actions/nfseActions'
+import NFSeEscrituracaoModal from './nfse/NFSeEscrituracaoModal'
+
 export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: any; nfeIdInicial: string | null }) {
   const { nfes, buscarItens, salvarClassificacao } = nfeHook
   const planoHook = usePlanoContas()
@@ -19,6 +22,8 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   const [itens, setItens] = useState<any[]>([])
   const [loadingItens, setLoadingItens] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [vinculoData, setVinculoData] = useState<any>(null)
 
   const nfeSelecionada = nfes.find((n: any) => n.id === selectedNfeId)
 
@@ -56,26 +61,56 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   }
 
   const finalizar = async () => {
-    if (!selectedNfeId) return
-    if (!confirm('Deseja finalizar a escrituração e gerar os lançamentos contábeis? Esta ação não pode ser desfeita.')) return
+    if (!selectedNfeId || !nfeSelecionada) return
     
+    // 1. Buscar Fornecedor pelo CNPJ da nota
     setSaving(true)
-    const saveRes = await salvarClassificacao(selectedNfeId, itens)
-    if (saveRes.error) {
-      setSaving(false)
-      alert(`Erro ao salvar antes de integrar: ${saveRes.error}`)
+    const resFor = await getFornecedorByCpfCnpjAction(nfeSelecionada.cnpj_emitente)
+    setSaving(false)
+
+    if (!resFor.data) {
+      alert('Fornecedor (Emitente) não encontrado no sistema. Por favor, cadastre o fornecedor antes de escriturar a nota.')
       return
     }
 
-    await new Promise(resolve => setTimeout(resolve, 800))
+    // 2. Abrir Modal de Vínculo Financeiro
+    setVinculoData({
+      nota: {
+        id: nfeSelecionada.id,
+        numero_nfse: nfeSelecionada.numero_nf, // Adaptado para o modal reutilizado
+        valor_liquido: nfeSelecionada.valor_total,
+        data_emissao: nfeSelecionada.data_emissao,
+        prestador_id: resFor.data.id,
+        descricao_servico: `NF-e ${nfeSelecionada.numero_nf} - ${nfeSelecionada.nome_emitente}`
+      },
+      prestador: {
+        razao_social: nfeSelecionada.nome_emitente,
+        cnpj: nfeSelecionada.cnpj_emitente
+      }
+    })
+    setIsModalOpen(true)
+  }
 
-    const result = await integracaoHook.finalizarEscrituracao(selectedNfeId)
-    setSaving(false)
-    
-    if (result.error) alert(`Erro na integração: ${result.error}`)
-    else {
-      alert('Escrituração finalizada e integrada com sucesso!')
-      nfeHook.refresh()
+  const handleSubmitVinculo = async (payload: any) => {
+    setSaving(true)
+    try {
+      // Primeiro salva a classificação dos itens
+      const saveRes = await salvarClassificacao(selectedNfeId, itens)
+      if (saveRes.error) throw new Error(saveRes.error)
+
+      // Depois integra com o financeiro selecionado
+      const result = await integracaoHook.finalizarEscrituracao(selectedNfeId, payload.financeiroId)
+      
+      if (result.error) alert(`Erro na integração: ${result.error}`)
+      else {
+        alert('Escrituração finalizada e vinculada ao financeiro com sucesso!')
+        setIsModalOpen(false)
+        nfeHook.refresh()
+      }
+    } catch (err: any) {
+      alert(`Erro: ${err.message}`)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -368,6 +403,13 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
           <p className="text-sm font-black text-slate-400">Selecione uma NF-e acima para iniciar a escrituração</p>
         </div>
       )}
+      {/* Modal de Vínculo Financeiro */}
+      <NFSeEscrituracaoModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        nfseData={vinculoData}
+        onSubmit={handleSubmitVinculo}
+      />
     </div>
   )
 }

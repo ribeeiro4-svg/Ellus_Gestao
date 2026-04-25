@@ -153,18 +153,15 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     return { error: `Erro fatal: Nenhuma conta contábil raiz (Caixa ou Resultado) encontrada para o tenant.` }
   }
 
-  // 3.1 Verificar se é um pagamento de NFS-e (Escrituração Prévia)
+  // 3.1 Verificar se é um pagamento de Nota Fiscal (Escrituração Prévia)
   // Se for, o Débito deve ser em Fornecedores (2.1.3.01.002) e não na Despesa
-  const { data: vinculo } = await sb
-    .from('nfse_financeiro_vinculo')
-    .select('id, nfse_id')
-    .eq('financeiro_id', financialId)
-    .maybeSingle()
+  const { data: vinculoNfse } = await sb.from('nfse_financeiro_vinculo').select('id').eq('financeiro_id', financialId).maybeSingle()
+  const { data: vinculoNfe } = await sb.from('nfe_entradas').select('id').eq('lancamento_financeiro_id', financialId).maybeSingle()
 
   let contaDebitoEfetiva = contaCat
   let historicoEfetivo = `${fin.tipo === 'receita' ? 'REC' : 'PAG'} — ${fin.descricao}`
 
-  if (vinculo && fin.tipo === 'despesa') {
+  if ((vinculoNfse || vinculoNfe) && fin.tipo === 'despesa') {
     const { data: contaFornecedor } = await sb
       .from('plano_contas')
       .select('id')
@@ -174,7 +171,7 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     
     if (contaFornecedor) {
       contaDebitoEfetiva = contaFornecedor
-      historicoEfetivo = `PAG — Liq. NFS-e vinculada — ${fin.descricao}`
+      historicoEfetivo = `PAG — Liq. Nota vinculada — ${fin.descricao}`
     }
   }
 
@@ -229,13 +226,79 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     partidas.push({ lancamento_id: lanc.id, conta_id: contaBanco.id, tipo_partida: 'D', valor, ordem: 1, historico_partida: `Vlr. recebido ref. ${fin.categoria}` })
     partidas.push({ lancamento_id: lanc.id, conta_id: contaCat.id, tipo_partida: 'C', valor, ordem: 2, historico_partida: `Vlr. recebido ref. ${fin.categoria}` })
   } else {
-    partidas.push({ lancamento_id: lanc.id, conta_id: contaDebitoEfetiva.id, tipo_partida: 'D', valor, ordem: 1, historico_partida: vinculo ? `Liq. obrigação NFS-e` : `Vlr. pago ref. ${fin.categoria}` })
+    partidas.push({ lancamento_id: lanc.id, conta_id: contaDebitoEfetiva.id, tipo_partida: 'D', valor, ordem: 1, historico_partida: (vinculoNfse || vinculoNfe) ? `Liq. obrigação fiscal vinculada` : `Vlr. pago ref. ${fin.categoria}` })
     partidas.push({ lancamento_id: lanc.id, conta_id: contaBanco.id, tipo_partida: 'C', valor, ordem: 2, historico_partida: `Vlr. pago ref. ${fin.categoria}` })
   }
 
   const { error: partErr } = await sb.from('lancamentos_partidas').insert(partidas)
 
   return { error: partErr?.message || null }
+}
+
+/**
+ * Sincroniza a PROVISÃO de uma Nota Fiscal (Escrituração Fiscal)
+ * D: Despesa/Estoque / C: Fornecedores a Pagar
+ */
+export async function sincronizarNotaFiscalContabil(notaId: string, tipo: 'nfse' | 'nfe') {
+  const sb = await createServerSupabase()
+  
+  // 1. Buscar dados da nota
+  let nota: any
+  if (tipo === 'nfse') {
+    const { data } = await sb.from('nfse_entradas').select('*, fornecedor:fornecedores(*)').eq('id', notaId).single()
+    nota = data
+  } else {
+    const { data } = await sb.from('nfe_entradas').select('*').eq('id', notaId).single()
+    nota = data
+  }
+  if (!nota) return { error: 'Nota não encontrada' }
+
+  // 2. Definir contas
+  const { data: config } = await sb.from('configuracoes_contabeis').select('conta_fornecedores_id').eq('tenant_id', nota.tenant_id).single()
+  const contaFornecedorId = config?.conta_fornecedores_id || (await sb.from('plano_contas').select('id').eq('tenant_id', nota.tenant_id).eq('codigo', '2.1.3.01.002').maybeSingle()).data?.id
+
+  // Conta de Débito (Despesa)
+  let contaDebitoId = nota.conta_despesa_id // Para NFSe
+  if (tipo === 'nfe') {
+    // Para NFe, pega do primeiro item ou configuração
+    const { data: item } = await sb.from('nfe_entradas_itens').select('conta_contabil_id').eq('nfe_entrada_id', notaId).limit(1).maybeSingle()
+    contaDebitoId = item?.conta_contabil_id
+  }
+
+  if (!contaFornecedorId || !contaDebitoId) return { error: 'Contas contábeis não configuradas para a nota' }
+
+  // 3. Limpar lançamento anterior da nota
+  const { data: existing } = await sb.from('lancamentos_contabeis').select('id').eq('origem_id', notaId).maybeSingle()
+  if (existing) {
+    await sb.from('lancamentos_partidas').delete().eq('lancamento_id', existing.id)
+    await sb.from('lancamentos_contabeis').delete().eq('id', existing.id)
+  }
+
+  // 4. Criar Capa
+  const valor = tipo === 'nfse' ? nota.valor_bruto : nota.valor_total
+  const numero = tipo === 'nfse' ? nota.numero_nfse : nota.numero_nf
+  const emitente = tipo === 'nfse' ? nota.fornecedor?.nome : nota.nome_emitente
+
+  const { data: lanc, error: insErr } = await sb.from('lancamentos_contabeis').insert({
+    tenant_id: nota.tenant_id,
+    data_lancamento: nota.data_emissao,
+    data_competencia: nota.data_competencia || nota.data_emissao,
+    tipo: 'normal',
+    historico: `Escrituração Fiscal ${tipo.toUpperCase()} ${numero} — ${emitente}`,
+    origem_tipo: tipo === 'nfse' ? 'fiscal_nfse' : 'fiscal',
+    origem_id: notaId,
+    status: 'confirmado'
+  }).select('id').single()
+
+  if (insErr || !lanc) return { error: insErr?.message }
+
+  // 5. Partidas
+  await sb.from('lancamentos_partidas').insert([
+    { lancamento_id: lanc.id, conta_id: contaDebitoId, tipo_partida: 'D', valor, ordem: 1, historico_partida: 'Vlr. ref. serviço/produto tomado' },
+    { lancamento_id: lanc.id, conta_id: contaFornecedorId, tipo_partida: 'C', valor, ordem: 2, historico_partida: 'Vlr. provisão para pagamento' },
+  ])
+
+  return { success: true }
 }
 
 export async function sincronizarPeriodoContabil(dataInicio: string) {

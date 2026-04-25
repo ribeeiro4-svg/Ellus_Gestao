@@ -1,9 +1,9 @@
 
 'use client'
 import React, { useState, useEffect } from 'react'
-import { X, Check, Loader2, Info, FileText, Landmark, ShieldCheck, Calculator } from 'lucide-react'
-import { usePlanoContas } from '@/features/contabil/hooks/usePlanoContas'
+import { X, Check, Loader2, Search, Calendar, Landmark, CreditCard, Info, AlertCircle, Filter } from 'lucide-react'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
+import { buscarLancamentosParaVinculoAction } from '../../actions/nfseActions'
 
 export default function NFSeEscrituracaoModal({ 
   isOpen, 
@@ -14,37 +14,50 @@ export default function NFSeEscrituracaoModal({
   isOpen: boolean; 
   onClose: () => void; 
   nfseData: any; 
-  onSubmit: (data: any) => Promise<void> 
+  onSubmit: (payload: any) => Promise<void> 
 }) {
-  const [formData, setFormData] = useState<any>({})
   const [loading, setLoading] = useState(false)
-  const planoHook = usePlanoContas()
+  const [financials, setFinancials] = useState<any[]>([])
+  const [loadingFinancials, setLoadingFinancials] = useState(false)
+  const [selectedFinId, setSelectedFinId] = useState<string | null>(null)
+  const [periodo, setPeriodo] = useState('all')
+  const [search, setSearch] = useState('')
+
+  const { nota, prestador } = nfseData || {}
 
   useEffect(() => {
-    if (isOpen && nfseData) {
-      setFormData({
-        ...nfseData.nota,
-        conta_despesa_id: nfseData.nota.conta_despesa_id || '',
-        centro_custo_id: '',
-        projeto_id: ''
-      })
+    if (isOpen && nota?.prestador_id) {
+      loadFinancials()
     }
-  }, [isOpen, nfseData])
+  }, [isOpen, nota?.prestador_id, periodo])
+
+  const loadFinancials = async () => {
+    setLoadingFinancials(true)
+    const res = await buscarLancamentosParaVinculoAction(nota.prestador_id, periodo)
+    setFinancials(res.data || [])
+    setLoadingFinancials(false)
+  }
 
   if (!isOpen || !nfseData) return null
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const filteredFinancials = financials.filter(f => 
+    f.descricao?.toLowerCase().includes(search.toLowerCase()) ||
+    f.categoria?.toLowerCase().includes(search.toLowerCase()) ||
+    f.valor.toString().includes(search)
+  )
+
+  const handleConfirm = async () => {
+    if (!selectedFinId) return
     setLoading(true)
     try {
-      await onSubmit(formData)
-      onClose()
+      await onSubmit({
+        nfseId: nota.id,
+        financeiroId: selectedFinId
+      })
     } finally {
       setLoading(false)
     }
   }
-
-  const { nota, prestador } = nfseData
 
   return (
     <div 
@@ -52,17 +65,17 @@ export default function NFSeEscrituracaoModal({
       style={{ background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)', animation: 'overlayIn .2s ease both' }}
     >
       <div 
-        className="w-full max-w-[900px] max-h-[90vh] bg-white rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300"
+        className="w-full max-w-[1000px] max-h-[90vh] bg-white rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200"
       >
-        {/* Header */}
-        <div className="px-8 py-6 bg-slate-900 flex items-center justify-between">
+        {/* Header Superior */}
+        <div className="px-8 py-5 bg-slate-900 flex items-center justify-between border-b border-white/5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <FileText size={20} />
+              <Landmark size={20} />
             </div>
             <div>
-              <h2 className="text-lg font-black text-white uppercase tracking-tight">Escrituração NFS-e {nota.numero_nfse}</h2>
-              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest opacity-80">Processamento Fiscal Inteligente</p>
+              <h2 className="text-lg font-black text-white uppercase tracking-tight">Vincular Escrituração Fiscal</h2>
+              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest opacity-80">Conciliação Nota ↔ Financeiro</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl text-white/40 hover:text-white transition-all">
@@ -70,131 +83,217 @@ export default function NFSeEscrituracaoModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 flex flex-col lg:flex-row gap-8">
-          {/* Coluna Esquerda: Dados da Nota */}
-          <div className="flex-1 space-y-6">
-            <section>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <ShieldCheck size={12} className="text-blue-500" />
-                Dados do Prestador
-              </h3>
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="text-sm font-black text-slate-800">{prestador.razao_social}</p>
-                <p className="text-xs font-bold text-slate-500">{prestador.cnpj}</p>
-                {prestador.inscricao_municipal && <p className="text-[10px] text-slate-400 mt-1">IM: {prestador.inscricao_municipal}</p>}
-              </div>
-            </section>
+        <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+          {/* Lado Esquerdo: Detalhes da Nota (Resumo) */}
+          <div className="w-full lg:w-[350px] bg-slate-50 p-8 border-r border-slate-100 overflow-y-auto custom-scrollbar">
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <CreditCard size={12} className="text-emerald-500" />
+                  Documento Fiscal
+                </h3>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase">NFS-e Número</p>
+                    <p className="text-base font-black text-slate-800">{nota.numero_nfse}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase">Prestador</p>
+                    <p className="text-xs font-black text-slate-700 leading-tight">{prestador.razao_social}</p>
+                    <p className="text-[10px] font-bold text-slate-400">{prestador.cnpj}</p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 flex justify-between items-end">
+                    <div>
+                      <p className="text-[9px] font-black text-slate-400 uppercase">Valor Líquido</p>
+                      <p className="text-lg font-black text-emerald-600 leading-none">{fmtR(nota.valor_liquido)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] font-black text-slate-400 uppercase">Emissão</p>
+                      <p className="text-xs font-black text-slate-600">{fmtData(nota.data_emissao)}</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-            <section>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <Calculator size={12} className="text-blue-500" />
-                Resumo de Valores & Retenções
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-slate-50 rounded-xl">
-                  <p className="text-[9px] font-black text-slate-400 uppercase">Valor Bruto</p>
-                  <p className="text-sm font-black text-slate-800">{fmtR(nota.valor_bruto)}</p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-xl">
-                  <p className="text-[9px] font-black text-blue-400 uppercase">Valor Líquido</p>
-                  <p className="text-sm font-black text-blue-700">{fmtR(nota.valor_liquido)}</p>
-                </div>
+              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex gap-3">
+                <Info size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                <p className="text-[10px] font-medium text-emerald-700 leading-normal">
+                  A escrituração fiscal agora exige o vínculo com um lançamento financeiro existente (pagamento ou provisão). Selecione o lançamento correspondente ao lado.
+                </p>
               </div>
-              
-              <div className="mt-3 space-y-2 p-4 bg-orange-50/50 rounded-2xl border border-orange-100">
-                <div className="flex justify-between text-xs">
-                  <span className="font-bold text-slate-500">IRRF (1.5%)</span>
-                  <span className="font-black text-orange-600">{fmtR(nota.valor_irrf)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="font-bold text-slate-500">PCC (4.65%)</span>
-                  <span className="font-black text-orange-600">{fmtR(nota.valor_pcc_total)}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="font-bold text-slate-500">ISS {nota.iss_retido ? '(Retido)' : ''}</span>
-                  <span className={`font-black ${nota.iss_retido ? 'text-orange-600' : 'text-slate-400'}`}>{fmtR(nota.valor_iss)}</span>
-                </div>
-              </div>
-            </section>
 
-            <section>
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Discriminação do Serviço</h3>
-              <div className="p-4 bg-slate-50 rounded-2xl text-[11px] font-medium text-slate-600 italic border border-slate-100">
-                {nota.descricao_servico || 'Sem descrição informada no XML.'}
-              </div>
-            </section>
+              {nota.descricao_servico && (
+                <section>
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Serviço</h3>
+                  <p className="text-[10px] font-medium text-slate-500 italic line-clamp-4">{nota.descricao_servico}</p>
+                </section>
+              )}
+            </div>
           </div>
 
-          {/* Coluna Direita: Classificação */}
-          <div className="flex-1 space-y-6 lg:border-l lg:pl-8 border-slate-100">
-            <form onSubmit={handleSave} className="space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Conta Contábil de Dispêndio (Débito)</label>
-                <select
-                  required
-                  value={formData.conta_despesa_id}
-                  onChange={e => setFormData({...formData, conta_despesa_id: e.target.value})}
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500 transition-all"
-                >
-                  <option value="">Selecione uma conta...</option>
-                  {planoHook.contasAnaliticas.filter((c: any) => c.codigo.startsWith('4') || c.codigo.startsWith('5')).map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.codigo} — {c.descricao}</option>
-                  ))}
-                </select>
-                <p className="text-[9px] text-slate-400 mt-2 font-medium">Contas de Resultado (Despesas/Custos) conforme ITG 2002.</p>
+          {/* Lado Direito: Busca de Financeiro */}
+          <div className="flex-1 flex flex-col bg-white">
+            {/* Toolbar de Busca */}
+            <div className="p-6 border-b border-slate-100 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                  <Landmark size={16} className="text-blue-500" />
+                  Selecione o Lançamento Financeiro
+                </h3>
+                <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full border border-blue-100">
+                  {filteredFinancials.length} encontrados
+                </span>
               </div>
 
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Projeto / Convênio</label>
-                <select
-                  value={formData.projeto_id}
-                  onChange={e => setFormData({...formData, projeto_id: e.target.value})}
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all"
-                >
-                  <option value="">Geral (Sem vínculo)</option>
-                  {/* Projetos seriam mapeados aqui */}
-                </select>
-              </div>
-
-              <div className="p-5 bg-blue-50 rounded-[24px] border border-blue-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <Landmark size={14} className="text-blue-600" />
-                  <h4 className="text-[10px] font-black text-blue-800 uppercase tracking-widest">Ações Automáticas</h4>
+              <div className="flex gap-3">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <input 
+                    type="text" 
+                    placeholder="Filtrar por descrição, categoria ou valor..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium outline-none focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all"
+                  />
                 </div>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-2 text-[10px] font-bold text-blue-700">
-                    <div className="w-1 h-1 rounded-full bg-blue-400"></div>
-                    Geração de partida dobrada no Livro Diário
-                  </li>
-                  <li className="flex items-center gap-2 text-[10px] font-bold text-blue-700">
-                    <div className="w-1 h-1 rounded-full bg-blue-400"></div>
-                    Criação de título a pagar de {fmtR(nota.valor_liquido)}
-                  </li>
-                  <li className="flex items-center gap-2 text-[10px] font-bold text-blue-700">
-                    <div className="w-1 h-1 rounded-full bg-blue-400"></div>
-                    Mapeamento de guias de impostos retidos
-                  </li>
-                </ul>
+                <div className="relative w-40">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  <select 
+                    value={periodo}
+                    onChange={e => setPeriodo(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-black text-slate-600 outline-none cursor-pointer hover:bg-slate-100 transition-all appearance-none"
+                  >
+                    <option value="all">Todo período</option>
+                    {Array.from({ length: 12 }).map((_, i) => {
+                      const d = new Date()
+                      d.setMonth(d.getMonth() - i)
+                      const val = d.toISOString().slice(0, 7)
+                      const label = d.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })
+                      return <option key={val} value={val}>{label.toUpperCase()}</option>
+                    })}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de Resultados */}
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/30">
+              {loadingFinancials ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3">
+                  <Loader2 size={24} className="animate-spin text-blue-500" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Buscando lançamentos...</span>
+                </div>
+              ) : filteredFinancials.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-4 opacity-60">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
+                    <Filter size={32} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-black text-xs uppercase tracking-widest">Nenhum lançamento encontrado</p>
+                    <p className="text-[10px] font-bold mt-1">Verifique o fornecedor ou altere o período.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {filteredFinancials.map(fin => {
+                    const isSelected = selectedFinId === fin.id
+                    const valorMatch = Math.abs(fin.valor - nota.valor_liquido) < 0.01
+                    
+                    return (
+                      <div 
+                        key={fin.id}
+                        onClick={() => setSelectedFinId(fin.id)}
+                        className={`
+                          group relative p-4 rounded-2xl border-2 transition-all cursor-pointer
+                          ${isSelected 
+                            ? 'bg-blue-600 border-blue-600 shadow-lg shadow-blue-500/20 translate-x-1' 
+                            : 'bg-white border-slate-100 hover:border-blue-200 hover:shadow-md'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={`
+                              w-10 h-10 rounded-xl flex items-center justify-center transition-colors
+                              ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}
+                            `}>
+                              <Landmark size={18} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                  {fin.categoria}
+                                </span>
+                                {valorMatch && (
+                                  <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${isSelected ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'}`}>
+                                    VALOR IDÊNTICO
+                                  </span>
+                                )}
+                              </div>
+                              <p className={`text-sm font-black leading-tight mt-1 ${isSelected ? 'text-white' : 'text-slate-700'}`}>
+                                {fin.descricao}
+                              </p>
+                              <div className={`flex items-center gap-3 mt-2 text-[10px] font-bold ${isSelected ? 'text-blue-200' : 'text-slate-400'}`}>
+                                <span className="flex items-center gap-1">
+                                  <Calendar size={10} /> {fmtData(fin.data)}
+                                </span>
+                                <span className="uppercase">{fin.status}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="text-right">
+                            <p className={`text-base font-black ${isSelected ? 'text-white' : 'text-slate-800'}`}>
+                              {fmtR(fin.valor)}
+                            </p>
+                            {isSelected && (
+                              <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center text-blue-600 ml-auto mt-2">
+                                <Check size={14} strokeWidth={3} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer de Ações */}
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-4">
+              <div className="hidden sm:flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500">
+                  <AlertCircle size={14} />
+                </div>
+                <p className="text-[10px] font-bold text-slate-500 max-w-[200px] leading-tight">
+                  Ao confirmar, a nota será vinculada ao financeiro e o lançamento contábil será reprocessado automaticamente.
+                </p>
               </div>
 
-              <div className="flex items-center gap-4 pt-4">
+              <div className="flex gap-3 flex-1 sm:flex-none">
                 <button
-                  type="button"
                   onClick={onClose}
-                  className="flex-1 px-6 py-4 rounded-2xl text-[11px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest"
+                  className="flex-1 sm:px-6 py-3.5 rounded-xl text-[11px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-all"
                 >
                   Cancelar
                 </button>
                 <button
-                  type="submit"
-                  disabled={loading || !formData.conta_despesa_id}
-                  className="flex-[2] bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all active:scale-95"
+                  onClick={handleConfirm}
+                  disabled={loading || !selectedFinId}
+                  className={`
+                    flex-[2] sm:px-10 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95
+                    ${selectedFinId 
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20' 
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                    }
+                  `}
                 >
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
-                  Finalizar Escrituração
+                  Confirmar Vínculo e Escriturar
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       </div>
