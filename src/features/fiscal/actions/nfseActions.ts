@@ -203,11 +203,12 @@ export async function identificarPrestadorAction(cnpj: string, razaoSocial: stri
  */
 export async function salvarEscrituracaoNFSeAction(payload: any) {
   const sb = await createServerSupabase()
+  const sbAdmin = createAdminSupabase()
   const { id, conta_despesa_id, centro_custo_id, projeto_id } = payload
 
   try {
-    // 1. Buscar a nota original
-    const { data: nfse, error: fetchErr } = await sb
+    // 1. Buscar a nota original (admin para garantir que acha, independente de RLS)
+    const { data: nfse, error: fetchErr } = await sbAdmin
       .from('nfse_entradas')
       .select('*, prestador:fornecedores(*)')
       .eq('id', id)

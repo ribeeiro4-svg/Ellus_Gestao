@@ -14,7 +14,7 @@ function ModalSenha({
   onCancel, 
   count 
 }: { 
-  onConfirm: () => void
+  onConfirm: () => Promise<void>
   onCancel: () => void
   count: number 
 }) {
@@ -90,30 +90,19 @@ function ModalSenha({
 export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: any; onEscriturar: (id: string) => void }) {
   const { stats, nfses, loading } = nfseHook
 
-  const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [modalTarget, setModalTarget] = useState<string[] | null>(null) // IDs a excluir
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [modalTarget, setModalTarget] = useState<string[] | null>(null)
 
-  const allSelected = nfses.length > 0 && selected.size === nfses.length
-  const someSelected = selected.size > 0
-
-  const toggleAll = () => {
-    if (allSelected) setSelected(new Set())
-    else setSelected(new Set(nfses.map((n: any) => n.id)))
+  const pedirExclusao = (ids: string[]) => {
+    if (ids.length === 0) return
+    setModalTarget(ids)
   }
-
-  const toggleOne = (id: string) => {
-    const next = new Set(selected)
-    next.has(id) ? next.delete(id) : next.add(id)
-    setSelected(next)
-  }
-
-  const pedirExclusao = (ids: string[]) => setModalTarget(ids)
 
   const confirmarExclusao = async () => {
     if (!modalTarget) return
     const result = await deletarNFSeAction(modalTarget)
     if (result.success) {
-      setSelected(new Set())
+      setSelectedIds([])
       nfseHook.refresh()
     } else {
       alert(`Erro ao excluir: ${result.error}`)
@@ -130,27 +119,6 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
   ]
 
   const columns = [
-    {
-      header: (
-        <input
-          type="checkbox"
-          checked={allSelected}
-          onChange={toggleAll}
-          className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
-          title="Selecionar todas"
-        />
-      ),
-      key: 'select',
-      render: (n: any) => (
-        <input
-          type="checkbox"
-          checked={selected.has(n.id)}
-          onChange={() => toggleOne(n.id)}
-          className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
-          onClick={(e) => e.stopPropagation()}
-        />
-      )
-    },
     { 
       header: 'Data', 
       key: 'data_emissao', 
@@ -253,13 +221,13 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
           </h2>
           
           <div className="flex items-center gap-2">
-            {someSelected && (
+            {selectedIds.length > 0 && (
               <button
-                onClick={() => pedirExclusao(Array.from(selected))}
+                onClick={() => pedirExclusao(selectedIds)}
                 className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-black rounded-xl transition-all shadow-sm"
               >
                 <Trash2 size={13} />
-                Excluir {selected.size} selecionada{selected.size > 1 ? 's' : ''}
+                Excluir {selectedIds.length} selecionada{selectedIds.length > 1 ? 's' : ''}
               </button>
             )}
             <select 
@@ -284,6 +252,8 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
           data={nfses} 
           loading={loading}
           getRowClassName={(n: any) => n.status_escrituracao === 'concluida' ? 'opacity-60' : ''}
+          selectedIds={selectedIds}
+          onSelectChange={setSelectedIds}
         />
       </div>
     </div>
