@@ -8,7 +8,10 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   
   // 1. Buscar o lançamento financeiro
   const { data: fin, error: finErr } = await sb.from('lancamentos').select('*').eq('id', financialId).maybeSingle()
-  if (finErr || !fin || fin.status !== 'pago') return { error: 'Lançamento não elegível para integração contábil' }
+  if (finErr || !fin) return { error: 'Lançamento não encontrado' }
+  
+  const isElegivel = fin.status === 'pago' || fin.conciliado === true
+  if (!isElegivel) return { error: 'Lançamento não elegível para integração contábil (deve estar pago ou conciliado)' }
 
   // 1.1 Verificar se o período contábil está fechado
   const fechado = await isPeriodoFechado(fin.data, fin.tenant_id)
@@ -195,26 +198,43 @@ export async function sincronizarLancamentoContabil(financialId: string) {
 export async function sincronizarPeriodoContabil(dataInicio: string) {
   const sb = await createServerSupabase()
   
-  // 1. Buscar todos os lançamentos pagos desde a data de início
-  const { data: lancs, error } = await sb
-    .from('lancamentos')
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return { error: 'Sessão expirada' }
+  const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+  const tenantId = userData?.tenant_id
+
+  // 1. Buscar todos os lançamentos pagos ou conciliados desde a data de início
+  let query = sb.from('lancamentos')
     .select('id')
-    .eq('status', 'pago')
+    .or('status.eq.pago,conciliado.eq.true')
     .gte('data', dataInicio)
   
+  if (tenantId) query = query.eq('tenant_id', tenantId)
+  
+  const { data: lancs, error } = await query
+  
   if (error) return { error: error.message }
-  if (!lancs || lancs.length === 0) return { success: true, count: 0 }
+  if (!lancs || lancs.length === 0) return { success: true, count: 0, total: 0 }
 
   let count = 0
+  let alreadySynced = 0
   let errors = []
 
   for (const l of lancs) {
     const res = await sincronizarLancamentoContabil(l.id)
     if (!res.error) count++
-    else if (res.error !== 'Lançamento já sincronizado') {
+    else if (res.error === 'Lançamento já sincronizado') {
+      alreadySynced++
+    } else {
       errors.push(`${l.id}: ${res.error}`)
     }
   }
 
-  return { success: true, count, total: lancs.length, errors: errors.length > 0 ? errors : null }
+  return { 
+    success: true, 
+    count, 
+    total: lancs.length, 
+    alreadySynced,
+    errors: errors.length > 0 ? errors : null 
+  }
 }
