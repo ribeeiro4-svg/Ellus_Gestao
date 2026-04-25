@@ -18,6 +18,7 @@ const fmtCFOP = (c: string | null) => {
 import { getFornecedorByCpfCnpjAction, garantirFornecedorAction } from '@/features/fiscal/actions/nfseActions'
 import { getTributacaoPresetsAction, salvarTributacaoPresetAction, excluirTributacaoPresetAction } from '@/features/fiscal/actions/fiscalActions'
 import NFSeEscrituracaoModal from './nfse/NFSeEscrituracaoModal'
+import ImobilizadoShortcutModal, { ImobilizadoShortcutData } from './ImobilizadoShortcutModal'
 
 export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: any; nfeIdInicial: string | null }) {
   const { nfes, buscarItens, salvarClassificacao, tenantId } = nfeHook
@@ -31,6 +32,10 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   const [saving, setSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [vinculoData, setVinculoData] = useState<any>(null)
+  
+  // Controle do Modal de Imobilizado
+  const [modalImobAberto, setModalImobAberto] = useState(false)
+  const [imobItemData, setImobItemData] = useState<ImobilizadoShortcutData | null>(null)
   const [showPresets, setShowPresets] = useState(false)
   const [presetName, setPresetName] = useState('')
   const [presets, setPresets] = useState<any[]>([])
@@ -71,8 +76,25 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
     })
   }, [selectedNfeId])
 
-  const updateItem = (idx: number, field: string, value: any) => {
-    setItens(prev => prev.map((item, i) => i === idx ? { ...item, [field]: value } : item))
+  const updateItem = (index: number, field: string, value: any) => {
+    const newItens = [...itens]
+    newItens[index] = { ...newItens[index], [field]: value }
+    setItens(newItens)
+
+    // Trigger Imobilizado Shortcut
+    if (field === 'destinacao_item' && value === '4') {
+      const item = newItens[index]
+      if (nfeSelecionada) {
+        setImobItemData({
+          descricao_produto: item.descricao_produto || '',
+          valor_produto: Number(item.valor_produto || 0),
+          data_emissao: nfeSelecionada.data_emissao,
+          numero_nf: nfeSelecionada.numero_nf,
+          ncm: item.ncm || undefined
+        })
+        setModalImobAberto(true)
+      }
+    }
   }
 
   const aplicarTodosNCM = (ncm: string, field: string, value: any) => {
@@ -578,6 +600,12 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
         onClose={() => setIsModalOpen(false)}
         nfseData={vinculoData}
         onSubmit={handleSubmitVinculo}
+      />
+
+      <ImobilizadoShortcutModal 
+        isOpen={modalImobAberto}
+        onClose={() => setModalImobAberto(false)}
+        itemData={imobItemData}
       />
     </div>
   )

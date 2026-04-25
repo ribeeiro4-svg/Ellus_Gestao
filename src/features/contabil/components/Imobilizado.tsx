@@ -232,9 +232,12 @@ export default function Imobilizado({ planoHook }: { planoHook: any }) {
               </tr>
             ) : (
               ativos.map((ativo) => (
-                <tr key={ativo.id} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={ativo.id} className={`hover:bg-slate-50/50 transition-colors ${ativo.status === 'pendente' ? 'bg-amber-50/30' : ''}`}>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">{ativo.codigo_patrimonio}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">{ativo.codigo_patrimonio}</span>
+                      {ativo.status === 'pendente' && <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black uppercase rounded">Pendente</span>}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-xs font-bold text-slate-700">{ativo.nome}</p>
@@ -279,15 +282,23 @@ export default function Imobilizado({ planoHook }: { planoHook: any }) {
             <form className="p-8 space-y-4" onSubmit={async (e) => {
               e.preventDefault()
               const formData = new FormData(e.currentTarget)
-              const dados = Object.fromEntries(formData.entries())
+              
+              // Se estava pendente e está sendo salvo pelo formulário completo, vira ativo
+              const statusFinal = itemEdit?.status === 'pendente' ? 'ativo' : (itemEdit?.status || 'ativo')
               
               setLoading(true)
               const res = await upsertAtivoAction({
                 ...itemEdit,
-                ...dados,
-                valor_aquisicao: Number(dados.valor_aquisicao),
-                valor_residual: Number(dados.valor_residual),
-                vida_util_meses: Number(dados.vida_util_meses),
+                codigo_patrimonio: formData.get('codigo_patrimonio'),
+                nome: formData.get('nome'),
+                data_aquisicao: formData.get('data_aquisicao'),
+                valor_aquisicao: Number(formData.get('valor_aquisicao')),
+                valor_residual: Number(formData.get('valor_residual') || 0),
+                vida_util_meses: Number(formData.get('vida_util_meses')),
+                conta_imobilizado_id: formData.get('conta_imobilizado_id'),
+                conta_depreciacao_acum_id: formData.get('conta_depreciacao_acum_id'),
+                conta_despesa_deprec_id: formData.get('conta_despesa_deprec_id'),
+                status: statusFinal
               })
               setLoading(false)
               
