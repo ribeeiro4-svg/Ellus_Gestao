@@ -259,7 +259,15 @@ export async function repararNumeracaoAction() {
     .select('id, numero_lancamento, historico')
     .ilike('historico', '%Ref: %/%')
   
-  if (!lancs || lancs.length === 0) return { success: true, message: 'Nenhum lançamento com referência encontrado para reparo.' }
+  if (!lancs || lancs.length === 0) {
+    // Tenta conserto manual do específico relatado pelo usuário se ainda não foi corrigido
+    const { data: especifico } = await sbAdmin.from('lancamentos_contabeis').select('id').eq('numero_lancamento', '2026/002163').maybeSingle()
+    if (especifico) {
+      await sbAdmin.from('lancamentos_contabeis').update({ numero_lancamento: '2026/001389' }).eq('id', especifico.id)
+      return { success: true, message: 'Lançamento 2026/002163 corrigido para 2026/001389 com sucesso.' }
+    }
+    return { success: true, message: 'Nenhum lançamento para reparo encontrado.' }
+  }
 
   let reparados = 0
   for (const l of lancs) {
@@ -277,4 +285,18 @@ export async function repararNumeracaoAction() {
   }
 
   return { success: true, message: `Reparo concluído. ${reparados} lançamentos voltaram à numeração original.` }
+}
+
+/**
+ * Corrige um número de lançamento específico manualmente
+ */
+export async function fixSpecificEntryAction(currentNum: string, targetNum: string) {
+  const sbAdmin = createAdminSupabase()
+  const { data, error } = await sbAdmin
+    .from('lancamentos_contabeis')
+    .update({ numero_lancamento: targetNum })
+    .eq('numero_lancamento', currentNum)
+  
+  if (error) return { success: false, error: error.message }
+  return { success: true }
 }
