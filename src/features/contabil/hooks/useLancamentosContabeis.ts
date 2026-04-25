@@ -103,10 +103,10 @@ export function useLancamentosContabeis() {
       data_competencia: dados.data,
       tipo: dados.tipo || 'normal',
       historico: dados.historico,
-      documento_tipo: dados.documento_tipo || dados.documentoTipo || null,
-      documento_numero: dados.documento_numero || dados.documentoNumero || null,
-      origem_tipo: dados.origem_tipo || dados.origemTipo || null,
-      origem_id: dados.origem_id || dados.origemId || null,
+      documento_tipo: dados.documentoTipo || null,
+      documento_numero: dados.documentoNumero || null,
+      origem_tipo: dados.origemTipo || null,
+      origem_id: dados.origemId || null,
       status: 'confirmado',
     }).select().single()
 
