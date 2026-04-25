@@ -34,13 +34,17 @@ export async function importarNFSeAction(xmlContent: string) {
     if (prestador.error) throw new Error(prestador.error)
 
     // 2. Persistir no Banco de Dados (nfse_entradas)
-    // Verifica se já existe para evitar duplicidade
+    // Verifica se já existe para evitar duplicidade (Prioriza Chave Nacional se disponível)
+    let orFilter = `and(numero_nfse.eq.${parsed.nota.numero_nfse},prestador_id.eq.${prestador.id})`
+    if (parsed.nota.chave_nacional) {
+      orFilter = `chave_nacional.eq.${parsed.nota.chave_nacional},${orFilter}`
+    }
+
     const { data: existente } = await sbAdmin
       .from('nfse_entradas')
       .select('id')
+      .or(orFilter)
       .eq('tenant_id', tenantId)
-      .eq('numero_nfse', parsed.nota.numero_nfse)
-      .eq('prestador_id', prestador.id)
       .maybeSingle()
 
     let nfseId = existente?.id
