@@ -48,28 +48,48 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
     }
   }
 
-  // 4b. Busca por termo e CNPJ
-  let orClauses = [`numero_nfse.ilike.%${termoPrincipal}%`]
-  if (cnpjLimpo) orClauses.push(`id.in.(select id from nfse_entradas where prestador_id in (select id from fornecedores where cpf_cnpj ilike '%${cnpjLimpo}%'))`)
+  // 4b. Busca por Prestadores (Nome ou CNPJ)
+  let prestadorIds: string[] = []
+  const { data: prestadoresMatch } = await sb
+    .from('fornecedores')
+    .select('id')
+    .or(`nome.ilike.%${termoPrincipal}%,cpf_cnpj.ilike.%${cnpjLimpo || termoPrincipal}%`)
+  
+  if (prestadoresMatch) prestadorIds = prestadoresMatch.map(p => p.id)
 
-  const { data: nfsePorTermo } = await sb
+  // Adiciona prestadores por fragmentos do nome
+  if (partes.length > 0) {
+    const { data: prestadoresFragmentos } = await sb
+      .from('fornecedores')
+      .select('id')
+      .or(partes.map((p: string) => `nome.ilike.%${p}%`).join(','))
+    if (prestadoresFragmentos) {
+      prestadorIds = [...new Set([...prestadorIds, ...prestadoresFragmentos.map(p => p.id)])]
+    }
+  }
+
+  // 4c. Busca as Notas dos Prestadores encontrados + busca por número da nota
+  const { data: nfsePorBusca } = await sb
     .from('nfse_entradas')
     .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
-    .or(orClauses.join(','))
-    .limit(10)
-  
-  // Complementar com busca por partes do nome
-  let nfsePorNomes: any[] = []
-  if (partes.length > 0) {
-    const { data: nfsN } = await sb.from('nfse_entradas')
-      .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
-      .or(partes.map((p: string) => `fornecedores.nome.ilike.%${p}%`).join(','))
-      .limit(5)
-    nfsePorNomes = nfsN || []
-  }
-  
+    .or(`numero_nfse.ilike.%${termoPrincipal}%,prestador_id.in.(${prestadorIds.length > 0 ? prestadorIds.join(',') : '00000000-0000-0000-0000-000000000000'})`)
+    .limit(20)
+
   const nfseMap = new Map();
-  [...nfsePorVinculo, ...(nfsePorTermo || []), ...nfsePorNomes].forEach(n => nfseMap.set(n.id, n));
+  [...nfsePorVinculo, ...(nfsePorBusca || [])].forEach(n => nfseMap.set(n.id, n));
+  
+  // 4d. Fallback: Se não achou nada, busca notas recentes do mesmo mês
+  if (nfseMap.size === 0) {
+    const mes = lanc.data_lancamento.slice(0, 7)
+    const { data: recentNfse } = await sb
+      .from('nfse_entradas')
+      .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
+      .gte('data_emissao', `${mes}-01`)
+      .lte('data_emissao', `${mes}-31`)
+      .limit(5)
+    if (recentNfse) recentNfse.forEach(n => nfseMap.set(n.id, n))
+  }
+
   const nfseBase = Array.from(nfseMap.values())
 
   // Adicionar info de vínculo financeiro para o modal
