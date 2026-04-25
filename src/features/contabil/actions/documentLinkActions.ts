@@ -19,10 +19,13 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
   // 2. Extrair termo de busca do histórico
   // Ex: "PAG — Pgto QR Code Pix - MAGALUPAY" -> "MAGALUPAY"
   let termo = lanc.historico || ''
+  
+  // Remove prefixos comuns como "PAG — ", "REC — ", "Ref: 2026/001389 — "
+  termo = termo.replace(/^.*—\s*/, '')
+  // Tenta pegar a última parte se houver hífens
   if (termo.includes(' - ')) {
-    termo = termo.split(' - ').pop() || termo
-  } else if (termo.includes(' — ')) {
-    termo = termo.split(' — ').pop() || termo
+    const parts = termo.split(' - ')
+    termo = parts[parts.length - 1] || termo
   }
   termo = termo.trim()
 
@@ -36,20 +39,28 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
 
   // 4. Buscar em NFS-e
   // 4a. Busca direta por vínculo financeiro (mais preciso)
-  let nfseIdsPorFinanceiro: string[] = []
+  let nfsePorVinculo: any[] = []
   if (lanc.origem_tipo === 'financeiro' && lanc.origem_id) {
     const { data: vinculos } = await sb
       .from('nfse_financeiro_vinculo')
-      .select('nfse_id')
+      .select('nfse:nfse_id(id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome))')
       .eq('financeiro_id', lanc.origem_id)
-    if (vinculos) nfseIdsPorFinanceiro = vinculos.map(v => v.nfse_id)
+    
+    if (vinculos) {
+      nfsePorVinculo = vinculos.map((v: any) => v.nfse).filter(Boolean)
+    }
   }
 
-  const { data: nfse } = await sb
+  // 4b. Busca por termo
+  const { data: nfsePorTermo } = await sb
     .from('nfse_entradas')
     .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
-    .or(`numero_nfse.ilike.%${termo}%,id.in.(${nfseIdsPorFinanceiro.length > 0 ? nfseIdsPorFinanceiro.join(',') : '00000000-0000-0000-0000-000000000000'})`)
+    .ilike('numero_nfse', `%${termo}%`)
     .limit(10)
+  
+  const nfseMap = new Map();
+  [...nfsePorVinculo, ...(nfsePorTermo || [])].forEach(n => nfseMap.set(n.id, n));
+  const nfse = Array.from(nfseMap.values())
   
   // Se não achou pelo número/vínculo, tenta pelo nome ou CNPJ do prestador
   let nfseComplementar: any[] = []
@@ -66,23 +77,31 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
 
   // 5. Buscar em NF-e (Produtos)
   // 5a. Busca direta por vínculo financeiro (mais preciso)
-  const queryNfe = sb.from('nfe_entradas')
-    .select('id, numero_nf, data_emissao, valor_total, nome_emitente')
-  
+  let nfePorVinculo: any[] = []
   if (lanc.origem_tipo === 'financeiro' && lanc.origem_id) {
-    queryNfe.or(`numero_nf.ilike.%${termo}%,nome_emitente.ilike.%${termo}%,lancamento_financeiro_id.eq.${lanc.origem_id}`)
-  } else {
-    queryNfe.or(`numero_nf.ilike.%${termo}%,nome_emitente.ilike.%${termo}%`)
+    const { data: nfeV } = await sb
+      .from('nfe_entradas')
+      .select('id, numero_nf, data_emissao, valor_total, nome_emitente')
+      .eq('lancamento_financeiro_id', lanc.origem_id)
+    if (nfeV) nfePorVinculo = nfeV
   }
 
-  const { data: nfe } = await queryNfe.limit(10)
+  const { data: nfePorTermo } = await sb
+    .from('nfe_entradas')
+    .select('id, numero_nf, data_emissao, valor_total, nome_emitente')
+    .or(`numero_nf.ilike.%${termo}%,nome_emitente.ilike.%${termo}%`)
+    .limit(10)
+
+  const nfeMap = new Map();
+  [...nfePorVinculo, ...(nfePorTermo || [])].forEach(n => nfeMap.set(n.id, n));
+  const nfe = Array.from(nfeMap.values())
 
   return {
     success: true,
     data: {
       financial: financial || [],
-      nfse: [...(nfse || []), ...nfseComplementar].slice(0, 10),
-      nfe: nfe || []
+      nfse: [...nfse, ...nfseComplementar].slice(0, 10),
+      nfe: nfe.slice(0, 10)
     }
   }
 }
