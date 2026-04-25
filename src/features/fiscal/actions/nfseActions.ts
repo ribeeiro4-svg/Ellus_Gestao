@@ -52,7 +52,7 @@ export async function importarNFSeAction(xmlContent: string) {
     if (!existente) {
       const { data: local } = await sbAdmin
         .from('nfse_entradas')
-        .select('id')
+        .select('id, tenant_id')
         .eq('tenant_id', tenantId)
         .eq('numero_nfse', parsed.nota.numero_nfse)
         .eq('prestador_id', prestador.id)
@@ -62,7 +62,14 @@ export async function importarNFSeAction(xmlContent: string) {
 
     let nfseId = existente?.id
 
-    if (!existente) {
+    if (existente) {
+      // Se a nota já existe mas está vinculada a outro tenant (ex: fallback), 
+      // vinculamos ela ao tenant atual para que apareça na lista do usuário.
+      if (existente.tenant_id && existente.tenant_id !== tenantId) {
+        await sbAdmin.from('nfse_entradas').update({ tenant_id: tenantId }).eq('id', existente.id)
+      }
+      nfseId = existente.id
+    } else {
       const { data: nova, error: insErr } = await sbAdmin
         .from('nfse_entradas')
         .insert({
