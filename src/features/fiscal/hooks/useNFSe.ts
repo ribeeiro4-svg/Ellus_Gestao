@@ -37,5 +37,12 @@ export function useNFSe() {
     fetchNfses();
   }, [fetchNfses]);
 
-  return { nfses, loading, stats, refresh: fetchNfses, periodo, setPeriodo };
+  return { 
+    nfses, 
+    loading: loading || !tenantId, 
+    stats, 
+    refresh: fetchNfses, 
+    periodo, 
+    setPeriodo 
+  };
 }
