@@ -2,20 +2,21 @@
 
 import { createServerSupabase } from '@/lib/supabase/server'
 import { parseNFSeXML } from '../utils/nfseParser'
-
 import { createClient } from '@supabase/supabase-js'
+
+function createAdminSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 /**
  * Server Action para importar e processar XML de NFS-e
  */
-export async function importarNFSeAction(xmlContent: string) {
+export async function importarNFSeAction(xmlContent: string, clientTenantId?: string) {
   const sb = await createServerSupabase()
-  
-  // Service Role Client para bypass de RLS na inserção
-  const sbAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const sbAdmin = createAdminSupabase()
   
   try {
     const parsed = parseNFSeXML(xmlContent)
@@ -23,8 +24,8 @@ export async function importarNFSeAction(xmlContent: string) {
     // Pega o tenant do usuário logado
     const { data: { user } } = await sb.auth.getUser()
     
-    let tenantId = '971f92af-a72b-4bc4-a8e0-333d712ce6a7' // Fallback seguro para ambiente ACPROBEC
-    if (user) {
+    let tenantId = clientTenantId || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
+    if (!clientTenantId && user) {
       const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
       if (userData?.tenant_id) tenantId = userData.tenant_id
     }

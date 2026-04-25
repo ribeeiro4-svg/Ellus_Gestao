@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from 'react'
 import { Upload, FileText, CheckCircle, XCircle, Loader2, Info } from 'lucide-react'
 import { importarNFSeAction } from '@/features/fiscal/actions/nfseActions'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
+import { useTenantId } from '@/lib/hooks/useTenantId'
 
 export default function NFSeImportZone({ onImported }: { onImported: () => void }) {
   const [dragging, setDragging] = useState(false)
@@ -11,6 +12,7 @@ export default function NFSeImportZone({ onImported }: { onImported: () => void 
   const [previews, setPreviews] = useState<any[]>([])
   const [results, setResults] = useState<{ file: string; ok: boolean; msg: string }[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
+  const tenantId = useTenantId()
 
   const processFiles = async (files: FileList | File[]) => {
     const arr = Array.from(files).filter(f => f.name.endsWith('.xml'))
@@ -21,7 +23,7 @@ export default function NFSeImportZone({ onImported }: { onImported: () => void 
     
     for (const file of arr) {
       const content = await file.text()
-      const res = await importarNFSeAction(content)
+      const res = await importarNFSeAction(content, tenantId)
       if (res.success && res.data) {
         newPreviews.push({ ...res.data, fileName: file.name })
       } else {
