@@ -11,6 +11,7 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
   const { contas } = planoHook
   const { configuracoes } = useConfiguracoesContabeis()
   const [gerandoECD, setGerandoECD] = useState(false)
+  const [auditandoContas, setAuditandoContas] = useState(false)
   const ano = new Date().getFullYear()
 
   const handleGerarECD = async () => {
@@ -36,6 +37,22 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
       alert(`ECD gerado com sucesso!\n\n📄 Arquivo: ${res.nomeArquivo}\n📊 ${res.totalLinhas} linhas\n📒 ${res.totalLancamentos} lançamentos\n🏗️ ${res.totalContas} contas\n\nEncaminhe o arquivo ao seu contador para validação no PVA do SPED.`)
     } finally {
       setGerandoECD(false)
+    }
+  }
+
+  const handleAuditoriaContas = async () => {
+    setAuditandoContas(true)
+    try {
+      const { createMissingAccountsAction } = await import('@/features/contabil/actions/createMissingAccounts')
+      const res = await createMissingAccountsAction()
+      if (res.success) {
+        alert(`Auditoria de Contas concluída!\n\n🆕 Novas contas criadas: ${res.created}\n✅ Contas já existentes: ${res.skipped}\n\nO Plano de Contas foi atualizado para suportar Provisões, Estagiários e Pró-Labore conforme solicitado.`)
+        planoHook.refresh()
+      }
+    } catch (err) {
+      alert('Erro ao processar auditoria.')
+    } finally {
+      setAuditandoContas(false)
     }
   }
 
@@ -79,7 +96,17 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Plano de contas summary */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <h3 className="text-sm font-black text-slate-700 mb-4">🏗️ Plano de Contas ITG 2002</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-black text-slate-700">🏗️ Plano de Contas ITG 2002</h3>
+            <button 
+              onClick={handleAuditoriaContas}
+              disabled={auditandoContas}
+              className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all flex items-center gap-1 disabled:opacity-50"
+            >
+              {auditandoContas ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />}
+              {auditandoContas ? 'Verificando...' : 'Verificar Plano'}
+            </button>
+          </div>
           {contas.length === 0 ? (
             <div className="flex flex-col items-center py-8 text-slate-300">
               <BookOpen size={32} className="mb-2" />
