@@ -237,9 +237,16 @@ export async function buscarCandidatosFinanceirosAction(termo: string) {
  */
 export async function getContabilLogsAction() {
   const sb = await createServerSupabase()
-  const { data, error } = await sb
-    .from('contabil_logs')
-    .select('*')
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return { success: false, error: 'Sessão expirada' }
+
+  const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+  const tenantId = userData?.tenant_id
+
+  let query = sb.from('contabil_logs').select('*')
+  if (tenantId) query = query.eq('tenant_id', tenantId)
+  
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(50)
   
