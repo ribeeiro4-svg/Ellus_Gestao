@@ -349,6 +349,26 @@ export async function salvarEscrituracaoNFSeAction(payload: {
     await sincronizarNotaFiscalContabil(nfseId, 'nfse')
     const resSync = await sincronizarLancamentoContabil(financeiroId)
 
+    // 6. Atualizar o lançamento contábil com o número do documento (NFS-e)
+    const { data: lancContabil } = await sbAdmin
+      .from('lancamentos_contabeis')
+      .select('id')
+      .eq('origem_id', financeiroId)
+      .maybeSingle()
+    
+    if (lancContabil) {
+      await sbAdmin.from('lancamentos_contabeis').update({
+        documento_tipo: 'NF',
+        documento_numero: nfse.numero_nfse,
+        origem_tipo: 'fiscal_nfse'
+      }).eq('id', lancContabil.id)
+
+      // Também salvar o ID do lançamento contábil na nota para referência rápida
+      await sbAdmin.from('nfse_entradas').update({ 
+        lancamento_contabil_id: lancContabil.id 
+      }).eq('id', nfseId)
+    }
+
     return { success: true, syncError: resSync.error }
   } catch (err: any) {
     return { success: false, error: err.message }
@@ -363,12 +383,11 @@ export async function vincularNFSeALancamentoAction(nfseId: string, lancamentoId
 
   try {
     // 1. Buscar dados
-    const { data: nfse } = await sb.from('nfse_entradas').select('*').eq('id', nfseId).single()
+    const sbAdmin = createAdminSupabase()
+    const { data: nfse } = await sbAdmin.from('nfse_entradas').select('*').eq('id', nfseId).single()
     const { data: lanc } = await sb.from('lancamentos').select('*').eq('id', lancamentoId).single()
 
     if (!nfse || !lanc) throw new Error('NFS-e ou Lançamento não encontrado')
-
-    const sbAdmin = createAdminSupabase()
 
     // 2. Criar Vínculo
     const { error: vinculoErr } = await sbAdmin.from('nfse_financeiro_vinculo').insert({
@@ -390,9 +409,21 @@ export async function vincularNFSeALancamentoAction(nfseId: string, lancamentoId
     const { sincronizarLancamentoContabil } = await import('@/features/contabil/actions/accountingActions')
     await sincronizarLancamentoContabil(lancamentoId)
 
+    // 5. Atualizar Lançamento Contábil com o Documento
+    const { data: lancContabil } = await sbAdmin.from('lancamentos_contabeis').select('id').eq('origem_id', lancamentoId).maybeSingle()
+    if (lancContabil) {
+      await sbAdmin.from('lancamentos_contabeis').update({
+        documento_tipo: 'NF',
+        documento_numero: nfse.numero_nfse,
+        origem_tipo: 'fiscal_nfse'
+      }).eq('id', lancContabil.id)
+
+      await sbAdmin.from('nfse_entradas').update({ lancamento_contabil_id: lancContabil.id }).eq('id', nfseId)
+    }
+
     return { success: true }
   } catch (err: any) {
-    return { error: err.message }
+    return { success: false, error: err.message }
   }
 }
 
