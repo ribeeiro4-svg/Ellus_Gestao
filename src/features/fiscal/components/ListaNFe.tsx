@@ -235,11 +235,6 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
           </button>
         ) : (
           <>
-            <select value={filterPeriodo} onChange={e => setFilterPeriodo(e.target.value)}
-              className="bg-slate-50 px-3 py-2.5 rounded-xl text-xs font-bold border-none outline-none">
-              <option value="">Todos os períodos</option>
-              {periodos.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
               className="bg-slate-50 px-3 py-2.5 rounded-xl text-xs font-bold border-none outline-none">
               <option value="ALL">Todos os status</option>

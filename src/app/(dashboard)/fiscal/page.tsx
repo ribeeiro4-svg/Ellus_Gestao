@@ -39,6 +39,22 @@ export default function FiscalPage() {
     setActiveTab('escrituracao')
   }
 
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  const periodosOpcoes = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - i)
+    const val = d.toISOString().slice(0, 7)
+    const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    return { value: val, label: label.charAt(0).toUpperCase() + label.slice(1) }
+  })
+
+  const currentPeriod = nfeHook.filterPeriodo || 'all'
+
+  const handlePeriodoChange = (val: string) => {
+    nfeHook.setFilterPeriodo(val === 'all' ? '' : val)
+    nfseHook.setPeriodo(val)
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
       {/* Header */}
@@ -60,6 +76,30 @@ export default function FiscalPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Filtro de Período Global - Visível em todas as abas */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+            <Calendar size={18} />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-slate-800">Período de Análise</h3>
+            <p className="text-[10px] font-bold text-slate-400">Dados consolidados em tempo real para todo o módulo fiscal</p>
+          </div>
+        </div>
+        
+        <select 
+          value={currentPeriod} 
+          onChange={(e) => handlePeriodoChange(e.target.value)}
+          className="px-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-black text-slate-700 outline-none hover:bg-slate-100 transition-all cursor-pointer min-w-[220px]"
+        >
+          <option value="all">Visão Consolidada (Geral)</option>
+          {periodosOpcoes.map(p => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* Tabs */}
