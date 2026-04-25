@@ -272,18 +272,20 @@ export async function salvarEscrituracaoNFSeAction(payload: {
     if (finErr || !fin) throw new Error('Lançamento financeiro não encontrado')
 
     // 3. Criar Vínculo
-    await sb.from('nfse_financeiro_vinculo').insert({
+    await sbAdmin.from('nfse_financeiro_vinculo').insert({
       tenant_id: nfse.tenant_id,
       nfse_id: nfse.id,
       financeiro_id: fin.id,
       tipo_vinculo: 'escrituracao_vinculo'
     })
 
-    // 4. Marcar nota como concluída e vincular ao financeiro
-    await sb.from('nfse_entradas').update({
+    // 4. Marcar nota como concluída e vincular ao financeiro (Usando ADMIN para garantir sucesso)
+    const { error: upErr } = await sbAdmin.from('nfse_entradas').update({
       status_escrituracao: 'concluida',
-      lancamento_financeiro_id: fin.id // Se existir este campo, se não usamos o vínculo
+      // data_escrituracao: new Date().toISOString() // Adicionar se existir
     }).eq('id', nfse.id)
+
+    if (upErr) throw new Error(`Erro ao atualizar status da nota: ${upErr.message}`)
 
     // 5. Re-sincronizar Contabilidade
     // Sincroniza a Provisão da Nota e a Liquidação do Financeiro
@@ -311,8 +313,10 @@ export async function vincularNFSeALancamentoAction(nfseId: string, lancamentoId
 
     if (!nfse || !lanc) throw new Error('NFS-e ou Lançamento não encontrado')
 
+    const sbAdmin = createAdminSupabase()
+
     // 2. Criar Vínculo
-    const { error: vinculoErr } = await sb.from('nfse_financeiro_vinculo').insert({
+    const { error: vinculoErr } = await sbAdmin.from('nfse_financeiro_vinculo').insert({
       tenant_id: lanc.tenant_id,
       nfse_id: nfseId,
       financeiro_id: lancamentoId,
@@ -323,7 +327,7 @@ export async function vincularNFSeALancamentoAction(nfseId: string, lancamentoId
     if (vinculoErr) throw new Error(`Erro ao criar vínculo: ${vinculoErr.message}`)
 
     // 3. Atualizar Status da Nota
-    await sb.from('nfse_entradas').update({
+    await sbAdmin.from('nfse_entradas').update({
       status_escrituracao: 'concluida'
     }).eq('id', nfseId)
 
