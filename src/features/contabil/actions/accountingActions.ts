@@ -273,6 +273,14 @@ export async function sincronizarPeriodoContabil(dataInicio: string) {
     }
   }
 
+  // 2. Registrar LOG da operação
+  await sb.from('contabil_logs').insert({
+    tenant_id: tenantId,
+    acao: 'SINCRONIZAÇÃO EM MASSA',
+    detalhes: `Processados ${lancs.length} itens. Sucesso: ${count}. Já sincronizados: ${alreadySynced}. Erros: ${errors.length}. Período: ${dataInicio}`,
+    usuario_id: user.id
+  })
+
   return { 
     success: true, 
     count, 
