@@ -220,6 +220,21 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
           {loadingLogs ? <Loader2 size={14} className="animate-spin" /> : <History size={14} />}
           Logs
         </button>
+        <button 
+          onClick={async () => {
+            setLoadingLogs(true)
+            const { repararNumeracaoAction } = await import('../actions/documentLinkActions')
+            const res = await repararNumeracaoAction()
+            setLoadingLogs(false)
+            if (res.success) {
+              alert(res.message)
+              lancHook.refresh()
+            }
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-xl transition-all">
+          <Activity size={14} />
+          Corrigir Sequência
+        </button>
         <button onClick={imprimirDiarioPDF}
           className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all">
           <FileText size={14} />

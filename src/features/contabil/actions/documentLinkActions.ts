@@ -245,3 +245,36 @@ export async function getContabilLogsAction() {
   
   return { success: !error, data: data || [], error: error?.message }
 }
+
+/**
+ * Repara a numeração de lançamentos que foram "bagunçados" pela re-sincronização.
+ * Busca no histórico o padrão "Ref: 2026/XXXXXX" e restaura o número original.
+ */
+export async function repararNumeracaoAction() {
+  const sbAdmin = createAdminSupabase()
+  
+  // 1. Buscar lançamentos que tenham "Ref:" no histórico (onde guardamos o número original antes do re-processamento)
+  const { data: lancs } = await sbAdmin
+    .from('lancamentos_contabeis')
+    .select('id, numero_lancamento, historico')
+    .ilike('historico', '%Ref: %/%')
+  
+  if (!lancs || lancs.length === 0) return { success: true, message: 'Nenhum lançamento com referência encontrado para reparo.' }
+
+  let reparados = 0
+  for (const l of lancs) {
+    const match = l.historico.match(/Ref:\s*(\d{4}\/\d{6})/)
+    if (match && match[1] && match[1] !== l.numero_lancamento) {
+      const originalNum = match[1]
+      // Verificar se o número original já não está sendo usado por outro (segurança)
+      const { data: conflito } = await sbAdmin.from('lancamentos_contabeis').select('id').eq('numero_lancamento', originalNum).maybeSingle()
+      
+      if (!conflito) {
+        await sbAdmin.from('lancamentos_contabeis').update({ numero_lancamento: originalNum }).eq('id', l.id)
+        reparados++
+      }
+    }
+  }
+
+  return { success: true, message: `Reparo concluído. ${reparados} lançamentos voltaram à numeração original.` }
+}

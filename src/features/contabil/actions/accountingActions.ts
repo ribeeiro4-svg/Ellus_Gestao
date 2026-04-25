@@ -448,6 +448,14 @@ export async function sincronizarPeriodoContabil(dataInicio: string) {
     usuario_id: user.id
   })
 
+  // 3. Auto-reparo de numeração bagunçada (Opcional, mas ajuda a manter a ordem)
+  try {
+    const { repararNumeracaoAction } = await import('./documentLinkActions')
+    await repararNumeracaoAction()
+  } catch (err) {
+    console.error('Erro no auto-reparo de numeração:', err)
+  }
+
   return { 
     success: true, 
     count, 
