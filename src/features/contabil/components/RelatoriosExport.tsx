@@ -1,15 +1,18 @@
 import React from 'react'
-import { FileText, Printer, FileSpreadsheet, Loader2 } from 'lucide-react'
+import { FileText, Printer, Book, Building2, Target, FileBarChart } from 'lucide-react'
 import Balancete from './Balancete'
 import Demonstracoes from './Demonstracoes'
 import DFC from './DFC'
+import LivroDiario from './LivroDiario'
+import Imobilizado from './Imobilizado'
+import ExecucaoRubrica from './ExecucaoRubrica'
 
 export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
   
   const handleImprimir = (id: string, titulo: string) => {
     const conteudo = document.getElementById(id)
     if (!conteudo) {
-      alert(`O relatório "${titulo}" ainda não foi carregado ou não está disponível para impressão direta deste painel.`)
+      alert(`O relatório "${titulo}" está sendo processado. Por favor, aguarde um segundo e tente novamente.`)
       return
     }
 
@@ -30,14 +33,16 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
             .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
             .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: left; }
+            th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 10px; text-align: left; }
             .text-right { text-align: right; }
+            .text-center { text-align: center; }
             .font-black { font-weight: 900; }
             .font-bold { font-weight: 700; }
             .bg-slate-50, .bg-indigo-50, .bg-blue-50, .bg-emerald-50, .bg-rose-50, .bg-amber-50 { background-color: #f8fafc !important; }
             .indent { padding-left: 30px !important; }
             .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; }
-            @media print { @page { size: A4; margin: 1.5cm; } }
+            button, .no-print, .actions, select, .flex-wrap { display: none !important; }
+            @media print { @page { size: A4 landscape; margin: 1cm; } }
           </style>
         </head>
         <body>
@@ -45,7 +50,9 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
             <h1>ACPROBEC — ${titulo.toUpperCase()}</h1>
             <p>CONFORMIDADE ITG 2002 (R1) | RELATÓRIO OFICIAL</p>
           </div>
-          ${conteudo.innerHTML}
+          <div style="zoom: 0.9">
+            ${conteudo.innerHTML}
+          </div>
           <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
         </body>
       </html>
@@ -54,62 +61,56 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
     setTimeout(() => {
       janela.print()
       janela.close()
-    }, 500)
+    }, 800)
   }
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
-          { id: 'bp-print', title: 'Balanço Patrimonial', desc: 'Posição financeira (Ativo vs Passivo)', icon: FileText },
-          { id: 'dsd-print', title: 'Demonstração de Superávit', desc: 'DSD — Resultado do Exercício', icon: FileText },
-          { id: 'dfc-print', title: 'Fluxo de Caixa (DFC)', desc: 'Movimentação líquida de disponibilidades', icon: FileText },
-          { id: 'bal-print', title: 'Balancete Patrimonial', desc: 'Verificação de débitos e créditos', icon: FileText },
-          { id: 'mrosc-print', title: 'MROSC / Projetos', desc: 'Execução de rubricas por centro de custo', icon: FileText },
+          { id: 'diario-print', title: 'Livro Diário', desc: 'Livro de escrituração cronológica e sistemática', icon: Book },
+          { id: 'bal-print', title: 'Balancete Patrimonial', desc: 'Verificação de débitos, créditos e saldos atuais', icon: FileBarChart },
+          { id: 'bp-print', title: 'Balanço Patrimonial', desc: 'Demonstração da posição financeira e patrimonial', icon: FileText },
+          { id: 'dsd-print', title: 'Demonstração de Superávit', desc: 'DSD — Resultado das atividades do período', icon: FileText },
+          { id: 'dfc-print', title: 'Fluxo de Caixa (DFC)', desc: 'Movimentação financeira pelo método direto', icon: FileText },
+          { id: 'imob-print', title: 'Registro de Imobilizado', desc: 'Controle de bens, tombamento e depreciação', icon: Building2 },
+          { id: 'mrosc-print', title: 'MROSC / Projetos', desc: 'Execução de rubricas e prestação de contas', icon: Target },
         ].map((rel, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-all group">
-            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-all mb-4">
-              <rel.icon size={20} />
+          <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition-all group flex flex-col justify-between">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 transition-all mb-4">
+                <rel.icon size={20} />
+              </div>
+              <h4 className="text-sm font-black text-slate-800 mb-1">{rel.title}</h4>
+              <p className="text-[10px] text-slate-400 font-medium mb-6">{rel.desc}</p>
             </div>
-            <h4 className="text-sm font-black text-slate-800 mb-1">{rel.title}</h4>
-            <p className="text-[10px] text-slate-400 font-medium mb-6">{rel.desc}</p>
             
-            <div className="flex gap-2">
-              <button 
-                onClick={() => handleImprimir(rel.id, rel.title)}
-                className="flex-1 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black hover:bg-indigo-100 transition-all flex items-center justify-center gap-2"
-              >
-                <Printer size={12} />
-                IMPRIMIR AGORA
-              </button>
-            </div>
+            <button 
+              onClick={() => handleImprimir(rel.id, rel.title)}
+              className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black hover:bg-indigo-700 transition-all shadow-md flex items-center justify-center gap-2 uppercase tracking-widest"
+            >
+              <Printer size={12} />
+              Emitir Relatório
+            </button>
           </div>
         ))}
       </div>
 
-      {/* Renderização Oculta para Captura de Dados */}
-      <div className="hidden">
-        <div id="bp-print">
-          <Demonstracoes lancHook={lancHook} planoHook={planoHook} initialTab="bp" />
-        </div>
-        <div id="dsd-print">
-          <Demonstracoes lancHook={lancHook} planoHook={planoHook} initialTab="dsd" />
-        </div>
-        <div id="dfc-print">
-          <DFC lancHook={lancHook} planoHook={planoHook} />
-        </div>
-        <div id="bal-print">
-          <Balancete lancHook={lancHook} planoHook={planoHook} />
-        </div>
-        {/* MROSC e Imobilizado exigem seleções complexas ou hooks específicos que podem quebrar se renderizados ocultos sem props ideais */}
+      <div className="hidden pointer-events-none opacity-0 overflow-hidden h-0">
+        <div id="diario-print"><LivroDiario lancHook={lancHook} planoHook={planoHook} /></div>
+        <div id="bal-print"><Balancete lancHook={lancHook} planoHook={planoHook} /></div>
+        <div id="bp-print"><Demonstracoes lancHook={lancHook} planoHook={planoHook} initialTab="bp" /></div>
+        <div id="dsd-print"><Demonstracoes lancHook={lancHook} planoHook={planoHook} initialTab="dsd" /></div>
+        <div id="dfc-print"><DFC lancHook={lancHook} planoHook={planoHook} /></div>
+        <div id="imob-print"><Imobilizado planoHook={planoHook} /></div>
+        <div id="mrosc-print"><ExecucaoRubrica lancHook={lancHook} /></div>
       </div>
 
-      {/* Instrução */}
       <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-start gap-3">
         <span className="text-xl">📄</span>
         <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
-          Para gerar os relatórios em PDF, navegue até a aba correspondente (Ex: Balancete ou Demonstrações) e use o botão de impressão lá disponível. 
-          Este painel centraliza o acesso aos layouts oficiais de prestação de contas.
+          Este painel permite a emissão direta dos relatórios oficiais em formato PDF. 
+          Certifique-se de que os dados foram conferidos no Livro Diário antes de gerar os documentos finais para prestação de contas.
         </p>
       </div>
     </div>
