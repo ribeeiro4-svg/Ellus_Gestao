@@ -46,10 +46,43 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
     const prestador = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social, tenantId)
     if (prestador.error) throw new Error(prestador.error)
 
-    // 2. Persistir no Banco de Dados (nfse_entradas) via Upsert (Garante persistência e posse)
+    // 2. Persistir no Banco de Dados (nfse_entradas) via Upsert/Claim
     let nfseId: string | undefined;
 
+    // A. Se tem Chave Nacional, busca globalmente para "reivindicar" de outro tenant (ex: fallback)
     if (parsed.nota.chave_nacional) {
+      const { data: global } = await sbAdmin
+        .from('nfse_entradas')
+        .select('id, tenant_id')
+        .eq('chave_nacional', parsed.nota.chave_nacional)
+        .maybeSingle()
+      
+      if (global) {
+        if (global.tenant_id !== tenantId) {
+          await sbAdmin.from('nfse_entradas').update({ tenant_id: tenantId, prestador_id: prestador.id }).eq('id', global.id)
+        }
+        nfseId = global.id
+      }
+    } 
+    // B. Se NÃO tem Chave Nacional (ABRASF), busca por Número + Prestador globalmente
+    else {
+      const { data: globalAbrasf } = await sbAdmin
+        .from('nfse_entradas')
+        .select('id, tenant_id')
+        .eq('numero_nfse', parsed.nota.numero_nfse)
+        .eq('prestador_id', prestador.id)
+        .maybeSingle()
+      
+      if (globalAbrasf) {
+        if (globalAbrasf.tenant_id !== tenantId) {
+          await sbAdmin.from('nfse_entradas').update({ tenant_id: tenantId }).eq('id', globalAbrasf.id)
+        }
+        nfseId = globalAbrasf.id
+      }
+    }
+
+    // C. Se não encontrou globalmente, insere ou faz upsert local
+    if (!nfseId) {
       const { data: nova, error: upsertErr } = await sbAdmin
         .from('nfse_entradas')
         .upsert({
@@ -72,33 +105,13 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
           situacao: 'autorizada',
           status_escrituracao: 'pendente'
         }, {
-          onConflict: 'chave_nacional'
+          onConflict: parsed.nota.chave_nacional ? 'chave_nacional' : 'tenant_id,numero_nfse,prestador_id'
         })
         .select('id')
         .single()
 
-      if (upsertErr) throw new Error(`Erro ao salvar nota (upsert chave): ${upsertErr.message}`)
+      if (upsertErr) throw new Error(`Erro ao salvar nota: ${upsertErr.message}`)
       nfseId = nova.id
-    } else {
-      // Fallback para notas sem chave nacional (ABRASF clássico)
-      const { data: fallback, error: fErr } = await sbAdmin
-        .from('nfse_entradas')
-        .upsert({
-          tenant_id: tenantId,
-          prestador_id: prestador.id,
-          numero_nfse: parsed.nota.numero_nfse,
-          data_emissao: parsed.nota.data_emissao,
-          valor_bruto: parsed.nota.valor_bruto,
-          valor_liquido: parsed.nota.valor_liquido,
-          status_escrituracao: 'pendente'
-        }, {
-          onConflict: 'tenant_id,numero_nfse,prestador_id'
-        })
-        .select('id')
-        .single()
-      
-      if (fErr) throw new Error(`Erro ao salvar nota (upsert numero): ${fErr.message}`)
-      nfseId = fallback.id
     }
 
     return { 
