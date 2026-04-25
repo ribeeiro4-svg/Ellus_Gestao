@@ -368,8 +368,9 @@ export default function ConfigPage() {
                   </div>
 
                   <div className="lg:col-span-8">
-                    <ContaContabilSelect 
+                   <ContaContabilSelect 
                       value={mapping?.conta_contabil_codigo}
+                      currentLabel={mapping?.conta_contabil_nome}
                       tipo={cat.tipo === 'receita' ? 'ingresso' : 'dispesa'}
                       onChange={(item) => salvarMapping(cat.nome, item.codigo, item.descricao, cat.tipo === 'receita' ? 'ingresso' : 'dispendio')}
                     />
