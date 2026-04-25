@@ -182,7 +182,7 @@ export function useNFe() {
         }
 
         const updateData: any = {
-          cfop_escrituracao: limparCodigo(item.cfop_escrituracao, 4),
+          cfop_escrituracao: limparCodigo(item.cfop_escrituracao, 5),
           cst_icms: limparCodigo(item.cst_icms, 3),
           cst_ipi: limparCodigo(item.cst_ipi, 2),
           cst_pis: limparCodigo(item.cst_pis, 2),
