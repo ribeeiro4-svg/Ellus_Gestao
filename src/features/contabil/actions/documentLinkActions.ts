@@ -236,18 +236,27 @@ export async function buscarCandidatosFinanceirosAction(termo: string) {
  * Busca logs de integração contábil
  */
 export async function getContabilLogsAction() {
-  const sb = await createServerSupabase()
-  const { getMyTenantIdAction } = await import('@/app/actions/tenantActions')
-  const tenantId = await getMyTenantIdAction()
+  try {
+    const sb = await createServerSupabase()
+    const { getMyTenantIdAction } = await import('@/app/actions/tenantActions')
+    const tenantId = await getMyTenantIdAction()
 
-  let query = sb.from('contabil_logs').select('*')
-  if (tenantId) query = query.eq('tenant_id', tenantId)
-  
-  const { data, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(50)
-  
-  return { success: !error, data: data || [], error: error?.message }
+    let query = sb.from('contabil_logs').select('*')
+    if (tenantId) query = query.eq('tenant_id', tenantId)
+    
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(50)
+    
+    if (error) {
+       console.warn('Erro ao buscar logs (tabela pode estar ausente):', error.message)
+       return { success: false, data: [], error: 'Tabela de logs não encontrada ou inacessível.' }
+    }
+
+    return { success: true, data: data || [] }
+  } catch (err: any) {
+    return { success: false, data: [], error: err.message }
+  }
 }
 
 /**
