@@ -89,6 +89,8 @@ export default function FinanceiroPage() {
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
+  const [contabilMap, setContabilMap] = useState<Record<string, string>>({})
+  const [loadingContabil, setLoadingContabil] = useState(false)
   const [isCompModalOpen, setIsCompModalOpen] = useState(false)
   const [isRemanejarModalOpen, setIsRemanejarModalOpen] = useState(false)
   const [isLogModalOpen, setIsLogModalOpen] = useState(false)
@@ -437,6 +439,35 @@ export default function FinanceiroPage() {
     return { recReal: rR, recProv: rP, despReal: dR, despProv: dP }
   }, [lancamentos, filterYear])
 
+  const fetchContabilMap = useCallback(async () => {
+    if (!tenantId) return
+    setLoadingContabil(true)
+    try {
+      const { data, error } = await sb
+        .from('lancamentos_contabeis')
+        .select('origem_id, numero_lancamento')
+        .eq('tenant_id', tenantId)
+        .eq('origem_tipo', 'financeiro')
+      
+      if (error) throw error
+      if (data) {
+        const map: Record<string, string> = {}
+        data.forEach((l: any) => {
+          if (l.origem_id) map[l.origem_id] = l.numero_lancamento
+        })
+        setContabilMap(map)
+      }
+    } catch (err) {
+      console.error('Erro ao buscar mapa contábil:', err)
+    } finally {
+      setLoadingContabil(false)
+    }
+  }, [tenantId, sb])
+
+  useEffect(() => {
+    fetchContabilMap()
+  }, [fetchContabilMap])
+
   const handleSalvar = async (data: any) => {
     setSaving(true)
     try {
@@ -539,7 +570,7 @@ export default function FinanceiroPage() {
       header: 'Contabilizado', 
       key: 'contabil', 
       render: (l: any) => {
-        const numero = l.contabil?.[0]?.numero_lancamento
+        const numero = contabilMap[l.id]
         if (!numero) return <span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Não integrado</span>
         return (
           <div className="flex flex-col">
@@ -781,6 +812,7 @@ export default function FinanceiroPage() {
                     const res = await integracaoFiscalContabilTotalAction(`${filterYear}-01-01`)
                     if (res.success) {
                       alert('Integração concluída com sucesso! Verifique os logs no módulo contábil.')
+                      fetchContabilMap()
                       refresh()
                     } else {
                       alert(`Erro na integração: ${res.error}`)
