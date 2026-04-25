@@ -20,68 +20,97 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     .select('*')
     .eq('tenant_id', fin.tenant_id)
   
-  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '').trim()
+  const normalize = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, '').trim()
   const finCatNorm = normalize(fin.categoria)
   
   const targetTipo = fin.tipo === 'receita' ? 'ingresso' : 'dispendio'
+  
+  // 2.1 Busca Exata (Normalizada)
   let map = allMaps?.find(m => 
     normalize(m.categoria_nome) === finCatNorm && 
     m.tipo === targetTipo
   )
 
+  // 2.2 Busca Fuzzy (se não achou exata, tenta remover 's' final para lidar com plural/singular)
+  if (!map && finCatNorm.length > 3) {
+    const finCatFuzzy = finCatNorm.endsWith('s') ? finCatNorm.slice(0, -1) : finCatNorm
+    map = allMaps?.find(m => {
+      const mNorm = normalize(m.categoria_nome)
+      const mFuzzy = mNorm.endsWith('s') ? mNorm.slice(0, -1) : mNorm
+      return mFuzzy === finCatFuzzy && m.tipo === targetTipo
+    })
+  }
+
   if (!map) {
     console.info(`[AccountingSync] Criando mapeamento automático para: ${fin.categoria}`)
+    // 3. Verificar se a conta já existe (por descrição) para evitar duplicatas se o mapeamento sumiu mas a conta ficou
+    const { data: existingConta } = await sb
+      .from('plano_contas')
+      .select('id, codigo')
+      .eq('tenant_id', fin.tenant_id)
+      .eq('descricao', fin.categoria)
+      .maybeSingle()
+
+    let finalCodigo = existingConta?.codigo
+    let accountId = existingConta?.id
+
     const parentCodigo = targetTipo === 'ingresso' ? '3.1.1.01' : '4.2.2.01'
     
-    // Acha o próximo código sequencial
-    const { data: lastAccounts } = await sb
-      .from('plano_contas')
-      .select('codigo')
-      .eq('tenant_id', fin.tenant_id)
-      .like('codigo', `${parentCodigo}.%`)
-      .order('codigo', { ascending: false })
-      .limit(1)
+    if (!existingConta) {
+      // Acha o próximo código sequencial
+      const { data: lastAccounts } = await sb
+        .from('plano_contas')
+        .select('codigo')
+        .eq('tenant_id', fin.tenant_id)
+        .like('codigo', `${parentCodigo}.%`)
+        .order('codigo', { ascending: false })
+        .limit(1)
 
-    let nextSeq = 100
-    if (lastAccounts && lastAccounts.length > 0) {
-      const lastPart = lastAccounts[0].codigo.split('.').pop()
-      const lastNum = parseInt(lastPart || '0', 10)
-      if (!isNaN(lastNum) && lastNum >= 100) nextSeq = lastNum + 1
+      let nextSeq = 100
+      if (lastAccounts && lastAccounts.length > 0) {
+        const lastPart = lastAccounts[0].codigo.split('.').pop()
+        const lastNum = parseInt(lastPart || '0', 10)
+        if (!isNaN(lastNum) && lastNum >= 100) nextSeq = lastNum + 1
+      }
+
+      finalCodigo = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
+      const { data: pai } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', parentCodigo).single()
+
+      // Cria a conta
+      const { data: novaConta, error: errConta } = await sb.from('plano_contas').insert({
+        tenant_id: fin.tenant_id,
+        codigo: finalCodigo,
+        descricao: fin.categoria,
+        nivel: 5,
+        tipo: 'analitica',
+        natureza: targetTipo === 'ingresso' ? 'credora' : 'devedora',
+        classificacao: targetTipo === 'ingresso' ? 'ingresso' : 'despesa',
+        aceita_lancamentos: true,
+        ativa: true,
+        conta_pai_id: pai?.id || null
+      }).select('id').single()
+
+      if (errConta) return { error: `Erro ao criar conta para '${fin.categoria}': ${errConta.message}` }
+      accountId = novaConta?.id
     }
 
-    const novoCodigo = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
-    const { data: pai } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', parentCodigo).single()
-
-    // Cria a conta
-    const { data: novaConta } = await sb.from('plano_contas').insert({
-      tenant_id: fin.tenant_id,
-      codigo: novoCodigo,
-      descricao: fin.categoria,
-      nivel: 5,
-      tipo: 'analitica',
-      natureza: targetTipo === 'ingresso' ? 'credora' : 'devedora',
-      classificacao: targetTipo === 'ingresso' ? 'ingresso' : 'despesa',
-      aceita_lancamentos: true,
-      ativa: true,
-      conta_pai_id: pai?.id || null
-    }).select('id').single()
-
-    if (novaConta) {
+    if (accountId && finalCodigo) {
       // Cria o mapeamento
-      const { data: newMap } = await sb.from('configuracoes_contabeis').insert({
+      const { data: newMap, error: errMap } = await sb.from('configuracoes_contabeis').insert({
         tenant_id: fin.tenant_id,
         categoria_nome: fin.categoria,
-        conta_contabil_codigo: novoCodigo,
+        conta_contabil_codigo: finalCodigo,
         conta_contabil_nome: fin.categoria,
         tipo: targetTipo,
         updated_at: new Date().toISOString()
       }).select('*').single()
       
       if (newMap) map = newMap
+      else if (errMap) return { error: `Erro ao mapear '${fin.categoria}': ${errMap.message}` }
     }
 
     if (!map) {
-      return { error: `Não foi possível criar mapeamento automático para '${fin.categoria}'.` }
+      return { error: `Categoria '${fin.categoria}' não mapeada no Plano de Contas ITG 2002.` }
     }
   }
 
