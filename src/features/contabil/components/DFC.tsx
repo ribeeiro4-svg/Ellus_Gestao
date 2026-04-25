@@ -13,12 +13,45 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
   const handlePrint = (titulo: string, id: string) => {
     const conteudo = document.getElementById(id)
     if (!conteudo) return
-    const janela = window.open('', '', 'width=900,height=700')
+    const janela = window.open('', '_blank')
     if (!janela) return
-    janela.document.write(`<html><head><title>${titulo}</title><style>body{font-family:sans-serif;padding:40px}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:12px}.text-right{text-align:right}.indent{padding-left:30px}.font-bold{font-weight:bold}.bg-slate-50{background-color:#f8fafc}</style></head><body><h1>${titulo} - ACPROBEC</h1>${conteudo.innerHTML}</body></html>`)
+    janela.document.write(`
+      <html>
+        <head>
+          <title>${titulo} - ACPROBEC</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
+            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
+            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: left; }
+            .text-right { text-align: right; }
+            .font-black { font-weight: 900; }
+            .font-bold { font-weight: 700; }
+            .bg-slate-50 { background-color: #f8fafc; }
+            .bg-indigo-50 { background-color: #eef2ff; }
+            .text-emerald-600 { color: #059669; }
+            .text-rose-600 { color: #e11d48; }
+            .text-indigo-800 { color: #3730a3; }
+            .indent { padding-left: 40px !important; }
+            .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; }
+            @media print { @page { size: A4; margin: 1.5cm; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>ACPROBEC — ${titulo.toUpperCase()}</h1>
+            <p>MÉTODO DIRETO | CONFORMIDADE ITG 2002 | EXERCÍCIO ${ano}</p>
+          </div>
+          ${conteudo.innerHTML}
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+        </body>
+      </html>
+    `)
     janela.document.close()
-    janela.print()
-    janela.close()
+    setTimeout(() => { janela.print(); janela.close(); }, 500)
   }
 
   useEffect(() => {
@@ -92,10 +125,10 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
             <p className="text-indigo-100 text-xs mt-0.5">Exercício de {ano} • Conforme ITG 2002 (R1)</p>
           </div>
           <button 
-            onClick={() => handlePrint('DFC - Demonstração dos Fluxos de Caixa', 'dfc-table')}
-            className="p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all"
+            onClick={() => handlePrint('Demonstração dos Fluxos de Caixa (DFC)', 'dfc-table')}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all text-[10px] font-black uppercase tracking-wider"
           >
-            <Printer size={16} />
+            <Printer size={14} /> Imprimir PDF
           </button>
         </div>
 
@@ -109,7 +142,7 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
             </tr>
             {fluxos.operacionais.map((f: any, i: number) => (
               <tr key={i}>
-                <td className="px-12 py-2.5 text-slate-600 font-medium">{f.label}</td>
+                <td className="px-12 py-2.5 text-slate-600 font-medium indent">{f.label}</td>
                 <td className={`px-6 py-2.5 text-right font-bold ${f.value >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {fmtR(f.value)}
                 </td>
@@ -123,7 +156,7 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
             </tr>
             {fluxos.investimentos.map((f: any, i: number) => (
               <tr key={i}>
-                <td className="px-12 py-2.5 text-slate-600 font-medium">{f.label}</td>
+                <td className="px-12 py-2.5 text-slate-600 font-medium indent">{f.label}</td>
                 <td className={`px-6 py-2.5 text-right font-bold ${f.value >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {fmtR(f.value)}
                 </td>
@@ -137,7 +170,7 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
             </tr>
             {fluxos.financiamentos.map((f: any, i: number) => (
               <tr key={i}>
-                <td className="px-12 py-2.5 text-slate-600 font-medium">{f.label}</td>
+                <td className="px-12 py-2.5 text-slate-600 font-medium indent">{f.label}</td>
                 <td className={`px-6 py-2.5 text-right font-bold ${f.value >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {fmtR(f.value)}
                 </td>

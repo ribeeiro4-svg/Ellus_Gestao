@@ -64,6 +64,81 @@ export default function Imobilizado({ planoHook }: { planoHook: any }) {
     return acc
   }, { bruto: 0, acumulada: 0 })
 
+  const imprimirImobilizadoPDF = () => {
+    const html = `
+      <html>
+        <head>
+          <title>Registro de Bens Imobilizados - ACPROBEC</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 20px; color: #1e293b; }
+            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
+            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; }
+            th { background: #f8fafc; color: #64748b; text-transform: uppercase; padding: 8px; text-align: left; border: 1px solid #e2e8f0; font-weight: 900; }
+            td { padding: 8px; border: 1px solid #e2e8f0; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .summary { margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .summary-box { padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
+            .summary-box p { margin: 0; font-size: 8px; color: #64748b; font-weight: 900; text-transform: uppercase; }
+            .summary-box h2 { margin: 5px 0 0; font-size: 14px; color: #1e293b; }
+            .footer { margin-top: 30px; text-align: right; font-size: 8px; color: #94a3b8; }
+            @media print {
+              @page { size: A4 landscape; margin: 1cm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>ACPROBEC — REGISTRO DE BENS IMOBILIZADOS</h1>
+            <p>CONFORMIDADE NBC TG 27 | REGIME: ${parametros.regime_tributario.toUpperCase()}</p>
+          </div>
+          <div class="summary">
+            <div class="summary-box"><p>Valor Bruto</p><h2>${fmtR(totais.bruto)}</h2></div>
+            <div class="summary-box"><p>Deprec. Acumulada</p><h2>${fmtR(totais.acumulada)}</h2></div>
+            <div class="summary-box"><p>Valor Contábil Líquido</p><h2>${fmtR(totais.bruto - totais.acumulada)}</h2></div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th width="100">Patrimônio</th>
+                <th>Descrição do Bem</th>
+                <th width="80" class="text-center">Aquisição</th>
+                <th width="100" class="text-right">Vl. Aquisição</th>
+                <th width="100" class="text-right">Vl. Residual</th>
+                <th width="60" class="text-center">Vida Útil</th>
+                <th width="100" class="text-right">Deprec. Mensal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ativos.map(a => `
+                <tr>
+                  <td class="text-center"><strong>${a.codigo_patrimonio}</strong></td>
+                  <td>
+                    <strong>${a.nome}</strong><br/>
+                    <small style="color: #64748b">${a.conta_imobilizado?.descricao || '-'}</small>
+                  </td>
+                  <td class="text-center">${new Date(a.data_aquisicao).toLocaleDateString('pt-BR')}</td>
+                  <td class="text-right">${fmtR(a.valor_aquisicao)}</td>
+                  <td class="text-right">${fmtR(a.valor_residual || 0)}</td>
+                  <td class="text-center">${a.vida_util_meses} meses</td>
+                  <td class="text-right">${fmtR((Number(a.valor_aquisicao) - Number(a.valor_residual || 0)) / a.vida_util_meses)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+        </body>
+      </html>
+    `
+    const win = window.open('', '_blank')
+    win?.document.write(html)
+    win?.document.close()
+    setTimeout(() => win?.print(), 500)
+  }
+
   return (
     <div className="space-y-6">
       {/* Aviso de Regime Tributário */}
@@ -111,6 +186,12 @@ export default function Imobilizado({ planoHook }: { planoHook: any }) {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-black text-slate-800">Controle de Ativos</h2>
         <div className="flex gap-3">
+          <button
+            onClick={imprimirImobilizadoPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-xl text-xs font-black hover:bg-indigo-100 transition-all shadow-sm"
+          >
+            🖨️ Imprimir PDF
+          </button>
           <button
             onClick={handleProcessar}
             disabled={processando || loading}

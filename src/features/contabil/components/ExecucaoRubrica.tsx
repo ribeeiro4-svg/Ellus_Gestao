@@ -32,6 +32,70 @@ export default function ExecucaoRubrica({ lancHook }: { lancHook: any }) {
     return acc
   }, { realizado: 0, previsto: 50000 }) // 'previsto' seria um campo na tabela CC, simulando 50k
 
+  const imprimirExecucaoPDF = () => {
+    if (!ccSelecionado) return
+    const entries = lancamentos.filter((l: any) => l.lancamentos_partidas?.some((p: any) => p.centro_custo_id === selectedCc))
+    const html = `
+      <html>
+        <head>
+          <title>Relatório de Execução - ${ccSelecionado.nome}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
+            .header { text-align: center; border-bottom: 2px solid #9333ea; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 18px; color: #9333ea; text-transform: uppercase; letter-spacing: 1px; }
+            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; }
+            .summary-box { padding: 15px; background: #faf5ff; border: 1px solid #f3e8ff; border-radius: 12px; }
+            .summary-box p { margin: 0; font-size: 8px; color: #7e22ce; font-weight: 900; text-transform: uppercase; }
+            .summary-box h2 { margin: 5px 0 0; font-size: 16px; color: #581c87; font-weight: 900; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th { background: #f8fafc; color: #64748b; text-transform: uppercase; padding: 10px; text-align: left; border: 1px solid #e2e8f0; font-size: 9px; font-weight: 900; }
+            td { padding: 10px; border: 1px solid #e2e8f0; font-size: 10px; }
+            .text-right { text-align: right; }
+            .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; }
+            @media print { @page { size: A4; margin: 1.5cm; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>RELATÓRIO DE EXECUÇÃO — MROSC / PROJETOS</h1>
+            <p>PROJETO: ${ccSelecionado.codigo} - ${ccSelecionado.nome}</p>
+          </div>
+          <div class="summary">
+            <div class="summary-box"><p>Total Realizado</p><h2>${fmtR(execucao.realizado)}</h2></div>
+            <div class="summary-box"><p>Saldo Previsto</p><h2>${fmtR(execucao.previsto - execucao.realizado)}</h2></div>
+            <div class="summary-box"><p>% Execução</p><h2>${((execucao.realizado / execucao.previsto) * 100).toFixed(1)}%</h2></div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th width="80">Data</th>
+                <th>Histórico do Lançamento</th>
+                <th width="120" class="text-right">Valor Vinculado</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${entries.map((l: any) => `
+                <tr>
+                  <td>${new Date(l.data_lancamento).toLocaleDateString('pt-BR')}</td>
+                  <td><strong>${l.historico}</strong></td>
+                  <td class="text-right">${fmtR(l.lancamentos_partidas.find((p: any) => p.centro_custo_id === selectedCc)?.valor)}</td>
+                </tr>
+              `).join('')}
+              ${entries.length === 0 ? '<tr><td colspan="3" style="text-align:center;padding:40px;color:#94a3b8">Nenhum lançamento vinculado.</td></tr>' : ''}
+            </tbody>
+          </table>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+        </body>
+      </html>
+    `
+    const win = window.open('', '_blank')
+    win?.document.write(html)
+    win?.document.close()
+    setTimeout(() => win?.print(), 500)
+  }
+
   if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin inline mr-2" /> Carregando projetos...</div>
 
   return (
@@ -81,8 +145,8 @@ export default function ExecucaoRubrica({ lancHook }: { lancHook: any }) {
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
               <div className="px-6 py-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                 <h4 className="text-xs font-black text-slate-700">Lançamentos Vinculados ao Projeto</h4>
-                <button className="text-[10px] font-black text-purple-600 hover:underline flex items-center gap-1">
-                  Exportar Extrato <ArrowRight size={10} />
+                <button onClick={imprimirExecucaoPDF} className="text-[10px] font-black text-purple-600 hover:underline flex items-center gap-1">
+                  🖨️ Imprimir PDF
                 </button>
               </div>
               <table className="w-full text-[11px]">

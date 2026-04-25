@@ -52,6 +52,100 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
     { cls: 'despesa', label: '4. DISPÊNDIOS', color: 'text-orange-700' },
   ]
 
+  const imprimirBalancetePDF = () => {
+    const html = `
+      <html>
+        <head>
+          <title>Balancete de Verificação - ACPROBEC</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 20px; color: #1e293b; }
+            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
+            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; }
+            th { background: #f8fafc; color: #64748b; text-transform: uppercase; padding: 8px; text-align: left; border: 1px solid #e2e8f0; font-weight: 900; }
+            td { padding: 8px; border: 1px solid #e2e8f0; }
+            .row-group { background: #f1f5f9; font-weight: 900; color: #334155; }
+            .row-subtotal { background: #f8fafc; font-weight: 700; }
+            .row-total { background: #4f46e5; color: white; font-weight: 900; font-size: 10px; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .footer { margin-top: 30px; text-align: right; font-size: 8px; color: #94a3b8; }
+            @media print {
+              @page { size: A4 landscape; margin: 1cm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>ACPROBEC — BALANCETE DE VERIFICAÇÃO</h1>
+            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${periodo}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th width="100">Código</th>
+                <th>Conta Contábil</th>
+                <th width="100" class="text-right">Débitos</th>
+                <th width="100" class="text-right">Créditos</th>
+                <th width="100" class="text-right">Saldo Atual</th>
+                <th width="40" class="text-center">Nat.</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${grupos.map(({ cls, label }) => {
+                const totais = calcTotais(cls)
+                const contasCls = contas.filter((c: any) => c.classificacao === cls && c.tipo === 'analitica')
+                  .filter((c: any) => saldos[c.id]?.debitos > 0 || saldos[c.id]?.creditos > 0)
+                
+                if (contasCls.length === 0) return ''
+
+                return `
+                  <tr class="row-group">
+                    <td colspan="6">${label}</td>
+                  </tr>
+                  ${contasCls.map((conta: any) => {
+                    const s = getSaldo(conta)
+                    return `
+                      <tr>
+                        <td>${conta.codigo}</td>
+                        <td>${conta.descricao}</td>
+                        <td class="text-right">${s.debitos > 0 ? fmtR(s.debitos) : '-'}</td>
+                        <td class="text-right">${s.creditos > 0 ? fmtR(s.creditos) : '-'}</td>
+                        <td class="text-right">${fmtR(Math.abs(s.saldo))}</td>
+                        <td class="text-center">${conta.natureza === 'devedora' ? 'D' : 'C'}</td>
+                      </tr>
+                    `
+                  }).join('')}
+                  <tr class="row-subtotal">
+                    <td colspan="2">TOTAL ${label}</td>
+                    <td class="text-right">${fmtR(totais.debitos)}</td>
+                    <td class="text-right">${fmtR(totais.creditos)}</td>
+                    <td class="text-right">${fmtR(Math.abs(totais.saldo))}</td>
+                    <td></td>
+                  </tr>
+                `
+              }).join('')}
+              <tr class="row-total">
+                <td colspan="2">TOTAL GERAL (VERIFICAÇÃO)</td>
+                <td class="text-right">${fmtR(totalD)}</td>
+                <td class="text-right">${fmtR(totalC)}</td>
+                <td class="text-right">${Math.abs(totalD - totalC) < 0.01 ? 'ZERADO' : fmtR(Math.abs(totalD - totalC))}</td>
+                <td class="text-center">${Math.abs(totalD - totalC) < 0.01 ? 'OK' : 'ERR'}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+        </body>
+      </html>
+    `
+    const win = window.open('', '_blank')
+    win?.document.write(html)
+    win?.document.close()
+    setTimeout(() => win?.print(), 500)
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {/* Header */}
@@ -66,6 +160,10 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
         <button onClick={carregar} disabled={loading}
           className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-white bg-indigo-600 rounded-xl transition-all disabled:opacity-50">
           {loading ? <Loader2 size={12} className="animate-spin" /> : '🔄'} Atualizar
+        </button>
+        <button onClick={imprimirBalancetePDF}
+          className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all">
+          🖨️ Imprimir PDF
         </button>
         <div className="ml-auto flex gap-4 text-xs">
           <div className={`font-black ${Math.abs(totalD - totalC) < 0.01 ? 'text-emerald-600' : 'text-red-500'}`}>

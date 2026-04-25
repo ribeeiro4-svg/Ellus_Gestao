@@ -11,12 +11,51 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
   const handlePrint = (titulo: string, id: string) => {
     const conteudo = document.getElementById(id)
     if (!conteudo) return
-    const janela = window.open('', '', 'width=900,height=700')
+    const janela = window.open('', '_blank')
     if (!janela) return
-    janela.document.write(`<html><head><title>${titulo}</title><style>body{font-family:sans-serif;padding:40px}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid #eee;padding:10px;text-align:left;font-size:12px}.text-right{text-align:right}.indent{padding-left:30px}.font-bold{font-weight:bold}.bg-slate-50{background-color:#f8fafc}</style></head><body><h1>${titulo} - ACPROBEC</h1>${conteudo.innerHTML}</body></html>`)
+    janela.document.write(`
+      <html>
+        <head>
+          <title>${titulo} - ACPROBEC</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
+            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
+            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: left; }
+            .text-right { text-align: right; }
+            .font-black { font-weight: 900; }
+            .font-bold { font-weight: 700; }
+            .bg-slate-50 { background-color: #f8fafc; }
+            .bg-blue-50 { background-color: #eff6ff; }
+            .bg-rose-50 { background-color: #fff1f2; }
+            .bg-indigo-50 { background-color: #eef2ff; }
+            .bg-emerald-50 { background-color: #ecfdf5; }
+            .bg-purple-50 { background-color: #faf5ff; }
+            .text-blue-700 { color: #1d4ed8; }
+            .text-rose-700 { color: #be123c; }
+            .text-emerald-700 { color: #047857; }
+            .text-indigo-700 { color: #4338ca; }
+            .text-purple-700 { color: #7e22ce; }
+            .indent { padding-left: 30px !important; }
+            .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; }
+            @media print { @page { size: A4; margin: 1.5cm; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>ACPROBEC — ${titulo.toUpperCase()}</h1>
+            <p>CONFORMIDADE ITG 2002 (R1) | EXERCÍCIO ${ano}</p>
+          </div>
+          ${conteudo.innerHTML}
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+        </body>
+      </html>
+    `)
     janela.document.close()
-    janela.print()
-    janela.close()
+    setTimeout(() => { janela.print(); janela.close(); }, 500)
   }
 
   const [saldos, setSaldos] = useState<Record<string, { debitos: number; creditos: number }>>({})
@@ -72,10 +111,10 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
             <p className="text-emerald-100 text-xs mt-0.5">Exercício findo em 31/12/{ano} • Conforme ITG 2002 (R1)</p>
           </div>
           <button 
-            onClick={() => handlePrint('DSD - Demonstração do Resultado', 'dsd-table')}
-            className="p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all"
+            onClick={() => handlePrint('Demonstração do Resultado (DSD)', 'dsd-table')}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all text-[10px] font-black uppercase tracking-wider"
           >
-            <Printer size={16} />
+            <Printer size={14} /> Imprimir PDF
           </button>
         </div>
         <div id="dsd-table">
@@ -99,13 +138,13 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
                 { label: 'TOTAL DE DISPÊNDIOS', value: totalDisp, bold: true, color: 'text-rose-700', borderTop: true },
                 { label: '', value: null },
                 { label: 'SUPERÁVIT (DÉFICIT) DO EXERCÍCIO', value: totalIng - totalDisp, bold: true, color: 'text-indigo-700', bg: 'bg-indigo-50', borderTop: true },
-              ].filter(r => r.value !== null).map((row, i) => (
+              ].filter(r => r.value !== null || r.label === '').map((row, i) => (
                 <tr key={i} className={`border-t border-slate-50 ${row.bg || ''} ${row.borderTop ? 'border-t-2 border-slate-300' : ''}`}>
-                  <td className={`px-6 py-2.5 ${row.indent ? 'pl-12' : ''} ${row.bold ? 'font-black' : 'font-medium'} ${row.color || 'text-slate-700'}`}>
+                  <td className={`px-6 py-2.5 ${row.indent ? 'indent' : ''} ${row.bold ? 'font-black' : 'font-medium'} ${row.color || 'text-slate-700'}`}>
                     {row.label}
                   </td>
                   <td className={`px-6 py-2.5 text-right ${row.bold ? 'font-black' : 'font-medium'} ${row.color || 'text-slate-700'} w-40`}>
-                    {fmtR(row.value as number)}
+                    {row.value !== null ? fmtR(row.value as number) : ''}
                   </td>
                 </tr>
               ))}
@@ -138,9 +177,9 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
           </div>
           <button 
             onClick={() => handlePrint('Balanço Patrimonial', 'bp-table')}
-            className="p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all"
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all text-[10px] font-black uppercase tracking-wider"
           >
-            <Printer size={16} />
+            <Printer size={14} /> Imprimir PDF
           </button>
         </div>
         <div id="bp-table">
@@ -231,10 +270,10 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
             <p className="text-amber-100 text-xs mt-0.5">Exercício de {ano} • Conforme ITG 2002 (R1)</p>
           </div>
           <button 
-            onClick={() => handlePrint('DMPS', 'dmps-table')}
-            className="p-2 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all"
+            onClick={() => handlePrint('Demonstração das Mutações do Patrimônio Social (DMPS)', 'dmps-table')}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/40 text-white rounded-lg transition-all text-[10px] font-black uppercase tracking-wider"
           >
-            <Printer size={16} />
+            <Printer size={14} /> Imprimir PDF
           </button>
         </div>
         <div id="dmps-table">
