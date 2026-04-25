@@ -35,16 +35,26 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
     .limit(10)
 
   // 4. Buscar em NFS-e
+  // 4a. Busca direta por vínculo financeiro (mais preciso)
+  let nfseIdsPorFinanceiro: string[] = []
+  if (lanc.origem_tipo === 'financeiro' && lanc.origem_id) {
+    const { data: vinculos } = await sb
+      .from('nfse_financeiro_vinculo')
+      .select('nfse_id')
+      .eq('financeiro_id', lanc.origem_id)
+    if (vinculos) nfseIdsPorFinanceiro = vinculos.map(v => v.nfse_id)
+  }
+
   const { data: nfse } = await sb
     .from('nfse_entradas')
     .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
-    .or(`numero_nfse.ilike.%${termo}%`)
+    .or(`numero_nfse.ilike.%${termo}%,id.in.(${nfseIdsPorFinanceiro.length > 0 ? nfseIdsPorFinanceiro.join(',') : '00000000-0000-0000-0000-000000000000'})`)
     .limit(10)
   
-  // Se não achou pelo número, tenta pelo nome do prestador
+  // Se não achou pelo número/vínculo, tenta pelo nome ou CNPJ do prestador
   let nfseComplementar: any[] = []
   if (!nfse || nfse.length === 0) {
-     const { data: prestadores } = await sb.from('fornecedores').select('id').ilike('nome', `%${termo}%`)
+     const { data: prestadores } = await sb.from('fornecedores').select('id').or(`nome.ilike.%${termo}%,cpf_cnpj.ilike.%${termo}%`)
      if (prestadores && prestadores.length > 0) {
         const { data: nfs } = await sb.from('nfse_entradas')
           .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
@@ -55,11 +65,17 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
   }
 
   // 5. Buscar em NF-e (Produtos)
-  const { data: nfe } = await sb
-    .from('nfe_entradas')
+  // 5a. Busca direta por vínculo financeiro (mais preciso)
+  const queryNfe = sb.from('nfe_entradas')
     .select('id, numero_nf, data_emissao, valor_total, nome_emitente')
-    .or(`numero_nf.ilike.%${termo}%,nome_emitente.ilike.%${termo}%`)
-    .limit(10)
+  
+  if (lanc.origem_tipo === 'financeiro' && lanc.origem_id) {
+    queryNfe.or(`numero_nf.ilike.%${termo}%,nome_emitente.ilike.%${termo}%,lancamento_financeiro_id.eq.${lanc.origem_id}`)
+  } else {
+    queryNfe.or(`numero_nf.ilike.%${termo}%,nome_emitente.ilike.%${termo}%`)
+  }
+
+  const { data: nfe } = await queryNfe.limit(10)
 
   return {
     success: true,
