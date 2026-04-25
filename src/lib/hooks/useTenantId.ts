@@ -1,15 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { getMyTenantIdAction } from '@/app/actions/tenantActions'
 
 /**
- * Hook de Identidade ACPROBEC - VERSÃO DINÂMICA
- * Busca o ID do Tenant do usuário logado ou usa o fallback padrão.
+ * Hook de Identidade ACPROBEC - VERSÃO DEFINITIVA (SERVER-SIDE BYPASS)
+ * Resolve o Tenant ID no servidor para evitar erros 406 no cliente.
  */
 export function useTenantId(): string {
   const FALLBACK = '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
   
-  // 1. Tenta carregar do localStorage imediatamente para evitar estados null
   const [tenantId, setTenantId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('acprobec_tenant_id')
@@ -19,42 +18,21 @@ export function useTenantId(): string {
   })
   
   useEffect(() => {
-    const sb = createClient();
     let mounted = true;
     
-    async function resolveTenant() {
-      // Tenta até 3 vezes com pequenos intervalos em caso de erro 406 transiente
-      for (let attempt = 0; attempt < 3; attempt++) {
-        if (!mounted) return;
-
-        const { data: { user } } = await sb.auth.getUser()
-        if (user) {
-          // 1. JWT Metadata (Mais rápido)
-          const metaTenant = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id
-          if (metaTenant) {
-            if (mounted) {
-              setTenantId(metaTenant)
-              localStorage.setItem('acprobec_tenant_id', metaTenant)
-            }
-            return
-          }
-
-          // 2. Database Fallback
-          const { data: userData, error } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).maybeSingle()
-          if (!error && userData?.tenant_id) {
-            if (mounted) {
-              setTenantId(userData.tenant_id)
-              localStorage.setItem('acprobec_tenant_id', userData.tenant_id)
-            }
-            return
-          }
+    async function resolve() {
+      try {
+        const id = await getMyTenantIdAction()
+        if (mounted && id) {
+          setTenantId(id)
+          localStorage.setItem('acprobec_tenant_id', id)
         }
-        
-        await new Promise(r => setTimeout(r, 1000))
+      } catch (err) {
+        console.error('Falha ao resolver tenant no servidor:', err)
       }
     }
 
-    resolveTenant()
+    resolve()
     return () => { mounted = false }
   }, [])
 
