@@ -11,6 +11,8 @@ import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useCoraStaged } from '@/lib/hooks/useCoraStaged'
 import { useOFXParser } from '@/lib/hooks/useOFXParser'
 import { useConciliacaoAudit } from '@/features/conciliacao/hooks/useConciliacaoAudit'
+import { useTenantId } from '@/lib/hooks/useTenantId'
+import { createClient } from '@/lib/supabase/client'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal, { Field } from '@/components/ui/CrudModal'
@@ -43,6 +45,8 @@ import NFSeLinkModal from '@/features/fiscal/components/nfse/NFSeLinkModal'
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 export default function FinanceiroPage() {
+  const tenantId = useTenantId()
+  const sb = createClient()
   // Ganchos Financeiros
   const { 
     lancamentos, loading, inserir, atualizar, remover, 
