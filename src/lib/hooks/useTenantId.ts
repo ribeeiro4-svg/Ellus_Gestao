@@ -6,8 +6,16 @@ import { createClient } from '@/lib/supabase/client'
  * Hook de Identidade ACPROBEC - VERSÃO DINÂMICA
  * Busca o ID do Tenant do usuário logado ou usa o fallback padrão.
  */
-export function useTenantId() {
-  const [tenantId, setTenantId] = useState<string | null>(null)
+export function useTenantId(): string {
+  const FALLBACK = '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
+  
+  // 1. Tenta carregar do localStorage imediatamente para evitar estados null
+  const [tenantId, setTenantId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('acprobec_tenant_id') || FALLBACK
+    }
+    return FALLBACK
+  })
   
   useEffect(() => {
     const sb = createClient();
@@ -20,27 +28,29 @@ export function useTenantId() {
 
         const { data: { user } } = await sb.auth.getUser()
         if (user) {
-          // 1. JWT Metadata
+          // 1. JWT Metadata (Mais rápido)
           const metaTenant = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id
           if (metaTenant) {
-            setTenantId(metaTenant)
+            if (mounted) {
+              setTenantId(metaTenant)
+              localStorage.setItem('acprobec_tenant_id', metaTenant)
+            }
             return
           }
 
-          // 2. Database Fallback (com tratamento de erro)
+          // 2. Database Fallback
           const { data: userData, error } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).maybeSingle()
           if (!error && userData?.tenant_id) {
-            setTenantId(userData.tenant_id)
+            if (mounted) {
+              setTenantId(userData.tenant_id)
+              localStorage.setItem('acprobec_tenant_id', userData.tenant_id)
+            }
             return
           }
         }
         
-        // Se não conseguiu, espera um pouco e tenta de novo
         await new Promise(r => setTimeout(r, 1000))
       }
-
-      // Fallback final se tudo falhar após as tentativas
-      if (mounted) setTenantId('971f92af-a72b-4bc4-a8e0-333d712ce6a7')
     }
 
     resolveTenant()

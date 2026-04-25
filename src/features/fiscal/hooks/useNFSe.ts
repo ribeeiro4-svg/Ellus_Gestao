@@ -39,7 +39,7 @@ export function useNFSe() {
 
   return { 
     nfses, 
-    loading: loading || !tenantId, 
+    loading, 
     stats, 
     refresh: fetchNfses, 
     periodo, 
