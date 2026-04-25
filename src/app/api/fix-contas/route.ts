@@ -36,6 +36,7 @@ export async function GET() {
       // Keep the first one (lowest code)
       const primaryAccount = arr[0]
       const duplicateIds = arr.slice(1).map(c => c.id)
+      const duplicateCodes = arr.slice(1).map(c => c.codigo)
 
       // 3. Update lancamentos_partidas
       const { error: updErr1 } = await sbAdmin
@@ -43,11 +44,11 @@ export async function GET() {
         .update({ conta_id: primaryAccount.id })
         .in('conta_id', duplicateIds)
 
-      // 4. Update configuracoes_contabeis (just in case they are mapped)
+      // 4. Update configuracoes_contabeis
       const { error: updErr2 } = await sbAdmin
         .from('configuracoes_contabeis')
-        .update({ conta_id: primaryAccount.id })
-        .in('conta_id', duplicateIds)
+        .update({ conta_contabil_codigo: primaryAccount.codigo })
+        .in('conta_contabil_codigo', duplicateCodes)
 
       // 5. Delete duplicates
       if (!updErr1 && !updErr2) {
