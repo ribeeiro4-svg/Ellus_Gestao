@@ -126,6 +126,13 @@ export default function NFSeDashboard({ nfseHook, onEscriturar }: { nfseHook: an
           getRowClassName={(n: any) => n.status_escrituracao === 'concluida' ? 'opacity-60' : ''}
         />
       </div>
+
+      {/* Diagnostic Badge (Remover após resolver) */}
+      <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 opacity-50">
+        <p className="text-[10px] text-slate-400 font-mono">
+          DIAGNOSTIC: Tenant={nfseHook.tenantId} | Count={nfseHook.nfses.length} | Periodo={nfseHook.periodo}
+        </p>
+      </div>
     </div>
   )
 }
