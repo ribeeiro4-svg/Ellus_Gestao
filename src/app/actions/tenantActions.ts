@@ -22,14 +22,15 @@ export async function getMyTenantIdAction() {
     const metaTenant = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id
     if (metaTenant) return metaTenant
 
-    // 2. Database Fallback (usando admin para evitar RLS/406)
     const { createClient } = await import('@supabase/supabase-js')
-    const sbAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    const { data: userData } = await sbAdmin.from('usuarios').select('tenant_id').eq('id', user.id).maybeSingle()
-    if (userData?.tenant_id) return userData.tenant_id
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (url && key) {
+      const sbAdmin = createClient(url, key)
+      const { data: userData } = await sbAdmin.from('usuarios').select('tenant_id').eq('id', user.id).maybeSingle()
+      if (userData?.tenant_id) return userData.tenant_id
+    }
   }
 
   return '971f92af-a72b-4bc4-a8e0-333d712ce6a7'

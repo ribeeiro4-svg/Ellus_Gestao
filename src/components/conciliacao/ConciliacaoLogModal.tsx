@@ -2,7 +2,7 @@
 import React from 'react'
 import { X, FileText, CheckCircle2, Download, ExternalLink, Calendar, DollarSign, User, ShieldCheck } from 'lucide-react'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
-import jsPDF from 'jspdf'
+import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 
 interface LogEntry {
