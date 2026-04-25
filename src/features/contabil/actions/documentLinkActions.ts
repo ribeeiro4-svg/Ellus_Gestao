@@ -81,7 +81,7 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
   const { data: nfsePorBusca } = await sbAdmin
     .from('nfse_entradas')
     .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
-    .or(`numero_nfse.ilike.%${termoPrincipal}%,prestador_id.in.(${prestadorIds.length > 0 ? prestadorIds.join(',') : '00000000-0000-0000-0000-000000000000'})`)
+    .or(`numero_nfse.ilike.%${termoPrincipal}%,prestador_id.in.(${prestadorIds.length > 0 ? prestadorIds.map(id => `"${id}"`).join(',') : '"00000000-0000-0000-0000-000000000000"' })`)
     .limit(20)
 
   const nfseMap = new Map();
