@@ -231,3 +231,17 @@ export async function buscarCandidatosFinanceirosAction(termo: string) {
   
   return { success: true, data: data || [] }
 }
+
+/**
+ * Busca logs de integração contábil
+ */
+export async function getContabilLogsAction() {
+  const sb = await createServerSupabase()
+  const { data, error } = await sb
+    .from('contabil_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50)
+  
+  return { success: !error, data: data || [], error: error?.message }
+}
