@@ -10,6 +10,7 @@ import { useIntegracaoFiscalContabil } from '@/features/fiscal/hooks/useIntegrac
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
 import { getFornecedorByCpfCnpjAction } from '@/features/fiscal/actions/nfseActions'
+import { getTributacaoPresetsAction, salvarTributacaoPresetAction, excluirTributacaoPresetAction } from '@/features/fiscal/actions/fiscalActions'
 import NFSeEscrituracaoModal from './nfse/NFSeEscrituracaoModal'
 
 export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: any; nfeIdInicial: string | null }) {
@@ -28,9 +29,13 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   const [presetName, setPresetName] = useState('')
   const [presets, setPresets] = useState<any[]>([])
 
+  const loadPresets = async () => {
+    const res = await getTributacaoPresetsAction()
+    if (res.data) setPresets(res.data)
+  }
+
   useEffect(() => {
-    const saved = localStorage.getItem('acprobec_nfe_presets')
-    if (saved) setPresets(JSON.parse(saved))
+    loadPresets()
   }, [])
 
   const nfeSelecionada = nfes.find((n: any) => n.id === selectedNfeId)
@@ -72,10 +77,10 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
     }))
   }
 
-  const salvarPreset = () => {
+  const salvarPreset = async () => {
     if (itens.length < 1 || !presetName) return
     const p = itens[0]
-    const newPreset = {
+    const payload = {
       nome: presetName,
       cfop: p.cfop_escrituracao,
       icms: p.cst_icms,
@@ -86,11 +91,14 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
       conta: p.conta_contabil_id,
       credito: p.aproveitamento_credito
     }
-    const updated = [...presets, newPreset]
-    setPresets(updated)
-    localStorage.setItem('acprobec_nfe_presets', JSON.stringify(updated))
-    setPresetName('')
-    setShowPresets(false)
+    
+    const res = await salvarTributacaoPresetAction(payload)
+    if (res.error) alert(res.error)
+    else {
+      await loadPresets()
+      setPresetName('')
+      setShowPresets(false)
+    }
   }
 
   const aplicarPreset = (p: any) => {
@@ -107,10 +115,11 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
     })))
   }
 
-  const excluirPreset = (idx: number) => {
-    const updated = presets.filter((_, i) => i !== idx)
-    setPresets(updated)
-    localStorage.setItem('acprobec_nfe_presets', JSON.stringify(updated))
+  const excluirPreset = async (id: string) => {
+    if (!confirm('Deseja excluir este preset permanentemente?')) return
+    const res = await excluirTributacaoPresetAction(id)
+    if (res.error) alert(res.error)
+    else await loadPresets()
   }
 
   const salvar = async () => {
@@ -306,7 +315,7 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
                         {p.nome}
                       </button>
                       <button 
-                        onClick={() => excluirPreset(pi)}
+                        onClick={() => excluirPreset(p.id)}
                         className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                       >
                         <X size={8} strokeWidth={4} />
