@@ -30,9 +30,20 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   const [presets, setPresets] = useState<any[]>([])
 
   const loadPresets = async () => {
-    if (!tenantId) return
-    const res = await getTributacaoPresetsAction(tenantId)
-    if (res.data) setPresets(res.data)
+    // Primeiro tenta LocalStorage (mais rápido e sempre disponível)
+    const local = localStorage.getItem(`acprobec_presets_${tenantId}`)
+    if (local) {
+      setPresets(JSON.parse(local))
+    }
+
+    // Tenta DB como sync secundário (se a tabela existir futuramente)
+    if (tenantId) {
+      const res = await getTributacaoPresetsAction(tenantId)
+      if (res.data && res.data.length > 0) {
+        setPresets(res.data)
+        localStorage.setItem(`acprobec_presets_${tenantId}`, JSON.stringify(res.data))
+      }
+    }
   }
 
   useEffect(() => {
@@ -93,13 +104,18 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
       credito: p.aproveitamento_credito
     }
     
-    const res = await salvarTributacaoPresetAction(payload, tenantId)
-    if (res.error) alert(res.error)
-    else {
-      await loadPresets()
-      setPresetName('')
-      setShowPresets(false)
+    // Salva Local
+    const newPresets = [...presets, payload]
+    setPresets(newPresets)
+    localStorage.setItem(`acprobec_presets_${tenantId}`, JSON.stringify(newPresets))
+
+    // Tenta persistir no DB (silenciosamente se falhar a tabela)
+    if (tenantId) {
+      await salvarTributacaoPresetAction(payload, tenantId)
     }
+
+    setPresetName('')
+    setShowPresets(false)
   }
 
   const aplicarPreset = (p: any) => {
