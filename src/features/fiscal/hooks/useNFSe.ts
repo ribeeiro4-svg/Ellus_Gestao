@@ -9,7 +9,8 @@ export function useNFSe() {
   const [nfses, setNfses] = useState<NFSeEntrada[]>([]);
   const [loading, setLoading] = useState(true);
   const [periodo, setPeriodo] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const tenantId = useTenantId();
+  const rawTenantId = useTenantId();
+  const tenantId = rawTenantId && rawTenantId.length > 0 ? rawTenantId : null;
 
   const fetchNfses = useCallback(async () => {
     if (!tenantId) return;
@@ -38,6 +39,7 @@ export function useNFSe() {
   }, [fetchNfses]);
 
   return { 
+    tenantId,
     nfses, 
     loading, 
     stats, 

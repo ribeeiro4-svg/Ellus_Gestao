@@ -50,11 +50,32 @@ function extractValue(xml: string, tags: string[]): number {
   return 0;
 }
 
+function normalizeDate(dateStr: string): string {
+  if (!dateStr) return new Date().toISOString();
+  
+  // 1. Se já é ISO (YYYY-MM-DD...)
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) return dateStr;
+  
+  // 2. Se é Formato Brasileiro (DD/MM/YYYY...)
+  const brMatch = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (brMatch) {
+    return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+  }
+
+  // 3. Se é apenas data sem separador (YYYYMMDD)
+  if (/^\d{8}$/.test(dateStr)) {
+    return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
+  }
+
+  return dateStr;
+}
+
 function parseAbrasf(xml: string): NFSeParserResult {
   const numero = extractTag(xml, 'Numero');
-  const dataEmissao = extractTag(xml, 'DataEmissao') || extractTag(xml, 'dhEmi') || new Date().toISOString();
+  const rawDate = extractTag(xml, 'DataEmissao') || extractTag(xml, 'dhEmi');
+  const dataEmissao = normalizeDate(rawDate);
   
-  // Tenta várias tags comuns para valor bruto
+  // ... resto do código ...
   const valorBruto = extractValue(xml, ['ValorServicos', 'vServicos', 'vServ', 'ValorBruto', 'Valor']);
   
   const codigoServico = extractTag(xml, 'ItemListaServico') || extractTag(xml, 'CodigoServico');
@@ -104,7 +125,8 @@ function parseAbrasf(xml: string): NFSeParserResult {
 function parseADN(xml: string): NFSeParserResult {
   const chave = extractTag(xml, 'chNFSe');
   const numero = extractTag(xml, 'nNFSe');
-  const dataEmissao = extractTag(xml, 'dhEmi');
+  const rawDate = extractTag(xml, 'dhEmi');
+  const dataEmissao = normalizeDate(rawDate);
   const valorBruto = extractValue(xml, ['vServ', 'vServicos', 'ValorServicos']);
   const codigoNbs = extractTag(xml, 'cNBS');
   const discriminacao = extractTag(xml, 'xDescServ');

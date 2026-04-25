@@ -12,7 +12,8 @@ export function useTenantId(): string {
   // 1. Tenta carregar do localStorage imediatamente para evitar estados null
   const [tenantId, setTenantId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('acprobec_tenant_id') || FALLBACK
+      const saved = localStorage.getItem('acprobec_tenant_id')
+      if (saved && saved.length > 20) return saved
     }
     return FALLBACK
   })
