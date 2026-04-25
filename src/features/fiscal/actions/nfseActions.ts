@@ -379,7 +379,7 @@ export async function cleanProblematicNotesAction() {
   const { data, error } = await sbAdmin
     .from('nfse_entradas')
     .delete()
-    .in('numero_nfse', ['17', '573168'])
+    .or('numero_nfse.ilike.%573168,numero_nfse.eq.17,valor_bruto.eq.44.90,valor_bruto.eq.50.00')
     .select('id')
   
   return { success: !error, count: data?.length || 0, error }
