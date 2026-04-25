@@ -90,8 +90,17 @@ export async function sincronizarLancamentoContabil(financialId: string) {
         conta_pai_id: pai?.id || null
       }).select('id').single()
 
-      if (errConta) return { error: `Erro ao criar conta para '${fin.categoria}': ${errConta.message}` }
-      accountId = novaConta?.id
+      if (errConta) {
+        // Se deu erro de duplicidade (23505), busca a conta existente
+        if (errConta.code === '23505') {
+          const { data: ec } = await sb.from('plano_contas').select('id').eq('tenant_id', fin.tenant_id).eq('codigo', finalCodigo).single()
+          accountId = ec?.id
+        } else {
+          return { error: `Erro ao criar conta para '${fin.categoria}': ${errConta.message}` }
+        }
+      } else {
+        accountId = novaConta?.id
+      }
     }
 
     if (accountId && finalCodigo) {
