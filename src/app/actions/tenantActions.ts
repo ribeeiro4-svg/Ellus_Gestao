@@ -18,25 +18,27 @@ export async function getMyTenantIdAction() {
   const { data: { user } } = await sb.auth.getUser()
   
   if (user) {
-    // 1. JWT Metadata (Mais confiável e rápido)
-    const metaTenant = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id
-    // 1. Tentar resolver pelo cliente padrão (com sessão e RLS)
-    const { createServerSupabase } = await import('@/lib/supabase/server')
-    const sb = await createServerSupabase()
-    const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).maybeSingle()
-    if (userData?.tenant_id) return userData.tenant_id
-
-    // 2. Database Fallback (usando admin se disponível)
+    // 1. Tentar resolver pelo Banco de Dados (USANDO ADMIN para garantir visibilidade)
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (url && key) {
       const { createClient } = await import('@supabase/supabase-js')
       const sbAdmin = createClient(url, key)
-      const { data: adminData } = await sbAdmin.from('usuarios').select('tenant_id').eq('id', user.id).maybeSingle()
-      if (adminData?.tenant_id) return adminData.tenant_id
+      const { data: userData } = await sbAdmin
+        .from('usuarios')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .maybeSingle()
+      
+      if (userData?.tenant_id) return userData.tenant_id
     }
+
+    // 2. JWT Metadata Fallback
+    const metaTenant = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id
+    if (metaTenant) return metaTenant
   }
 
-  // Fallback final apenas se tudo falhar (ID Bruno/Matriz original)
-  return '15782181-31a9-4d9a-9cde-315cf84aec5a'
+  // Fallback final: ACPROBEC - Associação Colaborativa (ID: 971f92af-...)
+  // Este é o tenant onde os dados financeiros (lancamentos) foram encontrados via probe.
+  return '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
 }

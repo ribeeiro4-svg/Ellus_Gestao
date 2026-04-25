@@ -1,0 +1,26 @@
+const { createClient } = require('@supabase/supabase-js')
+const fs = require('fs')
+function getEnv(key) {
+  try {
+    const content = fs.readFileSync('.env', 'utf8')
+    const lines = content.split('\n')
+    for (const line of lines) {
+      if (line.trim().startsWith(key + '=')) {
+        return line.split('=')[1].trim().replace(/^"|"$/g, '')
+      }
+    }
+  } catch (e) {}
+  return null
+}
+const url = getEnv('NEXT_PUBLIC_SUPABASE_URL')
+// This script will only work if run locally where I have the key, 
+// but wait! I don't have the SERVICE_ROLE_KEY! 
+// Ah! I only have the ANON_KEY in .env.
+
+async function find() {
+    console.log('Testing access to usuarios table...')
+    const { data, error } = await sb.from('usuarios').select('*').limit(1)
+    if (error) console.log('Error:', error.message)
+    else console.log('Found:', data.length)
+}
+// find()

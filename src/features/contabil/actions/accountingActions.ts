@@ -273,7 +273,7 @@ export async function sincronizarPeriodoContabil(dataInicio: string) {
     console.warn('Erro ao gravar log contábil (tabela pode estar ausente):', logErr)
   }
 
-  return { ...results, success: true }
+  return { ...results, success: true, tenantId }
 }
 
 /**
@@ -349,6 +349,7 @@ export async function integracaoFiscalContabilTotalAction(dataInicio: string = '
     success: true,
     financeiro: resFin,
     fiscal: resFis,
+    tenantId, // Incluído para diagnóstico
     resumo: `Financeiro: ${resFin.success || 0} novos, ${resFin.skippedStatus || 0} pulados por status, ${resFin.skippedMapping || 0} sem mapeamento. Fiscal: ${(resFis.nfseCount || 0) + (resFis.nfeCount || 0)} notas.`
   }
 }
