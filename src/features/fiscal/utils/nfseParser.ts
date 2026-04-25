@@ -9,16 +9,15 @@ export function parseNFSeXML(xml: string): NFSeParserResult {
   const cleanXml = xml.replace(/\s+/g, ' ');
 
   // 1. Detectar Formato
-  const isAbrasf = cleanXml.includes('abrasf.org.br');
+  const isAbrasf = cleanXml.includes('abrasf.org.br') || cleanXml.includes('xmlns="http://www.abrasf.org.br');
   const isADN = cleanXml.includes('sped.fazenda.gov.br/nfse');
 
   if (isADN) {
     return parseADN(cleanXml);
-  } else if (isAbrasf) {
+  } else {
+    // Por padrão tenta ABRASF ou genérico se não for explicitamente ADN
     return parseAbrasf(cleanXml);
   }
-
-  throw new Error('Formato de XML de NFS-e não reconhecido (Deve ser ABRASF ou Padrão Nacional ADN)');
 }
 
 function extractTag(xml: string, tag: string): string {
@@ -27,27 +26,46 @@ function extractTag(xml: string, tag: string): string {
   return match ? match[1].trim() : '';
 }
 
+/**
+ * Tenta extrair valores de múltiplas tags possíveis e converte para número
+ */
+function extractValue(xml: string, tags: string[]): number {
+  for (const tag of tags) {
+    const val = extractTag(xml, tag);
+    if (val) {
+      // Remove pontos de milhar e converte vírgula decimal para ponto
+      const normalized = val.replace(/\./g, '').replace(',', '.');
+      const num = parseFloat(normalized);
+      if (!isNaN(num)) return num;
+    }
+  }
+  return 0;
+}
+
 function parseAbrasf(xml: string): NFSeParserResult {
   const numero = extractTag(xml, 'Numero');
-  const dataEmissao = extractTag(xml, 'DataEmissao');
-  const valorBruto = parseFloat(extractTag(xml, 'ValorServicos') || '0');
-  const codigoServico = extractTag(xml, 'ItemListaServico');
-  const discriminacao = extractTag(xml, 'Discriminacao');
+  const dataEmissao = extractTag(xml, 'DataEmissao') || extractTag(xml, 'dhEmi') || new Date().toISOString();
   
-  // Dados do Prestador
-  const prestadorXml = xml.match(/<PrestadorServico>(.*?)<\/PrestadorServico>/i)?.[1] || '';
-  const cnpj = extractTag(prestadorXml, 'Cnpj') || extractTag(prestadorXml, 'Cpf');
-  const razaoSocial = extractTag(prestadorXml, 'RazaoSocial');
+  // Tenta várias tags comuns para valor bruto
+  const valorBruto = extractValue(xml, ['ValorServicos', 'vServicos', 'vServ', 'ValorBruto', 'Valor']);
+  
+  const codigoServico = extractTag(xml, 'ItemListaServico') || extractTag(xml, 'CodigoServico');
+  const discriminacao = extractTag(xml, 'Discriminacao') || extractTag(xml, 'xDescServ');
+  
+  // Dados do Prestador - Tenta blocos diferentes
+  const prestadorXml = xml.match(/<(PrestadorServico|emit|Prestador)>(.*?)<\/(PrestadorServico|emit|Prestador)>/i)?.[2] || xml;
+  const cnpj = extractTag(prestadorXml, 'Cnpj') || extractTag(prestadorXml, 'CNPJ') || extractTag(prestadorXml, 'Cpf') || extractTag(prestadorXml, 'CPF');
+  const razaoSocial = extractTag(prestadorXml, 'RazaoSocial') || extractTag(prestadorXml, 'xNome') || extractTag(prestadorXml, 'Nome');
 
   // Retenções
-  const valorIrrf = parseFloat(extractTag(xml, 'ValorIrrf') || '0');
-  const valorPis = parseFloat(extractTag(xml, 'ValorPis') || '0');
-  const valorCofins = parseFloat(extractTag(xml, 'ValorCofins') || '0');
-  const valorCsll = parseFloat(extractTag(xml, 'ValorCsll') || '0');
-  const valorIss = parseFloat(extractTag(xml, 'ValorIss') || '0');
-  const issRetido = extractTag(xml, 'IssRetido') === '1';
+  const valorIrrf = extractValue(xml, ['ValorIrrf', 'vIRRF']);
+  const valorPis = extractValue(xml, ['ValorPis', 'vPIS']);
+  const valorCofins = extractValue(xml, ['ValorCofins', 'vCOFINS']);
+  const valorCsll = extractValue(xml, ['ValorCsll', 'vCSLL']);
+  const valorIss = extractValue(xml, ['ValorIss', 'vISS']);
+  const issRetido = extractTag(xml, 'IssRetido') === '1' || extractTag(xml, 'indISS') === '1' || extractTag(xml, 'ISSRetido') === 'S';
 
-  const valorLiquido = valorBruto - valorIrrf - valorPis - valorCofins - valorCsll - (issRetido ? valorIss : 0);
+  const valorLiquido = extractValue(xml, ['ValorLiquido', 'vLiquido']) || (valorBruto - valorIrrf - valorPis - valorCofins - valorCsll - (issRetido ? valorIss : 0));
 
   return {
     nota: {
@@ -71,7 +89,7 @@ function parseAbrasf(xml: string): NFSeParserResult {
       cnpj: cnpj,
       razao_social: razaoSocial
     },
-    retencoes: [] // Será detalhado na escrituração
+    retencoes: []
   };
 }
 
@@ -79,24 +97,22 @@ function parseADN(xml: string): NFSeParserResult {
   const chave = extractTag(xml, 'chNFSe');
   const numero = extractTag(xml, 'nNFSe');
   const dataEmissao = extractTag(xml, 'dhEmi');
-  const valorBruto = parseFloat(extractTag(xml, 'vServ') || '0');
+  const valorBruto = extractValue(xml, ['vServ', 'vServicos', 'ValorServicos']);
   const codigoNbs = extractTag(xml, 'cNBS');
   const discriminacao = extractTag(xml, 'xDescServ');
 
-  // Dados do Prestador
   const prestadorXml = xml.match(/<emit>(.*?)<\/emit>/i)?.[1] || '';
   const cnpj = extractTag(prestadorXml, 'CNPJ') || extractTag(prestadorXml, 'CPF');
   const razaoSocial = extractTag(prestadorXml, 'xNome');
 
-  // Retenções (Padrão ADN usa grupos específicos para tributos federais e municipais)
-  const valorIrrf = parseFloat(extractTag(xml, 'vIRRF') || '0');
-  const valorPis = parseFloat(extractTag(xml, 'vPIS') || '0');
-  const valorCofins = parseFloat(extractTag(xml, 'vCOFINS') || '0');
-  const valorCsll = parseFloat(extractTag(xml, 'vCSLL') || '0');
-  const valorIss = parseFloat(extractTag(xml, 'vISS') || '0');
-  const issRetido = extractTag(xml, 'indISS') === '1'; // Simplificação do padrão ADN
+  const valorIrrf = extractValue(xml, ['vIRRF']);
+  const valorPis = extractValue(xml, ['vPIS']);
+  const valorCofins = extractValue(xml, ['vCOFINS']);
+  const valorCsll = extractValue(xml, ['vCSLL']);
+  const valorIss = extractValue(xml, ['vISS']);
+  const issRetido = extractTag(xml, 'indISS') === '1';
 
-  const valorLiquido = valorBruto - valorIrrf - valorPis - valorCofins - valorCsll - (issRetido ? valorIss : 0);
+  const valorLiquido = extractValue(xml, ['vLiq', 'ValorLiquido']) || (valorBruto - valorIrrf - valorPis - valorCofins - valorCsll - (issRetido ? valorIss : 0));
 
   return {
     nota: {
