@@ -24,10 +24,15 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
     // Pega o tenant do usuário logado
     const { data: { user } } = await sb.auth.getUser()
     
-    let tenantId = clientTenantId || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
-    if (!clientTenantId && user) {
-      const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
-      if (userData?.tenant_id) tenantId = userData.tenant_id
+    const fallbackId = '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
+    let tenantId = clientTenantId || fallbackId
+    
+    // Prioriza descobrir o tenant real via sessão do servidor se o cliente mandou o fallback
+    if (tenantId === fallbackId || !clientTenantId) {
+      if (user) {
+        const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+        if (userData?.tenant_id) tenantId = userData.tenant_id
+      }
     }
 
     // 1. Identificar/Criar Prestador (Usando admin para evitar RLS)
