@@ -156,7 +156,7 @@ export async function sincronizarLancamentoContabil(financialId: string) {
   // 3.1 Verificar se é um pagamento de Nota Fiscal (Escrituração Prévia)
   // Se for, o Débito deve ser em Fornecedores (2.1.3.01.002) e não na Despesa
   const { data: vinculoNfse } = await sb.from('nfse_financeiro_vinculo').select('id').eq('financeiro_id', financialId).maybeSingle()
-  const { data: vinculoNfe } = await sb.from('nfe_entradas').select('id').eq('lancamento_financeiro_id', financialId).maybeSingle()
+  const { data: vinculoNfe } = await sb.from('nfe_entradas').select('id, numero_nf').eq('lancamento_financeiro_id', financialId).maybeSingle()
 
   let contaDebitoEfetiva = contaCat
   let historicoEfetivo = `${fin.tipo === 'receita' ? 'REC' : 'PAG'} — ${fin.descricao}`
@@ -171,7 +171,8 @@ export async function sincronizarLancamentoContabil(financialId: string) {
     
     if (contaFornecedor) {
       contaDebitoEfetiva = contaFornecedor
-      historicoEfetivo = `PAG — Liq. Nota vinculada — ${fin.descricao}`
+      const refNota = vinculoNfe ? `NF ${vinculoNfe.numero_nf}` : 'NFS-e'
+      historicoEfetivo = `PAG — Liq. obrigação ${refNota} — ${fin.descricao}`
     }
   }
 
@@ -258,14 +259,43 @@ export async function sincronizarNotaFiscalContabil(notaId: string, tipo: 'nfse'
   const contaFornecedorId = config?.conta_fornecedores_id || (await sb.from('plano_contas').select('id').eq('tenant_id', nota.tenant_id).eq('codigo', '2.1.3.01.002').maybeSingle()).data?.id
 
   // Conta de Débito (Despesa)
-  let contaDebitoId = nota.conta_despesa_id // Para NFSe
+  // Para NFe, agrupamos os itens por conta contábil para gerar partidas precisas
+  const partidasDebito: any[] = []
   if (tipo === 'nfe') {
-    // Para NFe, pega do primeiro item ou configuração
-    const { data: item } = await sb.from('nfe_entradas_itens').select('conta_contabil_id').eq('nfe_entrada_id', notaId).limit(1).maybeSingle()
-    contaDebitoId = item?.conta_contabil_id
+    const { data: itens } = await sb.from('nfe_entradas_itens').select('conta_contabil_id, valor_produto').eq('nfe_entrada_id', notaId)
+    if (itens && itens.length > 0) {
+      // Agrupar por conta
+      const agrupado = itens.reduce((acc: any, it: any) => {
+        const cid = it.conta_contabil_id || 'PENDENTE'
+        acc[cid] = (acc[cid] || 0) + Number(it.valor_produto || 0)
+        return acc
+      }, {})
+
+      for (const [cid, vlr] of Object.entries(agrupado)) {
+        const valorItem = Number(vlr)
+        if (valorItem > 0) {
+          partidasDebito.push({
+            conta_id: cid === 'PENDENTE' ? (await sb.from('plano_contas').select('id').eq('tenant_id', nota.tenant_id).eq('codigo', '4.2.2.01.013').maybeSingle()).data?.id : cid,
+            valor: valorItem,
+            historico: 'Vlr. ref. produtos tomados'
+          })
+        }
+      }
+    }
+  } else {
+    // Para NFSe
+    if (nota.conta_despesa_id && Number(nota.valor_bruto) > 0) {
+      partidasDebito.push({
+        conta_id: nota.conta_despesa_id,
+        valor: Number(nota.valor_bruto),
+        historico: 'Vlr. ref. serviço tomado'
+      })
+    }
   }
 
-  if (!contaFornecedorId || !contaDebitoId) return { error: 'Contas contábeis não configuradas para a nota' }
+  if (partidasDebito.length === 0 || !contaFornecedorId) {
+    return { error: 'Contas contábeis ou valores não identificados para a nota. Verifique a escrituração.' }
+  }
 
   // 3. Limpar lançamento anterior da nota
   const { data: existing } = await sb.from('lancamentos_contabeis').select('id').eq('origem_id', notaId).maybeSingle()
@@ -275,7 +305,7 @@ export async function sincronizarNotaFiscalContabil(notaId: string, tipo: 'nfse'
   }
 
   // 4. Criar Capa
-  const valor = tipo === 'nfse' ? nota.valor_bruto : nota.valor_total
+  const valorTotal = tipo === 'nfse' ? Number(nota.valor_bruto) : Number(nota.valor_total)
   const numero = tipo === 'nfse' ? nota.numero_nfse : nota.numero_nf
   const emitente = tipo === 'nfse' ? nota.fornecedor?.nome : nota.nome_emitente
 
@@ -290,13 +320,29 @@ export async function sincronizarNotaFiscalContabil(notaId: string, tipo: 'nfse'
     status: 'confirmado'
   }).select('id').single()
 
-  if (insErr || !lanc) return { error: insErr?.message }
+  if (insErr || !lanc) return { error: insErr?.message || 'Erro ao criar capa do lançamento' }
 
-  // 5. Partidas
-  await sb.from('lancamentos_partidas').insert([
-    { lancamento_id: lanc.id, conta_id: contaDebitoId, tipo_partida: 'D', valor, ordem: 1, historico_partida: 'Vlr. ref. serviço/produto tomado' },
-    { lancamento_id: lanc.id, conta_id: contaFornecedorId, tipo_partida: 'C', valor, ordem: 2, historico_partida: 'Vlr. provisão para pagamento' },
-  ])
+  // 5. Inserir Partidas
+  const finalPartidas = [
+    ...partidasDebito.map((p, i) => ({
+      lancamento_id: lanc.id,
+      conta_id: p.conta_id,
+      tipo_partida: 'D',
+      valor: p.valor,
+      ordem: i + 1,
+      historico_partida: p.historico
+    })),
+    {
+      lancamento_id: lanc.id,
+      conta_id: contaFornecedorId,
+      tipo_partida: 'C',
+      valor: valorTotal,
+      ordem: partidasDebito.length + 1,
+      historico_partida: 'Vlr. provisão para pagamento (Passivo)'
+    }
+  ]
+
+  await sb.from('lancamentos_partidas').insert(finalPartidas)
 
   return { success: true }
 }

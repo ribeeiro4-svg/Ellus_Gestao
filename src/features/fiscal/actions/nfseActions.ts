@@ -217,17 +217,27 @@ export async function getFornecedorByCpfCnpjAction(cpfCnpj: string) {
 export async function buscarLancamentosParaVinculoAction(prestadorId: string, periodo?: string) {
   const sb = await createServerSupabase()
   
+  // 1. Buscar o prestador para ter o CNPJ e Nome
+  const { data: prestador } = await sb.from('fornecedores').select('nome, cpf_cnpj').eq('id', prestadorId).single()
+  const nomeLimpo = prestador?.nome?.split(' ')[0] || ''
+  const cnpjLimpo = prestador?.cpf_cnpj?.replace(/\D/g, '') || ''
+
   let query = sb.from('lancamentos')
     .select('*')
-    .eq('fornecedor_id', prestadorId)
     .eq('tipo', 'despesa')
-    .order('data', { ascending: false })
+
+  // Busca por fornecedor_id OU por texto na descrição (Fuzzy)
+  const orFilter = [`fornecedor_id.eq.${prestadorId}`]
+  if (nomeLimpo && nomeLimpo.length > 2) orFilter.push(`descricao.ilike.%${nomeLimpo}%`)
+  if (cnpjLimpo && cnpjLimpo.length > 5) orFilter.push(`descricao.ilike.%${cnpjLimpo}%`)
+  
+  query = query.or(orFilter.join(','))
 
   if (periodo && periodo !== 'all') {
     query = query.gte('data', `${periodo}-01`).lte('data', `${periodo}-31`)
   }
 
-  const { data, error } = await query.limit(50)
+  const { data, error } = await query.order('data', { ascending: false }).limit(50)
   return { data: data || [], error: error?.message }
 }
 
