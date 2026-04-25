@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { Save, CheckCircle, AlertTriangle, ChevronDown, Loader2, FileText, Copy } from 'lucide-react'
+import { Save, CheckCircle, AlertTriangle, ChevronDown, Loader2, FileText, Copy, X } from 'lucide-react'
 import { TABELA_CFOP, buscarCFOP } from '@/features/fiscal/utils/tabelasCFOP'
 import { CST_ICMS_TRIBUTACAO, CST_IPI_ENTRADA, CST_PIS_COFINS, DESTINACOES_ITEM } from '@/features/fiscal/utils/tabelasCST'
 import { usePlanoContas } from '@/features/contabil/hooks/usePlanoContas'
@@ -24,6 +24,14 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   const [saving, setSaving] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [vinculoData, setVinculoData] = useState<any>(null)
+  const [showPresets, setShowPresets] = useState(false)
+  const [presetName, setPresetName] = useState('')
+  const [presets, setPresets] = useState<any[]>([])
+
+  useEffect(() => {
+    const saved = localStorage.getItem('acprobec_nfe_presets')
+    if (saved) setPresets(JSON.parse(saved))
+  }, [])
 
   const nfeSelecionada = nfes.find((n: any) => n.id === selectedNfeId)
 
@@ -46,6 +54,63 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
 
   const aplicarTodosNCM = (ncm: string, field: string, value: any) => {
     setItens(prev => prev.map(item => item.ncm === ncm ? { ...item, [field]: value } : item))
+  }
+
+  const replicarPrimeiroItem = () => {
+    if (itens.length < 1) return
+    const p = itens[0]
+    setItens(prev => prev.map((item, i) => i === 0 ? item : {
+      ...item,
+      cfop_escrituracao: p.cfop_escrituracao,
+      cst_icms: p.cst_icms,
+      cst_pis: p.cst_pis,
+      cst_cofins: p.cst_cofins,
+      cst_ipi: p.cst_ipi,
+      destinacao_item: p.destinacao_item,
+      conta_contabil_id: p.conta_contabil_id,
+      aproveitamento_credito: p.aproveitamento_credito
+    }))
+  }
+
+  const salvarPreset = () => {
+    if (itens.length < 1 || !presetName) return
+    const p = itens[0]
+    const newPreset = {
+      nome: presetName,
+      cfop: p.cfop_escrituracao,
+      icms: p.cst_icms,
+      pis: p.cst_pis,
+      cofins: p.cst_cofins,
+      ipi: p.cst_ipi,
+      dest: p.destinacao_item,
+      conta: p.conta_contabil_id,
+      credito: p.aproveitamento_credito
+    }
+    const updated = [...presets, newPreset]
+    setPresets(updated)
+    localStorage.setItem('acprobec_nfe_presets', JSON.stringify(updated))
+    setPresetName('')
+    setShowPresets(false)
+  }
+
+  const aplicarPreset = (p: any) => {
+    setItens(prev => prev.map(item => ({
+      ...item,
+      cfop_escrituracao: p.cfop,
+      cst_icms: p.icms,
+      cst_pis: p.pis,
+      cst_cofins: p.cofins,
+      cst_ipi: p.ipi,
+      destinacao_item: p.dest,
+      conta_contabil_id: p.conta,
+      aproveitamento_credito: p.credito
+    })))
+  }
+
+  const excluirPreset = (idx: number) => {
+    const updated = presets.filter((_, i) => i !== idx)
+    setPresets(updated)
+    localStorage.setItem('acprobec_nfe_presets', JSON.stringify(updated))
   }
 
   const salvar = async () => {
@@ -186,6 +251,73 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
 
       {!loadingItens && itens.length > 0 && (
         <div className="flex flex-col gap-4">
+          {/* Toolbar de Ações em Lote */}
+          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={replicarPrimeiroItem}
+                className="flex items-center gap-2 px-4 py-2 text-[11px] font-black text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all"
+                title="Copia a tributação do primeiro item para todos os outros"
+              >
+                <Copy size={14} /> Replicar 1º Item p/ Todos
+              </button>
+
+              <div className="h-6 w-[1px] bg-slate-100 mx-1" />
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowPresets(!showPresets)}
+                  className="flex items-center gap-2 px-4 py-2 text-[11px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-all"
+                >
+                  <Save size={14} /> Presets de Tributação
+                </button>
+                
+                {showPresets && (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                    <input 
+                      type="text" 
+                      placeholder="Nome do preset..."
+                      value={presetName}
+                      onChange={e => setPresetName(e.target.value)}
+                      className="px-3 py-2 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-bold outline-none w-32"
+                    />
+                    <button
+                      onClick={salvarPreset}
+                      disabled={!presetName}
+                      className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black disabled:opacity-50"
+                    >
+                      Salvar
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {presets.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-slate-400 uppercase mr-1">Aplicar:</span>
+                <div className="flex flex-wrap gap-1">
+                  {presets.map((p, pi) => (
+                    <div key={pi} className="group relative">
+                      <button
+                        onClick={() => aplicarPreset(p)}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-indigo-600 hover:text-white text-slate-600 rounded-lg text-[10px] font-black transition-all"
+                      >
+                        {p.nome}
+                      </button>
+                      <button 
+                        onClick={() => excluirPreset(pi)}
+                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                      >
+                        <X size={8} strokeWidth={4} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[1200px]">
