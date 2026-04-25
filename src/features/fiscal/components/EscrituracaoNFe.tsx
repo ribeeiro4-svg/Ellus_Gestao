@@ -14,7 +14,7 @@ import { getTributacaoPresetsAction, salvarTributacaoPresetAction, excluirTribut
 import NFSeEscrituracaoModal from './nfse/NFSeEscrituracaoModal'
 
 export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: any; nfeIdInicial: string | null }) {
-  const { nfes, buscarItens, salvarClassificacao } = nfeHook
+  const { nfes, buscarItens, salvarClassificacao, tenantId } = nfeHook
   const planoHook = usePlanoContas()
   const estoqueHook = useProdutosEstoque()
   const integracaoHook = useIntegracaoFiscalContabil()
@@ -30,13 +30,14 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   const [presets, setPresets] = useState<any[]>([])
 
   const loadPresets = async () => {
-    const res = await getTributacaoPresetsAction()
+    if (!tenantId) return
+    const res = await getTributacaoPresetsAction(tenantId)
     if (res.data) setPresets(res.data)
   }
 
   useEffect(() => {
-    loadPresets()
-  }, [])
+    if (tenantId) loadPresets()
+  }, [tenantId])
 
   const nfeSelecionada = nfes.find((n: any) => n.id === selectedNfeId)
 
@@ -92,7 +93,7 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
       credito: p.aproveitamento_credito
     }
     
-    const res = await salvarTributacaoPresetAction(payload)
+    const res = await salvarTributacaoPresetAction(payload, tenantId)
     if (res.error) alert(res.error)
     else {
       await loadPresets()
