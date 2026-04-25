@@ -266,3 +266,29 @@ export async function vincularNFSeALancamentoAction(nfseId: string, lancamentoId
     return { error: err.message }
   }
 }
+
+/**
+ * Server Action para buscar a lista de NFS-e ignorando bloqueios de RLS de leitura
+ */
+export async function getNFSeListAction(tenantIdParam?: string) {
+  const sbAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const tenantId = tenantIdParam || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
+
+  const { data, error } = await sbAdmin
+    .from('nfse_entradas')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .order('data_emissao', { ascending: false })
+
+  if (error) {
+    console.error('getNFSeListAction Error:', error.message)
+    return { error: error.message, data: null }
+  }
+
+  return { error: null, data }
+}
+

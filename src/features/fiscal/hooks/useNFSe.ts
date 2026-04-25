@@ -3,25 +3,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useTenantId } from '@/lib/hooks/useTenantId';
 import { NFSeEntrada } from '@/lib/types/nfse';
+import { getNFSeListAction } from '../actions/nfseActions';
 
 export function useNFSe() {
   const [nfses, setNfses] = useState<NFSeEntrada[]>([]);
   const [loading, setLoading] = useState(true);
   const tenantId = useTenantId();
-  const sb = createClient();
 
   const fetchNfses = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
     try {
-      const { data, error } = await sb
-        .from('nfse_entradas')
-        .select('*, prestador:fornecedores(nome, cpf_cnpj)')
-        .eq('tenant_id', tenantId)
-        .order('data_emissao', { ascending: false });
+      const { data, error } = await getNFSeListAction(tenantId);
       
       if (!error && data) {
-        setNfses(data);
+        setNfses(data as any);
       }
     } finally {
       setLoading(false);

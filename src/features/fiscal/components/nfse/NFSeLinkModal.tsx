@@ -31,7 +31,7 @@ export default function NFSeLinkModal({
       // Busca notas que ainda não foram concluídas ou vinculadas
       const { data, error } = await sb
         .from('nfse_entradas')
-        .select('*, fornecedores(nome, cpf_cnpj)')
+        .select('*')
         .eq('status_escrituracao', 'pendente')
         .order('data_emissao', { ascending: false })
 
