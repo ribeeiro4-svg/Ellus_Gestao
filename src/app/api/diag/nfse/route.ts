@@ -2,6 +2,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const sbAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,8 +12,13 @@ export async function GET() {
 
   const { data, error } = await sbAdmin
     .from('nfse_entradas')
-    .select('id, tenant_id, numero_nfse, valor_bruto, data_emissao, prestador_id')
-    .filter('valor_bruto', 'eq', 44.90)
+    .select('id, tenant_id, numero_nfse, valor_bruto, data_emissao, created_at')
+    .order('created_at', { ascending: false })
+    .limit(10)
 
-  return NextResponse.json({ data, error })
+  return NextResponse.json({ 
+    last_notes: data, 
+    search_44: (data || []).filter(n => Math.abs(Number(n.valor_bruto) - 44.90) < 0.1),
+    error 
+  })
 }
