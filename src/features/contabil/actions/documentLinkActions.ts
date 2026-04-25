@@ -16,25 +16,22 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
   
   if (lancErr || !lanc) return { error: 'Lançamento contábil não encontrado' }
 
-  // 2. Extrair termo de busca do histórico
-  // Ex: "PAG — Pgto QR Code Pix - MAGALUPAY" -> "MAGALUPAY"
-  let termo = lanc.historico || ''
+  // 2. Extrair múltiplos termos de busca do histórico para busca agressiva
+  const historico = lanc.historico || ''
+  const partes = historico.split(/[\s—\-]+/).filter((p: string) => p.length > 2 && !['PAG', 'REC', 'Ref', 'TRANSF', 'PIX', 'ENVIADA', 'RECEBIDA'].includes(p.toUpperCase()))
   
-  // Remove prefixos comuns como "PAG — ", "REC — ", "Ref: 2026/001389 — "
-  termo = termo.replace(/^.*—\s*/, '')
-  // Tenta pegar a última parte se houver hífens
-  if (termo.includes(' - ')) {
-    const parts = termo.split(' - ')
-    termo = parts[parts.length - 1] || termo
-  }
-  termo = termo.trim()
+  // CNPJ limpo (apenas dígitos) se houver algo que pareça um CNPJ
+  const cnpjMatch = historico.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/)
+  const cnpjLimpo = cnpjMatch ? cnpjMatch[0].replace(/\D/g, '') : null
+  
+  const termoPrincipal = partes[partes.length - 1] || ''
 
   // 3. Buscar no Financeiro (lancamentos)
   // Filtra por valor aproximado ou termo na descrição
   const { data: financial } = await sb
     .from('lancamentos')
     .select('id, data, descricao, categoria, valor, tipo')
-    .or(`descricao.ilike.%${termo}%,categoria.ilike.%${termo}%`)
+    .or(`descricao.ilike.%${termoPrincipal}%,categoria.ilike.%${termoPrincipal}%`)
     .limit(10)
 
   // 4. Buscar em NFS-e
@@ -51,21 +48,43 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
     }
   }
 
-  // 4b. Busca por termo
+  // 4b. Busca por termo e CNPJ
+  let orClauses = [`numero_nfse.ilike.%${termoPrincipal}%`]
+  if (cnpjLimpo) orClauses.push(`id.in.(select id from nfse_entradas where prestador_id in (select id from fornecedores where cpf_cnpj ilike '%${cnpjLimpo}%'))`)
+
   const { data: nfsePorTermo } = await sb
     .from('nfse_entradas')
     .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
-    .ilike('numero_nfse', `%${termo}%`)
+    .or(orClauses.join(','))
     .limit(10)
   
+  // Complementar com busca por partes do nome
+  let nfsePorNomes: any[] = []
+  if (partes.length > 0) {
+    const { data: nfsN } = await sb.from('nfse_entradas')
+      .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
+      .or(partes.map((p: string) => `fornecedores.nome.ilike.%${p}%`).join(','))
+      .limit(5)
+    nfsePorNomes = nfsN || []
+  }
+  
   const nfseMap = new Map();
-  [...nfsePorVinculo, ...(nfsePorTermo || [])].forEach(n => nfseMap.set(n.id, n));
-  const nfse = Array.from(nfseMap.values())
+  [...nfsePorVinculo, ...(nfsePorTermo || []), ...nfsePorNomes].forEach(n => nfseMap.set(n.id, n));
+  const nfseBase = Array.from(nfseMap.values())
+
+  // Adicionar info de vínculo financeiro para o modal
+  const nfseIds = nfseBase.map(n => n.id)
+  const { data: vinculosExistentes } = await sb.from('nfse_financeiro_vinculo').select('nfse_id, financeiro_id').in('nfse_id', nfseIds)
+  
+  const nfse = nfseBase.map(n => ({
+    ...n,
+    financeiro_vinculado_id: vinculosExistentes?.find(v => v.nfse_id === n.id)?.financeiro_id || null
+  }))
   
   // Se não achou pelo número/vínculo, tenta pelo nome ou CNPJ do prestador
   let nfseComplementar: any[] = []
   if (!nfse || nfse.length === 0) {
-     const { data: prestadores } = await sb.from('fornecedores').select('id').or(`nome.ilike.%${termo}%,cpf_cnpj.ilike.%${termo}%`)
+     const { data: prestadores } = await sb.from('fornecedores').select('id').or(`nome.ilike.%${termoPrincipal}%,cpf_cnpj.ilike.%${termoPrincipal}%`)
      if (prestadores && prestadores.length > 0) {
         const { data: nfs } = await sb.from('nfse_entradas')
           .select('id, numero_nfse, data_emissao, valor_bruto, fornecedores(nome)')
@@ -89,7 +108,7 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
   const { data: nfePorTermo } = await sb
     .from('nfe_entradas')
     .select('id, numero_nf, data_emissao, valor_total, nome_emitente')
-    .or(`numero_nf.ilike.%${termo}%,nome_emitente.ilike.%${termo}%`)
+    .or(`numero_nf.ilike.%${termoPrincipal}%,nome_emitente.ilike.%${termoPrincipal}%`)
     .limit(10)
 
   const nfeMap = new Map();
@@ -112,15 +131,22 @@ export async function buscarCandidatosVincularAction(lancamentoId: string) {
 export async function vincularEDocumentoReprocessarAction(params: {
   lancamentoId: string,
   docType: 'financeiro' | 'nfse' | 'nfe',
-  docId: string
+  docId: string,
+  financialId?: string // Opcional: Para vincular nota ao financeiro simultaneamente
 }) {
   const sb = await createServerSupabase()
-  const { lancamentoId, docType, docId } = params
+  const { lancamentoId, docType, docId, financialId } = params
 
   try {
     // 1. Buscar dados dos envolvidos
     const { data: lanc } = await sb.from('lancamentos_contabeis').select('*').eq('id', lancamentoId).single()
     if (!lanc) throw new Error('Lançamento contábil não encontrado')
+
+    // 1.1 Se houver financialId fornecido, criar o vínculo fiscal <-> financeiro primeiro
+    if (docType === 'nfse' && financialId) {
+      const { vincularNFSeALancamentoAction } = await import('../../fiscal/actions/nfseActions')
+      await vincularNFSeALancamentoAction(docId, financialId)
+    }
 
     let docNumero = ''
     let docTipo = ''
