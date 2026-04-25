@@ -34,18 +34,31 @@ export async function importarNFSeAction(xmlContent: string) {
     if (prestador.error) throw new Error(prestador.error)
 
     // 2. Persistir no Banco de Dados (nfse_entradas)
-    // Verifica se já existe para evitar duplicidade (Prioriza Chave Nacional se disponível)
-    let orFilter = `and(numero_nfse.eq.${parsed.nota.numero_nfse},prestador_id.eq.${prestador.id})`
+    // Verifica se já existe para evitar duplicidade.
+    // A Chave Nacional é única globalmente, então buscamos primeiro sem o filtro de tenant
+    // para evitar a violação de constraint "nfse_entradas_chave_nacional_key".
+    
+    let existente = null;
+
     if (parsed.nota.chave_nacional) {
-      orFilter = `chave_nacional.eq.${parsed.nota.chave_nacional},${orFilter}`
+      const { data: global } = await sbAdmin
+        .from('nfse_entradas')
+        .select('id, tenant_id')
+        .eq('chave_nacional', parsed.nota.chave_nacional)
+        .maybeSingle()
+      existente = global;
     }
 
-    const { data: existente } = await sbAdmin
-      .from('nfse_entradas')
-      .select('id')
-      .or(orFilter)
-      .eq('tenant_id', tenantId)
-      .maybeSingle()
+    if (!existente) {
+      const { data: local } = await sbAdmin
+        .from('nfse_entradas')
+        .select('id')
+        .eq('tenant_id', tenantId)
+        .eq('numero_nfse', parsed.nota.numero_nfse)
+        .eq('prestador_id', prestador.id)
+        .maybeSingle()
+      existente = local;
+    }
 
     let nfseId = existente?.id
 
