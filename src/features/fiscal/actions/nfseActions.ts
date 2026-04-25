@@ -39,52 +39,13 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
     const prestador = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social, tenantId)
     if (prestador.error) throw new Error(prestador.error)
 
-    // 2. Persistir no Banco de Dados (nfse_entradas)
-    // Verifica se já existe para evitar duplicidade.
-    // A Chave Nacional é única globalmente, então buscamos primeiro sem o filtro de tenant
-    // para evitar a violação de constraint "nfse_entradas_chave_nacional_key".
-    
-    let existente = null;
+    // 2. Persistir no Banco de Dados (nfse_entradas) via Upsert (Garante persistência e posse)
+    let nfseId: string | undefined;
 
     if (parsed.nota.chave_nacional) {
-      const { data: global } = await sbAdmin
+      const { data: nova, error: upsertErr } = await sbAdmin
         .from('nfse_entradas')
-        .select('id, tenant_id, prestador_id')
-        .eq('chave_nacional', parsed.nota.chave_nacional)
-        .maybeSingle()
-      existente = global;
-    }
-
-    if (!existente) {
-      const { data: local } = await sbAdmin
-        .from('nfse_entradas')
-        .select('id, tenant_id, prestador_id')
-        .eq('tenant_id', tenantId)
-        .eq('numero_nfse', parsed.nota.numero_nfse)
-        .eq('prestador_id', prestador.id)
-        .maybeSingle()
-      existente = local;
-    }
-
-    let nfseId = existente?.id
-
-    if (existente) {
-      // Se a nota já existe mas está vinculada a outro tenant (ex: fallback), 
-      // vinculamos ela ao tenant atual e também corrigimos o vínculo do prestador.
-      if (existente.tenant_id && existente.tenant_id !== tenantId) {
-        // Garante que o prestador exista no tenant alvo
-        const prestadorAlvo = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social, tenantId)
-        
-        await sbAdmin.from('nfse_entradas').update({ 
-          tenant_id: tenantId,
-          prestador_id: prestadorAlvo.id || existente.prestador_id
-        }).eq('id', existente.id)
-      }
-      nfseId = existente.id
-    } else {
-      const { data: nova, error: insErr } = await sbAdmin
-        .from('nfse_entradas')
-        .insert({
+        .upsert({
           tenant_id: tenantId,
           prestador_id: prestador.id,
           numero_nfse: parsed.nota.numero_nfse,
@@ -103,25 +64,34 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
           codigo_servico_lc116: parsed.nota.codigo_servico_lc116,
           situacao: 'autorizada',
           status_escrituracao: 'pendente'
+        }, {
+          onConflict: 'chave_nacional'
         })
         .select('id')
         .single()
 
-      if (insErr) {
-        // Fallback definitivo: Se deu erro de duplicidade que passou pelo check inicial
-        if (insErr.code === '23505') {
-          const { data: rec } = await sbAdmin
-            .from('nfse_entradas')
-            .select('id')
-            .eq('chave_nacional', parsed.nota.chave_nacional)
-            .maybeSingle()
-          nfseId = rec?.id
-        } else {
-          throw new Error(`Erro ao salvar nota: ${insErr.message}`)
-        }
-      } else {
-        nfseId = nova.id
-      }
+      if (upsertErr) throw new Error(`Erro ao salvar nota (upsert chave): ${upsertErr.message}`)
+      nfseId = nova.id
+    } else {
+      // Fallback para notas sem chave nacional (ABRASF clássico)
+      const { data: fallback, error: fErr } = await sbAdmin
+        .from('nfse_entradas')
+        .upsert({
+          tenant_id: tenantId,
+          prestador_id: prestador.id,
+          numero_nfse: parsed.nota.numero_nfse,
+          data_emissao: parsed.nota.data_emissao,
+          valor_bruto: parsed.nota.valor_bruto,
+          valor_liquido: parsed.nota.valor_liquido,
+          status_escrituracao: 'pendente'
+        }, {
+          onConflict: 'tenant_id,numero_nfse,prestador_id'
+        })
+        .select('id')
+        .single()
+      
+      if (fErr) throw new Error(`Erro ao salvar nota (upsert numero): ${fErr.message}`)
+      nfseId = fallback.id
     }
 
     return { 
@@ -144,11 +114,11 @@ export async function importarNFSeAction(xmlContent: string, clientTenantId?: st
  * Busca ou cria um prestador baseado no CNPJ
  */
 export async function identificarPrestadorAction(cnpj: string, razaoSocial: string, tenantId: string) {
-  const sb = await createServerSupabase()
+  const sbAdmin = createAdminSupabase()
   const cleanedCnpj = cnpj.replace(/\D/g, '')
 
   // 1. Buscar existente (Scopo por Tenant)
-  const { data: existente, error: findErr } = await sb
+  const { data: existente } = await sbAdmin
     .from('fornecedores')
     .select('id, is_prestador_servicos')
     .eq('tenant_id', tenantId)
@@ -156,16 +126,14 @@ export async function identificarPrestadorAction(cnpj: string, razaoSocial: stri
     .maybeSingle()
 
   if (existente) {
-    // Se existe mas não era marcado como prestador, atualiza flag
     if (!existente.is_prestador_servicos) {
-      await sb.from('fornecedores').update({ is_prestador_servicos: true }).eq('id', existente.id)
+      await sbAdmin.from('fornecedores').update({ is_prestador_servicos: true }).eq('id', existente.id)
     }
     return { id: existente.id }
   }
 
-  // 2. Criar novo (Utiliza o hook useFornecedores indiretamente via API do Supabase)
-  // Nota: Idealmente usaríamos a mesma lógica de auto-geração de conta contábil
-  const { data: novo, error: insErr } = await sb
+  // 2. Criar novo (Admin bypasses RLS)
+  const { data: novo, error: insErr } = await sbAdmin
     .from('fornecedores')
     .insert({
       tenant_id: tenantId,
@@ -331,8 +299,9 @@ export async function getNFSeListAction(tenantIdParam?: string, periodo?: string
 
   if (periodo && periodo !== 'all') {
     const [year, month] = periodo.split('-')
-    const startDate = `${year}-${month}-01`
-    const endDate = new Date(parseInt(year), parseInt(month), 0).toISOString().split('T')[0]
+    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
+    const startDate = `${year}-${month}-01 00:00:00`
+    const endDate = `${year}-${month}-${lastDay} 23:59:59`
     q = q.gte('data_emissao', startDate).lte('data_emissao', endDate)
   }
 
