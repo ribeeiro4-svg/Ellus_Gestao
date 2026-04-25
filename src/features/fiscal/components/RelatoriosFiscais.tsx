@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Printer, AlertTriangle, CheckCircle, Package, TrendingUp, Users, Building2, Map } from 'lucide-react'
+import { Printer, AlertTriangle, CheckCircle, Package, TrendingUp, Users, Building2, Map, Calendar } from 'lucide-react'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 
 export default function RelatoriosFiscais({ nfeHook, nfseHook, estoqueHook }: { nfeHook: any; nfseHook: any; estoqueHook: any }) {
@@ -345,8 +345,51 @@ export default function RelatoriosFiscais({ nfeHook, nfseHook, estoqueHook }: { 
 
   // --- INTERFACE DO PAINEL ---
 
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  const anoAtual = new Date().getFullYear()
+  const periodosOpcoes = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - i)
+    const val = d.toISOString().slice(0, 7) // 'YYYY-MM'
+    const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+    return { value: val, label: label.charAt(0).toUpperCase() + label.slice(1) }
+  })
+
+  // Usamos o período da NFe como base de exibição
+  const currentPeriod = nfeHook.filterPeriodo || 'all'
+
+  const handlePeriodoChange = (val: string) => {
+    nfeHook.setFilterPeriodo(val === 'all' ? '' : val)
+    nfseHook.setPeriodo(val)
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      
+      {/* Barra de Filtros */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+            <Calendar size={18} />
+          </div>
+          <div>
+            <h3 className="text-sm font-black text-slate-800">Filtro de Período</h3>
+            <p className="text-[10px] font-bold text-slate-400">Define o mês para todos os relatórios fiscais</p>
+          </div>
+        </div>
+        
+        <select 
+          value={currentPeriod} 
+          onChange={(e) => handlePeriodoChange(e.target.value)}
+          className="px-4 py-2.5 bg-slate-50 border-none rounded-xl text-xs font-black text-slate-700 outline-none hover:bg-slate-100 transition-all cursor-pointer min-w-[200px]"
+        >
+          <option value="all">Visão Geral (Todos os Períodos)</option>
+          {periodosOpcoes.map(p => (
+            <option key={p.value} value={p.value}>{p.label}</option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {[
           { id: 'rep-pendencias', title: 'Auditoria de Pendências', desc: 'Relação de NF-e e NFS-e aguardando classificação fiscal', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-50' },
