@@ -40,8 +40,8 @@ export function useLancamentosContabeis() {
     if (!tenantId) return
     setLoading(true)
     
-    // 1. Buscar Lista (Aumentado limite para visibilidade)
-    let q = sb.from('lancamentos_contabeis').select('*').eq('tenant_id', tenantId).order('data_lancamento', { ascending: false }).limit(1000)
+    // 1. Buscar Lista (Aumentado limite para visibilidade, e ordenado pelo NÚMERO do lançamento)
+    let q = sb.from('lancamentos_contabeis').select('*').eq('tenant_id', tenantId).order('numero_lancamento', { ascending: false }).limit(1000)
     if (competencia) {
       const [ano, mes] = competencia.split('-')
       q = q.gte('data_competencia', `${ano}-${mes}-01`).lte('data_competencia', `${ano}-${mes}-31`)
