@@ -12,8 +12,16 @@ export async function importarNFSeAction(xmlContent: string) {
   try {
     const parsed = parseNFSeXML(xmlContent)
     
+    // Pega o tenant do usuário logado
+    const { data: { user } } = await sb.auth.getUser()
+    let tenantId = '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
+    if (user) {
+      const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+      if (userData?.tenant_id) tenantId = userData.tenant_id
+    }
+
     // 1. Identificar/Criar Prestador
-    const prestador = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social)
+    const prestador = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social, tenantId)
     if (prestador.error) throw new Error(prestador.error)
 
     // 2. Preparar Nota para Revisão (Ainda não salva no banco, retorna para a UI)
@@ -35,7 +43,7 @@ export async function importarNFSeAction(xmlContent: string) {
 /**
  * Busca ou cria um prestador baseado no CNPJ
  */
-export async function identificarPrestadorAction(cnpj: string, razaoSocial: string) {
+export async function identificarPrestadorAction(cnpj: string, razaoSocial: string, tenantId: string) {
   const sb = await createServerSupabase()
   const cleanedCnpj = cnpj.replace(/\D/g, '')
 
@@ -59,6 +67,7 @@ export async function identificarPrestadorAction(cnpj: string, razaoSocial: stri
   const { data: novo, error: insErr } = await sb
     .from('fornecedores')
     .insert({
+      tenant_id: tenantId,
       nome: razaoSocial,
       cpf_cnpj: cleanedCnpj,
       is_prestador_servicos: true,
@@ -162,7 +171,7 @@ export async function salvarEscrituracaoNFSeAction(payload: any) {
       lancamento_contabil_id: lancContabil?.id
     }).eq('id', id)
 
-    return { success: true }
+    return { success: true, createdCount: 1, error: null }
   } catch (err: any) {
     return { error: err.message || 'Erro ao finalizar escrituração' }
   }

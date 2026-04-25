@@ -159,5 +159,5 @@ export async function seedAccountingConfigAction(providedTenantId?: string) {
     }
   }
 
-  return { success: true, createdCount }
+  return { success: true, createdCount, error: null }
 }
