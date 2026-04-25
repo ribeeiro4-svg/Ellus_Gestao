@@ -14,11 +14,12 @@ export async function importarNFSeAction(xmlContent: string) {
     
     // Pega o tenant do usuário logado
     const { data: { user } } = await sb.auth.getUser()
-    let tenantId = '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
-    if (user) {
-      const { data: userData } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
-      if (userData?.tenant_id) tenantId = userData.tenant_id
-    }
+    if (!user) throw new Error('Usuário não autenticado')
+    
+    const { data: userData, error: userErr } = await sb.from('usuarios').select('tenant_id').eq('id', user.id).single()
+    if (userErr || !userData?.tenant_id) throw new Error('Tenant não identificado para este usuário')
+    
+    const tenantId = userData.tenant_id
 
     // 1. Identificar/Criar Prestador
     const prestador = await identificarPrestadorAction(parsed.prestador.cnpj, parsed.prestador.razao_social, tenantId)
