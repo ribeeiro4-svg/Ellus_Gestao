@@ -88,8 +88,21 @@ export async function importarNFSeAction(xmlContent: string) {
         .select('id')
         .single()
 
-      if (insErr) throw new Error(`Erro ao salvar nota: ${insErr.message}`)
-      nfseId = nova.id
+      if (insErr) {
+        // Fallback definitivo: Se deu erro de duplicidade que passou pelo check inicial
+        if (insErr.code === '23505') {
+          const { data: rec } = await sbAdmin
+            .from('nfse_entradas')
+            .select('id')
+            .eq('chave_nacional', parsed.nota.chave_nacional)
+            .maybeSingle()
+          nfseId = rec?.id
+        } else {
+          throw new Error(`Erro ao salvar nota: ${insErr.message}`)
+        }
+      } else {
+        nfseId = nova.id
+      }
     }
 
     return { 
