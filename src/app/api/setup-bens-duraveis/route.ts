@@ -61,6 +61,17 @@ export async function GET() {
         END IF;
       END $$;
 
+      -- Permissões para os usuários autenticados
+      GRANT ALL ON TABLE bens_duraveis TO authenticated;
+      GRANT ALL ON TABLE bens_duraveis_manutencoes TO authenticated;
+      GRANT ALL ON TABLE nfse_financeiro_vinculo TO authenticated;
+      GRANT ALL ON TABLE bens_duraveis TO service_role;
+      GRANT ALL ON TABLE bens_duraveis_manutencoes TO service_role;
+      GRANT ALL ON TABLE nfse_financeiro_vinculo TO service_role;
+
+      -- Notificar o PostgREST para recarregar o cache do schema
+      NOTIFY pgrst, 'reload schema';
+
     `
 
     const { error } = await sbAdmin.rpc('exec_sql', { sql_query: sql })
