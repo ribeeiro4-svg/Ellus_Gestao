@@ -54,7 +54,7 @@ export function useIntegracaoFiscalContabil() {
               codigo_fornecedor: item.codigo_produto || '',
               codigo_ean: item.codigo_ean || '',
               destinacao_padrao: item.destinacao_item,
-              controla_estoque: ['2', '3', '10'].includes(item.destinacao_item),
+              controla_estoque: ['2', '3', '3.1', '10'].includes(item.destinacao_item),
               estoque_minimo: 0,
               estoque_maximo: null,
               ponto_pedido: null,
@@ -70,7 +70,7 @@ export function useIntegracaoFiscalContabil() {
           }
         }
 
-        const deveLancarEstoque = ['2', '3', '10'].includes(item.destinacao_item)
+        const deveLancarEstoque = ['2', '3', '3.1', '10'].includes(item.destinacao_item)
         if (produtoId && deveLancarEstoque) {
           await estoque.registrarEntrada(produtoId, Number(item.quantidade), Number(item.valor_unitario), `NF-e ${nfe.numero_nf}`, nfe.numero_nf, nfe.id)
         }
