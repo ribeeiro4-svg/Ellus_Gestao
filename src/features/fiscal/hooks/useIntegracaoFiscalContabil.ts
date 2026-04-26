@@ -100,7 +100,7 @@ export function useIntegracaoFiscalContabil() {
       // 5. Atualizar status da NF-e para 'escriturada' (Finalizado)
       const updatePayload: any = { 
         status_escrituracao: 'escriturada',
-        status_conciliacao: 'conciliado',
+        status_conciliacao: 'conciliada',
         financeiro_lancamento_id: financeiroId,
         data_escrituracao: new Date().toISOString()
       }
