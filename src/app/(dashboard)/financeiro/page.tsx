@@ -815,7 +815,26 @@ export default function FinanceiroPage() {
                     const { integracaoFiscalContabilTotalAction } = await import('@/features/contabil/actions/accountingActions')
                     const res: any = await integracaoFiscalContabilTotalAction(`${filterYear}-01-01`)
                     if (res.success) {
-                      alert('Integração concluída com sucesso! Verifique os logs no módulo contábil.')
+                      const fin = res.financeiro || {}
+                      const fis = res.fiscal || {}
+                      const msg = [
+                        `=== RESULTADO DA INTEGRAÇÃO ===`,
+                        ``,
+                        `✅ FINANCEIRO`,
+                        `  • Total processados: ${fin.total || 0}`,
+                        `  • Integrados agora: ${fin.success || 0}`,
+                        `  • Já sincronizados: ${fin.alreadySync || 0}`,
+                        `  • Pulados (status): ${fin.skippedStatus || 0}`,
+                        `  • Pulados (s/ mapeamento): ${fin.skippedMapping || 0}`,
+                        fin.errors?.length ? `  ⚠️ Erros: ${fin.errors.slice(0,3).join(' | ')}` : `  ✔️ Sem erros`,
+                        ``,
+                        `📄 FISCAL`,
+                        `  • NFSe: ${fis.nfseCount || 0}`,
+                        `  • NFe: ${fis.nfeCount || 0}`,
+                        ``,
+                        `Tenant: ${res.tenantId || '(n/a)'}`,
+                      ].join('\n')
+                      alert(msg)
                       fetchContabilMap()
                       refresh()
                     } else {
