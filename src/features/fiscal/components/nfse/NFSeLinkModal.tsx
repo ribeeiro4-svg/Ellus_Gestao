@@ -243,7 +243,7 @@ export default function NFSeLinkModal({
                 <div 
                   key={note.id}
                   className="group p-6 bg-white border border-slate-100 rounded-[32px] hover:border-indigo-400 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all flex items-center justify-between cursor-pointer animate-in slide-in-from-bottom-2 duration-300"
-                  onClick={() => handleLink(note.id)}
+                  onClick={() => handleLink(note)}
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-indigo-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors">
