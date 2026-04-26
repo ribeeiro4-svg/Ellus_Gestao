@@ -4,6 +4,18 @@ import { repararNumeracaoAction } from './documentLinkActions'
 import { getMyTenantIdAction } from '@/app/actions/tenantActions'
 
 /**
+ * Normaliza string para comparação: remove acentos, converte para minúsculas e trim.
+ * Ex: "ADESÃO" === "adesao" === "Adesão"
+ */
+function normalizar(str: string): string {
+  return (str || '')
+    .trim()
+    .normalize('NFD')               // decompõe acentos ("ã" -> "a" + "~")
+    .replace(/[\u0300-\u036f]/g, '') // remove os diacríticos
+    .toLowerCase()
+}
+
+/**
  * Carrega todos os mapeamentos e plano de contas UMA VEZ via RLS (sem filtro de tenant_id explícito)
  * A RLS garante que o usuário autenticado só veja seus dados.
  */
@@ -69,9 +81,9 @@ export async function sincronizarLancamentoContabil(
     const ctx = contexto || await carregarContextoContabil()
     const { configs, plano, tenantId } = ctx
 
-    // 4. Encontrar mapeamento (normalizado)
-    const categoriaNorm = (l.categoria || '').trim().toLowerCase()
-    const config = configs.find(c => (c.categoria_nome || '').trim().toLowerCase() === categoriaNorm)
+    // 4. Encontrar mapeamento (fuzzy: ignora maiúsculas, minúsculas e acentos)
+    const categoriaNorm = normalizar(l.categoria)
+    const config = configs.find(c => normalizar(c.categoria_nome) === categoriaNorm)
 
     if (!config) {
       return { error: `Mapeamento não encontrado para "${l.categoria}"` }
@@ -195,7 +207,7 @@ export async function sincronizarNotaFiscalContabil(docId: string, type: 'nfse' 
     const { configs, plano, tenantId } = ctx
 
     const catNome = type === 'nfse' ? 'SERVIÇOS PRESTADOS' : 'COMPRA DE MERCADORIAS'
-    const config = configs.find(c => (c.categoria_nome || '').trim().toLowerCase() === catNome.toLowerCase())
+    const config = configs.find(c => normalizar(c.categoria_nome) === normalizar(catNome))
     if (!config) return { error: `Mapeamento para "${catNome}" não configurado` }
 
     const mappedAccount = plano.find(p => p.codigo === config.conta_contabil_codigo)
