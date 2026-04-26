@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { Plus, Briefcase, Calendar, AlertTriangle, CheckCircle2, MoreVertical, Search, Tool, FileText } from 'lucide-react'
+import { Plus, Briefcase, Calendar, AlertTriangle, CheckCircle2, MoreVertical, Search, Wrench, FileText } from 'lucide-react'
 import { useBensDuraveis, BemDuravel } from '../hooks/useBensDuraveis'
 
 type Props = {
@@ -196,7 +196,7 @@ export default function BensDuraveisHub({ tenantId }: Props) {
                           onClick={() => abrirManutencoes(bem)}
                           className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ml-auto"
                         >
-                          <Tool size={14} /> Manutenções
+                          <Wrench size={14} /> Manutenções
                         </button>
                       </td>
                     </tr>
@@ -341,7 +341,7 @@ export default function BensDuraveisHub({ tenantId }: Props) {
                           m.tipo === 'corretiva' ? 'bg-red-100 text-red-600' :
                           'bg-amber-100 text-amber-600'
                         }`}>
-                          <Tool size={16} />
+                          <Wrench size={16} />
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start">
