@@ -34,6 +34,14 @@ export async function GET() {
         custo NUMERIC(15,2) DEFAULT 0,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+
+      -- Correção de limites de caracteres que causam erro na escrituração
+      ALTER TABLE nfe_entradas_itens ALTER COLUMN cst_icms TYPE VARCHAR(10);
+      ALTER TABLE nfe_entradas_itens ALTER COLUMN cst_ipi TYPE VARCHAR(10);
+      ALTER TABLE nfe_entradas_itens ALTER COLUMN cst_pis TYPE VARCHAR(10);
+      ALTER TABLE nfe_entradas_itens ALTER COLUMN cst_cofins TYPE VARCHAR(10);
+      ALTER TABLE nfe_entradas_itens ALTER COLUMN destinacao_item TYPE VARCHAR(10);
+      ALTER TABLE nfe_entradas_itens ALTER COLUMN cfop_escrituracao TYPE VARCHAR(10);
     `
 
     const { error } = await sbAdmin.rpc('exec_sql', { sql_query: sql })
