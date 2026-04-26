@@ -104,6 +104,13 @@ export const PLANO_CONTAS_ITG2002: PlanoContasItem[] = [
   { codigo:'2.3.3.01', descricao:'Resultado do Exercício Atual', nivel:4, tipo:'sintetica', natureza:'credora', classificacao:'patrimonio_social' },
   { codigo:'2.3.3.01.001', descricao:'Superávit/Déficit do Exercício Atual', nivel:5, tipo:'analitica', natureza:'credora', classificacao:'patrimonio_social', aceita_lancamentos:true },
 
+  // ── 3 USO E CONSUMO (CUSTOS / DISPÊNDIOS DIRETOS) ─────────────────────────
+  { codigo:'3', descricao:'USO E CONSUMO', nivel:1, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'3.1', descricao:'BENS DURÁVEIS', nivel:2, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'3.1.1', descricao:'USO E CONSUMO - BENS DURÁVEIS', nivel:3, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'3.1.1.01', descricao:'Aplicações em Bens Duráveis', nivel:4, tipo:'sintetica', natureza:'devedora', classificacao:'despesa' },
+  { codigo:'3.1.1.01.001', descricao:'Uso e Consumo - Bens Duráveis', nivel:5, tipo:'analitica', natureza:'devedora', classificacao:'despesa', aceita_lancamentos:true },
+
   // ── 4 INGRESSOS (RECEITAS) ────────────────────────────────────────────────
   { codigo:'4', descricao:'INGRESSOS', nivel:1, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },
   { codigo:'4.1', descricao:'INGRESSOS DAS ATIVIDADES COM RESTRIÇÃO', nivel:2, tipo:'sintetica', natureza:'credora', classificacao:'ingresso' },

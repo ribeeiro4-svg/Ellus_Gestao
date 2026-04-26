@@ -31,6 +31,13 @@ export async function createMissingAccountsAction(providedTenantId?: string) {
     { codigo: '5.2.1.04', descricao: 'Bolsas de Estágio — Admin.', nivel: 4, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '5.2.1' },
     { codigo: '5.2.1.05', descricao: 'Auxílio Alimentação — Estagiário Admin.', nivel: 4, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '5.2.1' },
     { codigo: '5.2.1.06', descricao: 'Auxílio Transporte — Estagiário Admin.', nivel: 4, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '5.2.1' },
+
+    // --- 3 USO E CONSUMO ---
+    { codigo: '3', descricao: 'USO E CONSUMO', nivel: 1, tipo: 'sintetica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: false, pai: null },
+    { codigo: '3.1', descricao: 'BENS DURÁVEIS', nivel: 2, tipo: 'sintetica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: false, pai: '3' },
+    { codigo: '3.1.1', descricao: 'USO E CONSUMO - BENS DURÁVEIS', nivel: 3, tipo: 'sintetica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: false, pai: '3.1' },
+    { codigo: '3.1.1.01', descricao: 'Aplicações em Bens Duráveis', nivel: 4, tipo: 'sintetica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: false, pai: '3.1.1' },
+    { codigo: '3.1.1.01.001', descricao: 'Uso e Consumo - Bens Duráveis', nivel: 5, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '3.1.1.01' },
   ]
 
   const log: string[] = []
@@ -58,14 +65,14 @@ export async function createMissingAccountsAction(providedTenantId?: string) {
       .eq('codigo', acc.pai)
       .single()
 
-    if (!pai) {
+    if (!pai && acc.pai !== null) {
       log.push(`⚠️ PAI AUSENTE: ${acc.pai} (Necessário criar o grupo primeiro)`)
       // Opcional: Criar o pai se for um grupo padrão (5.1.1, etc)
       continue
     }
 
     // 3. Criar a conta
-    const { error } = await sb.from('plano_contas').insert({
+    const { error, data: inserted } = await sb.from('plano_contas').insert({
       tenant_id: tenantId,
       codigo: acc.codigo,
       descricao: acc.descricao,
@@ -75,8 +82,8 @@ export async function createMissingAccountsAction(providedTenantId?: string) {
       classificacao: acc.classificacao,
       aceita_lancamentos: acc.aceita_lancamentos,
       ativa: true,
-      conta_pai_id: pai.id
-    })
+      conta_pai_id: pai ? pai.id : null
+    }).select('id').single()
 
     if (!error) {
       log.push(`🆕 CRIADA: ${acc.codigo} — ${acc.descricao}`)
