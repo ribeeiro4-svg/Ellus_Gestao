@@ -578,7 +578,10 @@ export default function FinanceiroPage() {
       header: 'Contabilizado', 
       key: 'contabil', 
       render: (l: any) => {
-        const numero = contabilMap[l.id]
+        const vinculo = l.nfse_vinculo?.[0]
+        const noteId = vinculo?.nfe_id || vinculo?.nfse_id
+        const numero = contabilMap[l.id] || (noteId ? contabilMap[noteId] : null)
+        
         if (!numero) return <span className="text-[10px] font-medium text-slate-300 italic uppercase tracking-tighter">Não integrado</span>
         return (
           <div className="flex flex-col">
