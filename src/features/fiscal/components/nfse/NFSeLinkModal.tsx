@@ -1,7 +1,7 @@
 
 'use client'
 import React, { useState, useEffect } from 'react'
-import { X, Check, Loader2, FileText, Search, UploadCloud, Info } from 'lucide-react'
+import { X, Check, Loader2, FileText, Search, UploadCloud, Info, Filter, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import { vincularNFSeALancamentoAction, importarNFSeAction, salvarEscrituracaoNFSeAction, vincularNFeALancamentoAction } from '../../actions/nfseActions'
@@ -21,6 +21,7 @@ export default function NFSeLinkModal({
   const [loading, setLoading] = useState(false)
   const [linking, setLinking] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [ignoreSupplier, setIgnoreSupplier] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   
   const sb = createClient()
@@ -28,23 +29,21 @@ export default function NFSeLinkModal({
   const fetchUnlinkedNotes = async () => {
     setLoading(true)
     try {
-      // Busca NFS-e pendentes
+      // Busca NFS-e (Serviços)
       const { data: nfses } = await sb
         .from('nfse_entradas')
-        .select('*, fornecedores:prestador_id(nome)')
-        .eq('status_escrituracao', 'pendente')
+        .select('*, fornecedores:prestador_id(nome, cnpj)')
         .order('data_emissao', { ascending: false })
 
-      // Busca NF-e (Produtos) pendentes
+      // Busca NF-e (Produtos)
       const { data: nfes } = await sb
         .from('nfe_entradas')
         .select('*')
-        .eq('status_escrituracao', 'pendente')
         .order('data_emissao', { ascending: false })
 
       const combined = [
-        ...(nfses || []).map(n => ({ ...n, type: 'nfse', numero: n.numero_nfse, valor: n.valor_bruto, emissao: n.data_emissao, fornecedor: n.fornecedores?.nome })),
-        ...(nfes || []).map(n => ({ ...n, type: 'nfe', numero: n.numero_nf, valor: n.valor_total, emissao: n.data_emissao, fornecedor: n.nome_emitente }))
+        ...(nfses || []).map(n => ({ ...n, type: 'nfse', numero: n.numero_nfse, valor: n.valor_bruto, emissao: n.data_emissao, fornecedor: n.fornecedores?.nome, cnpj: n.fornecedores?.cnpj })),
+        ...(nfes || []).map(n => ({ ...n, type: 'nfe', numero: n.numero_nf, valor: n.valor_total, emissao: n.data_emissao, fornecedor: n.nome_emitente, cnpj: n.cnpj_emitente }))
       ]
 
       setNotes(combined)
@@ -108,10 +107,25 @@ export default function NFSeLinkModal({
 
   if (!isOpen || !lancamento) return null
 
-  const filteredNotes = notes.filter(n => 
-    n.numero.includes(searchTerm) || 
-    (n.fornecedor || '').toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredNotes = notes.filter(n => {
+    // Busca por termo (número, fornecedor ou cnpj)
+    const matchSearch = !searchTerm || 
+      n.numero.includes(searchTerm) || 
+      (n.fornecedor || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (n.cnpj || '').includes(searchTerm)
+
+    if (ignoreSupplier) return matchSearch
+
+    // Filtro inteligente de fornecedor (se não estiver ignorando)
+    // Tenta encontrar o nome do fornecedor dentro da descrição do lançamento
+    const descLower = (lancamento?.descricao || '').toLowerCase()
+    const fornLower = (n.fornecedor || '').toLowerCase()
+    
+    // Se o nome do fornecedor da nota está na descrição do PIX/Boleto, é um forte candidato
+    const supplierMatch = descLower.includes(fornLower) || fornLower.includes(descLower.split(' ')[0])
+
+    return matchSearch && supplierMatch
+  })
 
   return (
     <div 
@@ -160,24 +174,47 @@ export default function NFSeLinkModal({
 
         {/* Search & Actions */}
         <div className="p-10 pb-6">
-          <div className="flex gap-4">
-            <div className="relative flex-1 group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
-              <input 
-                type="text" 
-                placeholder="Número da nota ou nome do prestador..."
-                className="w-full pl-14 pr-5 py-5 bg-slate-50 border-none rounded-[24px] text-sm font-bold text-slate-700 outline-none ring-2 ring-slate-100 focus:ring-4 focus:ring-indigo-100 focus:bg-white transition-all shadow-sm"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <label className="cursor-pointer">
-              <input type="file" className="hidden" accept=".xml" onChange={handleFileUpload} disabled={isUploading} />
-              <div className="h-full px-8 bg-slate-900 text-white rounded-[24px] flex items-center justify-center gap-3 hover:bg-indigo-600 transition-all active:scale-95 shadow-xl shadow-slate-900/10">
-                {isUploading ? <Loader2 size={20} className="animate-spin" /> : <UploadCloud size={20} />}
-                <span className="text-[11px] font-black uppercase tracking-widest">Novo XML</span>
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-4">
+              <div className="relative flex-1 group">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Número da nota, fornecedor ou CNPJ..."
+                  className="w-full pl-14 pr-5 py-5 bg-slate-50 border-none rounded-[24px] text-sm font-bold text-slate-700 outline-none ring-2 ring-slate-100 focus:ring-4 focus:ring-indigo-100 focus:bg-white transition-all shadow-sm"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
               </div>
-            </label>
+              <label className="cursor-pointer">
+                <input type="file" className="hidden" accept=".xml" onChange={handleFileUpload} disabled={isUploading} />
+                <div className="h-full px-8 bg-slate-900 text-white rounded-[24px] flex items-center justify-center gap-3 hover:bg-indigo-600 transition-all active:scale-95 shadow-xl shadow-slate-900/10">
+                  {isUploading ? <Loader2 size={20} className="animate-spin" /> : <UploadCloud size={20} />}
+                  <span className="text-[11px] font-black uppercase tracking-widest">Novo XML</span>
+                </div>
+              </label>
+            </div>
+            
+            <div className="flex items-center justify-between px-2">
+              <button 
+                onClick={() => setIgnoreSupplier(!ignoreSupplier)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                  ignoreSupplier 
+                    ? 'bg-amber-100 text-amber-700 ring-1 ring-amber-200' 
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                <Filter size={12} strokeWidth={3} />
+                {ignoreSupplier ? 'Filtro de Fornecedor: Desativado' : 'Filtrar por Fornecedor (Recomendado)'}
+              </button>
+              
+              {ignoreSupplier && (
+                <div className="flex items-center gap-2 text-[9px] font-bold text-amber-600 uppercase tracking-tighter animate-pulse">
+                  <Info size={10} />
+                  Mostrando todas as notas disponíveis
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
