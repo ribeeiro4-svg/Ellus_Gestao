@@ -394,7 +394,7 @@ export function useProdutosEstoque() {
           codigo_fornecedor: item.codigo_produto || '',
           codigo_ean: item.codigo_ean || '',
           destinacao_padrao: item.destinacao_item,
-          controla_estoque: ['3', '3.1', '7', '8'].includes(item.destinacao_item) || item.destinacao_item?.startsWith('4'),
+          controla_estoque: ['3', '31', '7', '8'].includes(item.destinacao_item) || item.destinacao_item?.startsWith('4'),
           estoque_minimo: 0,
           estoque_maximo: null,
           ponto_pedido: null,
