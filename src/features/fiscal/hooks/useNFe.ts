@@ -184,7 +184,7 @@ export function useNFe() {
 
         const limparDestinacao = (val: string | null) => {
           if (!val) return null
-          return val.split(' ')[0].split('—')[0].split('-')[0].trim()
+          return val.split(' ')[0].split('—')[0].split('-')[0].replace(/\./g, '').trim()
         }
 
         const updateData: any = {
