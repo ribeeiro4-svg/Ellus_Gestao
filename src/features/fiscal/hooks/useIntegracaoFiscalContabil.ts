@@ -101,10 +101,10 @@ export function useIntegracaoFiscalContabil() {
       const updatePayload: any = { 
         status_escrituracao: 'escriturada',
         status_conciliacao: 'conciliado',
-        lancamento_financeiro_id: financeiroId,
+        financeiro_lancamento_id: financeiroId,
         data_escrituracao: new Date().toISOString()
       }
-      if (dataEfetiva) updatePayload.data_competencia = dataEfetiva
+      if (dataEfetiva) updatePayload.data_entrada = dataEfetiva
 
       const { error: upErr } = await sb.from('nfe_entradas').update(updatePayload).eq('id', nfeId)
 

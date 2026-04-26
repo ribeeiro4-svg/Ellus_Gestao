@@ -42,6 +42,16 @@ export async function GET() {
       ALTER TABLE nfe_entradas_itens ALTER COLUMN cst_cofins TYPE VARCHAR(10);
       ALTER TABLE nfe_entradas_itens ALTER COLUMN destinacao_item TYPE VARCHAR(10);
       ALTER TABLE nfe_entradas_itens ALTER COLUMN cfop_escrituracao TYPE VARCHAR(10);
+      -- Tabela de vínculos (caso não exista)
+      CREATE TABLE IF NOT EXISTS nfse_financeiro_vinculo (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        tenant_id UUID NOT NULL,
+        nfe_id UUID,
+        nfse_id UUID,
+        financeiro_id UUID,
+        tipo_vinculo VARCHAR,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
     `
 
     const { error } = await sbAdmin.rpc('exec_sql', { sql_query: sql })
