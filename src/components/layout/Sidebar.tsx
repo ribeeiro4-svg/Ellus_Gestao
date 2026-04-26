@@ -54,6 +54,7 @@ const MENU = [
     section: 'Gerencial', 
     items: [
       { href: '/estrategia', icon: Target, label: 'Estratégia' },
+      { href: '/bens-duraveis', icon: Briefcase, label: 'Bens Duráveis' },
     ]
   },
   { 

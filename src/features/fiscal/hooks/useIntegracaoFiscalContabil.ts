@@ -74,6 +74,21 @@ export function useIntegracaoFiscalContabil() {
         if (produtoId && deveLancarEstoque) {
           await estoque.registrarEntrada(produtoId, Number(item.quantidade), Number(item.valor_unitario), `NF-e ${nfe.numero_nf}`, nfe.numero_nf, nfe.id)
         }
+
+        if (item.destinacao_item === '3.1') {
+          await sb.from('bens_duraveis').insert({
+            tenant_id: tenantId,
+            nfe_id: nfe.id,
+            nfe_item_id: item.id,
+            descricao: item.descricao_produto,
+            codigo_interno: item.codigo_produto || null,
+            data_aquisicao: dataEfetiva || new Date().toISOString().split('T')[0],
+            valor_aquisicao: Number(item.valor_produto),
+            vida_util_meses: null,
+            status: 'pendente_analise',
+            observacoes: 'Gerado automaticamente via Escrituração de NF-e.'
+          })
+        }
       }
 
       // 4. Re-sincronizar Contabilidade
