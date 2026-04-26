@@ -75,13 +75,21 @@ export default function BensDuraveisHub({ tenantId }: Props) {
     setSyncing(true)
     try {
       // Buscar itens escriturados com destinação 31 ou 3.1
-      const { data: itens } = await sb.from('nfe_entradas_itens')
-        .select('*, nfe:nfe_entradas(data_entrada, numero_nf)')
-        .eq('classificado', true)
+      // Removemos o filtro de 'classificado' para ser mais resiliente a registros antigos
+      const { data: itens, error: fetchErr } = await sb.from('nfe_entradas_itens')
+        .select('*, nfe:nfe_entradas!inner(data_entrada, numero_nf)')
         .or('destinacao_item.eq.31,destinacao_item.eq.3.1')
       
+      if (fetchErr) {
+        console.error('Fetch items error:', fetchErr)
+        alert('Erro ao buscar itens: ' + fetchErr.message)
+        return
+      }
+
+      console.log('Itens encontrados para sincronismo:', itens)
+      
       if (!itens || itens.length === 0) {
-        alert('Nenhum item pendente encontrado nas notas escrituradas.')
+        alert('Nenhum item com destinação "Bens Duráveis" foi encontrado nas suas notas fiscais.')
         return
       }
 

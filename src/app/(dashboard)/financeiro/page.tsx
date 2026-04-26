@@ -449,9 +449,9 @@ export default function FinanceiroPage() {
     try {
       const { data, error } = await sb
         .from('lancamentos_contabeis')
-        .select('origem_id, numero_lancamento')
+        .select('origem_id, numero_lancamento, origem_tipo')
         .eq('tenant_id', tenantId)
-        .eq('origem_tipo', 'financeiro')
+        .in('origem_tipo', ['financeiro', 'nfse', 'nfe', 'fiscal_nfse', 'fiscal_nfe'])
       
       if (error) throw error
       if (data) {
@@ -548,15 +548,19 @@ export default function FinanceiroPage() {
           </button>
         )
         
+        const isNFe = !!vinculo.nfe_id
+        const docNum = isNFe ? vinculo.nfe?.numero_nf : vinculo.nfse?.numero_nfse
+        const docLabel = isNFe ? 'NF-e' : 'NFS-e'
+        
         return (
           <div className="flex items-center gap-2">
             <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedLancamentoNF(l); setIsNFSeLinkModalOpen(true) }}>
-              <span className="text-[10px] font-black text-indigo-600 uppercase">NFS-e {vinculo.nfse?.numero_nfse}</span>
+              <span className="text-[10px] font-black text-indigo-600 uppercase">{docLabel} {docNum}</span>
               <span className="text-[8px] text-indigo-400 font-bold uppercase tracking-tighter">Escriturada</span>
             </div>
-            {vinculo.nfse?.xml_url && (
+            {(vinculo.nfse?.xml_url || vinculo.nfe?.xml_url) && (
               <a 
-                href={vinculo.nfse.xml_url} 
+                href={vinculo.nfse?.xml_url || vinculo.nfe?.xml_url} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="p-1.5 text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"

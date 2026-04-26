@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Check, Loader2, FileText, Search, UploadCloud, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
-import { vincularNFSeALancamentoAction, importarNFSeAction, salvarEscrituracaoNFSeAction } from '../../actions/nfseActions'
+import { vincularNFSeALancamentoAction, importarNFSeAction, salvarEscrituracaoNFSeAction, vincularNFeALancamentoAction } from '../../actions/nfseActions'
 
 export default function NFSeLinkModal({ 
   isOpen, 
@@ -28,14 +28,26 @@ export default function NFSeLinkModal({
   const fetchUnlinkedNotes = async () => {
     setLoading(true)
     try {
-      // Busca notas que ainda não foram concluídas ou vinculadas
-      const { data, error } = await sb
+      // Busca NFS-e pendentes
+      const { data: nfses } = await sb
         .from('nfse_entradas')
+        .select('*, fornecedores:prestador_id(nome)')
+        .eq('status_escrituracao', 'pendente')
+        .order('data_emissao', { ascending: false })
+
+      // Busca NF-e (Produtos) pendentes
+      const { data: nfes } = await sb
+        .from('nfe_entradas')
         .select('*')
         .eq('status_escrituracao', 'pendente')
         .order('data_emissao', { ascending: false })
 
-      if (!error) setNotes(data || [])
+      const combined = [
+        ...(nfses || []).map(n => ({ ...n, type: 'nfse', numero: n.numero_nfse, valor: n.valor_bruto, emissao: n.data_emissao, fornecedor: n.fornecedores?.nome })),
+        ...(nfes || []).map(n => ({ ...n, type: 'nfe', numero: n.numero_nf, valor: n.valor_total, emissao: n.data_emissao, fornecedor: n.nome_emitente }))
+      ]
+
+      setNotes(combined)
     } finally {
       setLoading(false)
     }
@@ -47,10 +59,13 @@ export default function NFSeLinkModal({
     }
   }, [isOpen])
 
-  const handleLink = async (nfseId: string) => {
-    setLinking(nfseId)
+  const handleLink = async (note: any) => {
+    setLinking(note.id)
     try {
-      const res = await vincularNFSeALancamentoAction(nfseId, lancamento.id)
+      const res = note.type === 'nfse' 
+        ? await vincularNFSeALancamentoAction(note.id, lancamento.id)
+        : await vincularNFeALancamentoAction(note.id, lancamento.id)
+        
       if (res.error) alert(res.error)
       else {
         onSuccess()
@@ -94,8 +109,8 @@ export default function NFSeLinkModal({
   if (!isOpen || !lancamento) return null
 
   const filteredNotes = notes.filter(n => 
-    n.numero_nfse.includes(searchTerm) || 
-    n.fornecedores?.nome.toLowerCase().includes(searchTerm.toLowerCase())
+    n.numero.includes(searchTerm) || 
+    (n.fornecedor || '').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -198,12 +213,12 @@ export default function NFSeLinkModal({
                       <FileText size={18} />
                     </div>
                     <div>
-                      <h4 className="text-sm font-black text-slate-800 group-hover:text-indigo-900 transition-colors">NFS-e {note.numero_nfse}</h4>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{note.fornecedores?.nome}</p>
+                      <h4 className="text-sm font-black text-slate-800 group-hover:text-indigo-900 transition-colors">{note.type === 'nfse' ? 'NFS-e' : 'NF-e'} {note.numero}</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{note.fornecedor}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[9px] font-bold text-slate-400">{fmtData(note.data_emissao)}</span>
+                        <span className="text-[9px] font-bold text-slate-400">{fmtData(note.emissao)}</span>
                         <div className="w-1 h-1 rounded-full bg-slate-200"></div>
-                        <span className="text-[9px] font-black text-indigo-500">{fmtR(note.valor_bruto)}</span>
+                        <span className="text-[9px] font-black text-indigo-500">{fmtR(note.valor)}</span>
                       </div>
                     </div>
                   </div>

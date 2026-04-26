@@ -501,3 +501,42 @@ export async function deletarNFSeAction(ids: string[]) {
   if (error) return { success: false, error: error.message }
   return { success: true, count: ids.length }
 }
+/**
+ * Vincula uma NF-e (Produto) existente a um lançamento financeiro
+ */
+export async function vincularNFeALancamentoAction(nfeId: string, lancamentoId: string) {
+  const sb = await createServerSupabase()
+
+  try {
+    const sbAdmin = createAdminSupabase()
+    const { data: nfe } = await sbAdmin.from('nfe_entradas').select('*').eq('id', nfeId).single()
+    const { data: lanc } = await sb.from('lancamentos').select('*').eq('id', lancamentoId).single()
+
+    if (!nfe || !lanc) throw new Error('NF-e ou Lançamento não encontrado')
+
+    // 1. Criar Vínculo na tabela de junção
+    await sbAdmin.from('nfse_financeiro_vinculo').insert({
+      tenant_id: lanc.tenant_id,
+      nfe_id: nfeId,
+      financeiro_id: lancamentoId,
+      tipo_vinculo: 'vinculo_manual',
+      data_vinculo: new Date().toISOString()
+    })
+
+    // 2. Atualizar NFe
+    await sbAdmin.from('nfe_entradas').update({
+      status_escrituracao: 'concluida',
+      financeiro_lancamento_id: lancamentoId
+    }).eq('id', nfeId)
+
+    // 3. Integrar Contabilidade
+    const { sincronizarLancamentoContabil, sincronizarNotaFiscalContabil } = await import('@/features/contabil/actions/accountingActions')
+    
+    await sincronizarNotaFiscalContabil(nfeId, 'nfe')
+    await sincronizarLancamentoContabil(lancamentoId)
+
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}

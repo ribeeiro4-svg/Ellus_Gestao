@@ -62,7 +62,22 @@ export async function GET() {
       return NextResponse.json({ error: error.message, tip: "Se 'exec_sql' não existe, rode este SQL manualmente no Supabase SQL Editor.", sql })
     }
 
-    return NextResponse.json({ success: true, message: 'Tabelas criadas com sucesso.' })
+    // DEBUG: Verificar itens da nota 463625
+    const { data: nfe } = await sbAdmin.from('nfe_entradas').select('id').eq('numero_nf', '463625').single()
+    let itens463625 = []
+    if (nfe) {
+      const { data: itens } = await sbAdmin.from('nfe_entradas_itens').select('*').eq('nfe_entrada_id', nfe.id)
+      itens463625 = itens || []
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Tabelas criadas com sucesso.',
+      debug: {
+        nfe_found: !!nfe,
+        itens: itens463625.map((i: any) => ({ desc: i.descricao_produto, dest: i.destinacao_item, class: i.classificado }))
+      }
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message })
   }
