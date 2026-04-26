@@ -186,10 +186,20 @@ export async function sincronizarLancamentoContabil(
 
     const config = configMatch!
 
-    // 5. Resolver contas no Plano
-    const mappedAccount = plano.find(p => p.codigo === config.conta_contabil_codigo)
+    // 5. Resolver contas no Plano (busca exata, depois normalizada)
+    let mappedAccount = plano.find(p => p.codigo === config.conta_contabil_codigo)
+      || plano.find(p => normalizar(p.codigo) === normalizar(config.conta_contabil_codigo))
+
     if (!mappedAccount) {
-      return { error: `Conta "${config.conta_contabil_codigo}" não encontrada no Plano de Contas` }
+      // Conta configurada não existe no plano — usar conta genérica "A Classificar"
+      const naturezaFallback: 'ingresso' | 'dispendio' =
+        config.tipo === 'ingresso' ? 'ingresso' : 'dispendio'
+      const fallbackPorCodigo = await getOrCreateFallbackAccount(sb, plano, tenantId, naturezaFallback)
+      if (!fallbackPorCodigo) {
+        return { error: `Conta "${config.conta_contabil_codigo}" não existe no Plano de Contas e não foi possível usar conta genérica` }
+      }
+      console.warn(`[Contábil] Conta "${config.conta_contabil_codigo}" não encontrada — usando fallback: ${fallbackPorCodigo.codigo}`)
+      mappedAccount = fallbackPorCodigo
     }
 
     const bankAccount = plano.find(p => p.codigo === '1.1.1.02')
