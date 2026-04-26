@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Briefcase, Calendar, AlertTriangle, CheckCircle2, MoreVertical, Search, Wrench, FileText } from 'lucide-react'
 import { useBensDuraveis, BemDuravel } from '../hooks/useBensDuraveis'
+import { createClient } from '@/lib/supabase/client'
 
 type Props = {
   tenantId: string | null
@@ -10,6 +11,8 @@ type Props = {
 export default function BensDuraveisHub({ tenantId }: Props) {
   const { bens, manutencoes, loading, carregarBens, atualizarBem, carregarManutencoes, adicionarManutencao } = useBensDuraveis(tenantId)
   const [activeTab, setActiveTab] = useState<'pendentes' | 'ativos'>('pendentes')
+  const [syncing, setSyncing] = useState(false)
+  const sb = createClient()
   
   // Modals
   const [bemSelecionado, setBemSelecionado] = useState<BemDuravel | null>(null)
@@ -67,6 +70,58 @@ export default function BensDuraveisHub({ tenantId }: Props) {
     }
   }
 
+  const handleSyncNFes = async () => {
+    if (!tenantId) return
+    setSyncing(true)
+    try {
+      // Buscar itens escriturados com destinação 31 ou 3.1
+      const { data: itens } = await sb.from('nfe_entradas_itens')
+        .select('*, nfe:nfe_entradas(data_entrada, numero_nf)')
+        .eq('classificado', true)
+        .or('destinacao_item.eq.31,destinacao_item.eq.3.1')
+      
+      if (!itens || itens.length === 0) {
+        alert('Nenhum item pendente encontrado nas notas escrituradas.')
+        return
+      }
+
+      let count = 0
+      for (const item of itens) {
+        // Verificar se já existe
+        const { data: existing } = await sb.from('bens_duraveis')
+          .select('id')
+          .eq('nfe_item_id', item.id)
+          .maybeSingle()
+
+        if (!existing) {
+          await sb.from('bens_duraveis').insert({
+            tenant_id: tenantId,
+            nfe_id: item.nfe_entrada_id,
+            nfe_item_id: item.id,
+            descricao: item.descricao_produto,
+            codigo_interno: item.codigo_produto || null,
+            data_aquisicao: item.nfe?.data_entrada || new Date().toISOString().split('T')[0],
+            valor_aquisicao: Number(item.valor_produto),
+            status: 'pendente_analise',
+            observacoes: `Sincronizado manualmente da NF-e ${item.nfe?.numero_nf || ''}.`
+          })
+          count++
+        }
+      }
+      
+      if (count > 0) {
+        await carregarBens()
+        alert(`${count} novo(s) bem(ns) identificado(s) e adicionado(s) para análise.`)
+      } else {
+        alert('Todos os itens das notas já estão no controle de bens.')
+      }
+    } catch (err: any) {
+      alert('Erro na sincronização: ' + err.message)
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const abrirManutencoes = (bem: BemDuravel) => {
     setBemSelecionado(bem)
     carregarManutencoes(bem.id)
@@ -111,6 +166,19 @@ export default function BensDuraveisHub({ tenantId }: Props) {
             )}
           </button>
         </div>
+
+        <button 
+          onClick={handleSyncNFes}
+          disabled={syncing}
+          className="absolute right-8 bottom-3 flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all disabled:opacity-50 shadow-lg shadow-slate-900/10"
+        >
+          {syncing ? (
+            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <CheckCircle2 size={14} className="text-emerald-400" />
+          )}
+          Sincronizar com Notas Fiscais
+        </button>
       </div>
 
       {/* CONTENT */}
