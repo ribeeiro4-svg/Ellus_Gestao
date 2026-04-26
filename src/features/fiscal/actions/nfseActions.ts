@@ -388,7 +388,7 @@ export async function vincularNFSeALancamentoAction(nfseId: string, lancamentoId
     // 1. Buscar dados
     const sbAdmin = createAdminSupabase()
     const { data: nfse } = await sbAdmin.from('nfse_entradas').select('*').eq('id', nfseId).single()
-    const { data: lanc } = await sb.from('lancamentos').select('*').eq('id', lancamentoId).single()
+    const { data: lanc } = await sbAdmin.from('lancamentos').select('*').eq('id', lancamentoId).single()
 
     if (!nfse || !lanc) throw new Error('NFS-e ou Lançamento não encontrado')
 
@@ -510,9 +510,12 @@ export async function vincularNFeALancamentoAction(nfeId: string, lancamentoId: 
   try {
     const sbAdmin = createAdminSupabase()
     const { data: nfe } = await sbAdmin.from('nfe_entradas').select('*').eq('id', nfeId).single()
-    const { data: lanc } = await sb.from('lancamentos').select('*').eq('id', lancamentoId).single()
+    const { data: lanc } = await sbAdmin.from('lancamentos').select('*').eq('id', lancamentoId).single()
 
-    if (!nfe || !lanc) throw new Error('NF-e ou Lançamento não encontrado')
+    if (!nfe || !lanc) {
+      console.error('Link Error - IDs not found:', { nfeId, lancamentoId, nfeFound: !!nfe, lancFound: !!lanc })
+      throw new Error('NF-e ou Lançamento não encontrado')
+    }
 
     // 1. Criar Vínculo na tabela de junção
     await sbAdmin.from('nfse_financeiro_vinculo').insert({
