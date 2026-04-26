@@ -5,6 +5,7 @@ import { usePlanoContas } from '@/features/contabil/hooks/usePlanoContas'
 import { useLancamentosContabeis } from '@/features/contabil/hooks/useLancamentosContabeis'
 import ContabilDashboard from '@/features/contabil/components/ContabilDashboard'
 import LivroDiario from '@/features/contabil/components/LivroDiario'
+import LivroRazao from '@/features/contabil/components/LivroRazao'
 import PlanoContasTree from '@/features/contabil/components/PlanoContasTree'
 import Balancete from '@/features/contabil/components/Balancete'
 import Demonstracoes from '@/features/contabil/components/Demonstracoes'
@@ -16,7 +17,7 @@ import PreFechamento from '@/features/contabil/components/PreFechamento'
 import RelatoriosExport from '@/features/contabil/components/RelatoriosExport'
 import ExecucaoRubrica from '@/features/contabil/components/ExecucaoRubrica'
 
-type Tab = 'dashboard' | 'lancamentos' | 'plano' | 'balancete' | 'demonstracoes' | 'imobilizado' | 'periodos' | 'centros_custo' | 'dfc' | 'pre_fechamento' | 'relatorios' | 'execucao'
+type Tab = 'dashboard' | 'lancamentos' | 'razao' | 'plano' | 'balancete' | 'demonstracoes' | 'imobilizado' | 'periodos' | 'centros_custo' | 'dfc' | 'pre_fechamento' | 'relatorios' | 'execucao'
 
 export default function ContabilPage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
@@ -26,6 +27,7 @@ export default function ContabilPage() {
   const tabs = [
     { id: 'dashboard' as Tab, label: '📊 Dashboard' },
     { id: 'lancamentos' as Tab, label: '📒 Livro Diário', badge: lancHook.stats.total },
+    { id: 'razao' as Tab, label: '📖 Livro Razão' },
     { id: 'plano' as Tab, label: '🏗️ Plano de Contas' },
     { id: 'balancete' as Tab, label: '📈 Balancete' },
     { id: 'demonstracoes' as Tab, label: '📑 Demonstrações' },
@@ -99,18 +101,51 @@ export default function ContabilPage() {
           </button>
           <button
             onClick={async () => {
-              if (confirm('Deseja configurar automaticamente o mapeamento das categorias financeiras e atualizar as contas de fornecedores?')) {
+              if (confirm('Deseja configurar automaticamente o mapeamento das categorias financeiras e atualizar as contas de fornecedores e bancos?')) {
                 const { seedAccountingConfigAction } = await import('@/features/contabil/actions/seedAccountingConfig')
                 const { fixFornecedoresAccountsAction } = await import('@/features/contabil/actions/fixFornecedoresAccounts')
+                const { fixBankAccountsAction } = await import('@/features/contabil/actions/fixBankAccountsAction')
+                const { atualizarBancosNoDiarioAction } = await import('@/features/contabil/actions/atualizarBancosNoDiarioAction')
+                
                 const res = await seedAccountingConfigAction(planoHook.tenantId)
                 const fixRes = await fixFornecedoresAccountsAction(planoHook.tenantId)
-                if (res.success) alert(`Mapeamento configurado! ${fixRes.count ? fixRes.count + ' fornecedores atualizados.' : ''}`)
-                else alert(`Erro ao configurar: ${res.error}`)
+                const bankRes = await fixBankAccountsAction(planoHook.tenantId)
+                const updateRes = await atualizarBancosNoDiarioAction(planoHook.tenantId)
+                
+                let msg = 'Mapeamento configurado!'
+                if (fixRes.count) msg += `\n✅ ${fixRes.count} fornecedores mapeados.`
+                if (bankRes.count) msg += `\n✅ ${bankRes.count} contas bancárias mapeadas.`
+                if (updateRes.updated) msg += `\n✅ ${updateRes.updated} lançamentos corrigidos com contas específicas.`
+                
+                alert(msg)
               }
             }}
             className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-indigo-600 bg-white border border-indigo-100 hover:bg-indigo-50 rounded-xl transition-all shadow-sm"
           >
             ⚙️ Mapeamento Automático
+          </button>
+
+          <button
+            onClick={async () => {
+              if (confirm('ATENÇÃO: Deseja executar o Saneamento de Auditoria?\n\nIsso irá varrer todos os lançamentos e corrigir erros de classificação (Aluguel, Tarifas, Inversões e Espécie) baseando-se nas regras da ITG 2002. Esta ação remove e recria lançamentos contábeis vinculados ao financeiro.')) {
+                const { executarSaneamentoContabilAction } = await import('@/features/contabil/actions/executarSaneamentoContabilAction')
+                const { createMissingAccountsAction } = await import('@/features/contabil/actions/createMissingAccounts')
+                
+                // Garante que as contas existem antes de sanear
+                await createMissingAccountsAction(planoHook.tenantId)
+                
+                const res = await executarSaneamentoContabilAction(planoHook.tenantId)
+                if (res.success) {
+                  alert(`Saneamento Concluído!\n✅ ${res.fixedCount} lançamentos foram corrigidos e reclassificados.\n❌ ${res.errorCount} erros durante o processo.`)
+                  window.location.reload()
+                } else {
+                  alert(`Erro no saneamento: ${res.error}`)
+                }
+              }
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 text-xs font-black text-amber-600 bg-white border border-amber-100 hover:bg-amber-50 rounded-xl transition-all shadow-sm"
+          >
+            🧹 Saneamento Contábil (Audit)
           </button>
         </div>
       </div>
@@ -170,6 +205,7 @@ export default function ContabilPage() {
 
       {activeTab === 'dashboard' && <ContabilDashboard lancHook={lancHook} planoHook={planoHook} />}
       {activeTab === 'lancamentos' && <LivroDiario lancHook={lancHook} planoHook={planoHook} />}
+      {activeTab === 'razao' && <LivroRazao lancHook={lancHook} planoHook={planoHook} />}
       {activeTab === 'plano' && <PlanoContasTree planoHook={planoHook} />}
       {activeTab === 'balancete' && <Balancete lancHook={lancHook} planoHook={planoHook} />}
       {activeTab === 'demonstracoes' && <Demonstracoes lancHook={lancHook} planoHook={planoHook} />}

@@ -31,21 +31,22 @@ async function getOrCreateFallbackAccount(
     ? 'Outros Ingressos A Classificar'
     : 'Outros Dispêndios A Classificar'
 
-  // 1. Procurar conta já existente com o código exato
+  // 1. Procurar conta já existente com o código exato (ITG 2002 padrão ACPROBEC)
   let conta = plano.find(p => p.codigo === codigoFallback)
 
   // 2. Procurar qualquer conta com "classificar" no nome no grupo correto
   if (!conta) {
     conta = plano.find(p =>
       normalizar(p.descricao || '').includes('classificar') &&
-      (p.codigo || '').startsWith(prefix)
+      (p.codigo || '').startsWith(prefix) &&
+      p.aceita_lancamentos
     )
   }
 
-  // 3. Procurar qualquer conta que aceita lançamentos no grupo correto
+  // 3. Se não achou "classificar", busca qualquer conta no grupo 3.9 (Receitas) ou 4.9 (Despesas)
   if (!conta) {
     conta = plano.find(p =>
-      (p.codigo || '').startsWith(prefix) && p.aceita_lancamentos
+      (p.codigo || '').startsWith(`${prefix}.9`) && p.aceita_lancamentos
     )
   }
 
@@ -58,7 +59,10 @@ async function getOrCreateFallbackAccount(
           tenant_id: tenantId,
           codigo: codigoFallback,
           descricao: descricaoFallback,
-          aceita_lancamentos: true,
+          classificacao: codigoFallback,
+          nivel: 4,
+          tipo: tipo === 'ingresso' ? 'receita' : 'despesa',
+          aceita_lancamentos: true
         })
         .select()
         .single()
@@ -117,21 +121,29 @@ async function carregarContextoContabil() {
  */
 export async function sincronizarLancamentoContabil(
   financialId: string,
-  contexto?: { configs: any[]; plano: any[]; tenantId: string }
+  contexto?: { configs: any[]; plano: any[]; tenantId: string },
+  sbClient?: any
 ) {
-  const sb = await createServerSupabase()
+  const sb = sbClient || await createServerSupabase()
   const { data: { user } } = await sb.auth.getUser()
-  if (!user) return { error: 'Sessão expirada' }
+  if (!user && !sbClient) return { error: 'Sessão expirada' }
+  const usuarioEmail = user?.email || 'sistema@integracao.com'
 
   try {
     // 1. Buscar dados do financeiro
     const { data: l, error: lErr } = await sb
       .from('lancamentos')
-      .select('id, data, status, descricao, categoria, valor, tipo')
+      .select('id, data, status, descricao, categoria, valor, tipo, conta_id')
       .eq('id', financialId)
       .single()
 
     if (lErr || !l) throw new Error('Lançamento não encontrado')
+    
+    // 1.1 Bloquear integração de itens não liquidados (apenas PAGO ou CONCILIADO deve integrar)
+    const status = (l.status || '').toLowerCase()
+    if (status !== 'pago' && status !== 'conciliado' && status !== 'liquidado') {
+      return { error: `Lançamento com status "${l.status}" não pode ser integrado. Apenas itens pagos/liquidados são permitidos.` }
+    }
 
     // 2. Verificar se já existe (para evitar duplicidade)
     const { data: existing } = await sb.from('lancamentos_contabeis')
@@ -145,14 +157,33 @@ export async function sincronizarLancamentoContabil(
     const { configs, plano, tenantId } = ctx
 
     // 4. Encontrar mapeamento (fuzzy: ignora maiúsculas, minúsculas e acentos)
+    const historico = (l.descricao || '').toUpperCase()
     const categoriaNorm = normalizar(l.categoria)
     let configMatch = configs.find(c => normalizar(c.categoria_nome) === categoriaNorm)
 
+    // --- REGRAS DE AUDITORIA E SANEAMENTO (AVANÇADO) ---
+    // Erro 4: Se o histórico diz "RECEBIDO", força a natureza de INGRESSO (Receita)
+    let forcedNature: 'ingresso' | 'dispendio' | null = null
+    if (historico.includes('RECEBIDO') || historico.includes('RECEBIDA')) {
+      forcedNature = 'ingresso'
+    }
+
+    // Erros 1 & 2: Identifica palavras-chave no histórico para redirecionar de 4.2.1.01 para contas corretas
+    if (historico.includes('ALUGUEL')) {
+      configMatch = configs.find(c => c.categoria_nome === 'ALUGUEL') || configMatch
+    } else if (historico.includes('TARIFA') || historico.includes('TAXA') || historico.includes('BOLETO')) {
+      configMatch = configs.find(c => c.categoria_nome === 'TARIFAS BANCÁRIAS') || configMatch
+    } else if (historico.includes('ALIMENTAÇÃO') || historico.includes('REFEIÇÃO')) {
+      configMatch = configs.find(c => c.categoria_nome === 'ALIMENTAÇÃO') || configMatch
+    } else if (historico.includes('COMBUSTÍVEL') || historico.includes('POSTO')) {
+      configMatch = configs.find(c => c.categoria_nome === 'COMBUSTÍVEL') || configMatch
+    }
+
     // 5. Se não encontrou mapeamento, criar automaticamente para conta genérica
     if (!configMatch) {
-      // Detectar natureza pelo tipo do lançamento
-      const natureza: 'ingresso' | 'dispendio' =
-        (l.tipo === 'receita' || Number(l.valor) > 0) ? 'ingresso' : 'dispendio'
+      // Detectar natureza pelo tipo do lançamento (ou forçar se auditado)
+      const natureza: 'ingresso' | 'dispendio' = forcedNature ||
+        ((l.tipo === 'receita' || Number(l.valor) > 0) ? 'ingresso' : 'dispendio')
 
       const fallbackConta = await getOrCreateFallbackAccount(sb, plano, tenantId, natureza)
 
@@ -202,13 +233,37 @@ export async function sincronizarLancamentoContabil(
       mappedAccount = fallbackPorCodigo
     }
 
-    const bankAccount = plano.find(p => p.codigo === '1.1.1.02')
-      || plano.find(p => p.codigo === '1.1.1.01')
-      || plano.find(p => (p.codigo || '').startsWith('1.1.1') && p.aceita_lancamentos)
-      || plano.find(p => (p.codigo || '').startsWith('1.1') && p.aceita_lancamentos)
+    // 5. Definir conta de Banco/Caixa (Prioriza mapeamento específico)
+    const { data: bankMapping } = await sb
+      .from('configuracoes_contabeis')
+      .select('conta_contabil_codigo')
+      .eq('tenant_id', tenantId)
+      .eq('categoria_nome', `banco_${l.conta_id}`)
+      .maybeSingle()
+
+    let bankAccount = null
+    if (bankMapping) {
+      bankAccount = plano.find(p => p.codigo === bankMapping.conta_contabil_codigo)
+    }
 
     if (!bankAccount) {
-      return { error: 'Conta Banco/Caixa não encontrada no grupo 1.1 do Plano de Contas' }
+      bankAccount = plano.find(p => p.codigo === '1.1.1.02')
+        || plano.find(p => p.codigo === '1.1.1.01')
+        || plano.find(p => (p.codigo || '').startsWith('1.1.1') && p.aceita_lancamentos)
+        || plano.find(p => (p.codigo || '').startsWith('1.1') && p.aceita_lancamentos)
+    }
+
+    // Erro 3: Se o histórico indica dinheiro físico ("EM ESPÉCIE" ou "DINHEIRO"), força a conta CAIXA GERAL (1.1.1.01)
+    if (historico.includes('ESPÉCIE') || historico.includes('DINHEIRO')) {
+      const caixaGeral = plano.find(p => p.codigo === '1.1.1.01')
+      if (caixaGeral) {
+        console.log(`[Auditoria] Forçando conta CAIXA GERAL para lançamento: ${historico}`)
+        bankAccount = caixaGeral
+      }
+    }
+
+    if (!bankAccount) {
+      return { error: `Conta Banco/Caixa (ID: ${l.conta_id}) não encontrada e nenhum fallback disponível no grupo 1.1` }
     }
 
     // 6. Definir partidas (Débito/Crédito)
@@ -222,34 +277,47 @@ export async function sincronizarLancamentoContabil(
     }
 
     // 7. Gerar número sequencial para o ano
-    const ano = new Date(l.data).getFullYear()
+    const dataLanc = new Date(l.data)
+    const ano = dataLanc.getFullYear()
+    const inicioAno = `${ano}-01-01`
+    const fimAno = `${ano}-12-31`
+    
     const { data: ultimosLancs } = await sb
       .from('lancamentos_contabeis')
       .select('numero_lancamento')
       .eq('tenant_id', tenantId)
-      .like('numero_lancamento', `${ano}/%`)
+      .gte('data_lancamento', inicioAno)
+      .lte('data_lancamento', fimAno)
       .order('numero_lancamento', { ascending: false })
       .limit(1)
 
-    let maxSeq = 0
+    let proximoNumero = 1
     if (ultimosLancs && ultimosLancs.length > 0) {
-      const parts = (ultimosLancs[0].numero_lancamento || '').split('/')
-      if (parts.length === 2) maxSeq = parseInt(parts[1], 10) || 0
+      const lastNum = ultimosLancs[0].numero_lancamento.split('/')[1]
+      proximoNumero = parseInt(lastNum) + 1
     }
-    const seq = String(maxSeq + 1).padStart(6, '0')
-    const numeroLancamento = `${ano}/${seq}`
 
-    // 8. Inserir Capa do Lançamento
+    const numeroFormatado = `${ano}/${proximoNumero.toString().padStart(6, '0')}`
+
+    // 8. Criar o lançamento contábil
+    // PADRÃO DE HISTÓRICO: Segue estritamente a descrição do financeiro conforme solicitado.
+    let historicoFinal = l.descricao || `${config.tipo === 'ingresso' ? 'RECEBIMENTO' : 'PAGAMENTO'} - ${config.categoria_nome}`
+    
+    // Se for um recebimento forçado por auditoria (Erro 4), garante que o termo RECEBIDO esteja claro se não estiver
+    if (forcedNature === 'ingresso' && !historicoFinal.toUpperCase().includes('RECEB')) {
+      historicoFinal = `REC. ${historicoFinal}`
+    }
+
     const insertData: any = {
       tenant_id: tenantId,
       data_lancamento: l.data,
       data_competencia: l.data,
-      numero_lancamento: numeroLancamento,
-      historico: `${config.tipo === 'ingresso' ? 'REC' : 'PAG'} - ${l.descricao || l.categoria}`,
+      historico: historicoFinal,
+      numero_lancamento: numeroFormatado,
       origem_id: l.id,
       origem_tipo: 'financeiro',
       status: 'confirmado',
-      usuario_nome: user.email,
+      usuario_nome: usuarioEmail
     }
 
     const { data: lancContabil, error: cErr } = await sb
@@ -287,7 +355,7 @@ export async function sincronizarLancamentoContabil(
       throw pErr
     }
 
-    return { success: true, numero: numeroLancamento }
+    return { success: true, numero: numeroFormatado }
   } catch (err: any) {
     console.error('[Contábil] Erro sincronizarLancamentoContabil:', err)
     return { error: err.message }
@@ -413,7 +481,7 @@ export async function sincronizarPeriodoContabil(dataInicio: string) {
 
   for (const l of items) {
     const status = (l.status || '').toLowerCase()
-    if (status !== 'pago' && status !== 'conciliado') {
+    if (status !== 'pago' && status !== 'conciliado' && status !== 'liquidado') {
       results.skippedStatus++
       continue
     }

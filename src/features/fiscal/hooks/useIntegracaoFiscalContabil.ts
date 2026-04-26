@@ -32,7 +32,7 @@ export function useIntegracaoFiscalContabil() {
       await sb.from('nfse_financeiro_vinculo').insert({
         tenant_id: tenantId,
         nfe_id: nfe.id,
-        financeiro_id: financeiroId,
+        transacao_id: financeiroId,
         tipo_vinculo: 'escrituracao_nfe'
       })
 
@@ -97,11 +97,18 @@ export function useIntegracaoFiscalContabil() {
       await sincronizarNotaFiscalContabil(nfeId, 'nfe')
       const resSync = await sincronizarLancamentoContabil(financeiroId)
 
-      // 5. Atualizar status da NF-e para 'escriturada' (Finalizado)
+      // 5. Registrar Log de Integração (Unificado para Contabilidade)
+      await sb.from('contabil_logs').insert({
+        tenant_id: tenantId,
+        acao: 'ESCRITURAÇÃO NFE',
+        detalhes: `Escrituração concluída para nota ${nfe.numero_nf}. Lançamento financeiro vinculado e estoque atualizado.`
+      })
+
+      // 6. Atualizar status da NF-e para 'escriturada' (Finalizado)
       const updatePayload: any = { 
         status_escrituracao: 'escriturada',
         status_conciliacao: 'conciliada',
-        financeiro_lancamento_id: financeiroId,
+        lancamento_financeiro_id: financeiroId,
         data_escrituracao: new Date().toISOString()
       }
       if (dataEfetiva) updatePayload.data_entrada = dataEfetiva

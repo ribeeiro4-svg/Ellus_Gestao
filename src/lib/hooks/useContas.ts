@@ -35,11 +35,18 @@ export function useContas() {
       alert('Erro: ID de sessão não identificado. Recarregue a página.')
       return { error: 'No tenant' }
     }
-    const { error } = await sb.from('contas_bancarias').insert({ ...input, tenant_id: tenantId })
+    const { data, error } = await sb.from('contas_bancarias').insert({ ...input, tenant_id: tenantId }).select('id').single()
     if (error) {
       console.error('Erro ao inserir conta:', error)
       alert('Erro ao salvar no banco: ' + error.message)
     } else {
+      // Tenta mapear automaticamente no contábil
+      try {
+        const { fixBankAccountsAction } = await import('@/features/contabil/actions/fixBankAccountsAction')
+        await fixBankAccountsAction(tenantId)
+      } catch (e) {
+        console.warn('Erro ao mapear conta contábil:', e)
+      }
       await fetch()
     }
     return { error }

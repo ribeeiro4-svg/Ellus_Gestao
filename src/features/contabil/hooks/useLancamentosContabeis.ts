@@ -51,17 +51,41 @@ export function useLancamentosContabeis() {
 
     if (competencia) {
       const [ano, mes] = competencia.split('-')
-      q = q.gte('data_competencia', `${ano}-${mes}-01`).lte('data_competencia', `${ano}-${mes}-31`)
+      // Calcula o último dia do mês corretamente
+      const ultimoDia = new Date(Number(ano), Number(mes), 0).getDate()
+      q = q.gte('data_competencia', `${ano}-${mes}-01`).lte('data_competencia', `${ano}-${mes}-${ultimoDia}`)
     }
     const { data } = await q
     
     // Processar para adicionar valor_total (soma dos Débitos)
-    const processed = (data ?? []).map((l: any) => {
+    let processed = (data ?? []).map((l: any) => {
       const total = (l.lancamentos_partidas ?? [])
         .filter((p: any) => p.tipo_partida === 'D')
         .reduce((sum: number, p: any) => sum + Number(p.valor), 0)
       return { ...l, valor_total: total }
     })
+
+    // 1.1 Buscar URLs/Chaves das notas de origem para permitir visualização
+    const noteNumbers = processed
+      .filter(l => l.documento_tipo === 'NF' && l.documento_numero)
+      .map(l => l.documento_numero)
+      .filter(Boolean) as string[]
+
+    if (noteNumbers.length > 0) {
+      const [{ data: nfses }, { data: nfes }] = await Promise.all([
+        sb.from('nfse_entradas').select('id, xml_url, numero_nfse').in('numero_nfse', noteNumbers),
+        sb.from('nfe_entradas').select('id, chave_acesso, numero_nf').in('numero_nf', noteNumbers)
+      ])
+
+      const noteMapByNumber: Record<string, { url?: string; chave?: string; numero?: string; id?: string }> = {}
+      ;(nfses ?? []).forEach((n: any) => noteMapByNumber[n.numero_nfse] = { url: n.xml_url, numero: n.numero_nfse, id: n.id })
+      ;(nfes ?? []).forEach((n: any) => noteMapByNumber[n.numero_nf] = { url: n.xml_url, chave: n.chave_acesso, numero: n.numero_nf, id: n.id })
+
+      processed = processed.map(l => ({
+        ...l,
+        nota_info: (l.documento_tipo === 'NF' && l.documento_numero) ? noteMapByNumber[l.documento_numero] : null
+      }))
+    }
 
     setLancamentos(processed)
 
@@ -196,8 +220,9 @@ export function useLancamentosContabeis() {
     let start, end;
     if (periodo.includes('-')) {
       const [ano, mes] = periodo.split('-')
+      const ultimoDia = new Date(Number(ano), Number(mes), 0).getDate()
       start = `${ano}-${mes}-01`
-      end = `${ano}-${mes}-31`
+      end = `${ano}-${mes}-${ultimoDia}`
     } else {
       start = `${periodo}-01-01`
       end = `${periodo}-12-31`
@@ -220,5 +245,60 @@ export function useLancamentosContabeis() {
     return saldos
   }
 
-  return { lancamentos, loading, stats, inserir, estornar, excluir, buscarPartidas, calcularBalancete, refresh: fetch, periodo, setPeriodo }
+  // Livro Razão Analítico (Por Conta ou Geral)
+  const calcularRazao = async (periodo: string, contaId?: string) => {
+    let start, end;
+    if (periodo.includes('-')) {
+      const [ano, mes] = periodo.split('-')
+      const ultimoDia = new Date(Number(ano), Number(mes), 0).getDate()
+      start = `${ano}-${mes}-01`
+      end = `${ano}-${mes}-${ultimoDia}`
+    } else {
+      start = `${periodo}-01-01`
+      end = `${periodo}-12-31`
+    }
+
+    // 1. Saldo Anterior (Tudo antes de start)
+    let queryAnterior = sb.from('lancamentos_partidas')
+      .select('conta_id, tipo_partida, valor, lancamento:lancamento_id!inner(data_competencia, status, tenant_id)')
+      .eq('lancamento.tenant_id', tenantId)
+      .eq('lancamento.status', 'confirmado')
+      .lt('lancamento.data_competencia', start)
+
+    if (contaId) {
+      queryAnterior = queryAnterior.eq('conta_id', contaId)
+    }
+
+    const { data: partidasAnteriores } = await queryAnterior
+
+    const saldosIniciais: Record<string, { debitos: number; creditos: number }> = {}
+    ;(partidasAnteriores ?? []).forEach((p: any) => {
+      if (!saldosIniciais[p.conta_id]) saldosIniciais[p.conta_id] = { debitos: 0, creditos: 0 }
+      if (p.tipo_partida === 'D') saldosIniciais[p.conta_id].debitos += Number(p.valor)
+      else saldosIniciais[p.conta_id].creditos += Number(p.valor)
+    })
+
+    // 2. Movimentação do Período
+    let queryPeriodo = sb.from('lancamentos_partidas')
+      .select('id, conta_id, tipo_partida, valor, historico_partida, lancamento:lancamento_id!inner(id, numero_lancamento, data_competencia, status, tenant_id)')
+      .eq('lancamento.tenant_id', tenantId)
+      .eq('lancamento.status', 'confirmado')
+      .gte('lancamento.data_competencia', start)
+      .lte('lancamento.data_competencia', end)
+
+    if (contaId) {
+      queryPeriodo = queryPeriodo.eq('conta_id', contaId)
+    }
+
+    const { data: movimentacao } = await queryPeriodo
+    
+    // Sort chronologically in memory (since Supabase ordering by related table can be tricky)
+    const movs = (movimentacao ?? []).sort((a: any, b: any) => {
+      return new Date(a.lancamento.data_competencia).getTime() - new Date(b.lancamento.data_competencia).getTime()
+    })
+
+    return { saldosIniciais, movimentacao: movs }
+  }
+
+  return { lancamentos, loading, stats, inserir, estornar, excluir, buscarPartidas, calcularBalancete, calcularRazao, refresh: fetch, periodo, setPeriodo }
 }

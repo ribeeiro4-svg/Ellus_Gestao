@@ -27,7 +27,7 @@ export function useFinanceiro() {
 
       while (hasMore) {
         const { data, error } = await sb.from('lancamentos')
-          .select('*, nfse_vinculo:nfse_financeiro_vinculo(*)')
+          .select('*, nfse_vinculo:nfse_financeiro_vinculo(*, nfse:nfse_id(numero_nfse, xml_url), nfe:nfe_id(numero_nf, chave_acesso))')
           .eq('tenant_id', tenantId)
           .gte('data', start)
           .lte('data', end)
@@ -57,7 +57,44 @@ export function useFinanceiro() {
         // Atualiza a lista local antes do setLancamentos para refletir imediatamente na UI
         allData = allData.map(l => (l.status === 'aberto' && l.data < todayStr) ? { ...l, status: 'atrasado' } : l)
       }
+      // 2. Fetch all links for this tenant using a Server Action to bypass RLS
+      const { getVinculosFinanceiroAction } = await import('@/features/fiscal/actions/nfseActions')
+      const { data: allLinks } = await getVinculosFinanceiroAction(tenantId)
       
+      if (allLinks && allLinks.length > 0) {
+        // Map links by transacao_id
+        const linksByTransacao: Record<string, any[]> = {}
+        allLinks.forEach((link: any) => {
+          if (!linksByTransacao[link.transacao_id]) linksByTransacao[link.transacao_id] = []
+          linksByTransacao[link.transacao_id].push(link)
+        })
+
+        // Enriquecer vínculos de NF-e manualmente
+        const nfeIds = [...new Set(allLinks.filter((v: any) => v.nfe_id).map((v: any) => v.nfe_id))]
+        const nfeMap: Record<string, any> = {}
+        
+        if (nfeIds.length > 0) {
+          const { data: nfeRows } = await sb.from('nfe_entradas').select('id, numero_nf, chave_acesso').in('id', nfeIds)
+          if (nfeRows) {
+            nfeRows.forEach((n: any) => { nfeMap[n.id] = n })
+          }
+        }
+
+        allData = allData.map((l: any) => {
+          const transacaoLinks = linksByTransacao[l.id] || []
+          return {
+            ...l,
+            nfse_vinculo: transacaoLinks.map(v => ({
+              ...v,
+              nfe: v.nfe_id && nfeMap[v.nfe_id] ? nfeMap[v.nfe_id] : null
+            }))
+          }
+        })
+      } else {
+        // Se não tem links, garante que nfse_vinculo é um array vazio
+        allData = allData.map((l: any) => ({ ...l, nfse_vinculo: l.nfse_vinculo || [] }))
+      }
+
       setLancamentos(allData)
     } catch (err) {
       console.error('Error fetching financeiro:', err)

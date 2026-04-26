@@ -38,6 +38,13 @@ export async function createMissingAccountsAction(providedTenantId?: string) {
     { codigo: '3.1.1', descricao: 'USO E CONSUMO - BENS DURÁVEIS', nivel: 3, tipo: 'sintetica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: false, pai: '3.1' },
     { codigo: '3.1.1.01', descricao: 'Aplicações em Bens Duráveis', nivel: 4, tipo: 'sintetica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: false, pai: '3.1.1' },
     { codigo: '3.1.1.01.001', descricao: 'Uso e Consumo - Bens Duráveis', nivel: 5, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '3.1.1.01' },
+    
+    // --- CONTAS DE AUDITORIA (5.2.2 / 5.2.3) ---
+    { codigo: '5.2.2.01', descricao: 'Aluguel e Condomínio', nivel: 4, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '5.2.2' },
+    { codigo: '5.2.2.12', descricao: 'Alimentação e Refeições', nivel: 4, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '5.2.2' },
+    { codigo: '5.2.2.13', descricao: 'Combustíveis e Lubrificantes', nivel: 4, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '5.2.2' },
+    { codigo: '5.2.2.14', descricao: 'Despesas Diversas', nivel: 4, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '5.2.2' },
+    { codigo: '5.2.3.02', descricao: 'Tarifas Bancárias', nivel: 4, tipo: 'analitica', natureza: 'devedora', classificacao: 'despesa', aceita_lancamentos: true, pai: '5.2.3' },
   ]
 
   const log: string[] = []

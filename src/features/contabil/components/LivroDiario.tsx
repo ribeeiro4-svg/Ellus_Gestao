@@ -399,7 +399,32 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
                       <td className="px-4 py-3">
                         {l.documento_numero && l.documento_tipo === 'NF' ? (
                           <span className="text-emerald-600 font-black tracking-tighter flex items-center gap-1">
-                            <FileText size={10} /> {l.documento_numero}
+                            <FileText size={10} />
+                            {(l as any).nota_info?.chave || (l as any).nota_info?.url ? (
+                              <button
+                                className="hover:underline text-left"
+                                onClick={async () => {
+                                  // Se tiver xml_url (NFS-e), abre direto
+                                  if ((l as any).nota_info?.url && !(l as any).nota_info?.chave) {
+                                    window.open((l as any).nota_info.url, '_blank')
+                                    return
+                                  }
+                                  // NF-e modelo 55: abre layout interno
+                                  const { abrirDanfeInterno } = await import('@/lib/utils/abrirDanfe')
+                                  const { createClient } = await import('@/lib/supabase/client')
+                                  const sb = createClient()
+                                  const noteId = (l as any).nota_info?.id || l.origem_id
+                                  const { data: nfe } = await sb.from('nfe_entradas').select('*').eq('id', noteId).single()
+                                  if (!nfe) { alert('Dados da nota não encontrados.'); return }
+                                  const { data: itens } = await sb.from('nfe_entradas_itens').select('*').eq('nfe_entrada_id', nfe.id).order('numero_item')
+                                  abrirDanfeInterno(nfe, itens || [])
+                                }}
+                              >
+                                {l.documento_numero}
+                              </button>
+                            ) : (
+                              l.documento_numero
+                            )}
                           </span>
                         ) : (
                           <button 

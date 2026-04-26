@@ -552,23 +552,44 @@ export default function FinanceiroPage() {
         const docNum = isNFe ? (vinculo.nfe?.numero_nf || '...') : (vinculo.nfse?.numero_nfse || '...')
         const docLabel = isNFe ? 'NF-e' : 'NFS-e'
         
+        // Para NFS-e: abre xml_url direto se disponível
+        // Para NF-e: abre nosso visualizador interno
+        const abrirNota = async () => {
+          if (!isNFe) {
+            // NFS-e: tenta abrir xml_url
+            const url = vinculo.nfse?.xml_url
+            if (url) { window.open(url, '_blank'); return }
+            alert('URL do documento não disponível.')
+            return
+          }
+          // NF-e modelo 55: busca dados e abre layout interno
+          const { abrirDanfeInterno } = await import('@/lib/utils/abrirDanfe')
+          const { createClient } = await import('@/lib/supabase/client')
+          const sb = createClient()
+          const { data: nfe } = await sb.from('nfe_entradas').select('*').eq('id', vinculo.nfe_id).single()
+          if (!nfe) { alert('Dados da nota não encontrados.'); return }
+          const { data: itens } = await sb.from('nfe_entradas_itens').select('*').eq('nfe_entrada_id', nfe.id).order('numero_item')
+          abrirDanfeInterno(nfe, itens || [])
+        }
+
         return (
           <div className="flex items-center gap-2">
-            <div className="flex flex-col cursor-pointer" onClick={() => { setSelectedLancamentoNF(l); setIsNFSeLinkModalOpen(true) }}>
-              <span className="text-[10px] font-black text-indigo-600 uppercase">{docLabel} {docNum}</span>
+            <div className="flex flex-col">
+              <button
+                onClick={abrirNota}
+                className="hover:underline text-left"
+              >
+                <span className="text-[10px] font-black text-indigo-600 uppercase">{docLabel} {docNum}</span>
+              </button>
               <span className="text-[8px] text-indigo-400 font-bold uppercase tracking-tighter">Escriturada</span>
             </div>
-            {(vinculo.nfse?.xml_url || vinculo.nfe?.xml_url) && (
-              <a 
-                href={vinculo.nfse?.xml_url || vinculo.nfe?.xml_url} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="p-1.5 text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                title="Ver/Baixar Nota Fiscal"
-              >
-                <FileText size={12} />
-              </a>
-            )}
+            <button
+              onClick={abrirNota}
+              className="p-1.5 text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+              title="Ver Nota Fiscal"
+            >
+              <FileText size={12} />
+            </button>
           </div>
         )
       }

@@ -190,32 +190,36 @@ export async function vincularEDocumentoReprocessarAction(params: {
     }
 
     // 2. Atualizar o lançamento contábil
-    await sb.from('lancamentos_contabeis').update({
+    // IMPORTANTE: Se estamos vinculando um documento (NF-e/NFS-e) a um lançamento que 
+    // já veio do financeiro, NÃO devemos sobrescrever a origem. Ele deve continuar
+    // apontando para o lançamento financeiro, senão a checagem de duplicidade quebra.
+    const updatePayload: any = {
       documento_tipo: docTipo,
       documento_numero: docNumero,
-      origem_tipo: origemTipo,
-      origem_id: docId
-    }).eq('id', lancamentoId)
-
-    // 3. Reprocessar Integração (Sincroniza as partidas)
-    const { sincronizarLancamentoContabil } = await import('./accountingActions')
+    }
     
-    let targetFinanceiroId = docId
-    if (docType === 'nfse' || docType === 'nfe') {
-       // Se vinculou nota, precisamos achar o financeiro dela para re-sincronizar
-       const sbAdmin = createAdminSupabase()
-       if (docType === 'nfse') {
-          const { data: v } = await sbAdmin.from('nfse_financeiro_vinculo').select('financeiro_id').eq('nfse_id', docId).maybeSingle()
-          if (v?.financeiro_id) targetFinanceiroId = v.financeiro_id
-       } else {
-          const { data: n } = await sbAdmin.from('nfe_entradas').select('lancamento_financeiro_id').eq('id', docId).maybeSingle()
-          if (n?.lancamento_financeiro_id) targetFinanceiroId = n.lancamento_financeiro_id
-       }
+    // Só atualiza origem_tipo se estivermos vinculando documento fiscal num lançamento manual 
+    // (não vindo do financeiro). Se veio do financeiro, mantém a origem_id e origem_tipo intactos.
+    if (lanc.origem_tipo !== 'financeiro') {
+      updatePayload.origem_tipo = origemTipo
+      updatePayload.origem_id = docId
     }
 
-    const syncRes = await sincronizarLancamentoContabil(targetFinanceiroId)
+    if (docType === 'financeiro') {
+       // Se o usuário vinculou a um financeiro, atualizamos a origem para o financeiro
+       updatePayload.origem_tipo = origemTipo
+       updatePayload.origem_id = docId
+    }
 
-    return { success: true, syncError: syncRes.error }
+    await sb.from('lancamentos_contabeis').update(updatePayload).eq('id', lancamentoId)
+
+    // 3. (Removido o re-sync daqui) 
+    // O lançamento contábil já existe. Acabamos de atualizá-lo com os dados da nota.
+    // Chamar sincronizarLancamentoContabil aqui estava criando uma duplicata.
+    // Não precisamos sincronizar pois o lançamento já está no banco e já foi mapeado.
+
+
+    return { success: true }
   } catch (err: any) {
     return { success: false, error: err.message }
   }
@@ -237,20 +241,20 @@ export async function buscarCandidatosFinanceirosAction(termo: string) {
  */
 export async function getContabilLogsAction() {
   try {
-    const sb = await createServerSupabase()
     const { getMyTenantIdAction } = await import('@/app/actions/tenantActions')
     const tenantId = await getMyTenantIdAction()
 
-    let query = sb.from('contabil_logs').select('*')
+    const sbAdmin = createAdminSupabase()
+    let query = sbAdmin.from('contabil_logs').select('*')
     if (tenantId) query = query.eq('tenant_id', tenantId)
     
     const { data, error } = await query
       .order('created_at', { ascending: false })
-      .limit(50)
+      .limit(100)
     
     if (error) {
-       console.warn('Erro ao buscar logs (tabela pode estar ausente):', error.message)
-       return { success: false, data: [], error: 'Tabela de logs não encontrada ou inacessível.' }
+       console.warn('Erro ao buscar logs:', error.message)
+       return { success: false, data: [], error: 'Falha ao recuperar logs de integração.' }
     }
 
     return { success: true, data: data || [] }

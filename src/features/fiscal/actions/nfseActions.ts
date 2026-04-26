@@ -5,10 +5,23 @@ import { parseNFSeXML } from '../utils/nfseParser'
 import { createClient } from '@supabase/supabase-js'
 
 function createAdminSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  
+  if (!url || !key) {
+    console.warn('CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing in environment variables.')
+    // Return a dummy client that will fail on calls but won't crash on creation
+    return {
+      from: () => ({
+        select: () => ({ eq: () => ({ maybeSingle: () => ({ data: null }), single: () => ({ data: null }), in: () => ({ data: [] }), order: () => ({ limit: () => ({ data: [] }) }) }) }),
+        insert: () => ({ error: { message: 'Service Role Key Missing' } }),
+        update: () => ({ eq: () => ({ error: { message: 'Service Role Key Missing' } }) }),
+        delete: () => ({ eq: () => ({ error: { message: 'Service Role Key Missing' } }) }),
+      })
+    } as any
+  }
+
+  return createClient(url, key)
 }
 
 /**
@@ -329,13 +342,23 @@ export async function salvarEscrituracaoNFSeAction(payload: {
 
     if (finErr || !fin) throw new Error('Lançamento financeiro não encontrado')
 
-    // 3. Criar Vínculo
-    await sbAdmin.from('nfse_financeiro_vinculo').insert({
-      tenant_id: nfse.tenant_id,
-      nfse_id: nfse.id,
-      financeiro_id: fin.id,
-      tipo_vinculo: 'escrituracao_vinculo'
-    })
+    // 3. Criar Vínculo (a coluna é 'transacao_id', não 'financeiro_id')
+    // Verificar se já existe para evitar erro de constraint única (se houver)
+    const { data: vinculoExistente } = await sbAdmin.from('nfse_financeiro_vinculo')
+      .select('id')
+      .eq('nfse_id', nfse.id)
+      .eq('transacao_id', fin.id)
+      .maybeSingle()
+
+    if (!vinculoExistente) {
+      const { error: vinculoErr } = await sbAdmin.from('nfse_financeiro_vinculo').insert({
+        tenant_id: nfse.tenant_id,
+        nfse_id: nfse.id,
+        transacao_id: fin.id,
+        tipo_vinculo: 'escrituracao_vinculo'
+      })
+      if (vinculoErr) throw new Error(`Erro ao criar vínculo de escrituração: ${vinculoErr.message}`)
+    }
 
     // 4. Marcar nota como concluída e vincular ao financeiro (Usando ADMIN para garantir sucesso)
     const updatePayload: any = { status_escrituracao: 'concluida' }
@@ -393,36 +416,69 @@ export async function vincularNFSeALancamentoAction(nfseId: string, lancamentoId
     if (!nfse || !lanc) throw new Error('NFS-e ou Lançamento não encontrado')
 
     // 2. Criar Vínculo
-    const { error: vinculoErr } = await sbAdmin.from('nfse_financeiro_vinculo').insert({
-      tenant_id: lanc.tenant_id,
-      nfse_id: nfseId,
-      financeiro_id: lancamentoId,
-      tipo_vinculo: 'vinculo_manual',
-      data_vinculo: new Date().toISOString()
-    })
+    // Verificar se já existe para evitar erro de constraint única
+    const { data: vinculoExistente } = await sbAdmin.from('nfse_financeiro_vinculo')
+      .select('id')
+      .eq('nfse_id', nfseId)
+      .eq('transacao_id', lancamentoId)
+      .maybeSingle()
 
-    if (vinculoErr) throw new Error(`Erro ao criar vínculo: ${vinculoErr.message}`)
+    if (!vinculoExistente) {
+      const { error: vinculoErr } = await sbAdmin.from('nfse_financeiro_vinculo').insert({
+        tenant_id: lanc.tenant_id,
+        nfse_id: nfseId,
+        transacao_id: lancamentoId,
+        tipo_vinculo: 'vinculo_manual',
+        data_vinculo: new Date().toISOString()
+      })
+      if (vinculoErr) throw new Error(`Erro ao criar vínculo: ${vinculoErr.message}`)
+    }
 
     // 3. Atualizar Status da Nota
     await sbAdmin.from('nfse_entradas').update({
       status_escrituracao: 'concluida'
     }).eq('id', nfseId)
 
-    // 4. Re-integrar com Contabilidade
-    const { sincronizarLancamentoContabil } = await import('@/features/contabil/actions/accountingActions')
-    await sincronizarLancamentoContabil(lancamentoId)
+    // 4. Verificar se já existe lançamento contábil para este financeiro
+    const { data: lancContabilExistente } = await sbAdmin
+      .from('lancamentos_contabeis')
+      .select('id')
+      .eq('origem_id', lancamentoId)
+      .maybeSingle()
 
-    // 5. Atualizar Lançamento Contábil com o Documento
-    const { data: lancContabil } = await sbAdmin.from('lancamentos_contabeis').select('id').eq('origem_id', lancamentoId).maybeSingle()
-    if (lancContabil) {
+    if (lancContabilExistente) {
+      // Já existe — apenas atualizar o documento sem criar novo (evita duplicação)
       await sbAdmin.from('lancamentos_contabeis').update({
         documento_tipo: 'NF',
         documento_numero: nfse.numero_nfse,
         origem_tipo: 'fiscal_nfse'
-      }).eq('id', lancContabil.id)
+      }).eq('id', lancContabilExistente.id)
 
-      await sbAdmin.from('nfse_entradas').update({ lancamento_contabil_id: lancContabil.id }).eq('id', nfseId)
+      await sbAdmin.from('nfse_entradas').update({ lancamento_contabil_id: lancContabilExistente.id }).eq('id', nfseId)
+    } else {
+      // Não existe — sincronizar (vai criar o lançamento contábil) e depois atualizar
+      const { sincronizarLancamentoContabil } = await import('@/features/contabil/actions/accountingActions')
+      await sincronizarLancamentoContabil(lancamentoId)
+
+      // Após sync, buscar e atualizar com o documento
+      const { data: lancContabilNovo } = await sbAdmin.from('lancamentos_contabeis').select('id').eq('origem_id', lancamentoId).maybeSingle()
+      if (lancContabilNovo) {
+        await sbAdmin.from('lancamentos_contabeis').update({
+          documento_tipo: 'NF',
+          documento_numero: nfse.numero_nfse,
+          origem_tipo: 'fiscal_nfse'
+        }).eq('id', lancContabilNovo.id)
+
+        await sbAdmin.from('nfse_entradas').update({ lancamento_contabil_id: lancContabilNovo.id }).eq('id', nfseId)
+      }
     }
+
+    // 6. Registrar Log de Integração (Unificado para Contabilidade)
+    await sbAdmin.from('contabil_logs').insert({
+      tenant_id: lanc.tenant_id,
+      acao: 'VÍNCULO MANUAL',
+      detalhes: `Vínculo da nota ${nfse.numero_nfse} (Serviço) ao lançamento financeiro: ${lanc.descricao}`
+    })
 
     return { success: true }
   } catch (err: any) {
@@ -460,7 +516,7 @@ export async function getNFSeListAction(tenantIdParam?: string, periodo?: string
   // Fetch prestadores separately to avoid PostgREST relationship errors
   let enrichedData = data;
   if (data && data.length > 0) {
-    const prestadorIds = [...new Set(data.map(n => n.prestador_id).filter(Boolean))];
+    const prestadorIds = [...new Set(data.map((n: any) => n.prestador_id).filter(Boolean))];
     if (prestadorIds.length > 0) {
       const { data: prestadores } = await sbAdmin
         .from('fornecedores')
@@ -468,8 +524,8 @@ export async function getNFSeListAction(tenantIdParam?: string, periodo?: string
         .in('id', prestadorIds);
         
       if (prestadores) {
-        const prestadorMap = Object.fromEntries(prestadores.map(p => [p.id, p]));
-        enrichedData = data.map(n => ({
+        const prestadorMap = Object.fromEntries(prestadores.map((p: any) => [p.id, p]));
+        enrichedData = data.map((n: any) => ({
           ...n,
           prestador: prestadorMap[n.prestador_id] || null
         }));
@@ -498,8 +554,21 @@ export async function deletarNFSeAction(ids: string[]) {
     .delete()
     .in('id', ids)
 
-  if (error) return { success: false, error: error.message }
   return { success: true, count: ids.length }
+}
+
+/**
+ * Busca todos os vínculos financeiros para o dashboard, ignorando RLS
+ */
+export async function getVinculosFinanceiroAction(tenantId: string) {
+  const sbAdmin = createAdminSupabase()
+  
+  // Busca vínculos trazendo também os dados da NFS-e (se houver)
+  const { data, error } = await sbAdmin.from('nfse_financeiro_vinculo')
+    .select('*, nfse:nfse_id(numero_nfse, xml_url)')
+    .eq('tenant_id', tenantId)
+
+  return { data: data || [], error: error?.message }
 }
 /**
  * Vincula uma NF-e (Produto) existente a um lançamento financeiro
@@ -518,18 +587,28 @@ export async function vincularNFeALancamentoAction(nfeId: string, lancamentoId: 
     }
 
     // 1. Criar Vínculo na tabela de junção
-    await sbAdmin.from('nfse_financeiro_vinculo').insert({
-      tenant_id: lanc.tenant_id,
-      nfe_id: nfeId,
-      financeiro_id: lancamentoId,
-      tipo_vinculo: 'vinculo_manual',
-      data_vinculo: new Date().toISOString()
-    })
+    // Verificar se já existe para evitar erro de constraint única
+    const { data: vinculoExistente } = await sbAdmin.from('nfse_financeiro_vinculo')
+      .select('id')
+      .eq('nfe_id', nfeId)
+      .eq('transacao_id', lancamentoId)
+      .maybeSingle()
+
+    if (!vinculoExistente) {
+      const { error: vinculoErr } = await sbAdmin.from('nfse_financeiro_vinculo').insert({
+        tenant_id: lanc.tenant_id,
+        nfe_id: nfeId,
+        transacao_id: lancamentoId,
+        tipo_vinculo: 'vinculo_manual',
+        data_vinculo: new Date().toISOString()
+      })
+      if (vinculoErr) throw new Error(`Erro ao criar vínculo financeiro: ${vinculoErr.message}`)
+    }
 
     // 2. Atualizar NFe
     await sbAdmin.from('nfe_entradas').update({
       status_escrituracao: 'concluida',
-      financeiro_lancamento_id: lancamentoId
+      lancamento_financeiro_id: lancamentoId
     }).eq('id', nfeId)
 
     // 3. Integrar Contabilidade
@@ -537,6 +616,13 @@ export async function vincularNFeALancamentoAction(nfeId: string, lancamentoId: 
     
     await sincronizarNotaFiscalContabil(nfeId, 'nfe')
     await sincronizarLancamentoContabil(lancamentoId)
+
+    // 4. Registrar Log de Integração (Unificado para Contabilidade)
+    await sbAdmin.from('contabil_logs').insert({
+      tenant_id: lanc.tenant_id,
+      acao: 'VÍNCULO MANUAL (NFE)',
+      detalhes: `Vínculo da nota ${nfe.numero_nf} (Produto) ao lançamento financeiro: ${lanc.descricao}`
+    })
 
     return { success: true }
   } catch (err: any) {

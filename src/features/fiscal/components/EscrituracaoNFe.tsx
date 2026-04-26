@@ -252,7 +252,21 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-        <h3 className="text-sm font-black text-slate-700 mb-3">Selecionar NF-e para Escriturar</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-black text-slate-700">Selecionar NF-e para Escriturar</h3>
+          <button 
+            onClick={async () => {
+              if(!confirm('Deseja executar o ajuste de banco de dados e recarregar o cache?')) return
+              const { applyFinancialLinkFixAction } = await import('../actions/dbFix')
+              const res = await applyFinancialLinkFixAction()
+              if (res.success) alert('Banco de dados ajustado e cache recarregado!')
+              else alert('Erro ao ajustar: ' + res.error)
+            }}
+            className="text-[9px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-all"
+          >
+            Ajustar Banco / Cache
+          </button>
+        </div>
         <div className="flex items-center gap-3">
           <select
             value={selectedNfeId}

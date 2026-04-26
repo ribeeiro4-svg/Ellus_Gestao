@@ -107,6 +107,18 @@ export function useBensDuraveis(tenantId: string | null) {
     }
   }
 
+  const excluirBem = async (id: string) => {
+    if (!tenantId) return { error: 'Sem tenant' }
+    try {
+      const { error: err } = await sb.from('bens_duraveis').delete().eq('id', id)
+      if (err) throw err
+      await carregarBens()
+      return { success: true }
+    } catch (err: any) {
+      return { error: err.message }
+    }
+  }
+
   return {
     bens,
     manutencoes,
@@ -116,6 +128,7 @@ export function useBensDuraveis(tenantId: string | null) {
     carregarManutencoes,
     atualizarBem,
     adicionarManutencao,
-    excluirManutencao
+    excluirManutencao,
+    excluirBem
   }
 }

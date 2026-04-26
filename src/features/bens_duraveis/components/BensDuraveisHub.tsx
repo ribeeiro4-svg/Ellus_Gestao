@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { Plus, Briefcase, Calendar, AlertTriangle, CheckCircle2, MoreVertical, Search, Wrench, FileText } from 'lucide-react'
-import { useBensDuraveis, BemDuravel } from '../hooks/useBensDuraveis'
+import { Plus, Briefcase, Calendar, AlertTriangle, CheckCircle2, MoreVertical, Search, Wrench, FileText, Trash2 } from 'lucide-react'
+import { useBensDuraveis, BemDuravel, Manutencao } from '../hooks/useBensDuraveis'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from '@/lib/hooks/useTenantId'
 
@@ -13,7 +13,7 @@ export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
   const resolvedTenantId = useTenantId()
   const tenantId = initialTenantId || resolvedTenantId
   
-  const { bens, manutencoes, loading, carregarBens, atualizarBem, carregarManutencoes, adicionarManutencao } = useBensDuraveis(tenantId)
+  const { bens, manutencoes, loading, carregarBens, atualizarBem, carregarManutencoes, adicionarManutencao, excluirManutencao, excluirBem } = useBensDuraveis(tenantId)
   const [activeTab, setActiveTab] = useState<'pendentes' | 'ativos'>('pendentes')
   const [syncing, setSyncing] = useState(false)
   const sb = createClient()
@@ -70,6 +70,22 @@ export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
       setManuCusto('')
       // Não fecha o modal para ver o histórico
     } else {
+      alert(res.error)
+    }
+  }
+
+  const handleExcluirBem = async (bem: BemDuravel) => {
+    if (!confirm(`Tem certeza que deseja excluir o bem "${bem.descricao}"? Esta ação não pode ser desfeita.`)) return
+    const res = await excluirBem(bem.id)
+    if (!res.success) {
+      alert(res.error)
+    }
+  }
+
+  const handleExcluirManutencao = async (m: Manutencao) => {
+    if (!confirm('Excluir este registro de manutenção?')) return
+    const res = await excluirManutencao(m.id, m.bem_id)
+    if (!res.success) {
       alert(res.error)
     }
   }
@@ -236,17 +252,26 @@ export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(bem.valor_aquisicao || 0)}
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <button
-                          onClick={() => {
-                            setBemSelecionado(bem)
-                            setVidaUtil('')
-                            setObs(bem.observacoes || '')
-                            setShowCadastroModal(true)
-                          }}
-                          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
-                        >
-                          Analisar e Ativar
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setBemSelecionado(bem)
+                              setVidaUtil('')
+                              setObs(bem.observacoes || '')
+                              setShowCadastroModal(true)
+                            }}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                          >
+                            Analisar e Ativar
+                          </button>
+                          <button
+                            onClick={() => handleExcluirBem(bem)}
+                            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -282,12 +307,21 @@ export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
                       </td>
                       <td className="py-4 px-6 text-slate-500">{bem.vida_util_meses} meses</td>
                       <td className="py-4 px-6 text-right">
-                         <button
-                          onClick={() => abrirManutencoes(bem)}
-                          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ml-auto"
-                        >
-                          <Wrench size={14} /> Manutenções
-                        </button>
+                         <div className="flex items-center justify-end gap-2">
+                           <button
+                            onClick={() => abrirManutencoes(bem)}
+                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-bold transition-colors flex items-center gap-1"
+                          >
+                            <Wrench size={14} /> Manutenções
+                          </button>
+                          <button
+                            onClick={() => handleExcluirBem(bem)}
+                            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                         </div>
                       </td>
                     </tr>
                   ))}
@@ -447,6 +481,13 @@ export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
                                 Custo: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(m.custo)}
                               </span>
                             )}
+                            <button 
+                              onClick={() => handleExcluirManutencao(m)}
+                              className="ml-auto p-1 text-slate-300 hover:text-red-500 transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 size={12} />
+                            </button>
                           </div>
                         </div>
                       </div>

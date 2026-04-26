@@ -1,9 +1,10 @@
 import React from 'react'
-import { FileText, Printer, Book, Building2, Target, FileBarChart } from 'lucide-react'
+import { FileText, Printer, Book, Building2, Target, FileBarChart, BookOpen } from 'lucide-react'
 import Balancete from './Balancete'
 import Demonstracoes from './Demonstracoes'
 import DFC from './DFC'
 import LivroDiario from './LivroDiario'
+import LivroRazao from './LivroRazao'
 import Imobilizado from './Imobilizado'
 import ExecucaoRubrica from './ExecucaoRubrica'
 
@@ -69,6 +70,7 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { id: 'diario-print', title: 'Livro Diário', desc: 'Livro de escrituração cronológica e sistemática', icon: Book },
+          { id: 'razao-print', title: 'Livro Razão', desc: 'Razão analítico contendo saldos e movimentos', icon: BookOpen },
           { id: 'bal-print', title: 'Balancete Patrimonial', desc: 'Verificação de débitos, créditos e saldos atuais', icon: FileBarChart },
           { id: 'bp-print', title: 'Balanço Patrimonial', desc: 'Demonstração da posição financeira e patrimonial', icon: FileText },
           { id: 'dsd-print', title: 'Demonstração de Superávit', desc: 'DSD — Resultado das atividades do período', icon: FileText },
@@ -98,6 +100,7 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
 
       <div className="hidden pointer-events-none opacity-0 overflow-hidden h-0">
         <div id="diario-print"><LivroDiario lancHook={lancHook} planoHook={planoHook} /></div>
+        <div id="razao-print"><LivroRazao lancHook={lancHook} planoHook={planoHook} /></div>
         <div id="bal-print"><Balancete lancHook={lancHook} planoHook={planoHook} /></div>
         <div id="bp-print"><Demonstracoes lancHook={lancHook} planoHook={planoHook} initialTab="bp" /></div>
         <div id="dsd-print"><Demonstracoes lancHook={lancHook} planoHook={planoHook} initialTab="dsd" /></div>

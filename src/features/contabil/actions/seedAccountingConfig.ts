@@ -73,6 +73,14 @@ export async function seedAccountingConfigAction(providedTenantId?: string) {
     { categoria_nome: 'OUTROS (DESPESA)', conta_contabil_codigo: '5.2.2.11', conta_contabil_nome: 'Outros Serviços de Terceiros — Admin.', tipo: 'dispendio' },
     { categoria_nome: 'TRANSPORTE', conta_contabil_codigo: '5.2.2.10', conta_contabil_nome: 'Serviços de Transporte e Mobilidade', tipo: 'dispendio' },
     { categoria_nome: 'TROCO', conta_contabil_codigo: '1.1.1.01', conta_contabil_nome: 'Caixa Geral', tipo: 'dispendio' },
+    
+    // ── NOVAS CONTAS DE AUDITORIA (SANEAMENTO) ──────────────────────────
+    { categoria_nome: 'ALUGUEL', conta_contabil_codigo: '5.2.2.01', conta_contabil_nome: 'Aluguel e Condomínio', tipo: 'dispendio' },
+    { categoria_nome: 'TARIFAS BANCÁRIAS', conta_contabil_codigo: '5.2.3.02', conta_contabil_nome: 'Tarifas Bancárias', tipo: 'dispendio' },
+    { categoria_nome: 'TAXA DE BOLETO', conta_contabil_codigo: '5.2.3.02', conta_contabil_nome: 'Tarifas Bancárias', tipo: 'dispendio' },
+    { categoria_nome: 'ALIMENTAÇÃO', conta_contabil_codigo: '5.2.2.12', conta_contabil_nome: 'Alimentação e Refeições', tipo: 'dispendio' },
+    { categoria_nome: 'COMBUSTÍVEL', conta_contabil_codigo: '5.2.2.13', conta_contabil_nome: 'Combustíveis e Lubrificantes', tipo: 'dispendio' },
+    { categoria_nome: 'OUTROS (DESPESA)', conta_contabil_codigo: '5.2.2.14', conta_contabil_nome: 'Despesas Diversas', tipo: 'dispendio' },
   ]
 
   // 1. Upsert mapeamentos padrão

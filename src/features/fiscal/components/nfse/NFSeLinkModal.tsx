@@ -30,10 +30,12 @@ export default function NFSeLinkModal({
     setLoading(true)
     try {
       // Busca NFS-e (Serviços)
-      const { data: nfses } = await sb
+      const { data: nfses, error: nfseErr } = await sb
         .from('nfse_entradas')
-        .select('*, fornecedores:prestador_id(nome, cnpj)')
+        .select('*')
         .order('data_emissao', { ascending: false })
+      
+      if (nfseErr) console.error('Error fetching nfses:', nfseErr)
 
       // Busca NF-e (Produtos)
       const { data: nfes } = await sb
