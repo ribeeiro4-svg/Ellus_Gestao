@@ -71,13 +71,17 @@ export default function BensDuraveisHub({ tenantId }: Props) {
   }
 
   const handleSyncNFes = async () => {
-    if (!tenantId) return
+    if (!tenantId) {
+      alert('Sessão expirada ou tenant não identificado. Por favor, faça login novamente.')
+      return
+    }
     setSyncing(true)
     try {
       // Buscar itens escriturados com destinação 31 ou 3.1
       // Removemos o filtro de 'classificado' para ser mais resiliente a registros antigos
+      // Buscamos sem join para evitar erro de relacionamento caso o cache do Supabase esteja desatualizado
       const { data: itens, error: fetchErr } = await sb.from('nfe_entradas_itens')
-        .select('*, nfe:nfe_entradas!inner(data_entrada, numero_nf)')
+        .select('*')
         .or('destinacao_item.eq.31,destinacao_item.eq.3.1')
       
       if (fetchErr) {
@@ -102,16 +106,22 @@ export default function BensDuraveisHub({ tenantId }: Props) {
           .maybeSingle()
 
         if (!existing) {
+          // Busca a nota para pegar o número (opcional)
+          const { data: nfe } = await sb.from('nfe_entradas')
+            .select('numero_nf, data_entrada')
+            .eq('id', item.nfe_entrada_id)
+            .single()
+
           await sb.from('bens_duraveis').insert({
             tenant_id: tenantId,
             nfe_id: item.nfe_entrada_id,
             nfe_item_id: item.id,
             descricao: item.descricao_produto,
             codigo_interno: item.codigo_produto || null,
-            data_aquisicao: item.nfe?.data_entrada || new Date().toISOString().split('T')[0],
+            data_aquisicao: nfe?.data_entrada || item.created_at || new Date().toISOString().split('T')[0],
             valor_aquisicao: Number(item.valor_produto),
             status: 'pendente_analise',
-            observacoes: `Sincronizado manualmente da NF-e ${item.nfe?.numero_nf || ''}.`
+            observacoes: `Sincronizado manualmente da NF-e ${nfe?.numero_nf || ''}.`
           })
           count++
         }
