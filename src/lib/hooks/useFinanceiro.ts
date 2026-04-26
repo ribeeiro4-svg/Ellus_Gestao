@@ -27,7 +27,7 @@ export function useFinanceiro() {
 
       while (hasMore) {
         const { data, error } = await sb.from('lancamentos')
-          .select('*, nfse_vinculo:nfse_financeiro_vinculo(nfse_id, nfe_id, nfse:nfse_entradas(numero_nfse, xml_url), nfe:nfe_entradas(numero_nf, chave_acesso))')
+          .select('*, nfse_vinculo:nfse_financeiro_vinculo(*)')
           .eq('tenant_id', tenantId)
           .gte('data', start)
           .lte('data', end)

@@ -549,7 +549,7 @@ export default function FinanceiroPage() {
         )
         
         const isNFe = !!vinculo.nfe_id
-        const docNum = isNFe ? vinculo.nfe?.numero_nf : vinculo.nfse?.numero_nfse
+        const docNum = isNFe ? (vinculo.nfe?.numero_nf || '...') : (vinculo.nfse?.numero_nfse || '...')
         const docLabel = isNFe ? 'NF-e' : 'NFS-e'
         
         return (
