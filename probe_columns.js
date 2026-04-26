@@ -17,24 +17,12 @@ const key = getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
 const sb = createClient(url, key)
 
 async function probe() {
-  const { data, error } = await sb.from('configuracoes_contabeis').select('*').limit(1)
-  if (error) {
-      console.log('Error:', error.message)
-  } else {
-      if (data.length > 0) {
-          console.log('Columns:', Object.keys(data[0]))
-          console.log('Data:', data[0])
-      } else {
-          // If empty, try to get column names from information_schema if possible, 
-          // but anon key usually can't. 
-          // We can try to insert a dummy row and rollback? No.
-          // We can try to select specific common names.
-          const commonColumns = ['id', 'tenant_id', 'categoria_nome', 'conta_contabil_codigo', 'conta_debito_id', 'conta_credito_id']
-          for (const col of commonColumns) {
-              const { error: e } = await sb.from('configuracoes_contabeis').select(col).limit(1)
-              if (!e) console.log(`Column exists: ${col}`)
-          }
-      }
-  }
+  const { data: nfe, error: nfeErr } = await sb.from('nfe_entradas').select('*').limit(1)
+  if (nfe && nfe.length > 0) console.log('nfe_entradas cols:', Object.keys(nfe[0]))
+  else console.log('nfe error:', nfeErr?.message)
+
+  const { data: nfse, error: nfseErr } = await sb.from('nfse_servicos').select('*').limit(1)
+  if (nfse && nfse.length > 0) console.log('nfse_servicos cols:', Object.keys(nfse[0]))
+  else console.log('nfse error:', nfseErr?.message)
 }
 probe()

@@ -302,10 +302,11 @@ export async function buscarLancamentosParaVinculoAction(prestadorId: string, pe
 export async function salvarEscrituracaoNFSeAction(payload: { 
   nfseId: string; 
   financeiroId: string;
+  dataEfetiva?: string;
 }) {
   const sb = await createServerSupabase()
   const sbAdmin = createAdminSupabase()
-  const { nfseId, financeiroId } = payload
+  const { nfseId, financeiroId, dataEfetiva } = payload
 
   try {
     // 1. Buscar a nota original
@@ -335,10 +336,10 @@ export async function salvarEscrituracaoNFSeAction(payload: {
     })
 
     // 4. Marcar nota como concluída e vincular ao financeiro (Usando ADMIN para garantir sucesso)
-    const { error: upErr } = await sbAdmin.from('nfse_entradas').update({
-      status_escrituracao: 'concluida',
-      // data_escrituracao: new Date().toISOString() // Adicionar se existir
-    }).eq('id', nfse.id)
+    const updatePayload: any = { status_escrituracao: 'concluida' }
+    if (dataEfetiva) updatePayload.data_competencia = dataEfetiva
+
+    const { error: upErr } = await sbAdmin.from('nfse_entradas').update(updatePayload).eq('id', nfse.id)
 
     if (upErr) throw new Error(`Erro ao atualizar status da nota: ${upErr.message}`)
 

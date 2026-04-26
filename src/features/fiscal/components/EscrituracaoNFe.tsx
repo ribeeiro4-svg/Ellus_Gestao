@@ -222,8 +222,8 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
       const saveRes = await salvarClassificacao(selectedNfeId, itens)
       if (saveRes.error) throw new Error(saveRes.error)
 
-      // Depois integra com o financeiro selecionado
-      const result = await integracaoHook.finalizarEscrituracao(selectedNfeId, payload.financeiroId)
+      // Depois integra com o financeiro selecionado e passa a data efetiva
+      const result = await integracaoHook.finalizarEscrituracao(selectedNfeId, payload.financeiroId, payload.dataEfetiva)
       
       if (result.error) alert(`Erro na integração: ${result.error}`)
       else {

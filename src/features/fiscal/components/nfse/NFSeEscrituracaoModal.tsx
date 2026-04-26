@@ -22,8 +22,15 @@ export default function NFSeEscrituracaoModal({
   const [selectedFinId, setSelectedFinId] = useState<string | null>(null)
   const [periodo, setPeriodo] = useState('all')
   const [search, setSearch] = useState('')
+  const [dataEfetiva, setDataEfetiva] = useState('')
 
   const { nota, prestador } = nfseData || {}
+
+  useEffect(() => {
+    if (nota?.data_emissao && !dataEfetiva) {
+      setDataEfetiva(nota.data_emissao.split('T')[0])
+    }
+  }, [nota])
 
   useEffect(() => {
     if (isOpen && nota?.prestador_id) {
@@ -52,7 +59,8 @@ export default function NFSeEscrituracaoModal({
     try {
       await onSubmit({
         nfseId: nota.id,
-        financeiroId: selectedFinId
+        financeiroId: selectedFinId,
+        dataEfetiva
       })
     } finally {
       setLoading(false)
@@ -128,6 +136,22 @@ export default function NFSeEscrituracaoModal({
                   <p className="text-[10px] font-medium text-slate-500 italic line-clamp-4">{nota.descricao_servico}</p>
                 </section>
               )}
+
+              <section>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                  Data Efetiva (Prestação / Entrega)
+                </h3>
+                <input
+                  type="date"
+                  value={dataEfetiva}
+                  onChange={(e) => setDataEfetiva(e.target.value)}
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  required
+                />
+                <p className="text-[9px] text-slate-400 mt-1 italic">
+                  * Data real da prestação do serviço ou entrega da mercadoria. Padrão: Emissão.
+                </p>
+              </section>
             </div>
           </div>
 

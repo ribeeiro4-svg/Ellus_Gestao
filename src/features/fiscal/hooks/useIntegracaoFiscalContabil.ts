@@ -16,7 +16,7 @@ export function useIntegracaoFiscalContabil() {
   /**
    * Finaliza a escrituração de uma NF-e vinculando ao financeiro e estoque.
    */
-  const finalizarEscrituracao = async (nfeId: string, financeiroId: string) => {
+  const finalizarEscrituracao = async (nfeId: string, financeiroId: string, dataEfetiva?: string) => {
     if (!tenantId) return { error: 'Tenant não identificado' }
 
     try {
@@ -83,12 +83,15 @@ export function useIntegracaoFiscalContabil() {
       const resSync = await sincronizarLancamentoContabil(financeiroId)
 
       // 5. Atualizar status da NF-e para 'escriturada' (Finalizado)
-      const { error: upErr } = await sb.from('nfe_entradas').update({ 
+      const updatePayload: any = { 
         status_escrituracao: 'escriturada',
         status_conciliacao: 'conciliado',
         lancamento_financeiro_id: financeiroId,
         data_escrituracao: new Date().toISOString()
-      }).eq('id', nfeId)
+      }
+      if (dataEfetiva) updatePayload.data_competencia = dataEfetiva
+
+      const { error: upErr } = await sb.from('nfe_entradas').update(updatePayload).eq('id', nfeId)
 
       if (upErr) throw new Error(`Erro ao finalizar nota: ${upErr.message}`)
 
