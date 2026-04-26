@@ -46,12 +46,21 @@ export async function GET() {
       CREATE TABLE IF NOT EXISTS nfse_financeiro_vinculo (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         tenant_id UUID NOT NULL,
-        nfe_id UUID,
-        nfse_id UUID,
+        nfe_id UUID REFERENCES nfe_entradas(id),
+        nfse_id UUID REFERENCES nfse_entradas(id),
         financeiro_id UUID,
         tipo_vinculo VARCHAR,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+
+      -- Garantir que a FK de nfe_id existe se a tabela já existia
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'nfse_financeiro_vinculo_nfe_id_fkey') THEN
+          ALTER TABLE nfse_financeiro_vinculo ADD CONSTRAINT nfse_financeiro_vinculo_nfe_id_fkey FOREIGN KEY (nfe_id) REFERENCES nfe_entradas(id);
+        END IF;
+      END $$;
+
     `
 
     const { error } = await sbAdmin.rpc('exec_sql', { sql_query: sql })
