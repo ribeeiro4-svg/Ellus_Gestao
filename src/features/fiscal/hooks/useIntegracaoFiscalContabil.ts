@@ -50,7 +50,7 @@ export function useIntegracaoFiscalContabil() {
               descricao: item.descricao_produto,
               ncm: item.ncm || '',
               unidade_medida: item.unidade_comercial || 'UN',
-              tipo_produto: item.destinacao_item === '4' ? 'imobilizado' : 'mercadoria',
+              tipo_produto: item.destinacao_item?.startsWith('4') ? 'imobilizado' : 'mercadoria',
               codigo_fornecedor: item.codigo_produto || '',
               codigo_ean: item.codigo_ean || '',
               destinacao_padrao: item.destinacao_item,

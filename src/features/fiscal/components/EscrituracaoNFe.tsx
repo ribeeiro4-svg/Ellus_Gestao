@@ -82,7 +82,7 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
     setItens(newItens)
 
     // Trigger Imobilizado Shortcut
-    if (field === 'destinacao_item' && value === '4') {
+    if (field === 'destinacao_item' && value?.startsWith('4')) {
       const item = newItens[index]
       if (nfeSelecionada) {
         setImobItemData({
@@ -515,7 +515,7 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
                               <option key={d.codigo} value={d.codigo}>{d.descricao}</option>
                             ))}
                           </select>
-                          {(item.destinacao_item === '4' || item.destinacao_item === '7' || item.destinacao_item === '8') && (
+                          {(item.destinacao_item?.startsWith('4') || item.destinacao_item === '7' || item.destinacao_item === '8') && (
                             <div className="mt-2">
                               <p className="text-[8px] font-black text-emerald-600 uppercase mb-0.5">Vincular Produto</p>
                               <select

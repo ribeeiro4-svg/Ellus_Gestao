@@ -80,10 +80,15 @@ export const CST_PIS_COFINS: CSTItem[] = [
 
 // ── Destinação do Item — para Associações ────────────────────────────────────
 export const DESTINACOES_ITEM = [
-  { codigo: '1', descricao: '1 — Atividade-fim (uso direto no objeto social da associação)', color: 'emerald' },
+  { codigo: '1', descricao: '1 — Atividade-fim (uso direto no objeto social)', color: 'emerald' },
   { codigo: '2', descricao: '2 — Administrativo/Overhead (uso geral administrativo)', color: 'blue' },
-  { codigo: '3', descricao: '3 — Consumo Imediato (materiais de consumo — não ativa imobilizado)', color: 'slate' },
-  { codigo: '4', descricao: '4 — Ativo Imobilizado (bem de uso duradouro — cadastrar no imobilizado)', color: 'purple' },
+  { codigo: '3', descricao: '3 — Consumo Imediato (materiais de consumo)', color: 'slate' },
+  { codigo: '4.1', descricao: '4.1 — Ativo Imobilizado: Máquinas e Equipamentos', color: 'purple' },
+  { codigo: '4.2', descricao: '4.2 — Ativo Imobilizado: Veículos', color: 'purple' },
+  { codigo: '4.3', descricao: '4.3 — Ativo Imobilizado: Móveis e Utensílios', color: 'purple' },
+  { codigo: '4.4', descricao: '4.4 — Ativo Imobilizado: Equipamentos de Informática', color: 'purple' },
+  { codigo: '4.5', descricao: '4.5 — Ativo Imobilizado: Edificações e Benfeitorias', color: 'purple' },
+  { codigo: '4.9', descricao: '4.9 — Ativo Imobilizado: Outros', color: 'purple' },
   { codigo: '5', descricao: '5 — Manutenção Predial/Infraestrutura', color: 'orange' },
   { codigo: '6', descricao: '6 — Eventos e Projetos Específicos (vincular ao projeto)', color: 'indigo' },
   { codigo: '7', descricao: '7 — Revenda (a associação revende produtos)', color: 'yellow' },

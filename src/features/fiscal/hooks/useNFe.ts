@@ -182,13 +182,18 @@ export function useNFe() {
           return soCodigo.substring(0, max)
         }
 
+        const limparDestinacao = (val: string | null) => {
+          if (!val) return null
+          return val.split(' ')[0].split('—')[0].split('-')[0].trim()
+        }
+
         const updateData: any = {
           cfop_escrituracao: limparCodigo(item.cfop_escrituracao, 4),
           cst_icms: limparCodigo(item.cst_icms, 3),
           cst_ipi: limparCodigo(item.cst_ipi, 2),
           cst_pis: limparCodigo(item.cst_pis, 2),
           cst_cofins: limparCodigo(item.cst_cofins, 2),
-          destinacao_item: limparCodigo(item.destinacao_item, 2),
+          destinacao_item: limparDestinacao(item.destinacao_item),
           aproveitamento_credito: !!item.aproveitamento_credito,
           motivo_nao_aproveitamento: item.motivo_nao_aproveitamento || null,
           obs_fiscal: item.obs_fiscal || null,
