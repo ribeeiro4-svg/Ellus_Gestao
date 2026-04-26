@@ -3,12 +3,16 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Briefcase, Calendar, AlertTriangle, CheckCircle2, MoreVertical, Search, Wrench, FileText } from 'lucide-react'
 import { useBensDuraveis, BemDuravel } from '../hooks/useBensDuraveis'
 import { createClient } from '@/lib/supabase/client'
+import { useTenantId } from '@/lib/hooks/useTenantId'
 
 type Props = {
   tenantId: string | null
 }
 
-export default function BensDuraveisHub({ tenantId }: Props) {
+export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
+  const resolvedTenantId = useTenantId()
+  const tenantId = initialTenantId || resolvedTenantId
+  
   const { bens, manutencoes, loading, carregarBens, atualizarBem, carregarManutencoes, adicionarManutencao } = useBensDuraveis(tenantId)
   const [activeTab, setActiveTab] = useState<'pendentes' | 'ativos'>('pendentes')
   const [syncing, setSyncing] = useState(false)
