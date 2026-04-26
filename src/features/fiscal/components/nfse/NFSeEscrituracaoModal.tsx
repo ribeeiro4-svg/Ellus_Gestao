@@ -23,6 +23,7 @@ export default function NFSeEscrituracaoModal({
   const [periodo, setPeriodo] = useState('all')
   const [search, setSearch] = useState('')
   const [dataEfetiva, setDataEfetiva] = useState('')
+  const [ignoreFornecedor, setIgnoreFornecedor] = useState(false)
 
   const { nota, prestador } = nfseData || {}
 
@@ -36,11 +37,11 @@ export default function NFSeEscrituracaoModal({
     if (isOpen && nota?.prestador_id) {
       loadFinancials()
     }
-  }, [isOpen, nota?.prestador_id, periodo])
+  }, [isOpen, nota?.prestador_id, periodo, ignoreFornecedor])
 
   const loadFinancials = async () => {
     setLoadingFinancials(true)
-    const res = await buscarLancamentosParaVinculoAction(nota.prestador_id, periodo)
+    const res = await buscarLancamentosParaVinculoAction(nota.prestador_id, periodo, ignoreFornecedor)
     setFinancials(res.data || [])
     setLoadingFinancials(false)
   }
@@ -179,6 +180,18 @@ export default function NFSeEscrituracaoModal({
                     onChange={e => setSearch(e.target.value)}
                     className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium outline-none focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all"
                   />
+                  <div className="mt-2 flex items-center gap-2">
+                    <input 
+                      type="checkbox" 
+                      id="ignoreFornecedor"
+                      checked={ignoreFornecedor}
+                      onChange={e => setIgnoreFornecedor(e.target.checked)}
+                      className="w-3 h-3 accent-blue-600 rounded"
+                    />
+                    <label htmlFor="ignoreFornecedor" className="text-[10px] font-bold text-slate-400 uppercase cursor-pointer hover:text-slate-600 transition-all">
+                      Ignorar filtro de fornecedor
+                    </label>
+                  </div>
                 </div>
                 <div className="relative w-40">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />

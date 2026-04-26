@@ -269,30 +269,32 @@ export async function getFornecedorByCpfCnpjAction(cpfCnpj: string) {
 /**
  * Busca lançamentos financeiros candidatos a vínculo com uma NFS-e
  */
-export async function buscarLancamentosParaVinculoAction(prestadorId: string, periodo?: string) {
+export async function buscarLancamentosParaVinculoAction(prestadorId: string, periodo?: string, ignoreFornecedor = false) {
   const sb = await createServerSupabase()
   
-  // 1. Buscar o prestador para ter o CNPJ e Nome
-  const { data: prestador } = await sb.from('fornecedores').select('nome, cpf_cnpj').eq('id', prestadorId).single()
-  const nomeLimpo = prestador?.nome?.split(' ')[0] || ''
-  const cnpjLimpo = prestador?.cpf_cnpj?.replace(/\D/g, '') || ''
-
   let query = sb.from('lancamentos')
     .select('*')
     .eq('tipo', 'despesa')
 
-  // Busca por fornecedor_id OU por texto na descrição (Fuzzy)
-  const orFilter = [`fornecedor_id.eq.${prestadorId}`]
-  if (nomeLimpo && nomeLimpo.length > 2) orFilter.push(`descricao.ilike.%${nomeLimpo}%`)
-  if (cnpjLimpo && cnpjLimpo.length > 5) orFilter.push(`descricao.ilike.%${cnpjLimpo}%`)
-  
-  query = query.or(orFilter.join(','))
+  if (!ignoreFornecedor) {
+    // 1. Buscar o prestador para ter o CNPJ e Nome
+    const { data: prestador } = await sb.from('fornecedores').select('nome, cpf_cnpj').eq('id', prestadorId).single()
+    const nomeLimpo = prestador?.nome?.split(' ')[0] || ''
+    const cnpjLimpo = prestador?.cpf_cnpj?.replace(/\D/g, '') || ''
+
+    // Busca por fornecedor_id OU por texto na descrição (Fuzzy)
+    const orFilter = [`fornecedor_id.eq.${prestadorId}`]
+    if (nomeLimpo && nomeLimpo.length > 2) orFilter.push(`descricao.ilike.%${nomeLimpo}%`)
+    if (cnpjLimpo && cnpjLimpo.length > 5) orFilter.push(`descricao.ilike.%${cnpjLimpo}%`)
+    
+    query = query.or(orFilter.join(','))
+  }
 
   if (periodo && periodo !== 'all') {
     query = query.gte('data', `${periodo}-01`).lte('data', `${periodo}-31`)
   }
 
-  const { data, error } = await query.order('data', { ascending: false }).limit(50)
+  const { data, error } = await query.order('data', { ascending: false }).limit(100)
   return { data: data || [], error: error?.message }
 }
 
