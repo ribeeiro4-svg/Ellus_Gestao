@@ -16,6 +16,69 @@ function normalizar(str: string): string {
 }
 
 /**
+ * Encontra ou cria conta contábil genérica "A Classificar" para o tipo dado.
+ * Tenta 1º encontrar no plano existente, 2º criar nova conta.
+ */
+async function getOrCreateFallbackAccount(
+  sb: any,
+  plano: any[],
+  tenantId: string,
+  tipo: 'ingresso' | 'dispendio'
+): Promise<{ id: string; codigo: string; descricao: string } | null> {
+  const prefix = tipo === 'ingresso' ? '3' : '4'
+  const codigoFallback = tipo === 'ingresso' ? '3.9.9.99' : '4.9.9.99'
+  const descricaoFallback = tipo === 'ingresso'
+    ? 'Outros Ingressos A Classificar'
+    : 'Outros Dispêndios A Classificar'
+
+  // 1. Procurar conta já existente com o código exato
+  let conta = plano.find(p => p.codigo === codigoFallback)
+
+  // 2. Procurar qualquer conta com "classificar" no nome no grupo correto
+  if (!conta) {
+    conta = plano.find(p =>
+      normalizar(p.descricao || '').includes('classificar') &&
+      (p.codigo || '').startsWith(prefix)
+    )
+  }
+
+  // 3. Procurar qualquer conta que aceita lançamentos no grupo correto
+  if (!conta) {
+    conta = plano.find(p =>
+      (p.codigo || '').startsWith(prefix) && p.aceita_lancamentos
+    )
+  }
+
+  // 4. Criar conta genérica se não encontrada
+  if (!conta) {
+    try {
+      const { data: nova, error: novErr } = await sb
+        .from('plano_contas')
+        .insert({
+          tenant_id: tenantId,
+          codigo: codigoFallback,
+          descricao: descricaoFallback,
+          aceita_lancamentos: true,
+        })
+        .select()
+        .single()
+
+      if (!novErr && nova) {
+        plano.push(nova) // Adiciona ao contexto em memória
+        conta = nova
+        console.log(`[Contábil] Conta genérica criada: ${codigoFallback} - ${descricaoFallback}`)
+      } else {
+        console.warn('[Contábil] Erro ao criar conta fallback:', novErr?.message)
+      }
+    } catch (err: any) {
+      console.warn('[Contábil] Exceção ao criar conta fallback:', err.message)
+    }
+  }
+
+  return conta || null
+}
+
+/**
  * Carrega todos os mapeamentos e plano de contas UMA VEZ via RLS (sem filtro de tenant_id explícito)
  * A RLS garante que o usuário autenticado só veja seus dados.
  */
@@ -83,11 +146,45 @@ export async function sincronizarLancamentoContabil(
 
     // 4. Encontrar mapeamento (fuzzy: ignora maiúsculas, minúsculas e acentos)
     const categoriaNorm = normalizar(l.categoria)
-    const config = configs.find(c => normalizar(c.categoria_nome) === categoriaNorm)
+    let configMatch = configs.find(c => normalizar(c.categoria_nome) === categoriaNorm)
 
-    if (!config) {
-      return { error: `Mapeamento não encontrado para "${l.categoria}"` }
+    // 5. Se não encontrou mapeamento, criar automaticamente para conta genérica
+    if (!configMatch) {
+      // Detectar natureza pelo tipo do lançamento
+      const natureza: 'ingresso' | 'dispendio' =
+        (l.tipo === 'receita' || Number(l.valor) > 0) ? 'ingresso' : 'dispendio'
+
+      const fallbackConta = await getOrCreateFallbackAccount(sb, plano, tenantId, natureza)
+
+      if (!fallbackConta) {
+        return { error: `Categoria "${l.categoria}" sem mapeamento e sem conta genérica disponível no Plano de Contas` }
+      }
+
+      // Criar mapeamento permanente para uso futuro
+      const novoMapping = {
+        tenant_id: tenantId,
+        categoria_nome: l.categoria,
+        conta_contabil_codigo: fallbackConta.codigo,
+        conta_contabil_nome: fallbackConta.descricao,
+        tipo: natureza,
+      }
+
+      const { error: mapErr } = await sb
+        .from('configuracoes_contabeis')
+        .upsert(novoMapping, { onConflict: 'tenant_id,categoria_nome' })
+
+      if (mapErr) {
+        console.warn('[Contábil] Não foi possível salvar auto-mapeamento:', mapErr.message)
+      } else {
+        console.log(`[Contábil] Auto-mapeamento criado: "${l.categoria}" -> ${fallbackConta.codigo} (${natureza})`)
+        // Adicionar ao contexto em memória para próximos registros da mesma execução
+        configs.push({ ...novoMapping, id: 'auto' })
+      }
+
+      configMatch = { conta_contabil_codigo: fallbackConta.codigo, tipo: natureza, categoria_nome: l.categoria, tenant_id: tenantId }
     }
+
+    const config = configMatch!
 
     // 5. Resolver contas no Plano
     const mappedAccount = plano.find(p => p.codigo === config.conta_contabil_codigo)
