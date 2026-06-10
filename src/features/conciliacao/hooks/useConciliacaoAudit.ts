@@ -35,9 +35,19 @@ export function useConciliacaoAudit(
     const numbersInMemo = memo.replace(/\D/g, '')
     const extractedDoc = extractDocument(bankMemo)
     
-    // 1. Prioridade Máxima: CPF / CNPJ
     const dirCpfMatch = diretoria.find(d => d.cpf && numbersInMemo.includes(d.cpf.replace(/\D/g, '')))
-    if (dirCpfMatch) return { forMatch: { ...dirCpfMatch, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false }
+    if (dirCpfMatch) {
+      const bankDate = new Date(bankDateStr)
+      const m = bankDate.getMonth()
+      const y = bankDate.getFullYear()
+
+      const existingMatch = lancamentos.find(l => 
+        l.diretor_id === dirCpfMatch.id && 
+        (l.status === 'aberto' || l.status === 'atrasado') && 
+        ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+      )
+      return { forMatch: { ...dirCpfMatch, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false, existingMatch }
+    }
 
     const assocCpfMatch = associados.find(a => a.cpf && numbersInMemo.includes(a.cpf.replace(/\D/g, '')))
     if (assocCpfMatch) {
@@ -46,14 +56,8 @@ export function useConciliacaoAudit(
       const y = bankDate.getFullYear()
 
       const existingMatch = lancamentos.find(l => 
-        l.associado_id === assocCpfMatch.id && 
-        l.status === 'aberto' && 
-        (
-          l.categoria === 'Mensalidade' || 
-          l.categoria === 'Mensalidades' || 
-          l.categoria === 'ADESÃO' || 
-          l.descricao?.toUpperCase().includes('ADESAO')
-        ) &&
+        (l.associado_id === assocCpfMatch.id || l.descricao?.toUpperCase().includes(assocCpfMatch.nome.toUpperCase())) && 
+        (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
 
@@ -91,14 +95,8 @@ export function useConciliacaoAudit(
       const y = bankDate.getFullYear()
 
       const existingMatch = lancamentos.find(l => 
-        l.associado_id === assocExactMatch.id && 
-        l.status === 'aberto' && 
-        (
-          l.categoria === 'Mensalidade' || 
-          l.categoria === 'Mensalidades' || 
-          l.categoria === 'ADESÃO' || 
-          l.descricao?.toUpperCase().includes('ADESAO')
-        ) &&
+        (l.associado_id === assocExactMatch.id || l.descricao?.toUpperCase().includes(assocExactMatch.nome.toUpperCase())) && 
+        (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
 
@@ -120,7 +118,18 @@ export function useConciliacaoAudit(
     }
 
     const dirExactMatch = diretoria.find(d => memo.includes(normalizeName(d.nome)))
-    if (dirExactMatch) return { forMatch: { ...dirExactMatch, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false }
+    if (dirExactMatch) {
+      const bankDate = new Date(bankDateStr)
+      const m = bankDate.getMonth()
+      const y = bankDate.getFullYear()
+
+      const existingMatch = lancamentos.find(l => 
+        l.diretor_id === dirExactMatch.id && 
+        (l.status === 'aberto' || l.status === 'atrasado') && 
+        ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+      )
+      return { forMatch: { ...dirExactMatch, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false, existingMatch }
+    }
 
     // 3. Match Inteligente de Fragmentos (Fuzzy)
     const fuzzyMatch = (targetName: string) => {
@@ -136,14 +145,8 @@ export function useConciliacaoAudit(
       const y = bankDate.getFullYear()
 
       const existingMatch = lancamentos.find(l => 
-        l.associado_id === assocFuzzy.id && 
-        l.status === 'aberto' && 
-        (
-          l.categoria === 'Mensalidade' || 
-          l.categoria === 'Mensalidades' || 
-          l.categoria === 'ADESÃO' || 
-          l.descricao?.toUpperCase().includes('ADESAO')
-        ) &&
+        (l.associado_id === assocFuzzy.id || l.descricao?.toUpperCase().includes(assocFuzzy.nome.toUpperCase())) && 
+        (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
 
@@ -160,7 +163,18 @@ export function useConciliacaoAudit(
     }
 
     const dirFuzzy = diretoria.find(d => fuzzyMatch(d.nome))
-    if (dirFuzzy) return { forMatch: { ...dirFuzzy, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false }
+    if (dirFuzzy) {
+      const bankDate = new Date(bankDateStr)
+      const m = bankDate.getMonth()
+      const y = bankDate.getFullYear()
+
+      const existingMatch = lancamentos.find(l => 
+        l.diretor_id === dirFuzzy.id && 
+        (l.status === 'aberto' || l.status === 'atrasado') && 
+        ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+      )
+      return { forMatch: { ...dirFuzzy, isDirector: true }, assocMatch: null, suggestedCategory: 'Verba Diretoria / Administrativo', isAdesao: false, existingMatch }
+    }
 
     const forMatch = fornecedores.find(f => {
       const nF = normalizeName(f.nome)
@@ -168,11 +182,25 @@ export function useConciliacaoAudit(
       return (cF && numbersInMemo.includes(cF)) || memo.includes(nF)
     })
 
+    let existingMatchFor = null
+    if (forMatch) {
+      const bankDate = new Date(bankDateStr)
+      const m = bankDate.getMonth()
+      const y = bankDate.getFullYear()
+
+      existingMatchFor = lancamentos.find(l => 
+        l.fornecedor_id === forMatch.id && 
+        (l.status === 'aberto' || l.status === 'atrasado') && 
+        ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+      )
+    }
+
     return {
       assocMatch: null,
       forMatch: forMatch ? { ...forMatch, isDirector: false } : null,
       suggestedCategory: forMatch ? (forMatch as any).categoria_padrao : 'Outros',
-      isAdesao: false
+      isAdesao: false,
+      existingMatch: existingMatchFor
     }
   }, [associados, fornecedores, diretoria, lancamentos])
 

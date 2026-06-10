@@ -33,14 +33,33 @@ export function useAssociados() {
   }
 
   const atualizar = async (id: string, input: Partial<AssociadoInput>) => {
+    const existing = associados.find(a => a.id === id)
     const { error } = await sb.from('associados').update(input).eq('id', id)
-    if (!error) fetch()
+    if (!error) {
+      const oldStatus = (existing?.status || '').toLowerCase()
+      const newStatus = (input.status || '').toLowerCase()
+      
+      if (oldStatus === 'pendente' && newStatus === 'ativo' && tenantId) {
+        const updatedAssoc = { ...existing, ...input }
+        await syncAdesaoFinanceiraAction([updatedAssoc], tenantId)
+      }
+      fetch()
+    }
     return { error }
   }
 
   const atualizarBulk = async (ids: string[], input: Partial<AssociadoInput>) => {
     const { error } = await sb.from('associados').update(input).in('id', ids)
-    if (!error) fetch()
+    if (!error) {
+      const newStatus = (input.status || '').toLowerCase()
+      if (newStatus === 'ativo' && tenantId) {
+        const toProcess = associados.filter(a => ids.includes(a.id as string) && (a.status || '').toLowerCase() === 'pendente').map(a => ({ ...a, ...input }))
+        if (toProcess.length > 0) {
+          await syncAdesaoFinanceiraAction(toProcess, tenantId)
+        }
+      }
+      fetch()
+    }
     return { error }
   }
 
@@ -93,6 +112,9 @@ export function useAssociados() {
             codigo: existing.codigo, // Inclui o código original para evitar conflito de Unique Constraint
             zapsign_doc_token: it.zapsign_doc_token,
             zapsign_signers: it.zapsign_signers,
+            data_assinatura: it.data_assinatura,
+            // Atualiza data_ingresso (Associado Desde) para a data da assinatura do principal
+            ...(it.data_assinatura ? { data_ingresso: it.data_assinatura } : {}),
             zapsign_sync_at: new Date().toISOString()
           })
         } else {
@@ -106,18 +128,34 @@ export function useAssociados() {
 
       let finalMsg = ''
       
+      const logs: any[] = []
+      
       if (novos.length > 0) {
         const { error: errIns } = await inserirBulk(novos)
-        if (errIns) console.error('Erro ao inserir novos:', errIns)
-        else finalMsg += `${novos.length} novos associados importados. `
+        if (errIns) {
+          console.error('Erro ao inserir novos:', errIns)
+          novos.forEach(n => logs.push({ data: new Date().toISOString(), descricao: 'Importação ZapSign', associado: n.nome, status: 'erro', mensagem: 'Falha ao importar' }))
+        } else {
+          finalMsg += `${novos.length} novos associados importados. `
+          novos.forEach(n => logs.push({ data: new Date().toISOString(), descricao: 'Importação ZapSign', associado: n.nome, status: 'sucesso', mensagem: 'Novo associado importado' }))
+        }
       }
 
       if (paraAtualizarStatus.length > 0) {
         // Usamos update individual para cada um para evitar erros de constraint (como o 'nome' ser nulo num upsert parcial)
         // e para garantir que NENHUM outro campo seja alterado.
-        const updatePromises = paraAtualizarStatus.map(item => {
+        const updatePromises = paraAtualizarStatus.map(async (item) => {
           const { id, ...dataToUpdate } = item
-          return sb.from('associados').update(dataToUpdate).eq('id', id)
+          const assoc = associados.find(a => a.id === id)
+          const { error } = await sb.from('associados').update(dataToUpdate).eq('id', id)
+          logs.push({
+            data: new Date().toISOString(),
+            descricao: 'Sincronização Status',
+            associado: assoc?.nome || 'ID: ' + id,
+            status: error ? 'erro' : 'sucesso',
+            mensagem: error ? 'Erro na atualização' : 'Status ZapSign atualizado'
+          })
+          return { error }
         })
         
         const results = await Promise.all(updatePromises)
@@ -132,20 +170,52 @@ export function useAssociados() {
       }
 
       if (!finalMsg) finalMsg = 'Sincronização concluída: Todos os dados já estavam atualizados.'
-      
-      // Nova Etapa: Lançar ADESÃO financeira para os novos e ativos
+
+      fetch()
+      return { message: finalMsg, count: novos.length + paraAtualizarStatus.length, logs }
+    } catch (err: any) {
+      return { error: err.message || 'Falha na comunicação com o servidor de integração.' }
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const gerarAdesoesFinanceiras = async () => {
+    if (!tenantId) return { error: 'Identificação da conta não encontrada.' }
+    setIsSyncing(true)
+    try {
       const { data: updatedAssocs } = await sb.from('associados').select('*').eq('tenant_id', tenantId)
       if (updatedAssocs) {
         const resAdesao = await syncAdesaoFinanceiraAction(updatedAssocs, tenantId)
-        if (resAdesao.count && resAdesao.count > 0) {
-          finalMsg += ` | ${resAdesao.count} adesões financeiras provisionadas.`
+        if (resAdesao.error) {
+          return { error: resAdesao.error }
         }
+        if (resAdesao.count && resAdesao.count > 0) {
+          return { message: `${resAdesao.count} adesões financeiras provisionadas.` }
+        }
+        return { message: 'Nenhuma nova adesão para provisionar.' }
       }
-
-      fetch()
-      return { message: finalMsg, count: novos.length + paraAtualizarStatus.length }
+      return { error: 'Nenhum associado encontrado.' }
     } catch (err: any) {
-      return { error: err.message || 'Falha na comunicação com o servidor de integração.' }
+      return { error: err.message || 'Falha ao gerar adesões financeiras.' }
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const previewAdesoesFinanceiras = async () => {
+    if (!tenantId) return { error: 'Identificação da conta não encontrada.' }
+    setIsSyncing(true)
+    try {
+      const { data: updatedAssocs } = await sb.from('associados').select('*').eq('tenant_id', tenantId)
+      if (updatedAssocs) {
+        const resAdesao = await syncAdesaoFinanceiraAction(updatedAssocs, tenantId, true)
+        if (resAdesao.error) return { error: resAdesao.error }
+        return { preview: resAdesao.preview || [] }
+      }
+      return { error: 'Nenhum associado encontrado.' }
+    } catch (err: any) {
+      return { error: err.message || 'Falha ao processar previsão de adesões.' }
     } finally {
       setIsSyncing(false)
     }
@@ -161,5 +231,5 @@ export function useAssociados() {
     return { error }
   }
 
-  return { associados, loading, isSyncing, inserir, atualizar, atualizarBulk, remover, inserirBulk, syncZapSign, limparTudo, refresh: fetch }
+  return { associados, loading, isSyncing, inserir, atualizar, atualizarBulk, remover, inserirBulk, syncZapSign, gerarAdesoesFinanceiras, previewAdesoesFinanceiras, limparTudo, refresh: fetch, sb }
 }

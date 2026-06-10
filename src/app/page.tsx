@@ -14,7 +14,7 @@ export default function LandingPage() {
       <main className="relative z-20 flex flex-col items-center text-center px-6 max-w-5xl">
         <div className="mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
-            <Zap size={12} className="fill-current" /> Ecossistema Inovacont de Gestão
+            <Zap size={12} className="fill-current" /> Ecossistema ÁUREA Tech de Gestão
           </div>
           
           <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter mb-6 leading-tight">
@@ -71,7 +71,7 @@ export default function LandingPage() {
       <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none" />
       
       <footer className="relative z-20 mt-20 py-8 opacity-30">
-        <p className="text-white text-[10px] font-black uppercase tracking-[0.4em]">© 2024 INOVACONT · ACPROBEC · Inteligência em Benefícios</p>
+        <p className="text-white text-[10px] font-black uppercase tracking-[0.4em]">© 2024 ÁUREA Tech · ACPROBEC · Inteligência em Benefícios</p>
       </footer>
     </div>
   )

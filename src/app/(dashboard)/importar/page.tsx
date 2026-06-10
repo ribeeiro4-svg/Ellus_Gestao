@@ -65,11 +65,21 @@ export default function ImportPage() {
   }
 
   return (
-    <div className="dashboard-content animate-in fade-in duration-500 flex flex-col flex-1">
-      <div className="page-header mb-8">
-        <div className="flex items-center justify-between w-full">
-          <div><h1 className="page-title text-2xl font-bold text-gray-900 tracking-tight">Importação de Dados</h1><p className="page-subtitle text-xs text-gray-500 mt-1 font-medium">Planilhas em massa.</p></div>
-          <div className="bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 text-[11px] font-black text-gray-600">
+    <div className="dashboard-content animate-in fade-in duration-500 flex flex-col flex-1 gap-6">
+      {/* Header Centralizado - Estilo Hub Premium */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/60 shadow-sm">
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
+            <Upload size={28} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Importação de Dados</h1>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest opacity-70 mt-1">Processamento de Planilhas — ACPROBEC</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 bg-white/60 p-2 rounded-[22px] border border-white shadow-inner backdrop-blur-sm">
+          <div className="px-5 py-2.5 bg-white/80 rounded-xl border border-slate-100/50 text-[10px] font-black text-slate-600 uppercase tracking-widest">
             {tenantId === 'LOADING' ? 'Carregando...' : (tenantId || 'Não Identificada')}
           </div>
         </div>

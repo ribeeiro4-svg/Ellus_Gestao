@@ -19,7 +19,7 @@ export interface CoraTransaction {
  * Serviço central de integração com a API Cora (Versão Nativa sem Axios)
  */
 export class CoraService {
-  private static AUTH_HOST = 'matls-auth.cora.com.br';
+  private static AUTH_HOST = 'matls-clients.api.cora.com.br';
   private static API_HOST = 'api.cora.com.br';
   private static clientId = process.env.CORA_CLIENTE_ID || 'int-3sBr4azofg364myXzNx6H9';
   private static _lastDiag: string = '';
@@ -107,8 +107,10 @@ export class CoraService {
    * Obtém o Token de Acesso (OAuth2 + mTLS)
    */
   static async getToken(config?: { clientId?: string, cert?: string, key?: string }): Promise<string> {
+    const clientId = config?.clientId || this.clientId;
     const body = new URLSearchParams({
       grant_type: 'client_credentials',
+      client_id: clientId,
       scope: 'all'
     }).toString();
 
@@ -117,8 +119,7 @@ export class CoraService {
       path: '/token',
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'client_id': config?.clientId || this.clientId,
+        'Content-Type': 'application/x-www-form-urlencoded'
       }
     }, body, config);
 

@@ -86,7 +86,7 @@ export default function ExecucaoRubrica({ lancHook }: { lancHook: any }) {
               ${entries.length === 0 ? '<tr><td colspan="3" style="text-align:center;padding:40px;color:#94a3b8">Nenhum lançamento vinculado.</td></tr>' : ''}
             </tbody>
           </table>
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
         </body>
       </html>
     `

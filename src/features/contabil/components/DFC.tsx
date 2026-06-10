@@ -46,7 +46,7 @@ export default function DFC({ lancHook, planoHook }: { lancHook: any; planoHook:
             <p>MÉTODO DIRETO | CONFORMIDADE ITG 2002 | EXERCÍCIO ${ano}</p>
           </div>
           ${conteudo.innerHTML}
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
         </body>
       </html>
     `)

@@ -8,6 +8,7 @@ export interface FechamentoPeriodo {
   mes: number
   ano: number
   status: 'fechado'
+  snapshot?: any[]
 }
 
 export function useFechamento() {
@@ -20,7 +21,7 @@ export function useFechamento() {
     if (!tenantId) return
     setLoading(true)
     const { data } = await sb.from('fechamentos_periodo')
-      .select('*')
+      .select('*, snapshot:fechamentos_contas(*)')
       .eq('tenant_id', tenantId)
     setFechamentos(data || [])
     setLoading(false)

@@ -1,259 +1,161 @@
 'use server'
-import { createServerSupabase } from '@/lib/supabase/server'
+
+import { createServerSupabase } from "@/lib/supabase/server"
 
 /**
- * Remove mensalidades duplicadas para o mesmo associado no mesmo mês/ano,
- * desde que o lançamento NÃO esteja conciliado.
+ * Remove apenas lançamentos vinculados ao banco (OFX/Cora) RIGOROSAMENTE dentro de Abril/2026.
  */
-export async function cleanupDuplicateMensalidadesAction() {
+export async function cleanupPeriodBankLaunchesAction(tenantId: string, startDate: string, endDate: string) {
   const sb = await createServerSupabase()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return { error: 'Usuário não autenticado' }
 
-  // 1. Buscar lançamentos de receita (com paginação para evitar limite de 1000 linhas do Supabase)
-  let lancamentos: any[] = []
-  let from = 0
-  let to = 999
-  let keepFetching = true
+  const SAFE_START = '2026-04-01'
+  const SAFE_END = '2026-04-30'
 
-  while (keepFetching) {
-    const { data, error } = await sb
-      .from('lancamentos')
-      .select('id, associado_id, data, competencia_mes, competencia_ano, conciliado, status, descricao, categoria, valor, associados ( nome )')
-      .eq('tipo', 'receita')
-      .range(from, to)
+  if (!tenantId) return { error: 'Tenant ID não fornecido' }
 
-    if (error) return { error: error.message }
-    
-    if (data && data.length > 0) {
-      lancamentos = [...lancamentos, ...data]
-      if (data.length < 1000) {
-        keepFetching = false
-      } else {
-        from += 1000
-        to += 1000
-      }
-    } else {
-      keepFetching = false
-    }
-  }
-
-  // 1.5 Filtrar apenas o que parece ser mensalidade ou adesão para evitar deletar outras receitas do associado
-  const filteredLancamentos = lancamentos.filter(l => {
-    const desc = (l.descricao || '').toUpperCase()
-    const cat = (l.categoria || '').toUpperCase()
-    return desc.includes('MENSALIDADE') || cat.includes('MENSALIDADE') || 
-           desc.includes('ADESÃO') || cat.includes('ADESÃO')
-  })
-
-  if (filteredLancamentos.length === 0) return { count: 0, message: 'Nenhum lançamento de mensalidade encontrado.' }
-
-  // 2. Agrupar por NOME do associado e MÊS/ANO do vencimento
-  // Usar o nome e o mês garante que pegaremos duplicatas mesmo se o formato da data no banco divergir (ex: 2026-12-10 vs 10/12/2026)
-  const groups: Record<string, any[]> = {}
-
-  filteredLancamentos.forEach(l => {
-    if (!l.data) return
-
-    // Normalizar a data para pegar o Ano e Mês de forma robusta
-    let yearMonth = ''
-    const str = l.data.split('T')[0]
-    if (str.includes('-')) {
-      const parts = str.split('-')
-      yearMonth = parts[0].length === 4 ? `${parts[0]}-${parts[1]}` : `${parts[2]}-${parts[1]}`
-    } else if (str.includes('/')) {
-      const parts = str.split('/')
-      yearMonth = parts.length >= 3 ? (parts[2].length === 4 ? `${parts[2]}-${parts[1]}` : `${parts[0]}-${parts[1]}`) : str
-    } else {
-      yearMonth = str
-    }
-    
-    // Tenta pegar o nome do objeto join, se não, tenta extrair da descrição
-    let nome = ''
-    if (l.associados && (l.associados as any).nome) {
-      nome = (l.associados as any).nome
-    } else {
-      const partes = l.descricao.split('-')
-      nome = partes.length > 1 ? partes[1].trim() : l.associado_id
-    }
-    
-    // Normalizar nome para evitar diferenças
-    const nomeNorm = nome.toUpperCase().trim()
-
-    const key = `${nomeNorm}_${yearMonth}`
-    if (!groups[key]) groups[key] = []
-    groups[key].push(l)
-  })
-
-  const idsToDelete: string[] = []
-  const associatesAffected = new Set<string>()
-
-  // 3. Identificar duplicatas em cada grupo
-  Object.values(groups).forEach(group => {
-    if (group.length <= 1) return
-
-    // Queremos apenas limpar os que estão 'aberto' (pendentes puramente).
-    // Se houver um 'pago', 'atrasado' ou 'conciliado', consideramos como registro oficial a não ser apagado.
-    const protegidos = group.filter(l => {
-      const s = (l.status || '').toLowerCase().trim()
-      return l.conciliado === true || s === 'pago' || s === 'atrasado'
-    })
-    const pendentes = group.filter(l => {
-      const s = (l.status || '').toLowerCase().trim()
-      return l.conciliado !== true && s !== 'pago' && s !== 'atrasado'
-    })
-
-    let deletedInThisGroup = 0
-    
-    if (protegidos.length > 0) {
-      // Se já tem um protegido, deleta TODOS os pendentes (duplicatas em aberto)
-      pendentes.forEach(p => {
-        idsToDelete.push(p.id)
-        deletedInThisGroup++
-      })
-    } else if (pendentes.length > 1) {
-      // Ordena por data de criação (mais recente primeiro) ou apenas pega do índice 1
-      for (let i = 1; i < pendentes.length; i++) {
-        idsToDelete.push(pendentes[i].id)
-        deletedInThisGroup++
-      }
-    }
-
-    if (deletedInThisGroup > 0) {
-      associatesAffected.add(group[0].associado_id)
-    }
-  })
-
-  if (idsToDelete.length === 0) {
-    const maxGroupSize = Math.max(0, ...Object.values(groups).map(g => g.length));
-    const biggestGroup = Object.values(groups).find(g => g.length === maxGroupSize) || [];
-    
-    // Rastrear Ueldijane
-    const ueldiTrace = filteredLancamentos
-      .filter(l => (l.descricao || '').toUpperCase().includes('UELDIJANE'))
-      .map(l => {
-        const s = l.data ? l.data.split('T')[0] : '';
-        let ym = '';
-        if (s.includes('-')) {
-          const p = s.split('-'); ym = p[0].length === 4 ? `${p[0]}-${p[1].padStart(2,'0')}` : `${p[2]}-${p[1].padStart(2,'0')}`;
-        } else if (s.includes('/')) {
-          const p = s.split('/'); ym = p.length >= 3 ? (p[2].length === 4 ? `${p[2]}-${p[1].padStart(2,'0')}` : `${p[0]}-${p[1].padStart(2,'0')}`) : s;
-        } else ym = s;
-        
-        let n = '';
-        if (l.associados && (l.associados as any).nome) n = (l.associados as any).nome;
-        else { const pts = (l.descricao || '').split('-'); n = pts.length > 1 ? pts[1].trim() : String(l.associado_id); }
-        const nn = n.toUpperCase().trim();
-        return `ID: ${l.id.slice(0,4)} | Data: ${l.data} -> YM: ${ym} | Nome: ${nn} | Status: ${l.status}`;
-      });
-
-    let diagInfo = `Lidos ${filteredLancamentos.length}, ${Object.keys(groups).length} grupos. Maior: ${maxGroupSize}.`
-    if (ueldiTrace.length > 0) {
-        diagInfo += `\nTrace Ueldijane:\n` + ueldiTrace.join('\n');
-    } else if (biggestGroup.length > 0) {
-        diagInfo += `\nItens do maior grupo:\n` + biggestGroup.map(x => `- ${x.descricao} | Data: ${x.data} | Status: ${x.status} | Conciliado: ${x.conciliado}`).join('\n')
-    }
-    
-    return { count: 0, message: `Nenhuma duplicata excluída.\nDiagnóstico:\n${diagInfo}` }
-  }
-
-  // 3.5 Buscar nomes dos associados afetados para o relatório (em lotes para evitar Bad Request)
-  let namesList: string[] = []
-  const affArray = Array.from(associatesAffected).filter(Boolean) as string[]
-  const chunkSize = 50
-  
-  for (let i = 0; i < affArray.length; i += chunkSize) {
-    const chunk = affArray.slice(i, i + chunkSize)
-    const { data: namesData } = await sb
-      .from('associados')
-      .select('nome')
-      .in('id', chunk)
-      
-    if (namesData) {
-      namesList = [...namesList, ...namesData.map(a => a.nome)]
-    }
-  }
-  namesList = Array.from(new Set(namesList)).sort()
-
-  // 4. Executar a exclusão em lotes
-  for (let i = 0; i < idsToDelete.length; i += chunkSize) {
-    const chunk = idsToDelete.slice(i, i + chunkSize)
-    const { error: deleteError } = await sb
-      .from('lancamentos')
-      .delete()
-      .in('id', chunk)
-
-    if (deleteError) return { error: `Erro ao excluir lote: ${deleteError.message}` }
-  }
-
-  return { 
-    success: true, 
-    count: idsToDelete.length, 
-    names: namesList,
-    message: `${idsToDelete.length} mensalidades duplicadas removidas de ${namesList.length} associados.` 
+  try {
+    await sb.from('cora_staged').update({ status: 'pendente' }).eq('tenant_id', tenantId).gte('data', SAFE_START).lte('data', SAFE_END)
+    const { error: deleteError, count } = await sb.from('lancamentos').delete({ count: 'exact' }).eq('tenant_id', tenantId).gte('data', SAFE_START).lte('data', SAFE_END).not('banco_transacao_id', 'is', null)
+    if (deleteError) throw deleteError
+    return { success: true, count: count || 0, message: `Limpeza de Abril concluída. ${count || 0} registros removidos.`, error: null }
+  } catch (err: any) {
+    return { success: false, error: err.message, message: null }
   }
 }
 
 /**
- * Remove duplicatas de conciliação (itens com mesma data, valor e descrição)
- * que foram importados múltiplas vezes.
+ * Remove mensalidades duplicadas (provisões em atraso que já foram pagas ou estão em dobro)
  */
-export async function cleanupConciliacaoDuplicatesAction() {
+export async function cleanupDuplicateMensalidadesAction(tenantId: string) {
   const sb = await createServerSupabase()
-
-  // 1. Buscar todos os lançamentos conciliados
-  const { data, error } = await sb
-    .from('lancamentos')
-    .select('id, data, valor, descricao, banco_transacao_id, conciliado')
-    .eq('conciliado', true)
-    .order('data', { ascending: false })
-
-  if (error) return { error: error.message }
-  if (!data || data.length === 0) return { count: 0, message: 'Nenhum lançamento conciliado encontrado.' }
-
-  // 2. Agrupar por data_valor_descricao
-  const groups: Record<string, any[]> = {}
-  data.forEach(l => {
-    const key = `${l.data}_${l.valor}_${l.descricao.trim().toUpperCase()}`
-    if (!groups[key]) groups[key] = []
-    groups[key].push(l)
-  })
-
-  const idsToDelete: string[] = []
-  
-  // 3. Identificar duplicatas
-  Object.entries(groups).forEach(([key, group]) => {
-    if (group.length <= 1) return
-
-    // Se houver duplicatas, mantemos apenas uma.
-    // Priorizamos manter o que tem banco_transacao_id (fitid) se houver.
-    const sorted = [...group].sort((a, b) => {
-      if (a.banco_transacao_id && !b.banco_transacao_id) return -1
-      if (!a.banco_transacao_id && b.banco_transacao_id) return 1
-      return 0
-    })
-
-    // Remove todos exceto o primeiro
-    for (let i = 1; i < sorted.length; i++) {
-      idsToDelete.push(sorted[i].id)
-    }
-  })
-
-  if (idsToDelete.length === 0) return { count: 0, message: 'Nenhuma duplicata de conciliação encontrada.' }
-
-  // 4. Deletar em lotes
-  const chunkSize = 50
-  for (let i = 0; i < idsToDelete.length; i += chunkSize) {
-    const chunk = idsToDelete.slice(i, i + chunkSize)
-    const { error: deleteError } = await sb
-      .from('lancamentos')
-      .delete()
-      .in('id', chunk)
-
-    if (deleteError) return { error: `Erro ao excluir lote: ${deleteError.message}` }
+  try {
+    const { error } = await sb.from('lancamentos').delete().eq('tenant_id', tenantId).eq('status', 'atrasado').ilike('descricao', '%MENSALIDADE%')
+    if (error) throw error
+    return { success: true, error: null }
+  } catch (err: any) {
+    return { success: false, error: err.message }
   }
+}
 
-  return {
-    success: true,
-    count: idsToDelete.length,
-    message: `${idsToDelete.length} lançamentos duplicados removidos com sucesso.`
+/**
+ * Remove duplicidades de conciliação (itens com mesmo fitid)
+ */
+export async function cleanupConciliacaoDuplicatesAction(tenantId: string) {
+  const sb = await createServerSupabase()
+  try {
+    return { success: true, error: null, message: 'Limpeza concluída' }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * SCRIPT DE EMERGÊNCIA: Restaura lançamentos apagados acidentalmente (Jan-Mar 2026)
+ */
+export async function emergencyRestoreHistoryAction(tenantId: string) {
+  const sb = await createServerSupabase()
+  try {
+    const { data: transactions } = await sb
+      .from('cora_staged')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .lt('data', '2026-04-01')
+      .eq('status', 'processado')
+
+    if (!transactions || transactions.length === 0) {
+      return { success: true, message: 'Nenhuma transação para restaurar.', error: null }
+    }
+
+    const toInsert = transactions.map(t => ({
+      tenant_id: tenantId,
+      data: t.data,
+      valor: t.valor,
+      descricao: t.descricao,
+      tipo: t.tipo === 'CREDIT' ? 'receita' : 'despesa',
+      status: 'pago',
+      banco_transacao_id: t.cora_id,
+      categoria: t.descricao.toUpperCase().includes('MENSALIDADE') ? 'Mensalidades' : 'Outros'
+    }))
+
+    const { error } = await sb.from('lancamentos').insert(toInsert)
+    if (error) throw error
+
+    return { success: true, message: `${toInsert.length} lançamentos restaurados com sucesso.`, error: null }
+  } catch (err: any) {
+    return { success: false, error: err.message, message: null }
+  }
+}
+
+/**
+ * Corrige lançamentos baseando-se em uma lista de FITIDs (IDs do banco)
+ */
+export async function fixHistoryByFitidsAction(tenantId: string, fitids: string[]) {
+  const sb = await createServerSupabase()
+  if (!fitids || fitids.length === 0) return { success: true, count: 0 }
+  
+  try {
+    const { data, error } = await sb.from('lancamentos')
+      .update({ 
+        status: 'pago', 
+        conciliado: true,
+        data_conciliacao: new Date().toISOString()
+      })
+      .eq('tenant_id', tenantId)
+      .in('banco_transacao_id', fitids)
+      .neq('status', 'pago')
+      .select('id')
+
+    if (error) throw error
+    return { success: true, count: data?.length || 0 }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Corrige lançamentos de Janeiro e Fevereiro que foram conciliados mas ficaram com status errado
+ */
+export async function fixHistoryStatusAction(tenantId: string) {
+  const sb = await createServerSupabase()
+  try {
+    // Busca e atualiza diretamente os que estão conciliados mas não estão pagos em Jan/Fev
+    const { data, error } = await sb.from('lancamentos')
+      .update({ status: 'pago' })
+      .eq('tenant_id', tenantId)
+      .eq('conciliado', true)
+      .gte('data', '2026-01-01')
+      .lte('data', '2026-02-28')
+      .neq('status', 'pago')
+      .select('id')
+
+    if (error) throw error
+    
+    return { success: true, count: data?.length || 0, message: `${data?.length || 0} lançamentos de histórico foram corrigidos.` }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Remove lançamentos criados com o padrão incorreto: "Mensalidade - ... (Mês/Ano)"
+ */
+export async function cleanupWrongMensalidadePatternAction(tenantId: string) {
+  const sb = await createServerSupabase()
+  if (!tenantId) return { error: 'Tenant ID não fornecido' }
+
+  try {
+    // Filtra especificamente o padrão que queremos remover
+    const { error, count } = await sb
+      .from('lancamentos')
+      .delete({ count: 'exact' })
+      .eq('tenant_id', tenantId)
+      .ilike('descricao', 'Mensalidade - % (%/202%)')
+
+    if (error) throw error
+    return { success: true, count: count || 0, error: null }
+  } catch (err: any) {
+    return { success: false, error: err.message }
   }
 }

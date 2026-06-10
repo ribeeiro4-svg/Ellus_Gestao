@@ -10,6 +10,7 @@ interface DataTableProps<T> {
     className?: string
     sortable?: boolean
     filterable?: boolean
+    stopClickPropagation?: boolean
   }[]
   data: T[]
   loading?: boolean
@@ -19,6 +20,7 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void
   idKey?: keyof T // Chave que identifica o registro (default: 'id')
   showFilterInputs?: boolean
+  headerActions?: ReactNode
 }
 
 export default function DataTable<T>({ 
@@ -30,7 +32,8 @@ export default function DataTable<T>({
   onSelectChange,
   onRowClick,
   idKey = 'id' as keyof T,
-  showFilterInputs: initialShowFilters = false
+  showFilterInputs: initialShowFilters = false,
+  headerActions
 }: DataTableProps<T>) {
   
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -126,7 +129,8 @@ export default function DataTable<T>({
         </div>
       )}
       {/* Table Header with Global Filter Toggle */}
-      <div className="px-6 py-2 border-b border-slate-100 bg-slate-50/20 flex justify-end">
+      <div className="px-6 py-2 border-b border-slate-100 bg-slate-50/20 flex justify-end items-center gap-3">
+        {headerActions}
         <button 
           onClick={() => setShowFilterInputs(!showFilterInputs)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showFilterInputs ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
@@ -155,7 +159,7 @@ export default function DataTable<T>({
                 return (
                   <th 
                     key={i} 
-                    className={`px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest group ${col.className || ''}`}
+                    className={`whitespace-nowrap px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest group ${col.className || ''}`}
                   >
                     <div 
                       className="flex items-center gap-2 cursor-pointer hover:text-slate-600"
@@ -222,7 +226,15 @@ export default function DataTable<T>({
                       </td>
                     )}
                     {columns.map((col, colIndex) => (
-                      <td key={colIndex} className={`px-6 py-4 ${col.className || ''}`} onClick={col.key === 'acoes' ? (e) => e.stopPropagation() : undefined}>
+                      <td 
+                        key={colIndex} 
+                        className={`px-6 py-4 ${col.className || ''}`} 
+                        onClick={(e) => {
+                          if (col.key === 'acoes' || col.stopClickPropagation) {
+                            e.stopPropagation()
+                          }
+                        }}
+                      >
                         {col.render ? col.render(item) : (item[col.key as keyof T] as ReactNode)}
                       </td>
                     ))}

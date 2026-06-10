@@ -51,7 +51,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceMonths, setRecurrenceMonths] = useState(12)
 
-  const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, selectedMes, selectedAno)
+  const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, [selectedMes], selectedAno)
 
   // Gerenciamento de Períodos ProLabore
   const [periodosMember, setPeriodosMember] = useState<any | null>(null)

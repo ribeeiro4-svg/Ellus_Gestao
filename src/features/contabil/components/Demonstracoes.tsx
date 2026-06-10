@@ -50,7 +50,7 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
             <p>CONFORMIDADE ITG 2002 (R1) | EXERCÍCIO ${ano}</p>
           </div>
           ${conteudo.innerHTML}
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
         </body>
       </html>
     `)

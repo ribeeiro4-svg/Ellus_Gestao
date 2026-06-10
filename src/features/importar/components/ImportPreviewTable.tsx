@@ -16,7 +16,8 @@ export default function ImportPreviewTable({ type, data }: ImportPreviewTablePro
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Código</th>
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Nome</th>
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">CPF/CNPJ</th>
-                <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Categoria</th>
+                <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Telefone</th>
+                <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Venc.</th>
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Ingresso</th>
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Mensalidade</th>
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Status</th>
@@ -26,6 +27,7 @@ export default function ImportPreviewTable({ type, data }: ImportPreviewTablePro
               <>
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Data</th>
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Descrição</th>
+                <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Competência</th>
                 <th className="p-3 text-[10px] font-black text-gray-400 uppercase">Valor</th>
               </>
             )}
@@ -45,7 +47,8 @@ export default function ImportPreviewTable({ type, data }: ImportPreviewTablePro
                   <td className="p-3 text-xs text-gray-400 font-mono">{item.codigo}</td>
                   <td className="p-3 text-xs font-bold text-gray-700">{item.nome}</td>
                   <td className="p-3 text-xs text-gray-500 whitespace-nowrap">{item.cpf || '-'}</td>
-                  <td className="p-3 text-xs text-gray-500">{item.categoria}</td>
+                  <td className="p-3 text-xs text-gray-500 whitespace-nowrap">{item.telefone || '-'}</td>
+                  <td className="p-3 text-xs text-gray-500">{item.vencimento_dia}</td>
                   <td className="p-3 text-xs text-gray-500 whitespace-nowrap">{new Date(item.data_ingresso).toLocaleDateString()}</td>
                   <td className="p-3 text-xs font-black text-emerald-600">R$ {item.mensalidade}</td>
                   <td className="p-3">
@@ -57,6 +60,9 @@ export default function ImportPreviewTable({ type, data }: ImportPreviewTablePro
                 <>
                   <td className="p-3 text-xs text-gray-500">{new Date(item.data).toLocaleDateString()}</td>
                   <td className="p-3 text-xs font-medium text-gray-700">{item.descricao}</td>
+                  <td className="p-3 text-xs text-gray-500">
+                    {item.competencia_mes && item.competencia_ano ? `${item.competencia_mes}/${item.competencia_ano}` : '-'}
+                  </td>
                   <td className="p-3 text-xs font-black text-emerald-600">R$ {item.valor}</td>
                 </>
               )}

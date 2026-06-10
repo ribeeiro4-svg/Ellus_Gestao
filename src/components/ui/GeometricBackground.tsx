@@ -8,7 +8,7 @@ interface GeometricBackgroundProps {
 
 /**
  * Componente de Fundo Geométrico Oficial ACPROBEC
- * Replica a malha hexagonal técnica utilizada em todo o ecossistema Inovacont.
+ * Replica a malha hexagonal técnica utilizada em todo o ecossistema ÁUREA Tech.
  */
 export default function GeometricBackground({ 
   opacity = 1, 

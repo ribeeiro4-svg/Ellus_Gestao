@@ -32,6 +32,7 @@ export function useFinanceiro() {
           .gte('data', start)
           .lte('data', end)
           .order('data', { ascending: false })
+          .order('id', { ascending: true })
           .range(from, from + step - 1)
 
         if (error) throw error
@@ -111,10 +112,10 @@ export function useFinanceiro() {
     
     let finalInput = { ...input }
 
-    // Regra de Split de Taxa para Associados: O que passar de R$ 50 é taxa
+    // Regra de Split de Taxa para Associados: O que passar de R$ 50 é taxa (Apenas se for < 100)
     if (finalInput.tipo === 'receita' && 
         (finalInput.categoria === 'MENSALIDADE' || finalInput.categoria === 'ADESAO' || finalInput.associado_id) && 
-        Number(finalInput.valor) > 50) {
+        Number(finalInput.valor) > 50 && Number(finalInput.valor) < 100) {
       const total = Number(finalInput.valor)
       const valorLiquido = 50
       const valorTaxa = total - 50
@@ -169,19 +170,16 @@ export function useFinanceiro() {
     if (isPeriodoBloqueado(item.data)) return { error: 'Este período está fechado e não permite alterações.' }
     
     // Lógica de Estorno de Remanejo (Encontro de Contas)
-    if (item.descricao.includes('[ENCONTRO DE CONTAS]') && item.banco_transacao_id) {
-      const original = lancamentos.find(l => 
-        l.banco_transacao_id === item.banco_transacao_id && 
-        l.id !== item.id && 
-        !l.descricao.includes('[ENCONTRO DE CONTAS]')
-      )
+    if (item.is_ec_destino && item.id_origem) {
+      const original = lancamentos.find(l => l.id === item.id_origem)
 
       if (original) {
         // Devolve o valor ao original
         const novoValorOriginal = Number(original.valor) + Number(item.valor)
         
         // Tenta recuperar a descrição com taxa se o valor voltar a ser > 50 e for associado
-        let novaDescOriginal = original.descricao
+        let novaDescOriginal = original.descricao.replace(/\[ENCONTRO DE CONTAS[^\]]*\]/, '').trim()
+        
         if (novoValorOriginal > 50 && (original.categoria === 'MENSALIDADE' || original.associado_id)) {
            const valorTaxa = novoValorOriginal - 50
            const taxaFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTaxa)
@@ -190,7 +188,7 @@ export function useFinanceiro() {
            }
            await sb.from('lancamentos').update({ valor: 50, descricao: novaDescOriginal }).eq('id', original.id)
         } else {
-           await sb.from('lancamentos').update({ valor: novoValorOriginal }).eq('id', original.id)
+           await sb.from('lancamentos').update({ valor: novoValorOriginal, descricao: novaDescOriginal }).eq('id', original.id)
         }
       }
     }
@@ -206,9 +204,18 @@ export function useFinanceiro() {
     const hasLocked = lancamentos.some(l => ids.includes(l.id) && isPeriodoBloqueado(l.data))
     if (hasLocked) return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
 
-    const { error } = await sb.from('lancamentos').delete().in('id', ids)
-    if (!error) fetch()
-    return { error }
+    try {
+      for (let i = 0; i < ids.length; i += 100) {
+        const chunk = ids.slice(i, i + 100)
+        const { error } = await sb.from('lancamentos').delete().in('id', chunk)
+        if (error) throw error
+      }
+      fetch()
+      return { error: null }
+    } catch (err: any) {
+      console.error('Erro removerBulk:', err)
+      return { error: err.message || 'Erro desconhecido ao remover em lote.' }
+    }
   }
 
   const removerSerie = async (recorrencia_id: string) => {
@@ -235,11 +242,17 @@ export function useFinanceiro() {
 
     // Auditoria: Verifica duplicatas no banco antes de inserir (mesmo tenant, data, valor e descrição)
     const { data: existing } = await sb.from('lancamentos')
-      .select('data, valor, descricao, tenant_id')
+      .select('data, valor, descricao, tenant_id, banco_transacao_id')
       .eq('tenant_id', tenantId)
       .in('data', [...new Set(items.map(i => i.data))])
 
     const rows = items.filter(i => {
+      // Prioridade 1: ID da Transação Bancária (FITID)
+      if (i.banco_transacao_id && existing?.some(e => e.banco_transacao_id === i.banco_transacao_id)) {
+        return false
+      }
+
+      // Prioridade 2: Match Heurístico
       const isDup = existing?.some(e => 
         e.data === i.data && 
         Number(e.valor) === Number(i.valor) && 
@@ -254,10 +267,10 @@ export function useFinanceiro() {
         ...coreData 
       } = i as any
       
-      // Aplicar Regra de Split Automático em Lote
+      // Aplicar Regra de Split Automático em Lote (Apenas entre 50 e 100)
       if (coreData.tipo === 'receita' && 
           (coreData.categoria === 'MENSALIDADE' || coreData.categoria === 'ADESAO' || coreData.associado_id) && 
-          Number(coreData.valor) > 50) {
+          Number(coreData.valor) > 50 && Number(coreData.valor) < 100) {
         const total = Number(coreData.valor)
         const valorLiquido = 50
         const valorTaxa = total - 50
@@ -324,15 +337,22 @@ export function useFinanceiro() {
     const { error } = await sb.from('lancamentos')
       .update({ 
         conciliado: true, 
+        status: 'pago',
         banco_transacao_id: bancoId,
         data_conciliacao: new Date().toISOString() 
       })
       .eq('id', id)
-    if (!error) fetch()
+    
+    if (!error) {
+      // Sincroniza com a contabilidade se estiver pago
+      const { sincronizarLancamentoContabil } = await import('@/features/contabil/actions/accountingActions')
+      await sincronizarLancamentoContabil(id)
+      fetch()
+    }
     return { error }
   }
 
-  const remanejar = async (idOriginal: string, targetAssociadoId: string, valorParaMover: number, novaDescricao: string) => {
+  const remanejar = async (idOriginal: string, targetAssociadoId: string, valorParaMover: number, novaDescricao: string, targetLancamentoId?: string) => {
     const original = lancamentos.find(l => l.id === idOriginal)
     if (!original) return { error: 'Lançamento original não encontrado.' }
     if (isPeriodoBloqueado(original.data)) return { error: 'O período deste lançamento está fechado.' }
@@ -348,29 +368,33 @@ export function useFinanceiro() {
     }
 
     // 1. Calcular Novos Valores
-    // Se estou movendo R$ 50 e eu tinha R$ 50 + R$ 50 taxa, o original fica com R$ 50 e a taxa some.
-    // Se estou movendo R$ 80 e eu tinha R$ 50 + R$ 50 taxa, o original fica com R$ 20 e a taxa some.
     let novoValorOriginal = Number(original.valor)
-    if (targetVal <= valorTaxaOriginal) {
-      // Apenas "converte" a taxa em um novo lançamento. Original mantém o valor líquido dele.
-      // Opcional: Se quiser que o original reduza sempre, mude aqui.
-      // Mas pro usuário "Keila R$ 50 + Aretha R$ 50" é o ideal se o Pix foi R$ 100.
-    } else {
+    if (targetVal > valorTaxaOriginal) {
       const excesso = targetVal - valorTaxaOriginal
       novoValorOriginal = Math.max(0, novoValorOriginal - excesso)
     }
 
-    // Limpa a descrição do original (remove a taxa antiga)
+    // Limpa a descrição do original (remove a taxa antiga) e adiciona a tag de EC com valor original
     const descricaoLimpa = original.descricao
+      .replace(/\[ENCONTRO DE CONTAS[^\]]*\]/, '')
       .replace(/\(Taxa: R\$\s*[^)]+\)/, '')
-      .replace('[ENCONTRO DE CONTAS]', '')
       .trim()
+    
+    const vlrOrigFmt = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(valorTotalOriginal)
+    
+    let nomeAssociadoDestino = 'ASSOCIADO'
+    if (targetAssociadoId) {
+      const { data: assoc } = await sb.from('associados').select('nome').eq('id', targetAssociadoId).single()
+      if (assoc) nomeAssociadoDestino = assoc.nome
+    }
+    
+    const novaDescOrigem = `PAGAMENTO REALIZADO PARA - ${nomeAssociadoDestino.toUpperCase()} [ENCONTRO DE CONTAS - VLR ORIG. ${vlrOrigFmt}]`
 
     // 2. Atualizar o original
     const { error: err1 } = await sb.from('lancamentos')
       .update({ 
         valor: novoValorOriginal, 
-        descricao: descricaoLimpa 
+        descricao: novaDescOrigem 
       })
       .eq('id', idOriginal)
     
@@ -379,31 +403,81 @@ export function useFinanceiro() {
       return { error: `Erro no original: ${err1.message}` }
     }
 
-    // 3. Criar o novo lançamento (split)
-    const nomePagadorOriginal = original.descricao.split('-')[1]?.trim() || original.descricao.split('(')[0].trim()
-    
-    const novoLancamento: any = {
-      tenant_id: tenantId,
-      data: original.data,
-      tipo: original.tipo,
-      categoria: original.categoria,
-      status: original.status,
-      forma_pagamento: original.forma_pagamento,
-      conta_id: original.conta_id,
-      conciliado: original.conciliado,
-      banco_transacao_id: original.banco_transacao_id,
-      valor: targetVal,
-      associado_id: targetAssociadoId,
-      descricao: `[ENCONTRO DE CONTAS] ${novaDescricao} (Origem: ${nomePagadorOriginal})`
-    }
+    // 3. Processar Destino
+    if (targetLancamentoId) {
+      // VINCULAR A EXISTENTE
+      const targetLanc = lancamentos.find(l => l.id === targetLancamentoId)
+      if (!targetLanc) return { error: 'Lançamento de destino não encontrado.' }
+      
+      // Se já tiver tags de EC, mantém elas e anexa a nova para rastreabilidade múltipla no FINAL
+      const tagNova = `\n[ENCONTRO DE CONTAS - VLR ORIG. ${vlrOrigFmt}]`
+      let novaDescDestino = targetLanc.descricao
+      
+      if (!novaDescDestino.includes(`[ENCONTRO DE CONTAS - VLR ORIG. ${vlrOrigFmt}]`)) {
+        novaDescDestino = `${novaDescDestino}${tagNova}`
+      }
 
-    const { error: err2 } = await sb.from('lancamentos').insert(novoLancamento)
-    
-    if (err2) {
-      console.error('Erro ao inserir novo lançamento:', err2)
-      // Rollback
-      await sb.from('lancamentos').update({ valor: original.valor, descricao: original.descricao }).eq('id', idOriginal)
-      return { error: `Erro no split: ${err2.message}` }
+      // NOVO: Cálculo de quitação total ou parcial
+      const jaPago = targetLanc.valor_pago_ec || 0
+      const novoTotalPago = jaPago + targetVal
+      const statusFinal = novoTotalPago >= targetLanc.valor ? 'pago' : 'parcial'
+      
+      const { error: err2 } = await sb.from('lancamentos')
+        .update({
+          status: statusFinal,
+          banco_transacao_id: original.banco_transacao_id,
+          banco_original_memo: (original as any).banco_original_memo,
+          cora_id: (original as any).cora_id,
+          conciliado: original.conciliado,
+          data_conciliacao: original.data_conciliacao, // CRÍTICO: necessário para Regime de Caixa
+          descricao: novaDescDestino,
+          data: original.data, // Mantém a data do pagamento real
+          is_ec_destino: true,  // MARCAÇÃO PARA CONTABILIDADE
+          id_origem: idOriginal, // VÍNCULO TÉCNICO PARA ESTORNO
+          valor_pago_ec: novoTotalPago // CONTROLE DE SALDO RECEBIDO
+        })
+        .eq('id', targetLancamentoId)
+
+      if (err2) {
+        console.error('Erro ao vincular destino:', err2)
+        // Rollback parcial
+        await sb.from('lancamentos').update({ valor: original.valor, descricao: original.descricao }).eq('id', idOriginal)
+        return { error: `Erro ao vincular: ${err2.message}` }
+      }
+    } else {
+      // CRIAR NOVO (Legado / Split livre)
+      const statusFinal = targetVal >= targetVal ? 'pago' : 'parcial' // Para novos criados do zero sempre será pago
+      const nomePagadorOriginal = original.descricao.split('-')[1]?.trim() || original.descricao.split('(')[0].trim()
+      
+      const novoLancamento: any = {
+        tenant_id: tenantId,
+        data: original.data,
+        tipo: original.tipo,
+        categoria: original.categoria,
+        status: statusFinal,
+        forma_pagamento: original.forma_pagamento,
+        conta_id: original.conta_id,
+        conciliado: original.conciliado,
+        data_conciliacao: original.data_conciliacao, // CRÍTICO: necessário para Regime de Caixa
+        banco_transacao_id: original.banco_transacao_id,
+        banco_original_memo: (original as any).banco_original_memo,
+        cora_id: (original as any).cora_id,
+        valor: targetVal,
+        valor_pago_ec: targetVal,
+        associado_id: targetAssociadoId,
+        is_ec_destino: true, // MARCAÇÃO PARA CONTABILIDADE
+        id_origem: idOriginal, // VÍNCULO TÉCNICO PARA ESTORNO
+        descricao: `${novaDescricao} (Origem: ${nomePagadorOriginal})\n[ENCONTRO DE CONTAS - VLR ORIG. ${vlrOrigFmt}]`
+      }
+
+      const { error: err2 } = await sb.from('lancamentos').insert(novoLancamento)
+      
+      if (err2) {
+        console.error('Erro ao inserir novo lançamento:', err2)
+        // Rollback
+        await sb.from('lancamentos').update({ valor: original.valor, descricao: original.descricao }).eq('id', idOriginal)
+        return { error: `Erro no split: ${err2.message}` }
+      }
     }
 
     await fetch()
@@ -415,9 +489,18 @@ export function useFinanceiro() {
     const hasLocked = lancamentos.some(l => ids.includes(l.id) && isPeriodoBloqueado(l.data))
     if (hasLocked) return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
 
-    const { error } = await sb.from('lancamentos').update(input).in('id', ids)
-    if (!error) fetch()
-    return { error }
+    try {
+      for (let i = 0; i < ids.length; i += 100) {
+        const chunk = ids.slice(i, i + 100)
+        const { error } = await sb.from('lancamentos').update(input).in('id', chunk)
+        if (error) throw error
+      }
+      fetch()
+      return { error: null }
+    } catch (err: any) {
+      console.error('Erro atualizarBulk:', err)
+      return { error: err.message || 'Erro desconhecido ao atualizar em lote.' }
+    }
   }
 
   const kpis = useMemo(() => {

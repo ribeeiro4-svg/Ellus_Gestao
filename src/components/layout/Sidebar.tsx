@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useTenant } from '@/lib/hooks/useTenant'
 import { 
   Home,
   BarChart3, 
@@ -25,7 +26,8 @@ import {
   FileText,
   BookOpen,
   ChevronLeft,
-  Menu
+  Menu,
+  ClipboardList
 } from 'lucide-react'
 
 const MENU = [
@@ -45,15 +47,17 @@ const MENU = [
     ]
   },
   { 
-    section: 'Entidades', 
+    section: 'Vidas', 
     items: [
-      { href: '/associados', icon: Users, label: 'Gestão Geral' },
+      { href: '/associados', icon: Users, label: 'Gestão de Vidas' },
+      { href: '/atendimentos', icon: Calendar, label: 'Atendimentos e Agendamentos' },
     ]
   },
   { 
     section: 'Gerencial', 
     items: [
-      { href: '/estrategia', icon: Target, label: 'Estratégia' },
+      { href: '/estrategia', icon: Target, label: 'Metas e Projetos' },
+      { href: '/gestao-tarefas', icon: ClipboardList, label: 'Gestão de Tarefas' },
       { href: '/bens-duraveis', icon: Briefcase, label: 'Bens Duráveis' },
     ]
   },
@@ -79,25 +83,82 @@ const MENU = [
   },
 ]
 
+
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const sb = createClient()
+  const { tenant } = useTenant()
   
-  const [customLogo, setCustomLogo] = useState<string | null>(null)
-  const [customName, setCustomName] = useState('Gestão Áurea')
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [permissoes, setPermissoes] = useState<Record<string, any>>({})
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedLogo = localStorage.getItem('acprobec_custom_logo')
-      const savedName = localStorage.getItem('acprobec_user_name')
       const savedCollapse = localStorage.getItem('acprobec_sidebar_collapsed')
-      if (savedLogo) setCustomLogo(savedLogo)
-      if (savedName) setCustomName(savedName)
       if (savedCollapse === 'true') setIsCollapsed(true)
+      
+      try {
+        const profileRaw = localStorage.getItem('user_profile')
+        const permsRaw = localStorage.getItem('user_permissions')
+        if (profileRaw) {
+          const profile = JSON.parse(profileRaw)
+          if (profile.perfil_id === 1) setIsAdmin(true)
+        }
+        if (permsRaw) {
+          setPermissoes(JSON.parse(permsRaw))
+        }
+      } catch (e) {}
     }
   }, [])
+
+  const canSee = (href: string) => {
+    if (isAdmin) return true
+    if (href === '/' || href === '/resumo') return true
+
+    const routeToModuleMap: Record<string, string> = {
+      '/associados': 'socios',
+      '/financeiro': 'financeiro',
+      '/fechamento': 'fechamento',
+      '/planejamento': 'planejamento',
+      '/bens-duraveis': 'bens_duraveis',
+      '/cobranca': 'cobrancas',
+      '/atendimentos': 'atendimentos',
+      '/auditoria': 'auditoria',
+      '/estrategia': 'estrategia',
+      '/gestao-tarefas': 'gestao_tarefas',
+      '/recrutamento': 'recrutamento',
+      '/fiscal': 'fiscal',
+      '/contabil': 'contabil',
+      '/importar': 'importar',
+    }
+
+    if (href === '/configuracoes') return true // Sempre visível para a aba Minha Conta
+
+    const moduloName = routeToModuleMap[href]
+    if (moduloName) {
+      return permissoes[moduloName]?.ver === true
+    }
+
+    // Se não tiver módulo mapeado, permite acesso por padrão ou 
+    // podemos considerar que 'estrategia', 'recrutamento' são módulos que não implementamos o mapeamento, então deixamos visível.
+    return true
+  }
+
+  const customLogo = (tenant?.logo_url && tenant.logo_url.startsWith('http')) ? tenant.logo_url : null
+  const customName = tenant?.nome || 'ACPROBEC'
+
+  useEffect(() => {
+    if (tenant) {
+      console.log('[Sidebar] Tenant Data:', {
+        nome: tenant.nome,
+        logo: tenant.logo_url,
+        hasLogo: !!customLogo,
+        id: tenant.id
+      })
+    }
+  }, [tenant, customLogo])
 
   const toggleCollapse = () => {
     const next = !isCollapsed
@@ -106,8 +167,16 @@ export default function Sidebar() {
   }
 
   const logout = async () => {
+    // Chama o endpoint para excluir o cookie HttpOnly (rbac_token)
+    await fetch('/api/auth/logout', { method: 'POST' })
+    // Limpa a sessão do Supabase
     await sb.auth.signOut()
-    router.push('/login')
+    // Limpa o localStorage das permissões
+    localStorage.removeItem('user_profile')
+    localStorage.removeItem('user_permissions')
+    localStorage.removeItem('rbac_token_raw')
+    // Força recarga completa para o middleware limpar o estado do cookie
+    window.location.href = '/login'
   }
 
   const isActive = (path: string) => pathname === path
@@ -124,34 +193,38 @@ export default function Sidebar() {
 
       <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'}`}>
         <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-6 items-center text-center'}`}>
-          <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center gap-2 mb-2'}`}>
-            <div className="logo-icon w-10 h-10 rounded-xl flex items-center justify-center text-white text-[18px] font-bold bg-gradient-to-br from-[#2d8c6f] to-[#34d399] overflow-hidden shrink-0 shadow-lg">
+          <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center gap-5 mb-5'}`}>
+            <div className={`logo-icon ${isCollapsed ? 'w-10 h-10' : 'w-24 h-24'} rounded-full flex items-center justify-center overflow-hidden shrink-0 shadow-2xl transition-all duration-500 ${customLogo ? 'bg-white' : 'bg-gradient-to-br from-[#2d8c6f] to-[#34d399]'}`}>
               {customLogo ? (
                 <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
               ) : (
-                'AC'
+                <span className={`text-white font-bold ${isCollapsed ? 'text-[16px]' : 'text-3xl'}`}>AC</span>
               )}
             </div>
-            {!isCollapsed && <div className="logo-title text-[17px] font-extrabold text-white tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-300">ACPROBEC</div>}
+            {!isCollapsed && <div className="logo-title text-[20px] font-black text-white tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">ACPROBEC</div>}
           </div>
-          {!isCollapsed && <div className="logo-sub text-[10px] text-white/40 tracking-[1.2px] font-bold uppercase animate-in fade-in slide-in-from-bottom-2 duration-300">GESTÃO INTELIGENTE</div>}
+          {!isCollapsed && <div className="logo-sub text-[11px] text-white/40 tracking-[1.5px] font-bold uppercase animate-in fade-in slide-in-from-bottom-2 duration-300">GESTÃO INTELIGENTE</div>}
           {!isCollapsed && (
-            <div className="logo-divider w-full flex items-center gap-2 mt-4 text-[9px] text-white/15 tracking-[1.5px] font-black after:flex-1 after:h-[1px] after:bg-white/5 before:flex-1 before:h-[1px] before:bg-white/5 animate-in fade-in duration-500">
-              INOVACONT
+            <div className="logo-divider w-full flex items-center gap-2 mt-6 text-[9px] text-white/15 tracking-[2px] font-black after:flex-1 after:h-[1px] after:bg-white/5 before:flex-1 before:h-[1px] before:bg-white/5 animate-in fade-in duration-500">
+              ÁUREA Tech
             </div>
           )}
         </div>
 
       <nav className="flex-1 py-4 overflow-y-auto scrollbar-none">
-        {MENU.map(({ section, items }) => (
-          <div key={section} className={`sidebar-section py-2 transition-all ${isCollapsed ? 'px-0' : ''}`}>
-            {!isCollapsed && (
-              <div className="sidebar-label text-[9.5px] font-bold text-white/20 tracking-[1.4px] uppercase px-5 pb-2 animate-in fade-in duration-300">
-                {section}
-              </div>
-            )}
-            <div className="space-y-0.5">
-              {items.map(({ href, icon: Icon, label }) => {
+        {MENU.map(({ section, items }) => {
+          const visivelItems = items.filter(i => canSee(i.href))
+          if (visivelItems.length === 0) return null
+
+          return (
+            <div key={section} className={`sidebar-section py-2 transition-all ${isCollapsed ? 'px-0' : ''}`}>
+              {!isCollapsed && (
+                <div className="sidebar-label text-[9.5px] font-bold text-white/20 tracking-[1.4px] uppercase px-5 pb-2 animate-in fade-in duration-300">
+                  {section}
+                </div>
+              )}
+              <div className="space-y-0.5">
+                {visivelItems.map(({ href, icon: Icon, label }) => {
                 const active = isActive(href)
                 const IconComponent = Icon as any
                 return (
@@ -174,7 +247,7 @@ export default function Sidebar() {
               })}
             </div>
           </div>
-        ))}
+        )})}
       </nav>
 
       <div className={`sidebar-footer mt-auto border-t border-white/5 relative z-10 flex flex-col gap-4 transition-all ${isCollapsed ? 'p-3 items-center' : 'p-5'}`}>

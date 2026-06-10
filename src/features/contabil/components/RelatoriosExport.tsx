@@ -54,7 +54,7 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
           <div style="zoom: 0.9">
             ${conteudo.innerHTML}
           </div>
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
         </body>
       </html>
     `)

@@ -78,7 +78,7 @@ export default function LivroRazao({ lancHook, planoHook }: { lancHook: any; pla
             <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${currentPeriod === 'all' ? 'Exercício ' + ano : currentPeriod} | CONTA: ${contaSelecionada === 'all' ? 'TODAS AS CONTAS' : contas.find((c: any) => c.id === contaSelecionada)?.codigo}</p>
           </div>
           ${conteudo.innerHTML}
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
         </body>
       </html>
     `)
@@ -93,7 +93,7 @@ export default function LivroRazao({ lancHook, planoHook }: { lancHook: any; pla
   }
 
   // Filtrar contas que têm movimento e são sintéticas/analíticas relevantes
-  const contasExibir = contas.filter((c: any) => contasComMovimento.has(c.id)).sort((a: any, b: any) => a.codigo.localeCompare(b.codigo))
+  const contasExibir = contas.filter((c: any) => contasComMovimento.has(c.id)).sort((a: any, b: any) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
@@ -153,7 +153,7 @@ export default function LivroRazao({ lancHook, planoHook }: { lancHook: any; pla
               const sInicial = razaoData.saldosIniciais[conta.id] || { debitos: 0, creditos: 0 }
               
               // Determinar natureza para cálculo do saldo (Devedora: D-C, Credora: C-D)
-              const natureza = conta.codigo.startsWith('1') || conta.codigo.startsWith('4') ? 'D' : 'C'
+              const natureza = conta.natureza === 'devedora' ? 'D' : 'C'
               
               let saldoAtual = natureza === 'D' ? sInicial.debitos - sInicial.creditos : sInicial.creditos - sInicial.debitos
               

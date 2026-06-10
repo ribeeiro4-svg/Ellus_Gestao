@@ -1,7 +1,7 @@
 
 'use client'
 import React, { useState, useEffect } from 'react'
-import { X, Check, Loader2, Search, Calendar, Landmark, CreditCard, Info, AlertCircle, Filter } from 'lucide-react'
+import { X, Check, Loader2, Search, Calendar, Landmark, CreditCard, Info, AlertCircle, Filter, FileText } from 'lucide-react'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import { buscarLancamentosParaVinculoAction } from '../../actions/nfseActions'
 
@@ -104,7 +104,16 @@ export default function NFSeEscrituracaoModal({
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase">NFS-e Número</p>
-                    <p className="text-base font-black text-slate-800">{nota.numero_nfse}</p>
+                    <button 
+                      onClick={async () => {
+                        const { abrirDanfseInterno } = await import('@/lib/utils/abrirDanfe')
+                        abrirDanfseInterno(nota)
+                      }}
+                      className="flex items-center gap-2 group"
+                    >
+                      <p className="text-base font-black text-slate-800 group-hover:text-indigo-600 group-hover:underline">{nota.numero_nfse}</p>
+                      <FileText size={14} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                    </button>
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase">Prestador</p>

@@ -6,23 +6,50 @@ interface DashboardKpisProps {
 }
 
 export default function DashboardKpis({ metrics }: DashboardKpisProps) {
-  const { receitaTotal, despesaTotal, associadosStats } = metrics
+  const { receitaTotal, despesaTotal, receitaProvisionada, despesaProvisionada, associadosStats, regime } = metrics
+
+  const isCompetencia = regime === 'competencia'
+
+  // No modo competência: soma realizado + projetado para mostrar o total do período
+  const ingresso  = isCompetencia ? receitaTotal + (receitaProvisionada || 0) : receitaTotal
+  const dispendio = isCompetencia ? despesaTotal + (despesaProvisionada  || 0) : despesaTotal
+  const saldo     = ingresso - dispendio
 
   const cards = [
-    { label: `📈 Ingresso Realizado`, value: fmtR(receitaTotal), color: 'text-emerald-600' },
-    { label: `📉 Dispêndios Pagos`, value: fmtR(despesaTotal), color: 'text-rose-600' },
-    { label: `💵 Superávit/Déficit Líquido`, value: fmtR(receitaTotal - despesaTotal), color: 'text-indigo-600' },
-    { label: `🚀 Superávit`, value: fmtR(receitaTotal - despesaTotal), color: 'text-emerald-600' },
-    { label: `⚠️ Inadimplência`, value: fmtPct(associadosStats.pctInadimp), color: 'text-rose-500' },
+    {
+      label: isCompetencia ? '📈 Ingresso Projetado' : '📈 Ingresso Realizado',
+      value: fmtR(ingresso),
+      color: 'text-emerald-600'
+    },
+    {
+      label: isCompetencia ? '📉 Dispêndios Projetados' : '📉 Dispêndios Pagos',
+      value: fmtR(dispendio),
+      color: 'text-rose-600'
+    },
+    {
+      label: `💵 Superávit/Déficit Líquido`,
+      value: fmtR(saldo),
+      color: 'text-emerald-600'
+    },
+    {
+      label: `🚀 Superávit`,
+      value: fmtR(saldo),
+      color: 'text-emerald-600'
+    },
+    {
+      label: `⚠️ Inadimplência`,
+      value: fmtPct(associadosStats.pctInadimp),
+      color: 'text-rose-500'
+    },
   ]
 
   return (
     <div className="flex items-center gap-3 mb-8 w-full">
       <div className="flex flex-wrap items-stretch gap-2 flex-1">
         {cards.map(k => (
-          <div key={k.label} className="bg-white border border-slate-100 rounded-2xl p-4 flex-1 min-w-[140px] shadow-sm transition-all hover:shadow-md">
-            <div className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-wider">{k.label}</div>
-            <div className={`text-base font-black ${k.color}`}>{k.value}</div>
+          <div key={k.label} className="bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 backdrop-blur-2xl border border-white/5 rounded-2xl py-8 px-6 flex-1 min-w-[140px] shadow-2xl transition-all hover:border-emerald-500/40">
+            <div className="text-[10px] font-black text-white uppercase mb-2 tracking-wider">{k.label}</div>
+            <div className={`text-4xl font-black ${k.color} tracking-tight`}>{k.value}</div>
           </div>
         ))}
       </div>

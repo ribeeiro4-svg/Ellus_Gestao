@@ -53,14 +53,33 @@ export function useContas() {
   }
 
   const atualizar = async (id: string, input: Partial<ContaBancaria>) => {
-    const { error } = await sb.from('contas_bancarias').update(input).eq('id', id)
+    if (!id) return { error: { message: 'ID da conta não fornecido' } }
+    
+    // Remove campos protegidos ou nulos que podem causar falha na constraint NOT NULL
+    const updateData: any = {}
+    if (input.nome !== undefined && input.nome !== null) updateData.nome = input.nome
+    if (input.tipo !== undefined && input.tipo !== null) updateData.tipo = input.tipo
+    if (input.saldo_inicial !== undefined) updateData.saldo_inicial = input.saldo_inicial
+    
+    if (Object.keys(updateData).length === 0) return { error: null }
+
+    const { error } = await sb.from('contas_bancarias').update(updateData).eq('id', id)
     if (!error) fetch()
     return { error }
   }
 
   const remover = async (id: string) => {
+    if (!id) return { error: { message: 'ID da conta não fornecido' } }
     const { error } = await sb.from('contas_bancarias').delete().eq('id', id)
     if (!error) fetch()
+    else {
+      console.error('Erro ao remover conta:', error)
+      if (error.code === '23503') {
+        alert('Não é possível excluir esta conta pois ela possui lançamentos vinculados. Transfira ou exclua os lançamentos antes de excluir a conta.')
+      } else {
+        alert('Erro ao excluir conta: ' + error.message)
+      }
+    }
     return { error }
   }
 

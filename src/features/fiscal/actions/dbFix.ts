@@ -25,6 +25,16 @@ export async function applyFinancialLinkFixAction() {
     );
     ALTER TABLE contabil_logs DISABLE ROW LEVEL SECURITY;
 
+    -- 3.1 Tabela de Logs do Fiscal (se não existir)
+    CREATE TABLE IF NOT EXISTS fiscal_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        tenant_id UUID NOT NULL,
+        acao TEXT NOT NULL,
+        detalhes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    ALTER TABLE fiscal_logs DISABLE ROW LEVEL SECURITY;
+
     -- 4. Forçar reload do schema
     COMMENT ON TABLE nfe_entradas IS 'Tabela de notas de entrada de produtos - Atualizada';
     NOTIFY pgrst, 'reload schema';

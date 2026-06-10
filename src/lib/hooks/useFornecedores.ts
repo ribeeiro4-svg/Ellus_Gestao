@@ -41,34 +41,64 @@ export function useFornecedores() {
   const inserirFornecedor = async (obj: Partial<Fornecedor>) => {
     if (!tenantId) return { error: 'Tenant não identificado' }
 
+    // Validação de Duplicidade
+    const cpfCnpjLimpo = obj.cpf_cnpj?.replace(/\D/g, '')
+    if (cpfCnpjLimpo) {
+      const { data: existente } = await sb.from('fornecedores')
+        .select('id, nome')
+        .eq('tenant_id', tenantId)
+        .eq('cpf_cnpj', cpfCnpjLimpo)
+        .maybeSingle()
+      
+      if (existente) {
+        return { error: `Já existe um fornecedor cadastrado com este CPF/CNPJ: ${existente.nome}` }
+      }
+    }
+
+    // Auto-gerar conta contábil para o fornecedor
     // Auto-gerar conta contábil para o fornecedor
     let contaContabilId = obj.conta_contabil_id
     if (!contaContabilId) {
       try {
+        const parentCodigo = '2.1.2'
+        
+        // 1. Garantir conta pai
+        let { data: pai } = await sb.from('plano_contas').select('*').eq('tenant_id', tenantId).eq('codigo', parentCodigo).maybeSingle()
+        
+        if (!pai) {
+          const { data: novaPai } = await sb.from('plano_contas').insert({
+            tenant_id: tenantId, codigo: parentCodigo, descricao: 'FORNECEDORES',
+            nivel: 3, tipo: 'sintetica', natureza: 'credora', classificacao: 'passivo', aceita_lancamentos: false, ativa: true
+          }).select().single()
+          pai = novaPai
+        } else if (pai.tipo === 'analitica') {
+          await sb.from('plano_contas').update({ tipo: 'sintetica', aceita_lancamentos: false }).eq('id', pai.id)
+        }
+
+        // 2. Proximo codigo
         const { data: ultimasContas } = await sb.from('plano_contas')
           .select('codigo')
           .eq('tenant_id', tenantId)
-          .like('codigo', '2.1.3.01.%')
+          .like('codigo', `${parentCodigo}.%`)
           .order('codigo', { ascending: false })
           .limit(1)
 
-        let novoCodigo = '2.1.3.01.100' // Começa no 100 para evitar conflitos com ITG padrão
+        let nextSeq = 1
         if (ultimasContas && ultimasContas.length > 0) {
           const ultimo = ultimasContas[0].codigo
           const partes = ultimo.split('.')
           const sequencial = parseInt(partes[partes.length - 1], 10)
-          if (!isNaN(sequencial) && sequencial >= 100) {
-            novoCodigo = `2.1.3.01.${String(sequencial + 1).padStart(3, '0')}`
-          }
+          if (!isNaN(sequencial)) nextSeq = sequencial + 1
         }
+        
+        const novoCodigo = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
 
-        const { data: pai } = await sb.from('plano_contas').select('id').eq('tenant_id', tenantId).eq('codigo', '2.1.3.01').single()
-
+        // 3. Criar conta
         const { data: novaConta } = await sb.from('plano_contas').insert({
           tenant_id: tenantId,
           codigo: novoCodigo,
-          descricao: `Fornecedor: ${obj.nome}`,
-          nivel: 5,
+          descricao: `FORNECEDOR: ${obj.nome?.toUpperCase()}`,
+          nivel: 4,
           tipo: 'analitica',
           natureza: 'credora',
           classificacao: 'passivo',
@@ -85,16 +115,32 @@ export function useFornecedores() {
 
     const { data, error } = await sb
       .from('fornecedores')
-      .insert([{ ...obj, tenant_id: tenantId, conta_contabil_id: contaContabilId }])
+      .insert([{ ...obj, cpf_cnpj: cpfCnpjLimpo || obj.cpf_cnpj, tenant_id: tenantId, conta_contabil_id: contaContabilId }])
       .select()
     if (!error) await fetchFornecedores()
     return { data, error }
   }
 
   const atualizarFornecedor = async (id: string, obj: Partial<Fornecedor>) => {
+    if (!tenantId) return { error: 'Tenant não identificado' }
+
+    const cpfCnpjLimpo = obj.cpf_cnpj?.replace(/\D/g, '')
+    if (cpfCnpjLimpo) {
+      const { data: existente } = await sb.from('fornecedores')
+        .select('id, nome')
+        .eq('tenant_id', tenantId)
+        .eq('cpf_cnpj', cpfCnpjLimpo)
+        .neq('id', id)
+        .maybeSingle()
+      
+      if (existente) {
+        return { error: `Este CPF/CNPJ já está em uso pelo fornecedor: ${existente.nome}` }
+      }
+    }
+
     const { error } = await sb
       .from('fornecedores')
-      .update(obj)
+      .update({ ...obj, cpf_cnpj: cpfCnpjLimpo || obj.cpf_cnpj })
       .eq('id', id)
     if (!error) await fetchFornecedores()
     return { error }

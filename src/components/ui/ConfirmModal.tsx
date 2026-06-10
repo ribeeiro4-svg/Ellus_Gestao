@@ -7,11 +7,14 @@ interface ConfirmModalProps {
   onClose: () => void
   onConfirm: () => void
   title: string
-  message: string
+  message: React.ReactNode
   confirmText?: string
   cancelText?: string
   type?: 'danger' | 'warning' | 'success' | 'info'
   loading?: boolean
+  requirePassword?: boolean
+  passwordValue?: string
+  onPasswordChange?: (val: string) => void
 }
 
 export default function ConfirmModal({
@@ -23,7 +26,10 @@ export default function ConfirmModal({
   confirmText = 'Confirmar',
   cancelText = 'Cancelar',
   type = 'danger',
-  loading = false
+  loading = false,
+  requirePassword = false,
+  passwordValue = '',
+  onPasswordChange
 }: ConfirmModalProps) {
   if (!isOpen) return null
 
@@ -73,9 +79,22 @@ export default function ConfirmModal({
           <h3 className="text-xl font-black text-slate-800 text-center mb-2 tracking-tight">
             {title}
           </h3>
-          <p className="text-slate-500 text-center text-sm font-medium leading-relaxed">
+          <div className="text-slate-500 text-sm font-medium leading-relaxed text-center">
             {message}
-          </p>
+          </div>
+
+          {requirePassword && (
+            <div className="mt-6">
+              <input
+                type="password"
+                placeholder="Digite a senha para confirmar..."
+                value={passwordValue}
+                onChange={(e) => onPasswordChange?.(e.target.value)}
+                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all text-center"
+                autoFocus
+              />
+            </div>
+          )}
         </div>
 
         <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex gap-3">
@@ -88,7 +107,7 @@ export default function ConfirmModal({
           </button>
           <button
             onClick={onConfirm}
-            disabled={loading}
+            disabled={loading || (requirePassword && !passwordValue)}
             className={`flex-1 px-6 py-3.5 ${config.button} text-white rounded-2xl text-sm font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50`}
           >
             {loading ? (

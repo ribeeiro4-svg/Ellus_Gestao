@@ -18,6 +18,7 @@ import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal, { Field } from '@/components/ui/CrudModal'
 import PaymentBadge from '@/components/ui/PaymentBadge'
 import ChartCard from '@/components/ui/ChartCard'
+import IntegrityDropdown from '@/components/ui/IntegrityDropdown'
 import Skeleton from '@/components/ui/Skeleton'
 import OFXUpload from '@/components/conciliacao/OFXUpload'
 import MatchItem from '@/components/conciliacao/MatchItem'
@@ -26,8 +27,8 @@ import SupplierMatchModal from '@/components/conciliacao/SupplierMatchModal'
 import SupplierCreateModal from '@/components/conciliacao/SupplierCreateModal'
 import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToolbar'
 import { useFechamento } from '@/lib/hooks/useFechamento'
-import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
-import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, FileText, CloudLightning, Trash2, Target, ArrowRightLeft } from 'lucide-react'
+import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getDiaIdx, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, FileText, CloudLightning, Trash2, Target, ArrowRightLeft, ArrowUpRight, ArrowDownRight, AlertTriangle } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
@@ -41,10 +42,13 @@ import ConciliacaoHistoryModal from '@/components/conciliacao/ConciliacaoHistory
 import { useConciliacaoLogs } from '@/lib/hooks/useConciliacaoLogs'
 import { tempFixDatabaseAction } from '@/app/actions/zapsign'
 import NFSeLinkModal from '@/features/fiscal/components/nfse/NFSeLinkModal'
+import ManualLinkLancamentoModal from '@/components/conciliacao/ManualLinkLancamentoModal'
+import { usePermissions } from '@/lib/hooks/usePermissions'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
 export default function FinanceiroPage() {
+  const { criar, editar, excluir, isAdmin } = usePermissions('financeiro')
   const tenantId = useTenantId()
   const sb = createClient()
   // Ganchos Financeiros
@@ -59,7 +63,7 @@ export default function FinanceiroPage() {
   const { categorias } = useCategorias()
 
   // Ganchos e Estados de Conciliação
-  const { items: coraItems, updateStatusBulk, loading: loadingCora, setItems: setCoraItems } = useCoraStaged()
+  const { items: coraItems, updateStatusBulk, loading: loadingCora, setItems: setCoraItems, syncWithBank } = useCoraStaged()
   const { parseOFX } = useOFXParser()
   const [conciliacaoSubTab, setConciliacaoSubTab] = useState<'ofx' | 'cora'>('ofx')
   const [extrato, setExtrato] = useState<any[]>([])
@@ -85,13 +89,16 @@ export default function FinanceiroPage() {
   )
 
   // Estados Base
-  const [activeTab, setActiveTab] = useState<'geral' | 'receitas' | 'despesas' | 'inadimplencia' | 'conciliacao'>('geral')
+  const [activeTab, setActiveTab] = useState<'geral' | 'receitas' | 'despesas' | 'inadimplencia' | 'conciliacao' | 'relatorios'>('geral')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth())
+  const [filterDay, setFilterDay] = useState<number>(-1)
+  const [filterMonths, setFilterMonths] = useState<number[]>([-1])
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false)
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
+  const [filterDateType, setFilterDateType] = useState<'caixa'|'competencia'|'conciliacao'>('caixa')
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false)
   const [contabilMap, setContabilMap] = useState<Record<string, string>>({})
   const [loadingContabil, setLoadingContabil] = useState(false)
@@ -105,14 +112,22 @@ export default function FinanceiroPage() {
   const [remanejarTarget, setRemanejarTarget] = useState<any>(null)
   const [filterUnlinked, setFilterUnlinked] = useState<'ALL' | 'LINKED' | 'UNLINKED'>('ALL')
   const [filterCategory, setFilterCategory] = useState<string>('ALL')
+  const [filterConta, setFilterConta] = useState<string>('ALL')
+  const [filterPagamento, setFilterPagamento] = useState<string>('ALL')
+  const [filterLancamentoStatus, setFilterLancamentoStatus] = useState<string[]>(['ALL'])
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false)
   const [isSupplierCreateOpen, setIsSupplierCreateOpen] = useState(false)
   const [parentSetFormData, setParentSetFormData] = useState<any>(null)
   const [currentEditMemo, setCurrentEditMemo] = useState('')
   const [isNFSeLinkModalOpen, setIsNFSeLinkModalOpen] = useState(false)
   const [selectedLancamentoNF, setSelectedLancamentoNF] = useState<any>(null)
+  const [isReconciliarModalOpen, setIsReconciliarModalOpen] = useState(false)
+  const [selectedLancamentoParaReconciliar, setSelectedLancamentoParaReconciliar] = useState<any>(null)
 
   // Novos Estados para Ações em Lote
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [selectedMatchIds, setSelectedMatchIds] = useState<Set<string>>(new Set())
+  const [clearedMatches, setClearedMatches] = useState<Set<string>>(new Set())
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
 
   useEffect(() => {
@@ -322,16 +337,14 @@ export default function FinanceiroPage() {
 
   const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false)
   const handleCleanupDuplicates = async () => {
+    if (!tenantId) return alert('Tenant não identificado')
     if (!confirm('Deseja remover mensalidades duplicadas que ainda não foram conciliadas?')) return
     setIsCleaningDuplicates(true)
     try {
-      const res = await cleanupDuplicateMensalidadesAction()
+      const res = await cleanupDuplicateMensalidadesAction(tenantId)
       if (res.error) alert(`Erro: ${res.error}`)
       else {
-        const namesStr = res.names && res.names.length > 0 
-          ? `\n\nAssociados afetados:\n- ${res.names.join('\n- ')}` 
-          : ''
-        alert(`${res.message}${namesStr}`)
+        alert('Limpeza concluída com sucesso.')
       }
     } finally {
       setIsCleaningDuplicates(false)
@@ -339,10 +352,11 @@ export default function FinanceiroPage() {
   }
 
   const handleCleanupConciliacao = async () => {
+    if (!tenantId) return alert('Tenant não identificado')
     if (!confirm('Deseja remover lançamentos conciliados duplicados (mesma data, valor e descrição)? Esta ação manterá apenas um registro de cada importação repetida.')) return
     setIsCleaningDuplicates(true)
     try {
-      const res = await cleanupConciliacaoDuplicatesAction()
+      const res = await cleanupConciliacaoDuplicatesAction(tenantId)
       if (res.error) alert(`Erro: ${res.error}`)
       else alert(res.message)
     } finally {
@@ -377,7 +391,12 @@ export default function FinanceiroPage() {
 
   const filteredItemsConciliacao = useMemo(() => {
     const list = conciliacaoSubTab === 'ofx' ? matchedTransactions : coraMatchedItems
-    return list.filter((item: any) => {
+    return list.map((item: any) => {
+      if (clearedMatches.has(item.bank.fitid)) {
+        return { ...item, assocMatch: undefined, forMatch: undefined }
+      }
+      return item
+    }).filter((item: any) => {
       const matchesSearch = item.bank.memo.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesType = filterType === 'ALL' || item.bank.type === filterType
       const hasMatch = !!(item.assocMatch || item.forMatch)
@@ -386,14 +405,27 @@ export default function FinanceiroPage() {
       const matchesStatus = filterStatus === 'ALL' || (filterStatus === 'DUPLICATE' ? isDuplicate : !isDuplicate)
       return matchesSearch && matchesType && matchesMatch && matchesStatus
     })
-  }, [conciliacaoSubTab, matchedTransactions, coraMatchedItems, searchTerm, filterType, filterMatch, filterStatus, existingTxIds, processedIds])
+  }, [conciliacaoSubTab, matchedTransactions, coraMatchedItems, searchTerm, filterType, filterMatch, filterStatus, existingTxIds, processedIds, clearedMatches])
 
   // Filtros aplicados baseados na aba ativa (Hub Financeiro)
   const filteredLancamentos = useMemo(() => {
     return lancamentos.filter(item => {
-      const m = getMesIdx(item.data)
-      const y = getAnoIdx(item.data)
-      const matchPeriod = (filterMonth === -1 || m === filterMonth) && y === filterYear
+      let d = getDiaIdx(item.data)
+      let m = getMesIdx(item.data)
+      let y = getAnoIdx(item.data)
+
+      if (filterDateType === 'conciliacao') {
+        if (!item.data_conciliacao) return false;
+        d = getDiaIdx(item.data_conciliacao)
+        m = getMesIdx(item.data_conciliacao)
+        y = getAnoIdx(item.data_conciliacao)
+      } else if (filterDateType === 'competencia') {
+        if (item.competencia_mes !== undefined && item.competencia_mes !== null) m = item.competencia_mes
+        if (item.competencia_ano !== undefined && item.competencia_ano !== null) y = item.competencia_ano
+        // Na visão competência, o dia pode não existir (fica -1). Vamos aceitar.
+      }
+      
+      const matchPeriod = (filterDay === -1 || d === filterDay || d === -1) && (filterMonths.includes(-1) || filterMonths.includes(m)) && y === filterYear
       const matchSearch = (item.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || (item.categoria || '').toLowerCase().includes(searchTerm.toLowerCase()))
       
       let matchType = true
@@ -403,31 +435,49 @@ export default function FinanceiroPage() {
       const hasLink = !!(item.associado_id || item.fornecedor_id || item.diretor_id)
       const matchUnlinked = filterUnlinked === 'ALL' || (filterUnlinked === 'LINKED' ? hasLink : !hasLink)
       const matchCategory = filterCategory === 'ALL' || (item.categoria || '').toLowerCase() === filterCategory.toLowerCase()
+      const matchConta = filterConta === 'ALL' || item.conta_id === filterConta
+      const matchPagamento = filterPagamento === 'ALL' || (item.forma_pagamento || '').toLowerCase() === filterPagamento.toLowerCase()
+      const matchStatus = filterLancamentoStatus.includes('ALL') || filterLancamentoStatus.includes((item.status || '').toLowerCase())
 
-      return matchPeriod && matchSearch && matchType && matchUnlinked && matchCategory
+      return matchPeriod && matchSearch && matchType && matchUnlinked && matchCategory && matchConta && matchPagamento && matchStatus
     })
-  }, [lancamentos, filterYear, filterMonth, activeTab, searchTerm, filterUnlinked, filterCategory])
+  }, [lancamentos, filterDay, filterYear, filterMonths, activeTab, searchTerm, filterUnlinked, filterCategory, filterDateType, filterConta, filterPagamento, filterLancamentoStatus])
 
   // KPIs Inteligentes
   const kpiData = useMemo(() => {
     let pInc = 0, pExp = 0, oInc = 0, oExp = 0, fCash = 0, fBank = 0
     lancamentos.forEach(l => {
-      const y = getAnoIdx(l.data); if (y !== filterYear) return
-      const m = getMesIdx(l.data)
+      let d = getDiaIdx(l.data)
+      let m = getMesIdx(l.data)
+      let y = getAnoIdx(l.data)
+
+      if (filterDateType === 'conciliacao') {
+        if (!l.data_conciliacao) return;
+        d = getDiaIdx(l.data_conciliacao)
+        m = getMesIdx(l.data_conciliacao)
+        y = getAnoIdx(l.data_conciliacao)
+      } else if (filterDateType === 'competencia') {
+        if (l.competencia_mes !== undefined && l.competencia_mes !== null) m = l.competencia_mes
+        if (l.competencia_ano !== undefined && l.competencia_ano !== null) y = l.competencia_ano
+      }
+
+      if (y !== filterYear) return
+      // Para o KPI também aplicamos o dia (se definido)
+      if (filterDay !== -1 && d !== filterDay && d !== -1) return
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/);
       const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
       const valorComTaxa = safeSum(l.valor || 0, taxaVal);
-      if ((filterMonth === -1 || m <= filterMonth) && l.status === 'pago') {
+      if ((filterMonths.includes(-1) || m <= Math.max(...filterMonths)) && l.status === 'pago') {
         if (l.tipo === 'receita') { l.forma_pagamento === 'Dinheiro' ? fCash = safeSum(fCash, valorComTaxa) : fBank = safeSum(fBank, valorComTaxa) }
         else { l.forma_pagamento === 'Dinheiro' ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor) }
       }
-      if (filterMonth === -1 || m === filterMonth) {
+      if (filterMonths.includes(-1) || filterMonths.includes(m)) {
         if (l.tipo === 'receita') { l.status === 'pago' ? pInc = safeSum(pInc, valorComTaxa) : oInc = safeSum(oInc, valorComTaxa) }
         else { l.status === 'pago' ? pExp = safeSum(pExp, l.valor) : oExp = safeSum(oExp, l.valor) }
       }
     })
     return { pInc, pExp, realizado: safeDiff(pInc, pExp), provisionado: oExp, receitaProjetada: safeSum(pInc, oInc), projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), saldoCaixa: fCash, saldoBanco: fBank }
-  }, [lancamentos, filterYear, filterMonth])
+  }, [lancamentos, filterDay, filterYear, filterMonths, filterDateType])
 
   const chartData = useMemo(() => {
     const rR = Array(12).fill(0), rP = Array(12).fill(0), dR = Array(12).fill(0), dP = Array(12).fill(0)
@@ -475,7 +525,14 @@ export default function FinanceiroPage() {
   const handleSalvar = async (data: any) => {
     setSaving(true)
     try {
-      const res = await processFinancialSubmit(data, editingItem, associados, { inserir, atualizar, inserirBulk })
+      let finalData = { ...data };
+      const fv = finalData.fixo_variavel;
+      delete finalData.fixo_variavel;
+      finalData.descricao = (finalData.descricao || '').replace(/ \[FIXO\]| \[VARIÁVEL\]/g, '');
+      if (fv === 'fixo') finalData.descricao += ' [FIXO]';
+      if (fv === 'variavel') finalData.descricao += ' [VARIÁVEL]';
+
+      const res = await processFinancialSubmit(finalData, editingItem, associados, contas, { inserir, atualizar, inserirBulk })
       if (res?.error) {
         const errorMsg = typeof res.error === 'object' ? (res.error.message || JSON.stringify(res.error)) : res.error
         alert(`Erro ao salvar: ${errorMsg}`)
@@ -485,7 +542,7 @@ export default function FinanceiroPage() {
         const savedMonth = d.getMonth()
         const savedYear = d.getFullYear()
         
-        if (savedMonth !== filterMonth || savedYear !== filterYear) {
+        if ((!filterMonths.includes(-1) && !filterMonths.includes(savedMonth)) || savedYear !== filterYear) {
           const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
           alert(`Salvo com sucesso! O lançamento foi criado em ${meses[savedMonth]}/${savedYear}. Altere os filtros acima para visualizá-lo.`)
         }
@@ -514,7 +571,7 @@ export default function FinanceiroPage() {
         return (
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-800">{i.descricao}</span>
+              <span className="text-sm font-bold text-slate-800">{(i.descricao || '').replace(/ \[FIXO\]| \[VARIÁVEL\]/g, '')}</span>
               {i.banco_transacao_id && (
                 <span className="text-[9px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
                   <RefreshCw size={8} /> OFX
@@ -526,8 +583,24 @@ export default function FinanceiroPage() {
                 {i.categoria}{linkedName ? ` - ${linkedName.toUpperCase()}` : ''}
               </span>
             </div>
+            {i.banco_original_memo && (
+              <span className="text-[9px] text-slate-400 font-bold italic truncate max-w-[350px] mt-0.5">
+                Extrato: {i.banco_original_memo}
+              </span>
+            )}
           </div>
         )
+      } 
+    },
+    { 
+      header: 'Natureza', 
+      key: 'natureza_fixo_variavel', 
+      render: (i: any) => {
+        const isFixo = i.descricao?.includes('[FIXO]');
+        const isVar = i.descricao?.includes('[VARIÁVEL]');
+        if (isFixo) return <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">Fixo</span>;
+        if (isVar) return <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">Variável</span>;
+        return <span className="text-[10px] font-medium text-slate-300 italic">--</span>;
       } 
     },
     { header: 'Valor', key: 'valor', filterValue: (i: any) => fmtR(i.valor), render: (i: any) => <span className={`text-sm font-extrabold ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-rose-600'}`}>{i.tipo === 'receita' ? '+' : '-'}{fmtR(i.valor)}</span> },
@@ -636,17 +709,53 @@ export default function FinanceiroPage() {
               <ArrowRightLeft size={14} />
             </button>
           )}
-          <button onClick={() => { setEditingItem(i); setIsModalOpen(true) }} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"><Pencil size={14} /></button>
-          <button onClick={() => confirm('Excluir?') && remover(i.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><XCircle size={14} /></button>
+          {(editar || isAdmin) && !i.conciliado && (
+            <button 
+              onClick={() => {
+                if (confirm('Marcar este lançamento como Conciliado (Liquidado)?')) {
+                  atualizar(i.id, { 
+                    status: 'pago', 
+                    conciliado: true, 
+                    data_conciliacao: new Date().toISOString().split('T')[0] 
+                  })
+                }
+              }} 
+              className="p-1.5 text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100"
+              title="Conciliar Manualmente"
+            >
+              <FileCheck size={14} />
+            </button>
+          )}
+          {(editar || isAdmin) && i.conciliado && (i.banco_transacao_id || i.cora_id) && (
+            <button 
+              onClick={() => {
+                setSelectedLancamentoParaReconciliar(i);
+                setIsReconciliarModalOpen(true);
+              }} 
+              className="p-1.5 text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100"
+              title="Transferir Vínculo (Re-conciliar)"
+            >
+              <RefreshCw size={14} />
+            </button>
+          )}
+          {(editar || isAdmin) && <button onClick={() => { 
+            const isFixo = i.descricao?.includes('[FIXO]');
+            const isVar = i.descricao?.includes('[VARIÁVEL]');
+            const cleanDesc = i.descricao ? i.descricao.replace(/ \[FIXO\]| \[VARIÁVEL\]/g, '') : '';
+            setEditingItem({...i, descricao: cleanDesc, fixo_variavel: isFixo ? 'fixo' : (isVar ? 'variavel' : '')}); 
+            setIsModalOpen(true);
+          }} className="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"><Pencil size={14} /></button>}
+          {(excluir || isAdmin) && <button onClick={() => confirm('Excluir?') && remover(i.id)} className="p-1.5 text-red-600 bg-red-50 rounded-lg hover:bg-red-100"><XCircle size={14} /></button>}
         </div>
       ) 
     }
-  ], [associados, fornecedores, diretoria, editedMemos, remover])
+  ], [associados, fornecedores, diretoria, editedMemos, remover, editar, excluir, isAdmin])
 
   const modalFields: Field[] = useMemo(() => [
     { name: 'tipo', label: 'Tipo', type: 'select', required: true, options: [{ value: 'receita', label: 'Ingresso' }, { value: 'despesa', label: 'Dispêndio' }] },
     { name: 'data', label: 'Data', type: 'date', required: true },
     { name: 'descricao', label: 'Descrição', type: 'text', required: true },
+    { name: 'fixo_variavel', label: 'Natureza (Fixo/Variável)', type: 'select', options: [{ value: '', label: 'Nenhum' }, { value: 'fixo', label: 'Fixo' }, { value: 'variavel', label: 'Variável' }] },
     { name: 'valor', label: 'Valor (R$)', type: 'number', required: true },
     { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'aberto', label: 'Provisionado' }, { value: 'pago', label: 'Efetivado (Pago)' }, { value: 'atrasado', label: 'Atrasado' }] },
     { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
@@ -722,121 +831,18 @@ export default function FinanceiroPage() {
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm"><BarChart2 size={24} /></div>
-          <div><h1 className="text-2xl font-black text-slate-800 tracking-tight">Fluxo de Caixa</h1><p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Gestão Financeira Unificada</p></div>
-        </div>
-      </div>
-
-      <FinancialKpiGrid kpis={kpiData} onNewIngresso={() => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) }} onNewDespesa={() => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) }} />
-
-      <div className="flex gap-1.5 p-1.5 bg-slate-100 rounded-2xl w-fit">
-        <button onClick={() => setActiveTab('geral')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'geral' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📊 Geral</button>
-        <button onClick={() => setActiveTab('receitas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'receitas' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↑ Ingressos</button>
-        <button onClick={() => setActiveTab('despesas')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'despesas' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>↓ Dispêndios</button>
-        <button onClick={() => setActiveTab('inadimplencia')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'inadimplencia' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>⚠️ Inadimplência</button>
-        <button onClick={() => setActiveTab('conciliacao')} className={`px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'conciliacao' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>📑 Conciliação</button>
-      </div>
-
-      {activeTab === 'geral' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Ingresso Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Ingresso Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Disp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Disp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
-          <ChartCard title="📈 Saldo Acumulado" subtitle="Evolução do caixa"><Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
-        </div>
-      )}
-
-      {activeTab === 'inadimplencia' ? (
-        <InadimplenciaTab />
-      ) : activeTab === 'conciliacao' ? (
-        <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-2 duration-500">
-           {(extrato.length > 0 || (conciliacaoSubTab === 'cora' && (coraItems || []).length > 0)) && (
-              <ConciliacaoToolbar 
-                contas={contas} selectedContaId={selectedContaId} onContaChange={setSelectedContaId} 
-                activeTab={conciliacaoSubTab} categorias={categorias} onBatchCategory={(c: string) => { const next = { ...editedCategories }; filteredItemsConciliacao.forEach((item: any) => { if (!processedIds.has(item.bank.fitid) && !existingTxIds.has(item.bank.fitid)) next[item.bank.fitid] = c }); setEditedCategories(next); }} 
-                onAuditAll={async () => {
-                  const cpfs = Array.from(new Set(filteredItemsConciliacao.map(i => i.assocMatch?.cpf || i.bank.documento).filter(Boolean))).map(cpf => (cpf as string).replace(/\D/g, ''))
-                  if (cpfs.length === 0) return alert('Nenhum associado com CPF identificado.')
-                  setIsAuditingBatch(true); let found = 0
-                  try {
-                    for (const cpf of cpfs) {
-                      const resp = await fetch(`/api/cora/audit/invoices?cpf=${cpf}`)
-                      const data = await resp.json()
-                      if (data.success && data.invoices.length > 0) { setAuditResults(prev => ({ ...prev, [cpf]: data.invoices })); found++ }
-                    }
-                    alert(`Auditoria finalizada! ${found} associados com pendências na Cora.`)
-                  } catch { alert('Erro na auditoria.') } finally { setIsAuditingBatch(false) }
-                }} isAuditingBatch={isAuditingBatch} 
-                onExecute={conciliacaoSubTab === 'ofx' ? handleProcessarLote : handleCoraBatch} 
-                isProcessingBatch={isProcessingBatch} hasFilteredItems={filteredItemsConciliacao.length > 0} 
-                newItemsCount={conciliacaoSubTab === 'ofx' ? matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length : coraMatchedItems.filter((t: any) => !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length} 
-                totalItemsCount={filteredItemsConciliacao.length}
-                totalEntradas={conciliacaoStats.entries}
-                totalSaidas={conciliacaoStats.outings}
-                duplicatesCount={conciliacaoStats.duplicates}
-                onShowHistory={() => setIsHistoryModalOpen(true)}
-                onExportCurrent={handleExportCurrent}
-                onCleanupConciliacao={handleCleanupConciliacao}
-              />
-            )}
-
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-[32px] border border-slate-100 shadow-sm relative z-10 transition-all">
-              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 text-[11px] font-bold">
-                <button onClick={() => setConciliacaoSubTab('ofx')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${conciliacaoSubTab === 'ofx' ? 'bg-white text-emerald-600 shadow-md border border-emerald-50' : 'text-slate-400'}`}><CloudLightning size={14} /> EXTRATO OFX</button>
-                <button onClick={() => setConciliacaoSubTab('cora')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${conciliacaoSubTab === 'cora' ? 'bg-white text-emerald-600 shadow-md border border-emerald-50' : 'text-slate-400'}`}><RefreshCw size={14} /> CONEXÃO CORA</button>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative group min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="text" placeholder="Filtrar por texto..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-[11px] font-bold outline-none ring-1 ring-slate-100 focus:ring-emerald-500/20 transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterType} onChange={(e) => setFilterType(e.target.value as any)}><option value="ALL">Todo Tipo</option><option value="CREDIT">Entradas</option><option value="DEBIT">Saídas</option></select>
-                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterMatch} onChange={(e) => setFilterMatch(e.target.value as any)}><option value="ALL">Total ({conciliacaoSubTab === 'ofx' ? extrato.length : (coraItems || []).length})</option><option value="FOUND">Com Vínculo</option><option value="NOT_FOUND">Sem Vínculo</option></select>
-                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}><option value="ALL">Todo Status</option><option value="NEW">Não Conciliados</option><option value="DUPLICATE">Conciliados</option></select>
-              </div>
-            </div>
-
-            {(loading || (conciliacaoSubTab === 'cora' && loadingCora)) ? (<div className="grid grid-cols-1 gap-4">{[1,2,3,4].map(i => <Skeleton key={i} height={80} />)}</div>) : conciliacaoSubTab === 'ofx' ? (
-              extrato.length === 0 ? (<OFXUpload onUpload={(data: any) => setExtrato(parseOFX(data))} />) : (
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="flex items-center justify-between px-2"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lista de Lançamentos ({filteredItemsConciliacao.length})</span><button onClick={() => setExtrato([])} className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><Trash2 size={14} /> LIMPAR</button></div>
-                  {filteredItemsConciliacao.map((item: any) => (<MatchItem key={item.bank.fitid} {...item} isProcessed={processedIds.has(item.bank.fitid)} memo={editedMemos[item.bank.fitid] || item.bank.memo} category={editedCategories[item.bank.fitid] || item.suggestedCategory} allCategories={categorias} onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} onEditCategory={(c: string) => setEditedCategories(prev => ({ ...prev, [item.bank.fitid]: c }))} onLinkManual={() => { setSelectedExtrato(item); setIsManualLinkModalOpen(true) }} onLinkSupplier={() => { setSelectedExtrato(item); setIsSupplierLinkModalOpen(true) }} onIgnore={() => setIgnoredMatches(prev => { const n = new Set(prev); if (n.has(item.bank.fitid)) n.delete(item.bank.fitid); else n.add(item.bank.fitid); return n; })} isIgnored={ignoredMatches.has(item.bank.fitid)} isDuplicate={existingTxIds.has(item.bank.fitid)} externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]} />))}
-                </div>
-              )
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {(!coraItems || coraItems?.length === 0) ? (<div className="flex flex-col items-center justify-center p-20 bg-white rounded-[40px] border border-dashed border-slate-200"><RefreshCw size={48} className="text-slate-300 mb-4 animate-spin" /><p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Sincronizando com Banco Cora...</p></div>) : 
-                  filteredItemsConciliacao.map((item: any) => (<MatchItem key={item.bank.fitid} {...item} isCora isDuplicate={existingTxIds.has(item.bank.fitid)} isProcessed={processedIds.has(item.bank.fitid)} memo={editedMemos[item.bank.fitid] || item.bank.memo} category={editedCategories[item.bank.fitid] || item.suggestedCategory} allCategories={categorias} onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} onEditCategory={(c: string) => setEditedCategories(prev => ({ ...prev, [item.bank.fitid]: c }))} externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]} />))
-                }
-              </div>
-            )}
-        </div>
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no fluxo..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-            <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
-            <select value={filterMonth} onChange={(e) => setFilterMonth(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Meses</option>{MESES.map((m, idx) => <option key={m} value={idx}>{m}</option>)}</select>
-            <select value={filterUnlinked} onChange={(e) => setFilterUnlinked(e.target.value as any)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
-              <option value="ALL">Vínculos</option>
-              <option value="LINKED">Com Vínculo</option>
-              <option value="UNLINKED">Sem Vínculo</option>
-            </select>
-            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
-              <option value="ALL">Todas Categorias</option>
-              {[...new Set(categorias.map(c => c.nome))].sort().map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-            <div className="flex gap-2">
-              <button onClick={handleCleanupDuplicates} disabled={isCleaningDuplicates} className="px-4 py-4 bg-rose-50 text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-2 transition-all hover:bg-rose-100 disabled:opacity-50" title="Remover mensalidades duplicadas não conciliadas">
-                <Trash2 size={14} className={isCleaningDuplicates ? 'animate-spin' : ''} />
-                Limpar Provisões
-              </button>
-              <button onClick={handleCleanupConciliacao} disabled={isCleaningDuplicates} className="px-4 py-4 bg-amber-50 text-amber-600 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-2 transition-all hover:bg-amber-100 disabled:opacity-50" title="Remover conciliações duplicadas (importação repetida)">
-                <RefreshCw size={14} className={isCleaningDuplicates ? 'animate-spin' : ''} />
-                Limpar Extrato
-              </button>
-              <button onClick={() => setIsSyncModalOpen(true)} className="px-6 py-4 bg-slate-50 text-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-slate-100">
-                <RefreshCw size={14} /> Recorrência em Lote
-              </button>
-              <button 
-                onClick={async () => {
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between bg-white p-4 rounded-[32px] border border-slate-100 shadow-sm gap-4">
+        <div className="flex items-center gap-4 pl-2">
+          <div className="w-14 h-14 rounded-[20px] bg-[#0b2218] flex items-center justify-center text-emerald-400 shadow-sm shrink-0">
+            <BarChart2 size={24} />
+          </div>
+          <div className="flex flex-col">
+            <div className="mb-0.5">
+              <IntegrityDropdown 
+                onLimparProvisoes={handleCleanupDuplicates}
+                onLimparExtrato={handleCleanupConciliacao}
+                onRecorrenciaLote={() => setIsSyncModalOpen(true)}
+                onIntegracaoTotal={async () => {
                   if (!confirm('Deseja realizar a Integração Total (Fiscal e Contábil) de todo o exercício?')) return
                   setIsProcessingBatch(true)
                   try {
@@ -871,15 +877,230 @@ export default function FinanceiroPage() {
                   } catch (err: any) {
                     alert(`Erro inesperado: ${err.message}`)
                   } finally {
-                    setIsProcessingBatch(true) // Forçar refresh visual se necessário
+                    setIsProcessingBatch(true)
                     setIsProcessingBatch(false)
                   }
                 }}
-                className="px-6 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[1px] flex items-center gap-3 transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-100"
-              >
-                <CloudLightning size={14} /> Integração Fiscal e Contábil
-              </button>
+              />
             </div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-0.5">Fluxo de Caixa</h1>
+            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Gestão Financeira Unificada — ACPROBEC</p>
+          </div>
+        </div>
+
+        <div className="flex gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl w-full xl:w-auto overflow-x-auto no-scrollbar">
+          <button onClick={() => setActiveTab('geral')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'geral' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><BarChart2 size={12} /> Geral</button>
+          <button onClick={() => setActiveTab('receitas')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'receitas' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><ArrowUpRight size={12} /> Ingressos</button>
+          <button onClick={() => setActiveTab('despesas')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'despesas' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><ArrowDownRight size={12} /> Dispêndios</button>
+          <button onClick={() => setActiveTab('inadimplencia')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'inadimplencia' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><AlertTriangle size={12} /> Inadimplência</button>
+          <button onClick={() => setActiveTab('conciliacao')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'conciliacao' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><RefreshCw size={12} /> Conciliação</button>
+          <button onClick={() => setActiveTab('relatorios')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'relatorios' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={12} /> Relatórios</button>
+        </div>
+      </div>
+
+      <FinancialKpiGrid 
+        kpis={kpiData} 
+        cashReservePercentage={10}
+        onCashReservePercentageChange={() => {}}
+        hasReserveAccount={contas?.some(c => c.nome.toLowerCase().includes('fundo')) || false}
+        onFixAccount={() => alert('Para criar a conta de Fundo de Caixa, vá nas Configurações > Contas Bancárias.')}
+        onNewIngresso={(criar || isAdmin) ? () => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) } : undefined} 
+        onNewDespesa={(criar || isAdmin) ? () => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) } : undefined} 
+      />
+
+      {activeTab === 'geral' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Ingresso Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Ingresso Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Disp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Disp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+          <ChartCard title="📈 Saldo Acumulado" subtitle="Evolução do caixa"><Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+        </div>
+      )}
+
+      {activeTab === 'inadimplencia' ? (
+        <InadimplenciaTab />
+      ) : activeTab === 'conciliacao' ? (
+        <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-2 duration-500">
+           {(extrato.length > 0 || (conciliacaoSubTab === 'cora' && (coraItems || []).length > 0)) && (
+              <ConciliacaoToolbar 
+                contas={contas} selectedContaId={selectedContaId} onContaChange={setSelectedContaId} 
+                activeTab={conciliacaoSubTab} categorias={categorias} onBatchCategory={(c: string) => { 
+                  const next = { ...editedCategories }; 
+                  const targetItems = selectedMatchIds.size > 0 
+                    ? filteredItemsConciliacao.filter((i: any) => selectedMatchIds.has(i.bank.fitid))
+                    : filteredItemsConciliacao;
+                  targetItems.forEach((item: any) => { 
+                    if (!processedIds.has(item.bank.fitid) && !existingTxIds.has(item.bank.fitid)) next[item.bank.fitid] = c 
+                  }); 
+                  setEditedCategories(next);
+                  if (selectedMatchIds.size > 0) setSelectedMatchIds(new Set()); 
+                }} 
+                hasSelection={selectedMatchIds.size > 0}
+                selectedCount={selectedMatchIds.size}
+                onSelectAll={(checked) => {
+                  if (checked) {
+                    const allIds = filteredItemsConciliacao.map((i: any) => i.bank.fitid)
+                    setSelectedMatchIds(new Set(allIds))
+                  } else {
+                    setSelectedMatchIds(new Set())
+                  }
+                }}
+                onAuditAll={async () => {
+                  const cpfs = Array.from(new Set(filteredItemsConciliacao.map(i => i.assocMatch?.cpf || i.bank.documento).filter(Boolean))).map(cpf => (cpf as string).replace(/\D/g, ''))
+                  if (cpfs.length === 0) return alert('Nenhum associado com CPF identificado.')
+                  setIsAuditingBatch(true); let found = 0
+                  try {
+                    for (const cpf of cpfs) {
+                      const resp = await fetch(`/api/cora/audit/invoices?cpf=${cpf}`)
+                      const data = await resp.json()
+                      if (data.success && data.invoices.length > 0) { setAuditResults(prev => ({ ...prev, [cpf]: data.invoices })); found++ }
+                    }
+                    alert(`Auditoria finalizada! ${found} associados com pendências na Cora.`)
+                  } catch { alert('Erro na auditoria.') } finally { setIsAuditingBatch(false) }
+                }} isAuditingBatch={isAuditingBatch} 
+                onExecute={conciliacaoSubTab === 'ofx' ? handleProcessarLote : handleCoraBatch} 
+                isProcessingBatch={isProcessingBatch} hasFilteredItems={filteredItemsConciliacao.length > 0} 
+                newItemsCount={conciliacaoSubTab === 'ofx' ? matchedTransactions.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length : coraMatchedItems.filter((t: any) => !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid)).length} 
+                totalItemsCount={filteredItemsConciliacao.length}
+                totalEntradas={conciliacaoStats.entries}
+                totalSaidas={conciliacaoStats.outings}
+                duplicatesCount={conciliacaoStats.duplicates}
+                onShowHistory={() => setIsHistoryModalOpen(true)}
+                onExportCurrent={handleExportCurrent}
+                onCleanupConciliacao={handleCleanupConciliacao}
+              />
+            )}
+
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-[32px] border border-slate-100 shadow-sm relative z-10 transition-all">
+              <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100 text-[11px] font-bold">
+                <button onClick={() => setConciliacaoSubTab('ofx')} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${conciliacaoSubTab === 'ofx' ? 'bg-white text-emerald-600 shadow-md border border-emerald-50' : 'text-slate-400'}`}><CloudLightning size={14} /> EXTRATO OFX</button>
+                <button onClick={() => { setConciliacaoSubTab('cora'); syncWithBank(); }} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all ${conciliacaoSubTab === 'cora' ? 'bg-white text-emerald-600 shadow-md border border-emerald-50' : 'text-slate-400'}`}><RefreshCw size={14} /> CONEXÃO CORA</button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative group min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} /><input type="text" placeholder="Filtrar por texto..." className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border-none rounded-xl text-[11px] font-bold outline-none ring-1 ring-slate-100 focus:ring-emerald-500/20 transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterType} onChange={(e) => setFilterType(e.target.value as any)}><option value="ALL">Todo Tipo</option><option value="CREDIT">Entradas</option><option value="DEBIT">Saídas</option></select>
+                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterMatch} onChange={(e) => setFilterMatch(e.target.value as any)}><option value="ALL">Total ({conciliacaoSubTab === 'ofx' ? extrato.length : (coraItems || []).length})</option><option value="FOUND">Com Vínculo</option><option value="NOT_FOUND">Sem Vínculo</option></select>
+                <select className="bg-slate-50 text-[11px] font-bold text-slate-600 outline-none border-none p-2.5 rounded-xl ring-1 ring-slate-100" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as any)}><option value="ALL">Todo Status</option><option value="NEW">Não Conciliados</option><option value="DUPLICATE">Conciliados</option></select>
+              </div>
+            </div>
+
+            {(loading || (conciliacaoSubTab === 'cora' && loadingCora)) ? (<div className="grid grid-cols-1 gap-4">{[1,2,3,4].map(i => <Skeleton key={i} height={80} />)}</div>) : conciliacaoSubTab === 'ofx' ? (
+              extrato.length === 0 ? (<OFXUpload onUpload={(data: any) => setExtrato(parseOFX(data))} />) : (
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex items-center justify-between px-2"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lista de Lançamentos ({filteredItemsConciliacao.length})</span><button onClick={() => setExtrato([])} className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><Trash2 size={14} /> LIMPAR</button></div>
+                  {filteredItemsConciliacao.map((item: any) => (<MatchItem key={item.bank.fitid} {...item} isProcessed={processedIds.has(item.bank.fitid)} memo={editedMemos[item.bank.fitid] || item.bank.memo} category={editedCategories[item.bank.fitid] || item.suggestedCategory} allCategories={categorias} onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} onEditCategory={(c: string) => setEditedCategories(prev => ({ ...prev, [item.bank.fitid]: c }))} onLinkManual={() => { setSelectedExtrato(item); setIsManualLinkModalOpen(true) }} onLinkSupplier={() => { setSelectedExtrato(item); setIsSupplierLinkModalOpen(true) }} onIgnore={() => setIgnoredMatches(prev => { const n = new Set(prev); if (n.has(item.bank.fitid)) n.delete(item.bank.fitid); else n.add(item.bank.fitid); return n; })} isIgnored={ignoredMatches.has(item.bank.fitid)} isDuplicate={existingTxIds.has(item.bank.fitid)} externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]} isSelected={selectedMatchIds.has(item.bank.fitid)} onToggleSelect={() => { const next = new Set(selectedMatchIds); if (next.has(item.bank.fitid)) next.delete(item.bank.fitid); else next.add(item.bank.fitid); setSelectedMatchIds(next); }} onClearMatch={() => { const next = new Set(clearedMatches); next.add(item.bank.fitid); setClearedMatches(next); }} />))}
+                </div>
+              )
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {(!coraItems || coraItems?.length === 0) ? (<div className="flex flex-col items-center justify-center p-20 bg-white rounded-[40px] border border-dashed border-slate-200"><RefreshCw size={48} className="text-slate-300 mb-4 animate-spin" /><p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Sincronizando com Banco Cora...</p></div>) : 
+                  filteredItemsConciliacao.map((item: any) => (<MatchItem key={item.bank.fitid} {...item} isCora isDuplicate={existingTxIds.has(item.bank.fitid)} isProcessed={processedIds.has(item.bank.fitid)} memo={editedMemos[item.bank.fitid] || item.bank.memo} category={editedCategories[item.bank.fitid] || item.suggestedCategory} allCategories={categorias} onEditMemo={(m: string) => setEditedMemos(prev => ({ ...prev, [item.bank.fitid]: m }))} onEditCategory={(c: string) => setEditedCategories(prev => ({ ...prev, [item.bank.fitid]: c }))} externalAuditInvoices={auditResults[(item.assocMatch?.cpf || item.bank.documento)?.replace(/\D/g, '')]} isSelected={selectedMatchIds.has(item.bank.fitid)} onToggleSelect={() => { const next = new Set(selectedMatchIds); if (next.has(item.bank.fitid)) next.delete(item.bank.fitid); else next.add(item.bank.fitid); setSelectedMatchIds(next); }} onClearMatch={() => { const next = new Set(clearedMatches); next.add(item.bank.fitid); setClearedMatches(next); }} />))
+                }
+              </div>
+            )}
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no fluxo..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+            <select value={filterDateType} onChange={(e) => setFilterDateType(e.target.value as any)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
+              <option value="caixa">Visão Caixa</option>
+              <option value="competencia">Visão Competência</option>
+              <option value="conciliacao">Data de Conciliação</option>
+            </select>
+            <select value={filterDay} onChange={(e) => setFilterDay(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Dias</option>{Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}</select>
+            <div className="relative">
+              <div 
+                onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+                className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold cursor-pointer flex items-center gap-2 text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10 h-full"
+                title="Selecionar Meses"
+              >
+                {filterMonths.includes(-1) ? 'Todos Meses' : filterMonths.map(m => MESES[m]).join(', ')}
+              </div>
+              {isMonthDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-xl border border-slate-100 z-[100] py-2 max-h-64 overflow-y-auto">
+                   <div className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-slate-700" onClick={() => { setFilterMonths([-1]); setIsMonthDropdownOpen(false); }}>
+                     <input type="checkbox" checked={filterMonths.includes(-1)} readOnly className="rounded text-emerald-600" /> Todos Meses
+                   </div>
+                   {MESES.map((m, idx) => (
+                     <div key={m} className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-slate-600" onClick={() => {
+                       if (filterMonths.includes(-1)) {
+                         setFilterMonths([idx]);
+                       } else {
+                         if (filterMonths.includes(idx)) {
+                           const newM = filterMonths.filter(x => x !== idx);
+                           setFilterMonths(newM.length === 0 ? [-1] : newM);
+                         } else {
+                           setFilterMonths([...filterMonths, idx].sort((a,b) => a-b));
+                         }
+                       }
+                     }}>
+                       <input type="checkbox" checked={!filterMonths.includes(-1) && filterMonths.includes(idx)} readOnly className="rounded text-emerald-600" /> {m}
+                     </div>
+                   ))}
+                </div>
+              )}
+              {isMonthDropdownOpen && (
+                <div className="fixed inset-0 z-[90]" onClick={() => setIsMonthDropdownOpen(false)}></div>
+              )}
+            </div>
+            <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+            <div className="relative">
+              <div 
+                onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold cursor-pointer flex items-center gap-2 text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10 h-full"
+                title="Selecionar Status"
+              >
+                {filterLancamentoStatus.includes('ALL') ? 'Status' : filterLancamentoStatus.map(s => s === 'pago' ? 'Pago/Rec.' : s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}
+              </div>
+              {isStatusDropdownOpen && (
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-xl border border-slate-100 z-[100] py-2 max-h-64 overflow-y-auto">
+                   <div className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 text-[11px] font-bold text-slate-700" onClick={() => { setFilterLancamentoStatus(['ALL']); setIsStatusDropdownOpen(false); }}>
+                     <input type="checkbox" checked={filterLancamentoStatus.includes('ALL')} readOnly className="rounded text-emerald-600" /> Todos Status
+                   </div>
+                   {[
+                     { value: 'pago', label: 'Pago / Recebido' },
+                     { value: 'aberto', label: 'Aberto' },
+                     { value: 'atrasado', label: 'Atrasado' },
+                     { value: 'cancelado', label: 'Cancelado' },
+                   ].map((opt) => (
+                     <div key={opt.value} className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 text-[11px] font-bold text-slate-600" onClick={() => {
+                       if (filterLancamentoStatus.includes('ALL')) {
+                         setFilterLancamentoStatus([opt.value]);
+                       } else {
+                         if (filterLancamentoStatus.includes(opt.value)) {
+                           const newS = filterLancamentoStatus.filter(x => x !== opt.value);
+                           setFilterLancamentoStatus(newS.length === 0 ? ['ALL'] : newS);
+                         } else {
+                           setFilterLancamentoStatus([...filterLancamentoStatus, opt.value]);
+                         }
+                       }
+                     }}>
+                       <input type="checkbox" checked={!filterLancamentoStatus.includes('ALL') && filterLancamentoStatus.includes(opt.value)} readOnly className="rounded text-emerald-600" /> {opt.label}
+                     </div>
+                   ))}
+                </div>
+              )}
+              {isStatusDropdownOpen && (
+                <div className="fixed inset-0 z-[90]" onClick={() => setIsStatusDropdownOpen(false)}></div>
+              )}
+            </div>
+            <select value={filterConta} onChange={(e) => setFilterConta(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
+              <option value="ALL">Todas Contas</option>
+              {contas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+            <select value={filterPagamento} onChange={(e) => setFilterPagamento(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
+              <option value="ALL">Forma de Pagto</option>
+              {[...new Set(lancamentos.map(l => l.forma_pagamento).filter(Boolean))].sort().map(p => <option key={String(p)} value={String(p)}>{String(p)}</option>)}
+            </select>
+            <select value={filterUnlinked} onChange={(e) => setFilterUnlinked(e.target.value as any)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
+              <option value="ALL">Vínculos</option>
+              <option value="LINKED">Com Vínculo</option>
+              <option value="UNLINKED">Sem Vínculo</option>
+            </select>
+            <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
+              <option value="ALL">Todas Categorias</option>
+              {[...new Set(categorias.map(c => c.nome))].sort().map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+
           </div>
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
             <DataTable 
@@ -925,6 +1146,52 @@ export default function FinanceiroPage() {
           refresh()
         }}
       />
+
+      {isReconciliarModalOpen && selectedLancamentoParaReconciliar && (
+        <ManualLinkLancamentoModal
+          isOpen={isReconciliarModalOpen}
+          onClose={() => {
+            setIsReconciliarModalOpen(false)
+            setSelectedLancamentoParaReconciliar(null)
+          }}
+          bankItem={{
+            bank: {
+              memo: selectedLancamentoParaReconciliar.descricao,
+              date: selectedLancamentoParaReconciliar.data_conciliacao || selectedLancamentoParaReconciliar.data,
+              amount: selectedLancamentoParaReconciliar.valor,
+              fitid: selectedLancamentoParaReconciliar.banco_transacao_id || selectedLancamentoParaReconciliar.cora_id
+            }
+          }}
+          associados={associados}
+          lancamentos={lancamentos}
+          onSelect={async (assoc: any, newLancamento: any) => {
+            setIsReconciliarModalOpen(false)
+            try {
+              // 1. Atualizar o novo lançamento
+              await atualizar(newLancamento.id, {
+                status: 'pago',
+                conciliado: true,
+                data_conciliacao: selectedLancamentoParaReconciliar.data_conciliacao || selectedLancamentoParaReconciliar.data,
+                banco_transacao_id: selectedLancamentoParaReconciliar.banco_transacao_id,
+                forma_pagamento: selectedLancamentoParaReconciliar.forma_pagamento
+              })
+              
+              // 2. Reverter o antigo
+              await atualizar(selectedLancamentoParaReconciliar.id, {
+                status: 'aberto',
+                conciliado: false,
+                data_conciliacao: null as any,
+                banco_transacao_id: null as any
+              })
+
+              alert('Vínculo transferido com sucesso!')
+              refresh()
+            } catch (err: any) {
+              alert('Erro ao transferir vínculo: ' + err.message)
+            }
+          }}
+        />
+      )}
 
       <CrudModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} title="Gerar Mensalidades em Lote" onSubmit={async (p: any) => {
         let list = associados.filter(a => a.status === 'ativo');
@@ -1026,8 +1293,8 @@ export default function FinanceiroPage() {
 
       <BatchActionBar 
         selectedCount={selectedIds.length} 
-        onDelete={() => setIsConfirmDeleteOpen(true)}
-        onUpdate={handleBulkUpdate}
+        onDelete={(excluir || isAdmin) ? () => setIsConfirmDeleteOpen(true) : undefined}
+        onUpdate={(editar || isAdmin) ? handleBulkUpdate : undefined}
         onClear={() => setSelectedIds([])}
         categories={categorias}
       />
@@ -1058,6 +1325,7 @@ export default function FinanceiroPage() {
         onClose={() => setIsRemanejarModalOpen(false)}
         original={remanejarTarget}
         associados={associados}
+        lancamentos={lancamentos}
         onConfirm={remanejar}
       />
 

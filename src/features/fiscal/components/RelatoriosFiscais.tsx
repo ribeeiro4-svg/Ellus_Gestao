@@ -54,7 +54,7 @@ export default function RelatoriosFiscais({ nfeHook, nfseHook, estoqueHook }: { 
           <div>
             ${conteudo.innerHTML}
           </div>
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Módulo Fiscal Inovacont ACPROBEC</div>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Módulo Fiscal ÁUREA Tech ACPROBEC</div>
         </body>
       </html>
     `)

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { X, Target, UserPlus, Info, ArrowRightLeft, DollarSign } from 'lucide-react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { X, Target, UserPlus, Info, ArrowRightLeft, DollarSign, RefreshCw } from 'lucide-react'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 import type { Lancamento, Associado } from '@/lib/types'
 
@@ -8,11 +8,13 @@ interface RemanejarModalProps {
   onClose: () => void
   original: Lancamento | null
   associados: Associado[]
-  onConfirm: (idOriginal: string, targetAssociadoId: string, valor: number, novaDesc: string) => Promise<any>
+  lancamentos: Lancamento[]
+  onConfirm: (idOriginal: string, targetAssociadoId: string, valor: number, novaDesc: string, targetLancamentoId?: string) => Promise<any>
 }
 
-export default function RemanejarModal({ isOpen, onClose, original, associados, onConfirm }: RemanejarModalProps) {
+export default function RemanejarModal({ isOpen, onClose, original, associados, lancamentos, onConfirm }: RemanejarModalProps) {
   const [targetId, setTargetId] = useState('')
+  const [targetLancamentoId, setTargetLancamentoId] = useState('')
   const [valor, setValor] = useState(0)
   const [desc, setDesc] = useState('')
   const [loading, setLoading] = useState(false)
@@ -25,6 +27,14 @@ export default function RemanejarModal({ isOpen, onClose, original, associados, 
     return Number(original.valor) + taxaVal
   }, [original])
 
+  const targetLancamentos = useMemo(() => {
+    if (!targetId || !lancamentos) return []
+    return lancamentos.filter(l => 
+      l.associado_id === targetId && 
+      (l.status === 'atrasado' || l.status === 'aberto' || l.status === 'parcial')
+    ).sort((a, b) => b.data.localeCompare(a.data))
+  }, [targetId, lancamentos])
+
   useEffect(() => {
     if (original) {
       setValor(valorBruto)
@@ -32,16 +42,22 @@ export default function RemanejarModal({ isOpen, onClose, original, associados, 
     }
   }, [original, valorBruto])
 
+  useEffect(() => {
+    setTargetLancamentoId('')
+  }, [targetId])
+
   if (!isOpen || !original) return null
 
   const handleConfirm = async () => {
     if (!targetId) return alert('Selecione o associado de destino.')
     if (valor <= 0 || valor > valorBruto) return alert('Valor inválido.')
-    if (!desc) return alert('Informe a descrição para o novo associado.')
+    
+    // Se não selecionou um lançamento, a descrição é obrigatória
+    if (!targetLancamentoId && !desc) return alert('Informe a descrição para o novo associado.')
 
     setLoading(true)
     try {
-      const res = await onConfirm(original.id, targetId, valor, desc)
+      const res = await onConfirm(original.id, targetId, valor, desc, targetLancamentoId || undefined)
       if (res?.error) alert(res.error)
       else onClose()
     } catch (err: any) {
@@ -102,11 +118,44 @@ export default function RemanejarModal({ isOpen, onClose, original, associados, 
                 onChange={e => setTargetId(e.target.value)}
               >
                 <option value="">Selecione um Associado...</option>
-                {associados.filter(a => a.id !== original.associado_id).map(a => (
+                {associados.map(a => (
                   <option key={a.id} value={a.id}>{a.nome} ({a.cpf || 'S/ CPF'})</option>
                 ))}
               </select>
             </div>
+
+            {targetId && (
+              <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <ArrowRightLeft size={12} /> Vincular a Lançamento Existente (Opcional)
+                </label>
+                <select 
+                  className="w-full px-5 py-3.5 bg-emerald-50/30 border border-emerald-100 rounded-2xl text-sm font-bold text-emerald-900 outline-none focus:bg-white focus:border-emerald-500 transition-all appearance-none cursor-pointer"
+                  value={targetLancamentoId}
+                  onChange={e => {
+                    setTargetLancamentoId(e.target.value)
+                    if (e.target.value) {
+                      const l = targetLancamentos.find(x => x.id === e.target.value)
+                      if (l) {
+                        const saldoDevedor = Number(l.valor) - (l.valor_pago_ec || 0)
+                        setValor(Math.min(valorBruto, Math.max(0, saldoDevedor)))
+                        setDesc(l.descricao)
+                      }
+                    }
+                  }}
+                >
+                  <option value="">-- Criar novo lançamento --</option>
+                  {targetLancamentos.map(l => (
+                    <option key={l.id} value={l.id}>{fmtData(l.data)} - {l.descricao} ({fmtR(l.valor)})</option>
+                  ))}
+                </select>
+                <p className="text-[9px] text-emerald-600 font-bold ml-1 uppercase tracking-tight">
+                  {targetLancamentos.length > 0 
+                    ? `Encontrado(s) ${targetLancamentos.length} lançamento(s) pendente(s).` 
+                    : 'Nenhum lançamento pendente para este associado.'}
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -125,16 +174,17 @@ export default function RemanejarModal({ isOpen, onClose, original, associados, 
               <p className="text-[10px] text-slate-400 font-bold ml-1 italic">* Valor será descontado do lançamento original.</p>
             </div>
 
-            <div className="space-y-2">
+            <div className={`space-y-2 transition-opacity ${targetLancamentoId ? 'opacity-50 pointer-events-none' : ''}`}>
               <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Target size={12} /> Nova Descrição (P/ Destino)
+                <Target size={12} /> {targetLancamentoId ? 'Descrição Vinculada' : 'Nova Descrição (P/ Destino)'}
               </label>
               <input 
                 type="text" 
-                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-50/50 transition-all"
+                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-emerald-500 transition-all"
                 placeholder="Ex: Mensalidade - Aretha Oliveira"
                 value={desc}
                 onChange={e => setDesc(e.target.value)}
+                readOnly={!!targetLancamentoId}
               />
             </div>
           </div>
@@ -161,6 +211,3 @@ export default function RemanejarModal({ isOpen, onClose, original, associados, 
     </div>
   )
 }
-
-import { useMemo } from 'react'
-import { RefreshCw } from 'lucide-react'

@@ -8,7 +8,7 @@ import { getMyTenantIdAction } from '@/app/actions/tenantActions'
  * Ação de Saneamento Contábil: Varre todos os lançamentos integrados e os corrige
  * com base nas novas regras de auditoria (Aluguel, Taxas, Inversões e Espécie).
  */
-export async function executarSaneamentoContabilAction(providedTenantId?: string) {
+export async function executarSaneamentoContabilAction(providedTenantId?: string, periodo?: string) {
   const sb = await createServerSupabase()
   
   // 0. Detectar tenantId de forma robusta
@@ -18,21 +18,42 @@ export async function executarSaneamentoContabilAction(providedTenantId?: string
   const tenantId = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id || providedTenantId || await getMyTenantIdAction()
   if (!tenantId) return { error: 'Tenant ID não identificado', fixedCount: 0, errorCount: 0, renamedCount: 0 }
 
-  // 1. Buscar todos os lançamentos contábeis vinculados ao financeiro
-  const { data: lancsContData } = await sb.from('lancamentos_contabeis')
+  // 0.1 Calcular datas se houver período (YYYY-MM)
+  let startDate: string | null = null
+  let endDate: string | null = null
+  if (periodo && periodo !== 'all') {
+    startDate = `${periodo}-01`
+    const [year, month] = periodo.split('-').map(Number)
+    const lastDay = new Date(year, month, 0).getDate()
+    endDate = `${periodo}-${String(lastDay).padStart(2, '0')}`
+  }
+
+  // 1. Buscar lançamentos contábeis vinculados ao financeiro
+  let queryLancs = sb.from('lancamentos_contabeis')
     .select('id, origem_id')
     .eq('tenant_id', tenantId)
     .not('origem_id', 'is', null)
+  
+  if (startDate && endDate) {
+    queryLancs = queryLancs.gte('data_lancamento', startDate).lte('data_lancamento', endDate)
+  }
+
+  const { data: lancsContData } = await queryLancs
 
   let itemsToProcess = (lancsContData || []).map(l => ({ id: l.id, origem_id: l.origem_id }))
 
-  // Se o diário estiver vazio, buscamos tudo no financeiro para integrar
+  // Se o diário estiver vazio ou filtrado, buscamos no financeiro para integrar
   if (itemsToProcess.length === 0) {
-    console.log('[Contábil] Diário vazio. Iniciando reconstrução total...')
-    const { data: allFin } = await sb.from('lancamentos')
+    let queryFin = sb.from('lancamentos')
       .select('id')
       .eq('tenant_id', tenantId)
       .in('status', ['pago', 'conciliado', 'liquidado', 'PAGO', 'CONCILIADO', 'LIQUIDADO'])
+    
+    if (startDate && endDate) {
+      queryFin = queryFin.gte('data', startDate).lte('data', endDate)
+    }
+
+    const { data: allFin } = await queryFin
     
     if (allFin) {
       itemsToProcess = allFin.map(f => ({ id: null as any, origem_id: f.id }))
@@ -122,20 +143,25 @@ export async function executarSaneamentoContabilAction(providedTenantId?: string
     let newDescricao = lf.descricao
 
     // --- LÓGICA DE LIMPEZA AGRESSIVA DE HISTÓRICO ---
-    let descLimpa = lf.descricao
+    let descLimpa = (lf.descricao || '')
       .replace(/Pgto QR Code Pix - /gi, '')
       .replace(/Transf Pix enviada - /gi, '')
       .replace(/Pagamento recebido - /gi, '')
       .replace(/Transf Pix recebida - /gi, '')
+      .replace(/(PAGAMENTO\s*-\s*)+/gi, '')
+      .replace(/(PAGAMENTO\s+A\s+)+/gi, '')
+      .replace(/PAGAMENTO/gi, '')
       .replace(/PAG - /gi, '')
       .replace(/REC - /gi, '')
       .replace(/Débito em conta - /gi, '')
       .replace(/TARIFAS BANCÁRIAS/gi, '')
       .replace(/MENSALIDADE DE ASSOCIADO/gi, '')
       .replace(/ADESÃO DE ASSOCIADO/gi, '')
+      .replace(/ - - /g, ' - ')
       .replace(/  +/g, ' ')
       .trim()
       .replace(/^- /, '')
+      .replace(/- $/g, '')
 
     if (categoria.includes('MENSALIDADE') || categoria.includes('ADESÃO')) {
       const prefixo = categoria.includes('ADESÃO') ? 'ADESÃO' : 'MENSALIDADE'
@@ -145,7 +171,7 @@ export async function executarSaneamentoContabilAction(providedTenantId?: string
     } else if (categoria.includes('TARIFA') || categoria.includes('TAXA')) {
       newDescricao = `TARIFAS BANCÁRIAS - ${descLimpa || lf.categoria}`
     } else if (lf.tipo === 'despesa') {
-      newDescricao = nomeEntidade ? `PAGAMENTO A ${nomeEntidade} - ${lf.categoria}` : `PAGAMENTO - ${descLimpa || lf.categoria}`
+      newDescricao = nomeEntidade ? `PAGAMENTO - ${nomeEntidade} - ${lf.categoria}` : `PAGAMENTO - ${descLimpa || lf.categoria}`
     }
 
     try {

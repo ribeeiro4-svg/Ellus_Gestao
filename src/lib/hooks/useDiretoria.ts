@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 
@@ -28,28 +29,30 @@ export interface Diretor {
 }
 
 export function useDiretoria() {
-  const [diretoria, setDiretoria] = useState<Diretor[]>([])
-  const [loading, setLoading] = useState(true)
   const tenantId = useTenantId()
   const sb = createClient()
 
-  const fetchDiretoria = useCallback(async () => {
-    if (!tenantId) return
-    setLoading(true)
-    try {
+  const { data, isLoading, mutate } = useSWR<Diretor[]>(
+    tenantId ? ['diretoria_data', tenantId] : null,
+    async () => {
       const { data: dirs, error: errDirs } = await sb
         .from('diretoria')
         .select('*, periodos:diretoria_pro_labores(*)')
         .eq('tenant_id', tenantId)
         .order('nome')
       
-      if (!errDirs && dirs) {
-        setDiretoria(dirs)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [tenantId])
+      if (errDirs) throw errDirs
+      return dirs as Diretor[]
+    },
+    { revalidateOnFocus: true, revalidateOnReconnect: true }
+  )
+
+  const diretoria = data || []
+  const loading = isLoading
+
+  const fetchDiretoria = useCallback(async () => {
+    await mutate()
+  }, [mutate])
 
   const inserir = async (obj: Partial<Diretor>) => {
     if (!tenantId) return { error: 'Tenant não identificado' }
@@ -71,7 +74,7 @@ export function useDiretoria() {
       )
     }
 
-    await fetchDiretoria()
+    await mutate()
     return { data: newDir, error: null }
   }
 
@@ -103,7 +106,7 @@ export function useDiretoria() {
       }
     }
 
-    await fetchDiretoria()
+    await mutate()
     return { error: null }
   }
 
@@ -112,13 +115,9 @@ export function useDiretoria() {
       .from('diretoria')
       .delete()
       .eq('id', id)
-    if (!error) await fetchDiretoria()
+    if (!error) await mutate()
     return { error }
   }
-
-  useEffect(() => {
-    fetchDiretoria()
-  }, [fetchDiretoria])
 
   return { 
     diretoria, 

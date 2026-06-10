@@ -16,7 +16,8 @@ import {
   XCircle,
   Search,
   RefreshCw,
-  Trash2
+  Trash2,
+  AlertCircle
 } from 'lucide-react'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
 
@@ -40,6 +41,11 @@ interface MatchItemProps {
   allCategories?: any[];
   onEditCategory?: (newCat: string) => void;
   warning?: string;
+  existingMatch?: any;
+  onSearchEntries?: () => void;
+  onClearMatch?: () => void;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export default function MatchItem({ 
@@ -61,7 +67,12 @@ export default function MatchItem({
   category,
   allCategories,
   onEditCategory,
-  warning
+  warning,
+  existingMatch,
+  onSearchEntries,
+  onClearMatch,
+  isSelected,
+  onToggleSelect
 }: MatchItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [localMemo, setLocalMemo] = useState(memo || bank.memo)
@@ -110,11 +121,22 @@ export default function MatchItem({
     <div className={`relative flex flex-col gap-4 p-5 rounded-[32px] border transition-all duration-300 ${
       isDuplicate ? 'bg-gray-50/50 border-gray-100 opacity-60' :
       isIgnored ? 'bg-red-50/30 border-red-100 opacity-70' :
-      hasMatch ? 'bg-emerald-50/20 border-emerald-100/50 hover:border-emerald-200' : 
+      hasMatch ? (isIncome ? 'bg-emerald-50/20 border-emerald-100/50 hover:border-emerald-200' : 'bg-rose-50/20 border-rose-100/50 hover:border-rose-200') : 
       'bg-white border-gray-100 hover:border-indigo-200 shadow-sm'
     }`}>
       
       <div className="flex flex-col md:flex-row items-stretch gap-6">
+        {onToggleSelect && (
+          <div className="flex items-center justify-center -mr-2">
+            <input 
+              type="checkbox" 
+              checked={isSelected} 
+              onChange={onToggleSelect} 
+              className={`w-5 h-5 rounded cursor-pointer transition-all ${isIncome ? 'border-emerald-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-500' : 'border-rose-300 text-rose-600 focus:ring-rose-500 accent-rose-500'}`}
+            />
+          </div>
+        )}
+        
         {/* Coluna Banco */}
         <div className="flex-1 flex flex-col gap-3">
           <div className="flex items-center gap-2">
@@ -127,7 +149,7 @@ export default function MatchItem({
 
           <div className="flex flex-col">
             {isEditing ? (
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex flex-col gap-1 mt-1">
                 <input 
                   autoFocus
                   value={localMemo}
@@ -136,10 +158,18 @@ export default function MatchItem({
                   onKeyDown={(e) => e.key === 'Enter' && handleSaveMemo()}
                   className="w-full bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-1 text-sm font-bold text-indigo-900 outline-none"
                 />
+                <span className="text-[9px] text-gray-400 font-bold uppercase leading-tight flex items-center gap-1">
+                  <AlertCircle size={8} /> Extrato Original: {bank.memo}
+                </span>
               </div>
             ) : (
               <div className="flex items-start gap-2 group cursor-pointer" onClick={() => setIsEditing(true)}>
-                <h4 className="text-sm font-black text-gray-800 leading-tight uppercase whitespace-normal break-words">{localMemo}</h4>
+                <div className="flex flex-col">
+                  <h4 className="text-sm font-black text-gray-800 leading-tight uppercase whitespace-normal break-words">{localMemo}</h4>
+                  <span className="text-[9px] text-gray-400 font-bold uppercase mt-1 leading-tight flex items-center gap-1">
+                    <AlertCircle size={8} /> Extrato Original: {bank.memo}
+                  </span>
+                </div>
                 <div className="p-1 rounded-md bg-indigo-50 text-indigo-500 opacity-40 group-hover:opacity-100 transition-all shrink-0">
                   <Edit2 size={10} />
                 </div>
@@ -161,7 +191,7 @@ export default function MatchItem({
         <div className="hidden md:flex items-center justify-center">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
             isProcessed ? 'bg-indigo-600 text-white scale-110 shadow-xl' :
-            hasMatch ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 
+            hasMatch ? (isIncome ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'bg-rose-500 text-white shadow-lg shadow-rose-200') : 
             'bg-gray-100 text-gray-400'
           }`}>
             {isProcessed ? <ShieldCheck size={20} /> : <ArrowRight size={18} strokeWidth={3} />}
@@ -170,21 +200,46 @@ export default function MatchItem({
 
         {/* Coluna Sistema */}
         <div className={`flex-1 flex flex-col gap-3 p-4 rounded-2xl border ${
-          hasMatch ? 'bg-emerald-50/50 border-emerald-100' : 'bg-gray-50/50 border-gray-200 border-dashed'
+          hasMatch ? (isIncome ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100') : 'bg-gray-50/50 border-gray-200 border-dashed'
         }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {assocMatch ? <User size={14} className="text-emerald-600" /> : forMatch ? <Store size={14} className="text-emerald-600" /> : <Ghost size={14} className="text-gray-400" />}
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Vínculo no Sistema</span>
+              {assocMatch ? <User size={14} className={isIncome ? "text-emerald-600" : "text-rose-600"} /> : forMatch ? <Store size={14} className={isIncome ? "text-emerald-600" : "text-rose-600"} /> : <Ghost size={14} className="text-gray-400" />}
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isIncome ? 'text-emerald-700' : 'text-rose-700'}`}>Vínculo no Sistema</span>
             </div>
             <div className="flex items-center gap-2">
-              {hasMatch && <CheckCircle2 size={16} className="text-emerald-500" />}
+              {hasMatch && <CheckCircle2 size={16} className={isIncome ? "text-emerald-500" : "text-rose-500"} />}
               {targetCpf && !isAuditing && !isDuplicate && (
                 <button 
                   onClick={handleAuditCora}
                   className="flex items-center gap-1 px-3 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:bg-indigo-700 shadow-sm transition-all active:scale-95"
                 >
                   <Search size={10} /> AUDITAR COBRANÇAS
+                </button>
+              )}
+              {hasMatch && !isDuplicate && !isProcessed && (
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={onSearchEntries}
+                    className={`flex items-center gap-1 px-3 py-1 text-white rounded-lg text-[9px] font-black shadow-sm transition-all active:scale-95 ${isIncome ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}
+                  >
+                    <Search size={10} /> BUSCAR NO SISTEMA
+                  </button>
+                  <button 
+                    onClick={onClearMatch}
+                    title="Limpar Vínculo"
+                    className="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 shadow-sm transition-all active:scale-95"
+                  >
+                    <Trash2 size={12} strokeWidth={3} />
+                  </button>
+                </div>
+              )}
+              {!hasMatch && !isDuplicate && !isProcessed && (
+                 <button 
+                  onClick={onSearchEntries}
+                  className="flex items-center gap-1 px-3 py-1 bg-gray-600 text-white rounded-lg text-[9px] font-black hover:bg-gray-700 shadow-sm transition-all active:scale-95"
+                >
+                  <Search size={10} /> VINCULAR MANUAL
                 </button>
               )}
               {isAuditing && <RefreshCw size={12} className="animate-spin text-indigo-600" />}
@@ -194,7 +249,7 @@ export default function MatchItem({
           {hasMatch ? (
             <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <h4 className="text-sm font-black text-emerald-900 uppercase whitespace-normal break-words">
+                <h4 className={`text-sm font-black uppercase whitespace-normal break-words ${isIncome ? 'text-emerald-900' : 'text-rose-900'}`}>
                   {assocMatch?.nome || forMatch?.nome}
                   {forMatch?.isDirector && <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-lg">DIRETORIA</span>}
                 </h4>
@@ -202,20 +257,20 @@ export default function MatchItem({
                   <button 
                     onClick={assocMatch ? onLinkSupplier : onLinkManual}
                     title={assocMatch ? "Mudar para Fornecedor" : "Mudar para Associado"}
-                    className="p-1.5 rounded-lg bg-emerald-100/50 text-emerald-600 hover:bg-emerald-200 transition-all active:scale-95"
+                    className={`p-1.5 rounded-lg transition-all active:scale-95 ${isIncome ? 'bg-emerald-100/50 text-emerald-600 hover:bg-emerald-200' : 'bg-rose-100/50 text-rose-600 hover:bg-rose-200'}`}
                   >
                     <RefreshCw size={12} strokeWidth={3} />
                   </button>
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100/50 rounded-lg border border-emerald-200/50">
-                  <Tag size={10} className="text-emerald-700" />
+                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border ${isIncome ? 'bg-emerald-100/50 border-emerald-200/50' : 'bg-rose-100/50 border-rose-200/50'}`}>
+                  <Tag size={10} className={isIncome ? 'text-emerald-700' : 'text-rose-700'} />
                   <select 
                     value={category || ''} 
                     onChange={(e) => onEditCategory?.(e.target.value)}
                     disabled={isProcessed}
-                    className="bg-transparent border-none p-0 text-[11px] font-bold text-emerald-800 focus:ring-0 cursor-pointer outline-none capitalize"
+                    className={`bg-transparent border-none p-0 text-[11px] font-bold focus:ring-0 cursor-pointer outline-none capitalize ${isIncome ? 'text-emerald-800' : 'text-rose-800'}`}
                   >
                     <option value="" disabled>Selecionar Categoria</option>
                     {(allCategories || []).map((cat: any) => (
@@ -227,7 +282,7 @@ export default function MatchItem({
                   </select>
                 </div>
                 {isAdesao && (
-                  <span className="text-[9px] font-black bg-emerald-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                  <span className={`text-[9px] font-black text-white px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}`}>
                     <Zap size={10} className="fill-white" /> 1º PAGAMENTO (ADESÃO)
                   </span>
                 )}
@@ -236,6 +291,28 @@ export default function MatchItem({
                 <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 animate-bounce">
                   <RefreshCw size={12} className="text-amber-600 mt-0.5 shrink-0" />
                   <p className="text-[10px] font-black text-amber-700 leading-tight uppercase">{warning}</p>
+                </div>
+              )}
+
+              {/* Detalhes do Lançamento Existente no Financeiro */}
+              {existingMatch && (
+                <div className={`mt-3 p-3 rounded-xl border space-y-2 ${isIncome ? 'bg-emerald-100/30 border-emerald-200/30' : 'bg-rose-100/30 border-rose-200/30'}`}>
+                  <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest opacity-70 ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <AlertCircle size={10} /> Cadastro Original no Financeiro
+                  </div>
+                  <div className="space-y-1">
+                    <p className={`text-[11px] font-bold leading-tight ${isIncome ? 'text-emerald-900' : 'text-rose-900'}`}>
+                      "{existingMatch.descricao}"
+                    </p>
+                    <div className="flex items-center gap-3">
+                       <span className={`text-[10px] font-medium ${isIncome ? 'text-emerald-700/70' : 'text-rose-700/70'}`}>
+                        Vencimento: <span className="font-black">{fmtData(existingMatch.data)}</span>
+                       </span>
+                       <span className={`text-[10px] font-medium ${isIncome ? 'text-emerald-700/70' : 'text-rose-700/70'}`}>
+                        Valor: <span className="font-black">{fmtR(existingMatch.valor)}</span>
+                       </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

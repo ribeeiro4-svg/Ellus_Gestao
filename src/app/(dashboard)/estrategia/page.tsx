@@ -14,22 +14,28 @@ export default function EstrategiaHubPage() {
     { id: 'projetos' as TabID, label: 'Projetos e Iniciativas', icon: Briefcase, color: 'indigo' },
   ]
 
+  const getActiveIcon = () => {
+    const tab = tabs.find(t => t.id === activeTab)
+    const Icon = (tab as any)?.icon || Target
+    return <Icon size={28} />
+  }
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-      {/* Header Hub */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-2xl bg-${activeTab === 'metas' ? 'orange' : 'indigo'}-50 text-${activeTab === 'metas' ? 'orange' : 'indigo'}-600 flex items-center justify-center shadow-sm transition-all duration-500`}>
-            {activeTab === 'metas' ? <Target size={24} /> : <Briefcase size={24} />}
+      {/* Header Centralizado - Estilo Hub Premium */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/60 shadow-sm">
+        <div className="flex items-center gap-5">
+          <div className="w-14 h-14 rounded-2xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
+            {getActiveIcon()}
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Planejamento Estratégico</h1>
-            <p className="text-xs text-slate-500 font-medium">Gestão de objetivos, OKRs e projetos corporativos</p>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Planejamento Estratégico</h1>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest opacity-70 mt-1">Gestão de Objetivos e OKRs — ACPROBEC</p>
           </div>
         </div>
 
-        {/* Custom Tab Switcher - Premium Design */}
-        <div className="bg-slate-100/50 p-1.5 rounded-[20px] flex items-center gap-1 border border-slate-200/50 backdrop-blur-sm self-start">
+        {/* Custom Tab Switcher - Premium Interaction */}
+        <div className="bg-slate-100/60 p-1.5 rounded-[22px] flex items-center gap-1 border border-slate-200/40 backdrop-blur-sm shadow-inner">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id
             const Icon = tab.icon
@@ -39,13 +45,13 @@ export default function EstrategiaHubPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`
-                  flex items-center gap-2 px-4 py-2.5 rounded-[16px] text-xs font-black uppercase tracking-wider transition-all duration-300
+                  flex items-center gap-2 px-4 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-500
                   ${isActive 
-                    ? `bg-white text-${tab.color}-600 shadow-sm border border-slate-200/60` 
-                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-200/50'}
+                    ? 'bg-white text-[#0e2d22] shadow-md border border-slate-200/50 scale-105' 
+                    : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'}
                 `}
               >
-                <Icon size={16} />
+                <Icon size={14} />
                 {tab.label}
               </button>
             )
@@ -53,7 +59,6 @@ export default function EstrategiaHubPage() {
         </div>
       </div>
 
-      <hr className="border-slate-100" />
 
       {/* Dynamic Content */}
       <div className="min-h-[500px]">

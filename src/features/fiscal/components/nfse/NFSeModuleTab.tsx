@@ -1,11 +1,12 @@
 import React, { useState } from 'react'
-import { FileText, BarChart3, Upload } from 'lucide-react'
+import { FileText, BarChart3, Upload, Edit3 } from 'lucide-react'
 import NFSeDashboard from './NFSeDashboard'
 import NFSeImportZone from './NFSeImportZone'
 import NFSeEscrituracaoModal from './NFSeEscrituracaoModal'
+import NFSeManualForm from './NFSeManualForm'
 import { salvarEscrituracaoNFSeAction } from '@/features/fiscal/actions/nfseActions'
 
-type Tab = 'dashboard' | 'importar' | 'lista'
+type Tab = 'dashboard' | 'importar' | 'manual' | 'lista'
 
 export default function NFSeModuleTab({ nfseHook }: { nfseHook: any }) {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard')
@@ -15,6 +16,7 @@ export default function NFSeModuleTab({ nfseHook }: { nfseHook: any }) {
   const tabs = [
     { id: 'dashboard' as Tab, label: '📊 Dashboard', icon: BarChart3 },
     { id: 'importar' as Tab, label: '📥 Importar NFS-e', icon: Upload },
+    { id: 'manual' as Tab, label: '✍️ Lançamento Manual', icon: Edit3 },
     { id: 'lista' as Tab, label: '📋 Lista de Notas', icon: FileText, badge: nfseHook.stats.pendentes > 0 ? nfseHook.stats.pendentes : undefined },
   ]
 
@@ -83,6 +85,12 @@ export default function NFSeModuleTab({ nfseHook }: { nfseHook: any }) {
         {activeTab === 'dashboard' && <NFSeDashboard nfseHook={nfseHook} onEscriturar={handleEscriturar} />}
         {activeTab === 'importar' && (
           <NFSeImportZone onImported={() => {
+            nfseHook.refresh()
+            setActiveTab('lista')
+          }} />
+        )}
+        {activeTab === 'manual' && (
+          <NFSeManualForm onSaved={() => {
             nfseHook.refresh()
             setActiveTab('lista')
           }} />

@@ -15,7 +15,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard — ACPROBEC · INOVACONT",
+  title: "Dashboard — ACPROBEC · ÁUREA Tech",
   description: "Sistema de gestão inteligente. Especialista em gestão de associações e benefícios. [Build v1.1.2]",
 };
 
