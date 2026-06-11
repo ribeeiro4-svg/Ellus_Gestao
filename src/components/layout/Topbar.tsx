@@ -29,6 +29,8 @@ export default function Topbar() {
   const { searchTerm, setSearchTerm, setFilterType, setFilterStatus } = useSearch()
   
   const isGestaoTarefas = pathname === '/gestao-tarefas'
+  const isDashboard = pathname === '/resumo'
+  const isDarkBg = isGestaoTarefas || isDashboard
   const title = TITLES[pathname] || 'Dashboard'
 
   const handleClear = () => {
@@ -54,12 +56,12 @@ export default function Topbar() {
 
       <div className="topbar-left relative z-10 flex items-center gap-[10px]">
         <div className={`breadcrumb text-[12px] flex items-center gap-1.5 font-medium uppercase tracking-wider ${
-          isGestaoTarefas ? 'text-emerald-500/60' : 'text-[var(--text3)]'
+          isDarkBg ? 'text-emerald-500/80' : 'text-[var(--text3)]'
         }`}>
-          ACPROBEC 
+          Éllos 
           <span className="breadcrumb-sep opacity-40">/</span> 
           <span className={`${
-            isGestaoTarefas ? 'text-white' : 'text-[var(--text1)]'
+            isDarkBg ? 'text-white' : 'text-[var(--text1)]'
           } font-bold text-[13px]`}>{title}</span>
         </div>
       </div>

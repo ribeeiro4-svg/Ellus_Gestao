@@ -9,6 +9,7 @@ import { useDiretoria } from '@/lib/hooks/useDiretoria'
 import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useContas } from '@/lib/hooks/useContas'
 import { useFechamento } from '@/lib/hooks/useFechamento'
+import { useTenant } from '@/lib/hooks/useTenant'
 import DataTable from '@/components/ui/DataTable'
 import { fmtR, fmtData, getMesIdx, getAnoIdx, getBruto, safeSum, MESES } from '@/lib/utils/formatters'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -30,6 +31,7 @@ export default function RelatoriosFinanceirosTab({
   const { categorias } = useCategorias()
   const { contas } = useContas()
   const { isPeriodoBloqueado } = useFechamento()
+  const { tenant } = useTenant()
 
   const [selectedReport, setSelectedReport] = useState<string | null>(null)
   
@@ -556,9 +558,11 @@ export default function RelatoriosFinanceirosTab({
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 0; color: #1e293b; background: white; line-height: 1.5; }
             
-            .header { text-align: center; border-bottom: 3px solid #10b981; padding-bottom: 20px; margin-bottom: 30px; }
-            .header h1 { margin: 0; font-size: 24px; color: #065f46; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; }
-            .header p { margin: 6px 0 0; font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+            .header { background-color: #0b2218; display: flex; align-items: center; justify-content: flex-start; padding: 25px 35px; margin-bottom: 30px; border-radius: 12px; }
+            .header-logo { max-height: 45px; margin-right: 20px; border-radius: 8px; object-fit: contain; }
+            .header-info { text-align: left; }
+            .header h1 { margin: 0; font-size: 20px; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+            .header p { margin: 6px 0 0; font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
             
             .summary-title { 
               font-size: 11px; 
@@ -572,9 +576,9 @@ export default function RelatoriosFinanceirosTab({
               page-break-after: avoid;
             }
             
-            table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
-            th { background: #f8fafc; color: #475569; text-transform: uppercase; font-size: 8px; font-weight: 900; padding: 14px 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-            td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 9px; color: #334155; font-weight: 500; }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+            th { background: #f8fafc; color: #475569; text-transform: uppercase; font-size: 7px; font-weight: 900; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+            td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 8px; color: #334155; font-weight: 500; }
             tr:last-child td { border-bottom: none; }
             tr:nth-child(even) { background-color: #fcfdfe; }
             
@@ -657,13 +661,14 @@ export default function RelatoriosFinanceirosTab({
             }
             #val-fundo-caixa, [id="val-fundo-caixa"] { color: #d97706 !important; -webkit-text-fill-color: #d97706 !important; }
             
-            .report-summary-cards { display: flex; gap: 20px; margin-bottom: 25px; page-break-inside: avoid; }
-            .report-card { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; text-align: center; }
-            .report-card-label { font-size: 8px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-bottom: 8px; display: block; }
-            .report-card-value { font-size: 16px; font-weight: 900; }
-            .report-sub-summary { background: #fcfdfe; border: 1px solid #f1f5f9; padding: 12px 25px; border-radius: 12px; display: flex; justify-content: space-around; margin-bottom: 40px; font-size: 9px; color: #475569; page-break-inside: avoid; }
+            .report-summary-cards { display: flex; gap: 15px; margin-bottom: 15px; page-break-inside: avoid; }
+            .report-card { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; }
+            .report-card-label { font-size: 7px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-bottom: 4px; display: block; }
+            .report-card-value { font-size: 14px; font-weight: 900; }
+            .report-sub-summary { background: #fcfdfe; border: 1px solid #f1f5f9; padding: 8px 20px; border-radius: 8px; display: flex; justify-content: space-around; margin-bottom: 25px; font-size: 8px; color: #475569; page-break-inside: avoid; }
 
-            .footer { margin-top: 60px; text-align: right; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer { margin-top: 60px; background-color: #ffffff; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; padding-bottom: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer-logo { height: 50px; margin-bottom: 10px; }
             
             .late-cards-container { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; page-break-inside: avoid; }
             .late-card { 
@@ -683,6 +688,7 @@ export default function RelatoriosFinanceirosTab({
             @media print { 
               @page { size: landscape; }
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .chart-box { background: white !important; border: 1px solid #e2e8f0; box-shadow: none; }
               .no-print, button, input, select { display: none !important; }
             }
@@ -690,9 +696,11 @@ export default function RelatoriosFinanceirosTab({
         </head>
         <body>
           <div class="header">
-            <h1>ACPROBEC — RELATÓRIO EXECUTIVO</h1>
-            <p>${title.toUpperCase()} | EMISSÃO: ${new Date().toLocaleDateString('pt-BR')}</p>
-            <p style="font-size: 9px; margin-top: 4px;">PERÍODO: ${timeRange === 'month' ? (['receitas', 'despesas', 'receitas_mensal', 'despesas_mensal'].includes(selectedReport || '') ? (selectedMonths.length === 12 ? 'TODOS' : selectedMonths.map(m => MESES[m]).join(', ').toUpperCase()) : (filterMonth === -1 ? 'TODOS' : MESES[filterMonth].toUpperCase())) + ' / ' + filterYear : timeRange.toUpperCase()}</p>
+            ${tenant?.logo_url ? `<img src="${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />` : ''}
+            <div class="header-info">
+              <h1>${tenant?.nome || 'Associação'}</h1>
+              <p>${title.toUpperCase()} | EMISSÃO: ${new Date().toLocaleDateString('pt-BR')} — PERÍODO: ${timeRange === 'month' ? (['receitas', 'despesas', 'receitas_mensal', 'despesas_mensal'].includes(selectedReport || '') ? (selectedMonths.length === 12 ? 'TODOS' : selectedMonths.map(m => MESES[m]).join(', ').toUpperCase()) : (filterMonth === -1 ? 'TODOS' : MESES[filterMonth].toUpperCase())) + ' / ' + filterYear : timeRange.toUpperCase()}</p>
+            </div>
           </div>
 
           ${selectedReport !== 'provisoes' ? `
@@ -783,7 +791,8 @@ export default function RelatoriosFinanceirosTab({
           ` : ''}
 
           <div class="footer">
-            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} por ÁUREA Tech ACPROBEC
+            <img src="/ellos_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllos Gestão
           </div>
         </body>
       </html>
@@ -1543,21 +1552,19 @@ export default function RelatoriosFinanceirosTab({
           <div 
             key={i} 
             onClick={() => setSelectedReport(rel.id)}
-            className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-500/5 transition-all group cursor-pointer flex flex-col justify-between min-h-[220px]"
+            className="bg-white p-5 rounded-[24px] border border-slate-100 shadow-sm hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-500/5 transition-all group cursor-pointer flex items-center gap-4"
           >
-            <div>
-              <div className={`w-14 h-14 rounded-2xl ${rel.bg} flex items-center justify-center ${rel.color} group-hover:scale-110 transition-transform duration-500 mb-6`}>
-                <rel.icon size={28} />
-              </div>
-              <h4 className="text-lg font-black text-slate-800 mb-2 tracking-tight">{rel.title}</h4>
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">{rel.desc}</p>
+            <div className={`w-12 h-12 shrink-0 rounded-2xl ${rel.bg} flex items-center justify-center ${rel.color} group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-sm`}>
+              <rel.icon size={22} />
             </div>
             
-            <div className="mt-8 flex items-center justify-between">
-              <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Acessar Relatório</span>
-              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                <FileText size={18} />
-              </div>
+            <div className="flex-1 min-w-0 pr-2">
+              <h4 className="text-[13px] font-black text-slate-800 mb-0.5 tracking-tight truncate group-hover:text-emerald-700 transition-colors">{rel.title}</h4>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest leading-snug line-clamp-2">{rel.desc}</p>
+            </div>
+            
+            <div className="w-8 h-8 shrink-0 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 group-hover:bg-emerald-600 group-hover:border-emerald-600 group-hover:text-white transition-all duration-300 opacity-50 group-hover:opacity-100 shadow-sm">
+              <FileText size={14} />
             </div>
           </div>
         ))}

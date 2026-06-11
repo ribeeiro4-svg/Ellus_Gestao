@@ -2,6 +2,7 @@
 import Sidebar from '@/components/layout/Sidebar'
 import Topbar from '@/components/layout/Topbar'
 import { SearchProvider } from '@/lib/contexts/SearchContext'
+import ReleaseNotesModal from '@/components/modals/ReleaseNotesModal'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,6 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </main>
         </div>
       </div>
+      <ReleaseNotesModal />
     </SearchProvider>
   )
 }

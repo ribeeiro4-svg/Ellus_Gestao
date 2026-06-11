@@ -44,3 +44,22 @@ export const PUT = requireAdmin(async (req: AuthenticatedRequest, { params }: { 
 
   return NextResponse.json(data)
 })
+
+export const DELETE = requireAdmin(async (req: AuthenticatedRequest, { params }: { params: { id: string } }) => {
+  const sb = createAdminSupabase()
+
+  // Buscar nome para auditoria
+  const { data: colab } = await sb.from('colaboradores').select('nome, email').eq('id', params.id).single()
+  
+  if (!colab) {
+    return NextResponse.json({ erro: 'Colaborador não encontrado.' }, { status: 404 })
+  }
+
+  const { error } = await sb.from('colaboradores').delete().eq('id', params.id)
+
+  if (error) return NextResponse.json({ erro: error.message }, { status: 500 })
+
+  await registrarAuditoria(req.user.id, `Excluiu colaborador: ${colab.nome} (${colab.email})`, 'configuracoes')
+
+  return NextResponse.json({ sucesso: true })
+})

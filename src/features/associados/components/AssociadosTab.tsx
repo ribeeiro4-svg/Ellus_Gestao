@@ -1039,9 +1039,11 @@ Diretoria / Secretaria ACPROBEC`
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 0; color: #1e293b; background: white; line-height: 1.5; width: 100%; }
             
-            .header { text-align: center; border-bottom: 3px solid #10b981; padding-bottom: 20px; margin-bottom: 30px; width: 100%; }
-            .header h1 { margin: 0; font-size: 24px; color: #065f46; text-transform: uppercase; letter-spacing: 3px; font-weight: 900; }
-            .header p { margin: 6px 0 0; font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+            .header { background-color: #0b2218; display: flex; align-items: center; justify-content: flex-start; padding: 25px 35px; margin-bottom: 30px; border-radius: 12px; }
+            .header-logo { max-height: 45px; margin-right: 20px; border-radius: 8px; object-fit: contain; }
+            .header-info { text-align: left; }
+            .header h1 { margin: 0; font-size: 20px; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+            .header p { margin: 6px 0 0; font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
             
             .summary-title { 
                 font-size: 11px; 
@@ -1067,20 +1069,24 @@ Diretoria / Secretaria ACPROBEC`
             .font-bold { font-weight: 700; }
             .font-black { font-weight: 900; }
             
-            .footer { margin-top: 60px; text-align: right; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer { margin-top: 60px; background-color: #ffffff; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; padding-bottom: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer-logo { height: 50px; margin-bottom: 10px; }
             
             @media print { 
               @page { size: landscape; }
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .no-print, button, input, select { display: none !important; }
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>ACPROBEC — GESTÃO DE VIDAS</h1>
-            <p>RELATÓRIO DE ASSOCIADOS | EMISSÃO: ${new Date().toLocaleDateString('pt-BR')}</p>
-            <p style="font-size: 9px; margin-top: 4px;">BASE CONSOLIDADA: ${filtrados.length} ASSOCIADOS</p>
+            ${tenant?.logo_url ? `<img src="${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />` : ''}
+            <div class="header-info">
+              <h1>${tenant?.nome || 'Associação'}</h1>
+              <p>Relatório de Associados | Emissão: ${new Date().toLocaleDateString('pt-BR')} — Base Consolidada: ${filtrados.length} Associados</p>
+            </div>
           </div>
 
           ${chartImage ? `
@@ -1094,7 +1100,8 @@ Diretoria / Secretaria ACPROBEC`
           ${inativos.length > 0 ? renderTable(inativos, 'Associados Inativos', '#94a3b8') : ''}
 
           <div class="footer">
-            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} por ÁUREA Tech ACPROBEC
+            <img src="/ellos_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllos Gestão
           </div>
         </body>
       </html>

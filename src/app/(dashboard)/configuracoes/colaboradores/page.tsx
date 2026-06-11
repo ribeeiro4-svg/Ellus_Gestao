@@ -4,14 +4,14 @@ import React, { useState } from 'react'
 import { useColaboradores, usePerfis } from '@/lib/hooks/useRBAC'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
 
-import { Plus, Search, Edit2, Shield, UserX, UserCheck, ChevronDown, Users, Activity, Key } from "lucide-react"
+import { Plus, Search, Edit2, Shield, UserX, UserCheck, ChevronDown, Users, Activity, Key, Trash2 } from "lucide-react"
 
 export default function ColaboradoresPage() {
   return <ColaboradoresContent />
 }
 
 function ColaboradoresContent() {
-  const { colaboradores, loading: loadingColab, inserir, atualizar, alterarStatus } = useColaboradores()
+  const { colaboradores, loading: loadingColab, inserir, atualizar, alterarStatus, excluir } = useColaboradores()
   const { perfis } = usePerfis()
   const { diretoria, loading: loadingDir } = useDiretoria()
   
@@ -99,6 +99,15 @@ function ColaboradoresContent() {
     const novoStatus = colab.status === 'ativo' ? 'inativo' : 'ativo'
     if (confirm(`Deseja alterar o status para ${novoStatus}?`)) {
       await alterarStatus(colab.id, novoStatus)
+    }
+  }
+
+  const handleDelete = async (colab: any) => {
+    if (confirm(`Tem certeza que deseja excluir permanentemente o colaborador ${colab.nome}? O e-mail será liberado para novos cadastros.`)) {
+      const res = await excluir(colab.id)
+      if (res.error) {
+        alert(res.error)
+      }
     }
   }
 
@@ -203,6 +212,9 @@ function ColaboradoresContent() {
                             c.status === 'ativo' ? 'text-slate-500 hover:bg-rose-50 hover:text-rose-600' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-600'
                           }`} title={c.status === 'ativo' ? 'Desativar' : 'Ativar'}>
                             {c.status === 'ativo' ? <UserX size={14} /> : <UserCheck size={14} />}
+                          </button>
+                          <button onClick={() => handleDelete(c)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-colors" title="Excluir Colaborador">
+                            <Trash2 size={14} />
                           </button>
                         </>
                       ) : (

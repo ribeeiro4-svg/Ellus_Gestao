@@ -10,7 +10,7 @@ import { downloadTemplate } from '@/features/importar/utils/excelUtils'
 import { useImportProcessor } from '@/features/importar/hooks/useImportProcessor'
 import ImportPreviewTable from '@/features/importar/components/ImportPreviewTable'
 
-export default function ImportPage() {
+export default function ImportarTab() {
   const tenantId = useTenantId()
   const { inserirBulk: bulkFinanceiro } = useFinanceiro()
   const { associados: associadosAtuais, inserirBulk: bulkAssociados } = useAssociados()
@@ -65,26 +65,7 @@ export default function ImportPage() {
   }
 
   return (
-    <div className="dashboard-content animate-in fade-in duration-500 flex flex-col flex-1 gap-6">
-      {/* Header Centralizado - Estilo Hub Premium */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/60 shadow-sm">
-        <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
-            <Upload size={28} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Importação de Dados</h1>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest opacity-70 mt-1">Processamento de Planilhas — ACPROBEC</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 bg-white/60 p-2 rounded-[22px] border border-white shadow-inner backdrop-blur-sm">
-          <div className="px-5 py-2.5 bg-white/80 rounded-xl border border-slate-100/50 text-[10px] font-black text-slate-600 uppercase tracking-widest">
-            {tenantId === 'LOADING' ? 'Carregando...' : (tenantId || 'Não Identificada')}
-          </div>
-        </div>
-      </div>
-
+    <div className="flex flex-col flex-1 gap-6">
       {feedback && (
         <div className={`mb-8 p-4 rounded-2xl border flex items-center gap-3 animate-in slide-in-from-top ${feedback.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'}`}>
           {feedback.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}

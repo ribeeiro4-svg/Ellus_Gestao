@@ -121,7 +121,7 @@ export default function DataTable<T>({
   return (
     <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-hidden flex flex-col relative min-h-[200px]">
       {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-[2px] transition-all animate-in fade-in duration-300">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-[2px] transition-all animate-in fade-in duration-300 no-print print:hidden">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin shadow-inner"></div>
             <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest animate-pulse">Sincronizando...</span>

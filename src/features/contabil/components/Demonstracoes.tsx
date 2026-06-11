@@ -1,11 +1,14 @@
 'use client'
 import React, { useState } from 'react'
 import { Loader2, Lock, Printer } from 'lucide-react'
+import { useTenant } from '@/lib/hooks/useTenant'
+
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 
 export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' }: { lancHook: any; planoHook: any; initialTab?: 'dsd' | 'bp' | 'dmps' }) {
   const { contas } = planoHook
   const { calcularBalancete, refresh } = lancHook
+  const { tenant } = useTenant()
   const [demo, setDemo] = useState<'dsd' | 'bp' | 'dmps'>(initialTab)
   
   const handlePrint = (titulo: string, id: string) => {
@@ -20,9 +23,13 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
-            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            
+            .header { background-color: #0b2218; display: flex; align-items: center; justify-content: flex-start; padding: 25px 35px; margin-bottom: 30px; border-radius: 12px; }
+            .header-logo { max-height: 45px; margin-right: 20px; border-radius: 8px; object-fit: contain; }
+            .header-info { text-align: left; }
+            .header h1 { margin: 0; font-size: 20px; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+            .header p { margin: 6px 0 0; font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+            
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-align: left; }
             .text-right { text-align: right; }
@@ -40,17 +47,30 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
             .text-indigo-700 { color: #4338ca; }
             .text-purple-700 { color: #7e22ce; }
             .indent { padding-left: 30px !important; }
-            .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; }
-            @media print { @page { size: A4; margin: 1.5cm; } }
+            
+            .footer { margin-top: 60px; background-color: #ffffff; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; padding-bottom: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer-logo { height: 50px; margin-bottom: 10px; }
+            
+            @media print { 
+              @page { size: A4; margin: 1.5cm; } 
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>ACPROBEC — ${titulo.toUpperCase()}</h1>
-            <p>CONFORMIDADE ITG 2002 (R1) | EXERCÍCIO ${ano}</p>
+            ${tenant?.logo_url ? `<img src="${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />` : ''}
+            <div class="header-info">
+              <h1>${tenant?.nome || 'Associação'}</h1>
+              <p>${titulo.toUpperCase()} | CONFORMIDADE ITG 2002 (R1) | EXERCÍCIO ${ano}</p>
+            </div>
           </div>
           ${conteudo.innerHTML}
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
+          <div class="footer">
+            <img src="/ellos_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllos Gestão
+          </div>
         </body>
       </html>
     `)

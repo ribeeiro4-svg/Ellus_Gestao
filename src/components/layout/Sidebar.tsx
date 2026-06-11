@@ -34,7 +34,6 @@ const MENU = [
   { 
     section: 'Principal', 
     items: [
-      { href: '/', icon: Home, label: 'Início (Site)' },
       { href: '/resumo', icon: BarChart3, label: 'Dashboard' },
     ]
   },
@@ -72,13 +71,6 @@ const MENU = [
     items: [
       { href: '/fiscal', icon: FileText, label: 'Escrituração Fiscal' },
       { href: '/contabil', icon: BookOpen, label: 'Contabilidade' },
-    ]
-  },
-  { 
-    section: 'Dados', 
-    items: [
-      { href: '/importar', icon: Download, label: 'Importar Dados' },
-      { href: '/configuracoes', icon: Settings, label: 'Configurações' },
     ]
   },
 ]
@@ -146,8 +138,8 @@ export default function Sidebar() {
     return true
   }
 
-  const customLogo = (tenant?.logo_url && tenant.logo_url.startsWith('http')) ? tenant.logo_url : null
-  const customName = tenant?.nome || 'ACPROBEC'
+  const customLogo = (tenant?.logo_url && tenant.logo_url.startsWith('http')) ? tenant.logo_url : '/ellos_logo_dark.svg'
+  const customName = tenant?.nome || 'Éllos'
 
   useEffect(() => {
     if (tenant) {
@@ -193,22 +185,11 @@ export default function Sidebar() {
 
       <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'}`}>
         <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-6 items-center text-center'}`}>
-          <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center gap-5 mb-5'}`}>
-            <div className={`logo-icon ${isCollapsed ? 'w-10 h-10' : 'w-24 h-24'} rounded-full flex items-center justify-center overflow-hidden shrink-0 shadow-2xl transition-all duration-500 ${customLogo ? 'bg-white' : 'bg-gradient-to-br from-[#2d8c6f] to-[#34d399]'}`}>
-              {customLogo ? (
-                <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
-              ) : (
-                <span className={`text-white font-bold ${isCollapsed ? 'text-[16px]' : 'text-3xl'}`}>AC</span>
-              )}
+          <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center gap-4 mb-4'}`}>
+            <div className={`${isCollapsed ? 'w-10 h-10' : 'w-28 h-28'} rounded-[24px] bg-[#0A2618] border border-emerald-900/30 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-xl transition-all duration-500`}>
+              <img src="/ellos_logo_dark.svg" alt="Éllos" className={`w-full h-full object-contain ${isCollapsed ? 'scale-125' : 'scale-[1.8]'}`} />
             </div>
-            {!isCollapsed && <div className="logo-title text-[20px] font-black text-white tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-500">ACPROBEC</div>}
           </div>
-          {!isCollapsed && <div className="logo-sub text-[11px] text-white/40 tracking-[1.5px] font-bold uppercase animate-in fade-in slide-in-from-bottom-2 duration-300">GESTÃO INTELIGENTE</div>}
-          {!isCollapsed && (
-            <div className="logo-divider w-full flex items-center gap-2 mt-6 text-[9px] text-white/15 tracking-[2px] font-black after:flex-1 after:h-[1px] after:bg-white/5 before:flex-1 before:h-[1px] before:bg-white/5 animate-in fade-in duration-500">
-              ÁUREA Tech
-            </div>
-          )}
         </div>
 
       <nav className="flex-1 py-4 overflow-y-auto scrollbar-none">
@@ -243,20 +224,19 @@ export default function Sidebar() {
                     {active && !isCollapsed && <div className="absolute inset-[0_8px] rounded-lg -z-10 bg-white/10" />}
                     {active && isCollapsed && <div className="absolute inset-[4px_8px] rounded-lg -z-10 bg-white/10" />}
                   </div>
-                )
-              })}
+                )})}
             </div>
           </div>
         )})}
       </nav>
 
-      <div className={`sidebar-footer mt-auto border-t border-white/5 relative z-10 flex flex-col gap-4 transition-all ${isCollapsed ? 'p-3 items-center' : 'p-5'}`}>
+      <div className={`sidebar-footer mt-auto border-t border-white/5 relative z-10 flex flex-col gap-4 transition-all ${isCollapsed ? 'p-4 items-center' : 'p-8'}`}>
         <div className={`flex items-center gap-3 transition-all ${isCollapsed ? 'flex-col gap-4' : ''}`}>
-          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 overflow-hidden shrink-0">
-             {customLogo ? (
-               <img src={customLogo} alt="Logo" className="w-full h-full object-cover opacity-60" />
+          <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-white/40 overflow-hidden shrink-0 shadow-lg">
+             {tenant?.logo_url && tenant.logo_url.startsWith('http') ? (
+               <img src={tenant.logo_url} alt="Logo" className="w-full h-full object-cover" />
              ) : (
-               <Users size={16} />
+               <Users size={24} />
              )}
           </div>
           {!isCollapsed && (
@@ -275,9 +255,14 @@ export default function Sidebar() {
           </div>
         </div>
         {!isCollapsed && (
-          <div className="animate-in fade-in duration-500">
-             <p className="text-[10px] text-white/25 font-medium">© 2024 ACPROBEC</p>
-             <p className="text-[8px] text-white/10 mt-0.5">ESTRUTURA SaaS PROFISSIONAL</p>
+          <div className="w-full flex flex-col items-center mt-2 animate-in fade-in duration-500">
+            <div className="text-[10px] text-white/50 tracking-[2px] font-bold uppercase mb-4">Versão 2.0</div>
+            <div className="w-full h-[1px] bg-white/5 mb-3"></div>
+            <p className="text-[8px] text-white/30 tracking-[1px] font-bold uppercase text-center leading-[1.4]">
+              Desenvolvido por<br/>
+              <span className="text-white/50">Áurea Inteligência Empresarial</span>
+            </p>
+            <div className="w-full h-[1px] bg-white/5 mt-3"></div>
           </div>
         )}
       </div>

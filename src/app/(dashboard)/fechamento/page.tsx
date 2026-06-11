@@ -19,6 +19,7 @@ import {
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
 import { useFechamento } from '@/lib/hooks/useFechamento'
+import { useTenant } from '@/lib/hooks/useTenant'
 import { createClient } from '@/lib/supabase/client'
 import { fmtR, getMesIdx, getAnoIdx, safeSum, safeDiff, getBruto } from '@/lib/utils/formatters'
 import KpiCard from '@/components/ui/KpiCard'
@@ -45,6 +46,7 @@ export default function FechamentoPage() {
   const { lancamentos, inserir } = useFinanceiro()
   const { contas, loading: contasLoading } = useContas()
   const { fechamentos, fecharPeriodo, isPeriodoBloqueado, reabrirPeriodo } = useFechamento()
+  const { tenant } = useTenant()
 
   const [selectedMes, setSelectedMes] = useState(new Date().getMonth())
   const [selectedAno, setSelectedAno] = useState(new Date().getFullYear())
@@ -245,6 +247,91 @@ export default function FechamentoPage() {
     }
   }
 
+  const handleImprimirFechamento = () => {
+    const janela = window.open('', '_blank')
+    if (!janela) {
+      alert('Bloqueio de pop-up detectado!')
+      return
+    }
+
+    const htmlTabela = `
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px;">
+        <thead>
+          <tr>
+            <th style="padding: 8px; border-bottom: 2px solid #cbd5e1; background-color: #f8fafc; text-align: left; font-weight: 900; color: #334155; text-transform: uppercase; font-size: 9px;">Conta</th>
+            <th style="padding: 8px; border-bottom: 2px solid #cbd5e1; background-color: #f8fafc; text-align: right; font-weight: 900; color: #334155; text-transform: uppercase; font-size: 9px;">Anterior</th>
+            <th style="padding: 8px; border-bottom: 2px solid #cbd5e1; background-color: #f8fafc; text-align: right; font-weight: 900; color: #334155; text-transform: uppercase; font-size: 9px;">Sistema</th>
+            <th style="padding: 8px; border-bottom: 2px solid #cbd5e1; background-color: #f8fafc; text-align: right; font-weight: 900; color: #334155; text-transform: uppercase; font-size: 9px;">Real</th>
+            <th style="padding: 8px; border-bottom: 2px solid #cbd5e1; background-color: #f8fafc; text-align: right; font-weight: 900; color: #334155; text-transform: uppercase; font-size: 9px;">Diferença</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${balances.map(b => `
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #475569;">${b.conta.nome}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; color: #94a3b8;">${fmtR(b.saldoAnterior)}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #0f172a;">${fmtR(b.saldoSistema)}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #059669;">${fmtR(b.real)}</td>
+              <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #10b981;">OK</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <div style="margin-top: 60px; display: flex; justify-content: space-around; text-align: center;">
+        <div><div style="border-top: 1px solid #cbd5e1; width: 160px; margin: 40px auto 0;"></div><p style="font-size: 8px; font-weight: bold; text-transform: uppercase; margin-top: 8px; color: #94a3b8;">Responsável</p></div>
+        <div><div style="border-top: 1px solid #cbd5e1; width: 160px; margin: 40px auto 0;"></div><p style="font-size: 8px; font-weight: bold; text-transform: uppercase; margin-top: 8px; color: #94a3b8;">Conselho Fiscal</p></div>
+      </div>
+    `;
+
+    janela.document.write(`
+      <html>
+        <head>
+          <title>Fechamento Financeiro — ACPROBEC</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
+            
+            .header { background-color: #0b2218; display: flex; align-items: center; justify-content: flex-start; padding: 25px 35px; margin-bottom: 30px; border-radius: 12px; }
+            .header-logo { max-height: 45px; margin-right: 20px; border-radius: 8px; object-fit: contain; }
+            .header-info { text-align: left; }
+            .header h1 { margin: 0; font-size: 20px; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+            .header p { margin: 6px 0 0; font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+            
+            .footer { margin-top: 60px; background-color: #ffffff; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; padding-bottom: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer-logo { height: 50px; margin-bottom: 10px; }
+            
+            @media print { 
+              @page { size: A4 portrait; margin: 1cm; } 
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            ${tenant?.logo_url ? \`<img src="\${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />\` : ''}
+            <div class="header-info">
+              <h1>${tenant?.nome || 'Associação'}</h1>
+              <p>FECHAMENTO FINANCEIRO | PROTOCOLO DE AUDITORIA: ${MESES[selectedMes]} ${selectedAno}</p>
+            </div>
+          </div>
+          <div>
+            ${htmlTabela}
+          </div>
+          <div class="footer">
+            <img src="/ellos_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllos Gestão
+          </div>
+        </body>
+      </html>
+    `)
+    janela.document.close()
+    setTimeout(() => {
+      janela.print()
+      janela.close()
+    }, 800)
+  }
+
   if (contasLoading) return <div className="p-20 text-center font-bold text-[#0e2d22]">Carregando...</div>
 
   return (
@@ -288,7 +375,7 @@ export default function FechamentoPage() {
                   Os dados de {MESES[selectedMes]} de {selectedAno} estão consolidados e auditados.
                 </p>
                 <div className="flex items-center justify-center gap-4">
-                  <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-xl transition-all shadow-lg shadow-emerald-900/20 uppercase text-xs tracking-widest">
+                  <button onClick={handleImprimirFechamento} className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-xl transition-all shadow-lg shadow-emerald-900/20 uppercase text-xs tracking-widest">
                     <FileText size={18} />
                     Relatório de Fechamento
                   </button>
@@ -443,45 +530,8 @@ export default function FechamentoPage() {
         </div>
       )}
 
-      {/* Camada de Impressão */}
-      <div className="hidden print:block fixed inset-0 bg-white p-12 z-[9999]">
-        <div className="flex justify-between items-start border-b-2 border-[#0e2d22] pb-6 mb-6">
-          <div>
-            <LogoReport />
-            <h1 className="text-xl font-bold text-[#0e2d22] uppercase mt-4">Fechamento Financeiro</h1>
-            <p className="text-[9px] font-bold text-gray-400 uppercase">Protocolo de Auditoria</p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold text-[#0e2d22]">{MESES[selectedMes]} {selectedAno}</div>
-          </div>
         </div>
-        <table className="w-full text-xs border-collapse">
-          <thead>
-            <tr className="border-b-2 border-gray-100 text-gray-400 uppercase text-[9px]">
-              <th className="py-3 text-left">Conta</th>
-              <th className="py-3 text-right">Anterior</th>
-              <th className="py-3 text-right">Sistema</th>
-              <th className="py-3 text-right">Real</th>
-              <th className="py-3 text-right">Diferença</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {balances.map(b => (
-              <tr key={b.conta.id}>
-                <td className="py-3 font-bold">{b.conta.nome}</td>
-                <td className="py-3 text-right text-gray-400">{fmtR(b.saldoAnterior)}</td>
-                <td className="py-3 text-right">{fmtR(b.saldoSistema)}</td>
-                <td className="py-3 text-right font-bold text-emerald-600">{fmtR(b.real)}</td>
-                <td className="py-3 text-right font-bold text-emerald-500">OK</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="mt-20 grid grid-cols-2 gap-10 text-center">
-          <div><div className="border-t border-gray-300 w-40 mx-auto mt-10" /><p className="text-[8px] font-bold uppercase mt-2 text-gray-400">Responsável</p></div>
-          <div><div className="border-t border-gray-300 w-40 mx-auto mt-10" /><p className="text-[8px] font-bold uppercase mt-2 text-gray-400">Conselho</p></div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }

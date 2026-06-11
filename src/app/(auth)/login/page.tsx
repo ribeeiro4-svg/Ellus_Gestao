@@ -2,6 +2,7 @@
 import { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { LogIn, Mail, Lock, AlertCircle, ShieldCheck } from 'lucide-react'
+import LogoV2 from '@/components/ui/LogoV2'
 
 function LoginContent() {
   const [email, setEmail] = useState('')
@@ -34,9 +35,11 @@ function LoginContent() {
         if (data.token) {
           localStorage.setItem('rbac_token_raw', data.token)
         }
+        // Limpar o flag de sessão para forçar a exibição do modal de novidades no novo login
+        sessionStorage.removeItem('release_notes_v5_seen_session')
         
         // Redirecionar forçando reload para aplicar o novo cookie ao middleware
-        window.location.href = '/'
+        window.location.href = '/resumo'
       } else {
         setErro(data.erro || 'Credenciais inválidas.')
       }
@@ -58,13 +61,9 @@ function LoginContent() {
           <div className="absolute top-0 left-0 w-full h-1.5 bg-[#2d8c6f]"></div>
           
           <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#2d8c6f]/5 text-[#2d8c6f] mb-6 shadow-sm border border-[#2d8c6f]/10">
-              <ShieldCheck size={32} />
+            <div className="flex items-center justify-center w-full mb-4 mt-6">
+              <LogoV2 className="h-56 w-auto object-contain drop-shadow-xl scale-[1.5]" />
             </div>
-            <h2 className="text-3xl font-bold text-[#0e2d22] tracking-tight">ACPROBEC</h2>
-            <p className="text-[13px] text-slate-500 mt-2 font-medium">
-              Acesso Corporativo Seguro
-            </p>
           </div>
 
           {erro && (
@@ -86,7 +85,7 @@ function LoginContent() {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="exemplo@acprobec.org"
+                  placeholder="exemplo@ellos.com.br"
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 focus:bg-white transition-all placeholder:text-slate-400 text-slate-700 font-medium"
                 />
               </div>
@@ -119,7 +118,7 @@ function LoginContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 mt-2 active:scale-[0.98]"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 mt-2 active:scale-[0.98]"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -138,14 +137,15 @@ function LoginContent() {
                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Suporte Técnico</span>
                <div className="w-8 h-[1px] bg-slate-100"></div>
              </div>
-             <p className="text-[11px] text-slate-400 text-center leading-relaxed max-w-[240px]">
-               Desenvolvido por <span className="text-slate-600 font-bold">ÁUREA Tech</span> para gestão de associações de excelência.
+             <p className="text-[11px] text-slate-400 text-center leading-relaxed max-w-[240px] uppercase font-medium">
+               Desenvolvido por<br/>
+               <span className="text-slate-600 font-black tracking-wider">Áurea Inteligência Empresarial</span>
              </p>
           </div>
         </div>
         
         <p className="text-center mt-8 text-slate-500 text-[11px]">
-          &copy; {new Date().getFullYear()} ACPROBEC. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Éllos. Todos os direitos reservados.
         </p>
       </div>
     </div>

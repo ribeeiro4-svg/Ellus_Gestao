@@ -46,7 +46,14 @@ export function useColaboradores() {
     return { data: res.ok ? data : null, error: res.ok ? null : data.erro }
   }
 
-  return { colaboradores, loading, inserir, atualizar, alterarStatus, refresh: fetchColaboradores }
+  const excluir = async (id: string) => {
+    const res = await fetch(`/api/colaboradores/${id}`, { method: 'DELETE' })
+    const data = await res.json()
+    if (res.ok) await mutate()
+    return { data: res.ok ? data : null, error: res.ok ? null : data.erro }
+  }
+
+  return { colaboradores, loading, inserir, atualizar, alterarStatus, excluir, refresh: fetchColaboradores }
 }
 
 export function usePerfis() {

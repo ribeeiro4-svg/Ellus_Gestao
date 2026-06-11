@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react'
 import { Printer, AlertTriangle, CheckCircle, Package, TrendingUp, Users, Building2, Map, Calendar } from 'lucide-react'
 import { fmtR, fmtData } from '@/lib/utils/formatters'
+import { useTenant } from '@/lib/hooks/useTenant'
 
 export default function RelatoriosFiscais({ nfeHook, nfseHook, estoqueHook }: { nfeHook: any; nfseHook: any; estoqueHook: any }) {
   const { nfes } = nfeHook
   const { nfses } = nfseHook
   const { produtos } = estoqueHook
+  const { tenant } = useTenant()
 
   const handleImprimir = (id: string, titulo: string) => {
     const conteudo = document.getElementById(id)
@@ -27,9 +29,13 @@ export default function RelatoriosFiscais({ nfeHook, nfseHook, estoqueHook }: { 
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
-            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            
+            .header { background-color: #0b2218; display: flex; align-items: center; justify-content: flex-start; padding: 25px 35px; margin-bottom: 30px; border-radius: 12px; }
+            .header-logo { max-height: 45px; margin-right: 20px; border-radius: 8px; object-fit: contain; }
+            .header-info { text-align: left; }
+            .header h1 { margin: 0; font-size: 20px; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+            .header p { margin: 6px 0 0; font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+            
             table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px; }
             th { padding: 8px; border-bottom: 2px solid #cbd5e1; background-color: #f8fafc; text-align: left; font-weight: 900; color: #334155; text-transform: uppercase; font-size: 9px; }
             td { padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: left; color: #475569; }
@@ -38,23 +44,37 @@ export default function RelatoriosFiscais({ nfeHook, nfseHook, estoqueHook }: { 
             .text-center { text-align: center; }
             .font-black { font-weight: 900; color: #0f172a; }
             .font-bold { font-weight: 700; }
-            .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+            
+            .footer { margin-top: 60px; background-color: #ffffff; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; padding-bottom: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer-logo { height: 50px; margin-bottom: 10px; }
+            
             .summary-box { border: 1px solid #e2e8f0; padding: 10px; background-color: #f8fafc; margin-bottom: 20px; border-radius: 4px; display: flex; gap: 20px; }
             .summary-item { display: flex; flex-direction: column; }
             .summary-label { font-size: 8px; font-weight: bold; text-transform: uppercase; color: #64748b; }
             .summary-value { font-size: 14px; font-weight: 900; color: #0f172a; }
-            @media print { @page { size: A4 portrait; margin: 1cm; } }
+            
+            @media print { 
+              @page { size: A4 portrait; margin: 1cm; } 
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>ACPROBEC — ${titulo.toUpperCase()}</h1>
-            <p>RELATÓRIO FISCAL OFICIAL | DATA-BASE: ${new Date().toLocaleDateString('pt-BR')}</p>
+            ${tenant?.logo_url ? `<img src="${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />` : ''}
+            <div class="header-info">
+              <h1>${tenant?.nome || 'Associação'}</h1>
+              <p>${titulo.toUpperCase()} | DATA-BASE: ${new Date().toLocaleDateString('pt-BR')}</p>
+            </div>
           </div>
           <div>
             ${conteudo.innerHTML}
           </div>
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Módulo Fiscal ÁUREA Tech ACPROBEC</div>
+          <div class="footer">
+            <img src="/ellos_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllos Gestão
+          </div>
         </body>
       </html>
     `)

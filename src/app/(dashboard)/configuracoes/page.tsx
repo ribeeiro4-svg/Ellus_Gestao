@@ -1,9 +1,11 @@
 
 'use client'
 import React, { useState, useEffect } from 'react'
+import ImportarTab from './ImportarTab'
 import { 
   Settings, 
-  CreditCard, 
+  CreditCard,
+  Download, 
   Plus, 
   Trash2, 
   Pencil,
@@ -101,26 +103,26 @@ export default function ConfigPage() {
 
     setUploading(true)
     try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${tenant.id}-${Math.random()}.${fileExt}`
-      const filePath = `${fileName}`
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('tenantId', tenant.id)
 
-      const { error: uploadError } = await sb.storage
-        .from('logos')
-        .upload(filePath, file)
+      const res = await fetch('/api/upload-logo', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
 
-      if (uploadError) throw uploadError
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Erro desconhecido na API')
+      }
 
-      const { data: { publicUrl } } = sb.storage
-        .from('logos')
-        .getPublicUrl(filePath)
-
+      const publicUrl = data.publicUrl
       setCustomLogo(publicUrl)
       
-      // Salvar imediatamente no tenant
       const { error: saveError } = await atualizarTenant({ logo_url: publicUrl })
       if (saveError) {
-        alert('Logo enviada para o storage, mas erro ao vincular ao seu cadastro: ' + saveError.message)
+        alert('Logo enviada, mas erro ao vincular ao seu cadastro: ' + saveError.message)
       } else {
         alert('Logo enviada e salva com sucesso!')
       }
@@ -285,6 +287,7 @@ export default function ConfigPage() {
 
   const allTabs = [
     { id: 'geral', label: 'Dados Gerais', icon: Building2 },
+    { id: 'importar', label: 'Importar Dados', icon: Download },
     { id: 'financeiro', label: 'Contas Bancárias', icon: Wallet },
     { id: 'categorias', label: 'Categorias e Mapeamento', icon: BookOpen },
     { id: 'cobranca', label: 'Regras de Cobrança', icon: Zap },
@@ -343,11 +346,13 @@ export default function ConfigPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="table-card p-10 flex flex-col gap-8 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/40">
             <h2 className="text-sm font-black text-slate-400 uppercase tracking-[2px] flex items-center gap-3">
-              <Building2 className="text-emerald-600 w-5 h-5" />
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                <Building2 size={18} />
+              </div>
               Identidade Institucional
             </h2>
             
-            <div className="space-y-6">
+            <div className="flex flex-col flex-1 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Nome da Associação</label>
                 <input 
@@ -362,9 +367,9 @@ export default function ConfigPage() {
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Logotipo Institucional</label>
                 <div className="flex items-center gap-6 p-6 bg-slate-50/50 rounded-[24px] border border-slate-100 border-dashed hover:border-emerald-200 transition-all group">
-                  <div className="w-20 h-20 rounded-[20px] bg-white border border-slate-100 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-sm ring-4 ring-white group-hover:scale-105 transition-transform duration-500">
+                  <div className="w-20 h-20 rounded-[20px] bg-[#0A2618] border border-emerald-900/30 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-sm ring-4 ring-slate-100 group-hover:scale-105 transition-transform duration-500">
                     {customLogo ? (
-                      <img src={customLogo} alt="Logo" className="w-full h-full object-contain" />
+                      <img src={customLogo} alt="Logo" className="w-full h-full object-contain scale-125" />
                     ) : (
                       <div className="text-2xl font-black text-slate-200 uppercase">AC</div>
                     )}
@@ -410,7 +415,7 @@ export default function ConfigPage() {
 
               <button 
                 onClick={handleSavePerfil}
-                className="mt-4 w-full h-14 bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-95"
+                className="mt-auto w-full h-14 bg-[#0e2d22] text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-[#163d2f] transition-all shadow-xl shadow-emerald-900/20 active:scale-95"
               >
                 Salvar Dados Institucionais
               </button>
@@ -425,7 +430,7 @@ export default function ConfigPage() {
               Integração Bancária Cora (mTLS)
             </h2>
 
-            <div className="space-y-6">
+            <div className="flex flex-col flex-1 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Client ID</label>
                 <input 
@@ -459,7 +464,7 @@ export default function ConfigPage() {
 
               <button 
                 onClick={handleSavePerfil}
-                className="w-full h-14 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-emerald-500 transition-all shadow-xl shadow-emerald-100 active:scale-95"
+                className="mt-auto w-full h-14 bg-[#0e2d22] text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-[#163d2f] transition-all shadow-xl shadow-emerald-900/20 active:scale-95"
               >
                 Atualizar Credenciais Bancárias
               </button>
@@ -843,6 +848,8 @@ export default function ConfigPage() {
           </div>
         </div>
       )}
+
+      {activeTab === 'importar' && <ImportarTab />}
 
 
       <CrudModal 

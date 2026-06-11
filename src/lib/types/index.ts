@@ -190,12 +190,12 @@ export interface DashboardKPIs {
 export interface EvolucaoMensal {
   mes: number // 0-11
   label: string
-  receita: number
-  despesa: number
-  resultado: number
-  margem: number
-  assocAtivos: number
-  assocInadimplentes: number
+  receita: number | null
+  despesa: number | null
+  resultado: number | null
+  margem: number | null
+  assocAtivos: number | null
+  assocInadimplentes: number | null
 }
 
 // ─── Importação ────────────────────────────────────────────────────────────

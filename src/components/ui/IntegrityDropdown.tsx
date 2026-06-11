@@ -38,7 +38,7 @@ export default function IntegrityDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 md:w-96 origin-top-right rounded-2xl bg-[#0b2218] shadow-2xl ring-1 ring-emerald-500/20 focus:outline-none overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className="absolute left-0 mt-2 w-80 md:w-96 origin-top-left rounded-2xl bg-[#0b2218] shadow-2xl ring-1 ring-emerald-500/20 focus:outline-none overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200">
           <div className="p-5 border-b border-white/5">
             <div className="flex items-center gap-3">
               <ShieldCheck className="text-emerald-400" size={20} />

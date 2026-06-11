@@ -34,6 +34,7 @@ import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
+import RelatoriosFinanceirosTab from '@/features/financeiro/components/RelatoriosFinanceirosTab'
 import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction, cleanupConciliacaoDuplicatesAction } from '@/app/actions/financeiro_cleanup'
 import RemanejarModal from '@/components/ui/RemanejarModal'
@@ -917,6 +918,8 @@ export default function FinanceiroPage() {
 
       {activeTab === 'inadimplencia' ? (
         <InadimplenciaTab />
+      ) : activeTab === 'relatorios' ? (
+        <RelatoriosFinanceirosTab />
       ) : activeTab === 'conciliacao' ? (
         <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-2 duration-500">
            {(extrato.length > 0 || (conciliacaoSubTab === 'cora' && (coraItems || []).length > 0)) && (
