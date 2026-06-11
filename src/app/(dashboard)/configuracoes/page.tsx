@@ -40,7 +40,7 @@ import ContaContabilSelect from '@/features/contabil/components/ContaContabilSel
 import ConfigCobrancaTab from '@/features/cobranca/components/ConfigCobrancaTab'
 import { usePermissions } from '@/lib/hooks/usePermissions'
 
-type TabType = 'geral' | 'financeiro' | 'categorias' | 'cobranca' | 'acessos' | 'minha-conta'
+type TabType = 'geral' | 'financeiro' | 'categorias' | 'cobranca' | 'acessos' | 'minha-conta' | 'importar'
 
 export default function ConfigPage() {
   const [activeTab, setActiveTab] = useState<TabType>('geral')
