@@ -87,6 +87,7 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [permissoes, setPermissoes] = useState<Record<string, any>>({})
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -105,6 +106,11 @@ export default function Sidebar() {
         }
       } catch (e) {}
     }
+    
+    // Mobile event listener
+    const handleToggleMobile = () => setIsMobileOpen(prev => !prev)
+    window.addEventListener('toggleMobileSidebar', handleToggleMobile)
+    return () => window.removeEventListener('toggleMobileSidebar', handleToggleMobile)
   }, [])
 
   const canSee = (href: string) => {
@@ -177,15 +183,21 @@ export default function Sidebar() {
 
   return (
     <div className="relative z-[60]">
+      {/* Overlay for mobile */}
+      <div 
+        className={`sidebar-overlay md:hidden ${isMobileOpen ? 'mobile-open' : ''}`}
+        onClick={() => setIsMobileOpen(false)}
+      />
+
       <button 
         onClick={toggleCollapse}
-        className="absolute -right-3 top-10 w-6 h-6 bg-[#2d8c6f] text-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3)] border border-white/20 z-[70] hover:scale-110 transition-transform cursor-pointer"
+        className="absolute -right-3 top-10 w-6 h-6 bg-[#2d8c6f] text-white rounded-full md:flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3)] border border-white/20 z-[70] hover:scale-110 transition-transform cursor-pointer hidden"
         title={isCollapsed ? 'Expandir' : 'Recolher'}
       >
         {isCollapsed ? <Menu size={12} /> : <ChevronLeft size={12} />}
       </button>
 
-      <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'}`}>
+      <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'} ${isMobileOpen ? 'mobile-open' : ''}`}>
         <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-6 items-center text-center'}`}>
           <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center gap-4 mb-4'}`}>
             <div className={`${isCollapsed ? 'w-10 h-10' : 'w-28 h-28'} rounded-[24px] bg-[#0A2618] border border-emerald-900/30 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-xl transition-all duration-500`}>
@@ -213,7 +225,10 @@ export default function Sidebar() {
                 return (
                   <div
                     key={href}
-                    onClick={() => router.push(href)}
+                    onClick={() => {
+                      router.push(href)
+                      setIsMobileOpen(false)
+                    }}
                     title={isCollapsed ? label : ''}
                     className={`nav-item flex items-center gap-[10px] py-2.5 cursor-pointer transition-all text-[12.5px] relative 
                       ${isCollapsed ? 'px-0 justify-center' : 'px-5'}

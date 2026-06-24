@@ -1,6 +1,6 @@
 'use client'
 import { usePathname, useRouter } from 'next/navigation'
-import { Download, FileText, Bell, Search, User, Trash2, ChevronRight } from 'lucide-react'
+import { Download, FileText, Bell, Search, User, Trash2, ChevronRight, Menu } from 'lucide-react'
 import { useSearch } from '@/lib/contexts/SearchContext'
 
 const TITLES: Record<string, string> = {
@@ -55,6 +55,14 @@ export default function Topbar() {
       )}
 
       <div className="topbar-left relative z-10 flex items-center gap-[10px]">
+        {/* Mobile Menu Button */}
+        <button 
+          onClick={() => window.dispatchEvent(new CustomEvent('toggleMobileSidebar'))}
+          className="md:hidden w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors mr-2"
+        >
+          <Menu size={20} />
+        </button>
+
         <div className={`breadcrumb text-[12px] flex items-center gap-1.5 font-medium uppercase tracking-wider ${
           isDarkBg ? 'text-emerald-500/80' : 'text-[var(--text3)]'
         }`}>

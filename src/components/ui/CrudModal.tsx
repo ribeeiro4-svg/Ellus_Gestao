@@ -95,22 +95,25 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
 
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 overflow-hidden"
+      className="fixed inset-0 z-[1000] flex items-end md:items-center justify-center p-0 md:p-4 overflow-hidden"
       style={{ background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(12px)', animation: 'overlayIn .2s ease both' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full max-w-[580px] max-h-[90vh] flex flex-col relative"
+        className="w-full max-w-[580px] h-full md:h-auto max-h-[100vh] md:max-h-[90vh] flex flex-col relative mt-auto md:mt-0"
         style={{
           background: '#fff',
-          borderRadius: '28px',
           boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.4)',
           animation: 'modalIn .3s cubic-bezier(0.165, 0.84, 0.44, 1) both',
           border: '1px solid rgba(255,255,255,0.1)'
         }}
       >
+        <div className="md:hidden w-full flex justify-center pt-3 pb-1 absolute top-0 left-0 right-0 z-30">
+          <div className="w-12 h-1.5 bg-white/30 rounded-full" />
+        </div>
+        
         {/* Header */}
-        <div className={`px-8 pt-8 pb-7 ${isDespesa ? 'bg-[#be123c]' : 'bg-[#0e2d22]'} relative z-20 rounded-t-[28px] border-b border-white/10 transition-colors duration-500`}>
+        <div className={`px-8 pt-10 md:pt-8 pb-7 ${isDespesa ? 'bg-[#be123c]' : 'bg-[#0e2d22]'} relative z-20 rounded-t-[28px] md:rounded-[28px] md:rounded-b-none border-b border-white/10 transition-colors duration-500`}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-black text-white tracking-tight uppercase">{title}</h2>
