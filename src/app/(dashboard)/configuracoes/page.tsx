@@ -322,7 +322,7 @@ export default function ConfigPage() {
   }
 
   const sortedAndFilteredCategorias = useMemo(() => {
-    let result = [...categorias];
+    let result = [...(categorias || [])];
     
     if (filtroBusca) {
       result = result.filter(c => c.nome.toLowerCase().includes(filtroBusca.toLowerCase()));
@@ -333,13 +333,13 @@ export default function ConfigPage() {
       let valB: any = b.nome;
 
       if (sortColumn === 'terminologia') {
-        const mapA = configuracoes.find(c => c.categoria_nome === a.nome);
-        const mapB = configuracoes.find(c => c.categoria_nome === b.nome);
+        const mapA = (configuracoes || []).find(c => c.categoria_nome === a.nome);
+        const mapB = (configuracoes || []).find(c => c.categoria_nome === b.nome);
         valA = mapA ? mapA.conta_contabil_nome || '' : '';
         valB = mapB ? mapB.conta_contabil_nome || '' : '';
       } else if (sortColumn === 'uso') {
-        valA = lancamentos.filter(l => l.categoria === a.nome).length;
-        valB = lancamentos.filter(l => l.categoria === b.nome).length;
+        valA = (lancamentos || []).filter(l => l.categoria === a.nome).length;
+        valB = (lancamentos || []).filter(l => l.categoria === b.nome).length;
       } else {
         valA = a.nome;
         valB = b.nome;
@@ -696,8 +696,8 @@ export default function ConfigPage() {
                   <CategoriaRow 
                     key={cat.id} 
                     cat={cat} 
-                    lancamentosCount={lancamentos.filter(l => l.categoria === cat.nome).length}
-                    mapping={configuracoes.find(c => c.categoria_nome === cat.nome)}
+                    lancamentosCount={(lancamentos || []).filter(l => l.categoria === cat.nome).length}
+                    mapping={(configuracoes || []).find(c => c.categoria_nome === cat.nome)}
                     onEdit={() => { setEditingCat(cat); setIsCatModalOpen(true) }}
                     onDelete={() => confirm('Excluir esta categoria?') && removerCat(cat.id)}
                     onTransferir={() => setTransferCat(cat)}
