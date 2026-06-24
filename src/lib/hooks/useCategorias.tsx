@@ -1,10 +1,23 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { CategoriaConfig, CategoriaInput } from '@/lib/types'
 
+const CategoriasContext = createContext<ReturnType<typeof useCategoriasInternal> | null>(null)
+
+export function CategoriasProvider({ children }: { children: React.ReactNode }) {
+  const value = useCategoriasInternal()
+  return <CategoriasContext.Provider value={value}>{children}</CategoriasContext.Provider>
+}
+
 export function useCategorias() {
+  const context = useContext(CategoriasContext)
+  if (!context) throw new Error('useCategorias deve ser usado dentro de um CategoriasProvider')
+  return context
+}
+
+function useCategoriasInternal() {
   const tenantId = useTenantId()
   const [categorias, setCategorias] = useState<CategoriaConfig[]>([])
   const [loading, setLoading] = useState(true)

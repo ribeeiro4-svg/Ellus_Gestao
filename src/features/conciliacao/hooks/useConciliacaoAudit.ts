@@ -43,6 +43,7 @@ export function useConciliacaoAudit(
 
       const existingMatch = lancamentos.find(l => 
         l.diretor_id === dirCpfMatch.id && 
+        l.tipo === (bankType === 'CREDIT' ? 'receita' : 'despesa') &&
         (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
@@ -57,6 +58,7 @@ export function useConciliacaoAudit(
 
       const existingMatch = lancamentos.find(l => 
         (l.associado_id === assocCpfMatch.id || l.descricao?.toUpperCase().includes(assocCpfMatch.nome.toUpperCase())) && 
+        l.tipo === (bankType === 'CREDIT' ? 'receita' : 'despesa') &&
         (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
@@ -96,6 +98,7 @@ export function useConciliacaoAudit(
 
       const existingMatch = lancamentos.find(l => 
         (l.associado_id === assocExactMatch.id || l.descricao?.toUpperCase().includes(assocExactMatch.nome.toUpperCase())) && 
+        l.tipo === (bankType === 'CREDIT' ? 'receita' : 'despesa') &&
         (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
@@ -125,6 +128,7 @@ export function useConciliacaoAudit(
 
       const existingMatch = lancamentos.find(l => 
         l.diretor_id === dirExactMatch.id && 
+        l.tipo === (bankType === 'CREDIT' ? 'receita' : 'despesa') &&
         (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
@@ -146,6 +150,7 @@ export function useConciliacaoAudit(
 
       const existingMatch = lancamentos.find(l => 
         (l.associado_id === assocFuzzy.id || l.descricao?.toUpperCase().includes(assocFuzzy.nome.toUpperCase())) && 
+        l.tipo === (bankType === 'CREDIT' ? 'receita' : 'despesa') &&
         (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
@@ -170,6 +175,7 @@ export function useConciliacaoAudit(
 
       const existingMatch = lancamentos.find(l => 
         l.diretor_id === dirFuzzy.id && 
+        l.tipo === (bankType === 'CREDIT' ? 'receita' : 'despesa') &&
         (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
@@ -190,6 +196,7 @@ export function useConciliacaoAudit(
 
       existingMatchFor = lancamentos.find(l => 
         l.fornecedor_id === forMatch.id && 
+        l.tipo === (bankType === 'CREDIT' ? 'receita' : 'despesa') &&
         (l.status === 'aberto' || l.status === 'atrasado') && 
         ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
       )
@@ -208,12 +215,34 @@ export function useConciliacaoAudit(
     return extrato.map((bank: any) => {
       // Priorizar vínculo manual se ele já existir no objeto do extrato (OFX)
       if (bank.assocMatch !== undefined || bank.forMatch !== undefined) {
+        let existingMatch = undefined;
+        const bankDate = new Date(bank.date);
+        const m = bankDate.getMonth();
+        const y = bankDate.getFullYear();
+
+        if (bank.forMatch) {
+            existingMatch = lancamentos.find(l => 
+                l.fornecedor_id === bank.forMatch.id && 
+                l.tipo === (bank.type === 'CREDIT' ? 'receita' : 'despesa') &&
+                (l.status === 'aberto' || l.status === 'atrasado') && 
+                ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+            )
+        } else if (bank.assocMatch) {
+            existingMatch = lancamentos.find(l => 
+                (l.associado_id === bank.assocMatch.id || (bank.assocMatch.isDirector && l.diretor_id === bank.assocMatch.id)) && 
+                l.tipo === (bank.type === 'CREDIT' ? 'receita' : 'despesa') &&
+                (l.status === 'aberto' || l.status === 'atrasado') && 
+                ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+            )
+        }
+
         return { 
           bank, 
           assocMatch: bank.assocMatch, 
           forMatch: bank.forMatch, 
           suggestedCategory: bank.suggestedCategory,
           warning: bank.warning,
+          existingMatch,
           isAdesao: bank.isAdesao || false,
           needsUpdate: false,
           newDocument: null
@@ -222,7 +251,7 @@ export function useConciliacaoAudit(
       const audit = getAuditMatch(bank.memo, bank.amount, bank.type, bank.date)
       return { bank, ...audit }
     })
-  }, [extrato, getAuditMatch])
+  }, [extrato, getAuditMatch, lancamentos])
 
   const coraMatchedItems = useMemo(() => {
     return (coraItems || []).map((bank: any) => {
@@ -237,13 +266,34 @@ export function useConciliacaoAudit(
 
       // Priorizar vínculo manual se ele já existir no objeto (Cora)
       if (bank.assocMatch !== undefined || bank.forMatch !== undefined) {
+        let existingMatch = undefined;
+        const bankDate = new Date(bank.data);
+        const m = bankDate.getMonth();
+        const y = bankDate.getFullYear();
+
+        if (bank.forMatch) {
+            existingMatch = lancamentos.find(l => 
+                l.fornecedor_id === bank.forMatch.id && 
+                l.tipo === (bank.tipo === 'CREDIT' ? 'receita' : 'despesa') &&
+                (l.status === 'aberto' || l.status === 'atrasado') && 
+                ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+            )
+        } else if (bank.assocMatch) {
+            existingMatch = lancamentos.find(l => 
+                (l.associado_id === bank.assocMatch.id || (bank.assocMatch.isDirector && l.diretor_id === bank.assocMatch.id)) && 
+                l.tipo === (bank.tipo === 'CREDIT' ? 'receita' : 'despesa') &&
+                (l.status === 'aberto' || l.status === 'atrasado') && 
+                ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+            )
+        }
+
         return { 
           bank: normalizedBank, 
           assocMatch: bank.assocMatch, 
           forMatch: bank.forMatch, 
           suggestedCategory: bank.suggestedCategory,
           warning: bank.warning,
-          existingMatch: bank.existingMatch,
+          existingMatch: existingMatch || bank.existingMatch,
           isAdesao: bank.isAdesao || false,
           needsUpdate: false,
           newDocument: null
@@ -253,7 +303,7 @@ export function useConciliacaoAudit(
       const audit = getAuditMatch(bank.descricao, bank.valor, bank.tipo, bank.data)
       return { bank: normalizedBank, ...audit }
     })
-  }, [coraItems, getAuditMatch])
+  }, [coraItems, getAuditMatch, lancamentos])
 
   const auditStats = useMemo(() => {
     const list = activeTab === 'ofx' ? matchedTransactions : coraMatchedItems

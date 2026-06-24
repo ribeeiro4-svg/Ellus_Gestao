@@ -6,10 +6,11 @@ interface PreviewAdesoesModalProps {
   isOpen: boolean
   onClose: () => void
   previewData: any[]
+  associados?: any[]
   onConfirm: (selected: any[]) => Promise<void>
 }
 
-export default function PreviewAdesoesModal({ isOpen, onClose, previewData, onConfirm }: PreviewAdesoesModalProps) {
+export default function PreviewAdesoesModal({ isOpen, onClose, previewData, associados, onConfirm }: PreviewAdesoesModalProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -112,6 +113,7 @@ export default function PreviewAdesoesModal({ isOpen, onClose, previewData, onCo
                   const isSelected = selectedIds.has(item.associado_id)
                   // Extrai o nome da descrição "ADESÃO DE ASSOCIADO - NOME"
                   const nomeAssociado = item.descricao.split(' - ')[1] || 'Associado'
+                  const emailAssociado = associados?.find((a: any) => a.id === item.associado_id)?.email || ''
                   
                   return (
                     <div 
@@ -133,6 +135,7 @@ export default function PreviewAdesoesModal({ isOpen, onClose, previewData, onCo
                         </div>
                         <div>
                           <div className="font-bold text-slate-800">{nomeAssociado}</div>
+                          {emailAssociado && <div className="text-[11px] font-medium text-slate-500 mb-0.5">{emailAssociado}</div>}
                           <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
                             Vencimento: {item.data.split('-').reverse().join('/')}
                           </div>

@@ -10,6 +10,7 @@ export function useFichaAssociado(associadoId: string | null) {
   const [associado, setAssociado] = useState<any>(null)
   const [extrato, setExtrato] = useState<any[]>([])
   const [atendimentos, setAtendimentos] = useState<any[]>([])
+  const [historicoCobrancas, setHistoricoCobrancas] = useState<any[]>([])
 
   const carregarDados = useCallback(async () => {
     if (!associadoId || !tenantId) return
@@ -45,9 +46,17 @@ export function useFichaAssociado(associadoId: string | null) {
         let status = 'vazio'
         if (lanc) {
           const isAdesao = lanc.categoria?.toUpperCase().includes('ADESÃO') || lanc.descricao?.toUpperCase().includes('ADESÃO')
-          if (isAdesao) status = 'adesao'
+          if (isAdesao) {
+            status = lanc.status === 'pago' ? 'adesao_paga' : 'adesao'
+          }
           else if (lanc.status === 'pago') status = 'pago'
-          else if (lanc.status === 'aberto' || lanc.status === 'atrasado') status = 'pendente'
+          else if (lanc.status === 'aberto' || lanc.status === 'atrasado') {
+            const dataVenc = new Date(lanc.data + 'T12:00:00Z')
+            const hoje = new Date()
+            hoje.setHours(0, 0, 0, 0)
+            if (dataVenc >= hoje) status = 'a_vencer'
+            else status = 'pendente'
+          }
         } else {
           const mesAtual = new Date().getMonth()
           if (idx > mesAtual) status = 'futuro'
@@ -71,7 +80,34 @@ export function useFichaAssociado(associadoId: string | null) {
         .eq('tenant_id', tenantId)
         .order('data_agendamento', { ascending: false })
 
-      setAtendimentos(atendData || [])
+      // 4. Buscar Ações de Cobrança
+      const { data: cobrancaData } = await sb.from('cobranca_acoes')
+        .select('*')
+        .eq('associado_id', associadoId)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+
+      // 5. Mesclar e ordenar apenas os atendimentos normais
+      const mergedAtendimentos = (atendData || []).map(a => ({
+           ...a,
+           is_cobranca: false,
+           _date: new Date(a.data_agendamento || a.created_at || 0).getTime()
+      })).sort((a, b) => b._date - a._date)
+
+      setAtendimentos(mergedAtendimentos)
+      
+      const parsedCobrancas = (cobrancaData || []).map(c => ({
+           ...c,
+           id: `cob_${c.id}`,
+           is_cobranca: true,
+           data_agendamento: c.created_at,
+           responsavel_setor: c.canal || 'Sistema',
+           status: 'concluido',
+           etapas_concluidas: { observacao: `${c.etapa}: ${c.observacao || c.texto_enviado || ''}` },
+           _date: new Date(c.created_at || 0).getTime()
+      }))
+      
+      setHistoricoCobrancas(parsedCobrancas)
     } catch (err) {
       console.error('Erro ao carregar ficha do associado:', err)
     } finally {
@@ -85,8 +121,9 @@ export function useFichaAssociado(associadoId: string | null) {
       setAssociado(null)
       setExtrato([])
       setAtendimentos([])
+      setHistoricoCobrancas([])
     }
   }, [associadoId, carregarDados])
 
-  return { associado, extrato, atendimentos, loading, refresh: carregarDados }
+  return { associado, extrato, atendimentos, historicoCobrancas, loading, refresh: carregarDados }
 }

@@ -1,6 +1,6 @@
 
 'use client'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import ImportarTab from './ImportarTab'
 import { 
   Settings, 
@@ -27,11 +27,15 @@ import {
   KeyRound,
   Eye,
   EyeOff,
-  CheckCircle2
+  CheckCircle2,
+  ArrowRightLeft,
+  Search,
+  ArrowUpDown
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useContas } from '@/lib/hooks/useContas'
 import { useCategorias } from '@/lib/hooks/useCategorias'
+import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { fmtR } from '@/lib/utils/formatters'
 import CrudModal from '@/components/ui/CrudModal'
 import { useTenant } from '@/lib/hooks/useTenant'
@@ -46,6 +50,7 @@ export default function ConfigPage() {
   const [activeTab, setActiveTab] = useState<TabType>('geral')
   const { contas, loading: loadingContas, inserir: inserirConta, atualizar: atualizarConta, remover: removerConta } = useContas()
   const { categorias, loading: loadingCats, inserir: inserirCat, atualizar: atualizarCat, remover: removerCat } = useCategorias()
+  const { lancamentos, atualizarBulk } = useFinanceiro()
   const { tenant, loading: loadingTenant, atualizar: atualizarTenant } = useTenant()
   const { configuracoes, salvarMapping, removerMapping } = useConfiguracoesContabeis()
   const { ver: podeVerConfig, isAdmin, loading: loadingPerms } = usePermissions('configuracoes')
@@ -60,7 +65,11 @@ export default function ConfigPage() {
   const [editingItem, setEditingItem] = useState<any>(null)
   const [isCatModalOpen, setIsCatModalOpen] = useState(false)
   const [editingCat, setEditingCat] = useState<any>(null)
+  const [transferCat, setTransferCat] = useState<any>(null)
   const [allExpanded, setAllExpanded] = useState(false)
+  const [filtroBusca, setFiltroBusca] = useState('')
+  const [sortColumn, setSortColumn] = useState<'nome' | 'terminologia' | 'uso'>('nome')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isBatchMappingOpen, setIsBatchMappingOpen] = useState(false)
   const [isMigrating, setIsMigrating] = useState(false)
@@ -303,6 +312,47 @@ export default function ConfigPage() {
     return <Icon size={28} />
   }
 
+  const handleSort = (column: 'nome' | 'terminologia' | 'uso') => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+
+  const sortedAndFilteredCategorias = useMemo(() => {
+    let result = [...categorias];
+    
+    if (filtroBusca) {
+      result = result.filter(c => c.nome.toLowerCase().includes(filtroBusca.toLowerCase()));
+    }
+
+    result.sort((a, b) => {
+      let valA: any = a.nome;
+      let valB: any = b.nome;
+
+      if (sortColumn === 'terminologia') {
+        const mapA = configuracoes.find(c => c.categoria_nome === a.nome);
+        const mapB = configuracoes.find(c => c.categoria_nome === b.nome);
+        valA = mapA ? mapA.conta_contabil_nome || '' : '';
+        valB = mapB ? mapB.conta_contabil_nome || '' : '';
+      } else if (sortColumn === 'uso') {
+        valA = lancamentos.filter(l => l.categoria === a.nome).length;
+        valB = lancamentos.filter(l => l.categoria === b.nome).length;
+      } else {
+        valA = a.nome;
+        valB = b.nome;
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [categorias, filtroBusca, sortColumn, sortDirection, configuracoes, lancamentos])
+
   return (
     <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20">
       {/* Header Centralizado - Estilo Hub Premium */}
@@ -535,7 +585,17 @@ export default function ConfigPage() {
               <LayoutDashboard className="text-amber-500 w-5 h-5" />
               Gestão de Categorias e Mapeamento Contábil
             </h2>
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center">
+              <div className="relative group mr-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 w-4 h-4 group-focus-within:text-amber-500 transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Buscar categoria..." 
+                  value={filtroBusca}
+                  onChange={e => setFiltroBusca(e.target.value)}
+                  className="pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black text-slate-700 placeholder:text-slate-400 focus:ring-amber-500 focus:border-amber-500 w-56 uppercase tracking-widest transition-all"
+                />
+              </div>
               {selectedIds.length > 0 && (
                 <div className="flex items-center gap-3 bg-indigo-50 px-5 py-2 rounded-2xl border border-indigo-100 animate-in zoom-in-95 duration-200 mr-4">
                   <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mr-2 flex items-center gap-2">
@@ -601,19 +661,46 @@ export default function ConfigPage() {
                       }}
                     />
                   </th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Terminologia ITG 2002</th>
+                  <th 
+                    className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors"
+                    onClick={() => handleSort('nome')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Categoria
+                      <ArrowUpDown size={12} className={sortColumn === 'nome' ? 'text-amber-500' : 'text-slate-300'} />
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors"
+                    onClick={() => handleSort('terminologia')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Terminologia ITG 2002
+                      <ArrowUpDown size={12} className={sortColumn === 'terminologia' ? 'text-amber-500' : 'text-slate-300'} />
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors"
+                    onClick={() => handleSort('uso')}
+                  >
+                    <div className="flex items-center gap-2 justify-center">
+                      Uso
+                      <ArrowUpDown size={12} className={sortColumn === 'uso' ? 'text-amber-500' : 'text-slate-300'} />
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {categorias.map(cat => (
+                {sortedAndFilteredCategorias.map(cat => (
                   <CategoriaRow 
                     key={cat.id} 
                     cat={cat} 
+                    lancamentosCount={lancamentos.filter(l => l.categoria === cat.nome).length}
                     mapping={configuracoes.find(c => c.categoria_nome === cat.nome)}
                     onEdit={() => { setEditingCat(cat); setIsCatModalOpen(true) }}
                     onDelete={() => confirm('Excluir esta categoria?') && removerCat(cat.id)}
+                    onTransferir={() => setTransferCat(cat)}
                     onSaveMapping={salvarMapping}
                     onRemoveMapping={removerMapping}
                     allExpanded={allExpanded}
@@ -982,11 +1069,35 @@ export default function ConfigPage() {
           }
         ]}
       />
+      <CrudModal 
+        isOpen={!!transferCat}
+        onClose={() => setTransferCat(null)}
+        title={transferCat ? `Transferir Lançamentos de ${transferCat.nome}` : ''}
+        onSubmit={async (data) => {
+          if (transferCat) {
+            const lancamentosToMove = lancamentos.filter(l => l.categoria === transferCat.nome)
+            await atualizarBulk(lancamentosToMove.map(l => l.id), { categoria: data.nova_categoria })
+            setTransferCat(null)
+            alert('Lançamentos transferidos com sucesso!')
+          }
+        }}
+        fields={transferCat ? [
+          { 
+            name: 'nova_categoria', 
+            label: 'Nova Categoria de Destino', 
+            type: 'select', 
+            required: true, 
+            options: categorias
+              .filter(c => c.id !== transferCat.id && c.tipo === transferCat.tipo)
+              .map(c => ({ value: c.nome, label: c.nome })) 
+          }
+        ] : []}
+      />
     </div>
   )
 }
 
-function CategoriaRow({ cat, mapping, onEdit, onDelete, onSaveMapping, onRemoveMapping, allExpanded, isSelected, onSelect }: any) {
+function CategoriaRow({ cat, lancamentosCount, mapping, onEdit, onDelete, onTransferir, onSaveMapping, onRemoveMapping, allExpanded, isSelected, onSelect }: any) {
   const [isExpanded, setIsExpanded] = useState(false)
 
   useEffect(() => {
@@ -1032,10 +1143,22 @@ function CategoriaRow({ cat, mapping, onEdit, onDelete, onSaveMapping, onRemoveM
             {cat.tipo === 'receita' ? 'Ingresso (Receita)' : 'Dispêndio (Despesa)'}
           </span>
         </td>
+        <td className="px-6 py-5 text-center">
+          <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${lancamentosCount > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-50 text-slate-400'}`}>
+            {lancamentosCount} {lancamentosCount === 1 ? 'registro' : 'registros'}
+          </span>
+        </td>
         <td className="px-6 py-5 text-right">
           <div className="flex justify-end gap-1">
+            {lancamentosCount > 0 && (
+              <button onClick={onTransferir} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all shadow-sm border border-slate-100 bg-white" title="Transferir Lançamentos"><ArrowRightLeft size={14} /></button>
+            )}
             <button onClick={onEdit} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-sm border border-slate-100 bg-white"><Pencil size={14} /></button>
-            <button onClick={onDelete} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm border border-slate-100 bg-white"><Trash2 size={14} /></button>
+            {lancamentosCount > 0 ? (
+              <button onClick={() => alert('Não é possível excluir uma categoria que possui lançamentos vinculados. Transfira os lançamentos primeiro.')} className="w-9 h-9 flex items-center justify-center text-slate-300 cursor-not-allowed rounded-xl transition-all shadow-sm border border-slate-100 bg-white" title="Categoria em uso"><Trash2 size={14} /></button>
+            ) : (
+              <button onClick={onDelete} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm border border-slate-100 bg-white"><Trash2 size={14} /></button>
+            )}
           </div>
         </td>
       </tr>

@@ -119,7 +119,9 @@ export default function RemanejarModal({ isOpen, onClose, original, associados, 
               >
                 <option value="">Selecione um Associado...</option>
                 {associados.map(a => (
-                  <option key={a.id} value={a.id}>{a.nome} ({a.cpf || 'S/ CPF'})</option>
+                  <option key={a.id} value={a.id}>
+                    {a.nome} ({a.cpf || 'S/ CPF'}){a.email ? ` - ${a.email}` : ''}
+                  </option>
                 ))}
               </select>
             </div>

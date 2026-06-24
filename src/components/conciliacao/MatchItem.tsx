@@ -220,7 +220,7 @@ export default function MatchItem({
               {hasMatch && !isDuplicate && !isProcessed && (
                 <div className="flex items-center gap-1">
                   <button 
-                    onClick={onSearchEntries}
+                    onClick={isIncome ? onLinkManual : onLinkSupplier}
                     className={`flex items-center gap-1 px-3 py-1 text-white rounded-lg text-[9px] font-black shadow-sm transition-all active:scale-95 ${isIncome ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}
                   >
                     <Search size={10} /> BUSCAR NO SISTEMA
@@ -236,7 +236,7 @@ export default function MatchItem({
               )}
               {!hasMatch && !isDuplicate && !isProcessed && (
                  <button 
-                  onClick={onSearchEntries}
+                  onClick={isIncome ? onLinkManual : onLinkSupplier}
                   className="flex items-center gap-1 px-3 py-1 bg-gray-600 text-white rounded-lg text-[9px] font-black hover:bg-gray-700 shadow-sm transition-all active:scale-95"
                 >
                   <Search size={10} /> VINCULAR MANUAL
@@ -267,16 +267,24 @@ export default function MatchItem({
                 <div className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border ${isIncome ? 'bg-emerald-100/50 border-emerald-200/50' : 'bg-rose-100/50 border-rose-200/50'}`}>
                   <Tag size={10} className={isIncome ? 'text-emerald-700' : 'text-rose-700'} />
                   <select 
-                    value={category || ''} 
-                    onChange={(e) => onEditCategory?.(e.target.value)}
+                    value={category || (suggestedCategory ? `suggested_${suggestedCategory}` : '')} 
+                    onChange={(e) => {
+                      const val = e.target.value.replace('suggested_', '');
+                      onEditCategory?.(val);
+                    }}
                     disabled={isProcessed}
                     className={`bg-transparent border-none p-0 text-[11px] font-bold focus:ring-0 cursor-pointer outline-none capitalize ${isIncome ? 'text-emerald-800' : 'text-rose-800'}`}
                   >
                     <option value="" disabled>Selecionar Categoria</option>
+                    {!category && suggestedCategory && (
+                      <option value={`suggested_${suggestedCategory}`}>
+                        {suggestedCategory} (Sugerido)
+                      </option>
+                    )}
                     {(allCategories || []).map((cat: any) => (
                       <option key={cat.id} value={cat.nome}>{cat.nome}</option>
                     ))}
-                    {!allCategories?.some(c => c.nome === category) && category && (
+                    {category && !allCategories?.some(c => c.nome === category) && (
                       <option value={category}>{category}</option>
                     )}
                   </select>

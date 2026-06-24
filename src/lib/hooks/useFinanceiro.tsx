@@ -1,11 +1,24 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, createContext, useContext } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import { useFechamento } from './useFechamento'
 import { safeSum, safeDiff } from '@/lib/utils/formatters'
 import type { Lancamento, LancamentoInput } from '@/lib/types'
 
+const FinanceiroContext = createContext<ReturnType<typeof useFinanceiroInternal> | null>(null)
+
+export function FinanceiroProvider({ children }: { children: React.ReactNode }) {
+  const value = useFinanceiroInternal()
+  return <FinanceiroContext.Provider value={value}>{children}</FinanceiroContext.Provider>
+}
+
 export function useFinanceiro() {
+  const context = useContext(FinanceiroContext)
+  if (!context) throw new Error('useFinanceiro deve ser usado dentro de um FinanceiroProvider')
+  return context
+}
+
+function useFinanceiroInternal() {
   const tenantId = useTenantId()
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([])
   const [loading, setLoading] = useState(true)
@@ -17,7 +30,7 @@ export function useFinanceiro() {
     setLoading(true)
     try {
       const targetYear = ano || new Date().getFullYear()
-      const start = `${targetYear}-01-01`
+      const start = `${targetYear - 1}-12-01`
       const end = `${targetYear}-12-31`
 
       let allData: Lancamento[] = []
@@ -81,10 +94,22 @@ export function useFinanceiro() {
           }
         }
 
+        // Fetch latest cobranca actions
+        const { data: cobrancaAcoes } = await sb.from('cobranca_acoes').select('associado_id, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+        const lastCobrancaMap: Record<string, string> = {}
+        if (cobrancaAcoes) {
+          cobrancaAcoes.forEach(acao => {
+            if (!lastCobrancaMap[acao.associado_id]) {
+              lastCobrancaMap[acao.associado_id] = acao.created_at
+            }
+          })
+        }
+
         allData = allData.map((l: any) => {
           const transacaoLinks = linksByTransacao[l.id] || []
           return {
             ...l,
+            data_ultima_cobranca: l.associado_id ? lastCobrancaMap[l.associado_id] : null,
             nfse_vinculo: transacaoLinks.map(v => ({
               ...v,
               nfe: v.nfe_id && nfeMap[v.nfe_id] ? nfeMap[v.nfe_id] : null
@@ -92,8 +117,17 @@ export function useFinanceiro() {
           }
         })
       } else {
-        // Se não tem links, garante que nfse_vinculo é um array vazio
-        allData = allData.map((l: any) => ({ ...l, nfse_vinculo: l.nfse_vinculo || [] }))
+        // Se não tem links, ainda precisamos adicionar data_ultima_cobranca
+        const { data: cobrancaAcoes } = await sb.from('cobranca_acoes').select('associado_id, created_at').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+        const lastCobrancaMap: Record<string, string> = {}
+        if (cobrancaAcoes) {
+          cobrancaAcoes.forEach(acao => {
+            if (!lastCobrancaMap[acao.associado_id]) {
+              lastCobrancaMap[acao.associado_id] = acao.created_at
+            }
+          })
+        }
+        allData = allData.map((l: any) => ({ ...l, nfse_vinculo: l.nfse_vinculo || [], data_ultima_cobranca: l.associado_id ? lastCobrancaMap[l.associado_id] : null }))
       }
 
       setLancamentos(allData)
@@ -133,6 +167,7 @@ export function useFinanceiro() {
     }
     
     delete (finalInput as any).taxa 
+    delete (finalInput as any).data_caixa
 
     const { data, error } = await sb.from('lancamentos').insert({ ...finalInput, tenant_id: tenantId }).select('id, status').single()
     if (!error) {
@@ -151,7 +186,16 @@ export function useFinanceiro() {
     if (item && isPeriodoBloqueado(item.data)) return { error: 'Este período está fechado e não permite alterações.' }
     if (input.data && isPeriodoBloqueado(input.data)) return { error: 'Não é possível mover lançamentos para períodos fechados.' }
     
-    const { error } = await sb.from('lancamentos').update(input).eq('id', id)
+    const { 
+      data_caixa,
+      ...cleanInput 
+    } = input as any;
+
+    if (cleanInput.status === 'pago') {
+      cleanInput.status_cobranca = null;
+    }
+
+    const { error } = await sb.from('lancamentos').update(cleanInput).eq('id', id)
     if (!error) {
       // Integração Contábil Automática
       if (input.status === 'pago') {
@@ -264,6 +308,7 @@ export function useFinanceiro() {
       const { 
         troco_via_pix, valor_troco, is_lote, selected_associados, 
         recorrencia_ativa, recorrencia_meses, batch_selection,
+        data_caixa,
         ...coreData 
       } = i as any
       
@@ -425,6 +470,7 @@ export function useFinanceiro() {
       const { error: err2 } = await sb.from('lancamentos')
         .update({
           status: statusFinal,
+          ...(statusFinal === 'pago' ? { status_cobranca: null } : {}),
           banco_transacao_id: original.banco_transacao_id,
           banco_original_memo: (original as any).banco_original_memo,
           cora_id: (original as any).cora_id,
@@ -488,12 +534,92 @@ export function useFinanceiro() {
     if (!ids.length) return { error: null }
     const hasLocked = lancamentos.some(l => ids.includes(l.id) && isPeriodoBloqueado(l.data))
     if (hasLocked) return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
+    const { 
+      data_caixa,
+      fixo_variavel,
+      ...cleanInput 
+    } = input as any;
+
+    if (cleanInput.status === 'pago') {
+      cleanInput.status_cobranca = null;
+    }
 
     try {
+      let associadosMap: Record<string, string> = {};
+      let fornecedoresMap: Record<string, string> = {};
+      let diretoriaMap: Record<string, string> = {};
+
+      if (input.categoria) {
+        const lancamentosParaAtualizar = lancamentos.filter(l => ids.includes(l.id));
+        
+        const assocIds = [...new Set(lancamentosParaAtualizar.map(l => l.associado_id).filter(Boolean))] as string[];
+        if (assocIds.length > 0) {
+          const { data: assocData } = await sb.from('associados').select('id, nome').in('id', assocIds);
+          if (assocData) assocData.forEach((a: any) => { associadosMap[a.id] = a.nome });
+        }
+
+        const fornIds = [...new Set(lancamentosParaAtualizar.map(l => l.fornecedor_id).filter(Boolean))] as string[];
+        if (fornIds.length > 0) {
+          const { data: fornData } = await sb.from('fornecedores').select('id, nome').in('id', fornIds);
+          if (fornData) fornData.forEach((a: any) => { fornecedoresMap[a.id] = a.nome });
+        }
+
+        const dirIds = [...new Set(lancamentosParaAtualizar.map(l => l.diretor_id).filter(Boolean))] as string[];
+        if (dirIds.length > 0) {
+          const { data: dirData } = await sb.from('diretoria').select('id, nome').in('id', dirIds);
+          if (dirData) dirData.forEach((a: any) => { diretoriaMap[a.id] = a.nome });
+        }
+      }
+
       for (let i = 0; i < ids.length; i += 100) {
         const chunk = ids.slice(i, i + 100)
-        const { error } = await sb.from('lancamentos').update(input).in('id', chunk)
-        if (error) throw error
+        
+        if (input.categoria || 'fixo_variavel' in input) {
+          const updatePromises = chunk.map(id => {
+            const l = lancamentos.find(x => x.id === id);
+            let finalDescricao = input.descricao || l?.descricao || '';
+            const matchTaxa = finalDescricao.match(/\(Taxa:[^)]+\)/);
+
+            if (input.categoria) {
+              const catUpper = input.categoria.toUpperCase();
+              const isAdesaoOuMensalidade = catUpper === 'ADESÃO' || catUpper === 'MENSALIDADE' || catUpper === 'MENSALIDADES';
+              
+              if (isAdesaoOuMensalidade && l?.associado_id && associadosMap[l.associado_id]) {
+                const prefixo = catUpper === 'ADESÃO' ? 'RECEB. DE ADESÃO' : 'RECEB. DE MENSALIDADE';
+                const nomeAssoc = associadosMap[l.associado_id].toUpperCase();
+                finalDescricao = `${prefixo} - ${nomeAssoc}`;
+              } else if (!isAdesaoOuMensalidade && l?.tipo === 'despesa') {
+                const nomeFornecedor = l?.fornecedor_id ? fornecedoresMap[l.fornecedor_id] : null;
+                const nomeDiretor = l?.diretor_id ? diretoriaMap[l.diretor_id] : null;
+                const nomeVinculado = nomeFornecedor || nomeDiretor;
+                
+                if (nomeVinculado) {
+                  const catFormatada = (input.categoria || '').toUpperCase();
+                  finalDescricao = `PGTO DE ${catFormatada} - ${nomeVinculado.toUpperCase()}`;
+                }
+              }
+            }
+
+            if (matchTaxa && !finalDescricao.includes(matchTaxa[0])) {
+              finalDescricao += ` ${matchTaxa[0]}`;
+            }
+
+            if ('fixo_variavel' in input) {
+              finalDescricao = finalDescricao.replace(/ \[FIXO\]| \[VARIÁVEL\]/g, '');
+              if (fixo_variavel === 'fixo') finalDescricao += ' [FIXO]';
+              if (fixo_variavel === 'variavel') finalDescricao += ' [VARIÁVEL]';
+            }
+
+            return sb.from('lancamentos').update({ ...cleanInput, descricao: finalDescricao }).eq('id', id);
+          });
+
+          const results = await Promise.all(updatePromises);
+          const errorResult = results.find(r => r.error);
+          if (errorResult) throw errorResult.error;
+        } else {
+          const { error } = await sb.from('lancamentos').update(cleanInput).in('id', chunk)
+          if (error) throw error
+        }
       }
       fetch()
       return { error: null }

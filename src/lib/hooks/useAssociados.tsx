@@ -1,12 +1,25 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { Associado, AssociadoInput } from '@/lib/types'
 import { useTenant } from './useTenant'
 import { fetchZapSignAssociatesAction, tempFixDatabaseAction, syncAdesaoFinanceiraAction } from '@/app/actions/zapsign'
 
+const AssociadosContext = createContext<ReturnType<typeof useAssociadosInternal> | null>(null)
+
+export function AssociadosProvider({ children }: { children: React.ReactNode }) {
+  const value = useAssociadosInternal()
+  return <AssociadosContext.Provider value={value}>{children}</AssociadosContext.Provider>
+}
+
 export function useAssociados() {
+  const context = useContext(AssociadosContext)
+  if (!context) throw new Error('useAssociados deve ser usado dentro de um AssociadosProvider')
+  return context
+}
+
+function useAssociadosInternal() {
   const tenantId = useTenantId()
   const { tenant } = useTenant()
   const [associados, setAssociados] = useState<Associado[]>([])

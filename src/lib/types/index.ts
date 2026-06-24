@@ -65,6 +65,7 @@ export interface Lancamento {
   competencia_ano?: number // Ano de competência
   status_cobranca?: string // Status de cobrança (ex: EM COBRANÇA, NEGOCIADO)
   banco_original_memo?: string // Histórico oculto da transação bancária
+  data_caixa?: string // Data real da movimentação bancária (extrato) — diferente de competência e conciliação
   nfse_vinculo?: {
     nfse_id: string
     nfse: {

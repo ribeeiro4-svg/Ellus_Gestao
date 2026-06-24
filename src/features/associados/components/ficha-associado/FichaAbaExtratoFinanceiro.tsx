@@ -1,16 +1,17 @@
 import React from 'react'
 import ExtratoGradeMeses from './ExtratoGradeMeses'
 import { fmtR } from '@/lib/utils/formatters'
-import { TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
+import { TrendingUp, AlertCircle, CheckCircle, FileText, User } from 'lucide-react'
 
 interface FichaAbaExtratoFinanceiroProps {
   extrato: any[]
+  historicoCobrancas?: any[]
 }
 
-export default function FichaAbaExtratoFinanceiro({ extrato }: FichaAbaExtratoFinanceiroProps) {
-  const totalPago = extrato.filter(m => m.status === 'pago' || m.status === 'adesao').reduce((acc, curr) => acc + curr.valor, 0)
+export default function FichaAbaExtratoFinanceiro({ extrato, historicoCobrancas = [] }: FichaAbaExtratoFinanceiroProps) {
+  const totalPago = extrato.filter(m => m.status === 'pago' || m.status === 'adesao_paga').reduce((acc, curr) => acc + curr.valor, 0)
   const totalAberto = extrato.filter(m => m.status === 'pendente').reduce((acc, curr) => acc + curr.valor, 0)
-  const totalMesesPagos = extrato.filter(m => m.status === 'pago' || m.status === 'adesao').length
+  const totalMesesPagos = extrato.filter(m => m.status === 'pago' || m.status === 'adesao_paga').length
   
   const situacaoGeral = totalAberto > 0 ? 'Com Pendências' : 'Em Dia'
 
@@ -58,6 +59,100 @@ export default function FichaAbaExtratoFinanceiro({ extrato }: FichaAbaExtratoFi
         
         <ExtratoGradeMeses extrato={extrato} />
       </div>
+
+      {historicoCobrancas && historicoCobrancas.length > 0 && (
+        <div className="space-y-6 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Histórico de Cobranças</h3>
+          </div>
+          <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-slate-50/70 text-slate-500 text-[10px] uppercase font-black tracking-widest border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-4">Data e Hora</th>
+                    <th className="px-6 py-4">Status / Ação</th>
+                    <th className="px-6 py-4">Vencimento</th>
+                    <th className="px-6 py-4">Lançamentos Cobrados</th>
+                    <th className="px-6 py-4">Observação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {historicoCobrancas.map((a, idx) => {
+                    const dataAtendimento = a.data_agendamento ? new Date(a.data_agendamento) : a.created_at ? new Date(a.created_at) : null
+                    let observacao = a.etapas_concluidas?.observacao || '--'
+                    const responsavelPresencial = a.responsavel_setor || '--'
+
+                    const lancMatch = observacao.match(/\(Lanc:\s*(.*?)\)/);
+                    let lancamentosText = '--';
+                    let vencimentoText = '--';
+                    
+                    if (lancMatch) {
+                      lancamentosText = lancMatch[1];
+                      observacao = observacao.replace(lancMatch[0], '').trim();
+                      observacao = observacao.replace(/-\s*Data base da cobrança informada\.$/, '').replace(/^-\s*/, '').trim();
+                    }
+
+                    // Tenta extrair Venc: do formato novo
+                    const vencMatch = lancamentosText.match(/Venc:\s*([\d\/]+)/i);
+                    if (vencMatch) {
+                      vencimentoText = vencMatch[1];
+                      lancamentosText = lancamentosText.replace(/\|\s*Venc:\s*[\d\/]+/i, '').replace(/Venc:\s*[\d\/]+/i, '').trim();
+                    } else {
+                      // Fallback pro formato antigo digitado na observação
+                      const obsVencMatch = observacao.match(/vencimento:\s*([\d\/]+)/i);
+                      if (obsVencMatch) {
+                        vencimentoText = obsVencMatch[1];
+                      }
+                    }
+
+                    if (vencimentoText !== '--' && vencimentoText.length <= 5) {
+                      const ano = dataAtendimento ? dataAtendimento.getFullYear() : new Date().getFullYear();
+                      vencimentoText = `${vencimentoText}/${ano}`;
+                    }
+
+                    if (!observacao) observacao = '--'
+
+                    return (
+                      <tr key={a.id || idx} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-bold text-slate-700">
+                          {dataAtendimento ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-slate-800 font-bold">
+                                {dataAtendimento.toLocaleDateString('pt-BR')}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-normal">
+                                {dataAtendimento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          ) : '--'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2.5 py-1 bg-orange-100 text-orange-700 border border-orange-200/50 rounded-full text-[9px] font-black uppercase tracking-widest">
+                            Cobrança ({responsavelPresencial})
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-bold text-slate-700">
+                          {vencimentoText}
+                        </td>
+                        <td className="px-6 py-4 max-w-[200px] text-xs font-medium text-slate-600 whitespace-normal">
+                          {lancamentosText}
+                        </td>
+                        <td className="px-6 py-4 max-w-xs text-xs font-medium text-slate-600 whitespace-normal">
+                          <div className="flex items-start gap-1">
+                            <FileText size={12} className="text-slate-400 shrink-0 mt-0.5" />
+                            <span>{observacao}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

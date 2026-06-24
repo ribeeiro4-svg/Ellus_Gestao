@@ -231,7 +231,7 @@ export default function LaunchDetailsModal({ isOpen, onClose, launch, associados
                     >
                       <option value="">Selecione...</option>
                       {associados.filter(a => a.id !== launch.associado_id).map(a => (
-                        <option key={a.id} value={a.id}>{a.nome}</option>
+                        <option key={a.id} value={a.id}>{a.nome} ({a.cpf || 'S/ CPF'}){a.email ? ` - ${a.email}` : ''}</option>
                       ))}
                     </select>
                     <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300">

@@ -11,6 +11,7 @@ import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
+import BatchActionBarAssociados from '@/components/ui/BatchActionBarAssociados'
 import CrudModal from '@/components/ui/CrudModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import ChartCard from '@/components/ui/ChartCard'
@@ -874,6 +875,23 @@ Diretoria / Secretaria ACPROBEC`
     }
   }
 
+  const handleBulkEdit = async (data: any) => {
+    if (selectedIds.length === 0) return
+    setIsUpdatingBulk(true)
+    try {
+      const res = await atualizarBulk(selectedIds, data)
+      if (!res.error) {
+        alert('Associados atualizados em lote com sucesso!')
+        refresh()
+        setSelectedIds([])
+      } else {
+        alert('Erro ao atualizar associados: ' + res.error.message)
+      }
+    } finally {
+      setIsUpdatingBulk(false)
+    }
+  }
+
   const handleBatchUpdateConta = async () => {
     if (selectedIds.length === 0) return
     setIsBulkAccountModalOpen(true)
@@ -1519,7 +1537,7 @@ Diretoria / Secretaria ACPROBEC`
                  plugins: { 
                    legend: { 
                      position: 'bottom', 
-                     labels: { boxWidth: 8, usePointStyle: true, pointStyle: 'circle', font: { size: 10, weight: 'bold' as const }, padding: 10 } 
+                     labels: { color: '#1e293b', boxWidth: 10, usePointStyle: true, pointStyle: 'circle', font: { family: 'Inter, sans-serif', size: 12, weight: 600 }, padding: 15 } 
                    } 
                  } 
                }}
@@ -1527,7 +1545,7 @@ Diretoria / Secretaria ACPROBEC`
                  id: 'centerText',
                  beforeDraw: function(chart: any) {
                    var width = chart.width, height = chart.height, ctx = chart.ctx;
-                   ctx.restore();
+                   ctx.save();
                    ctx.font = "900 56px Inter, sans-serif";
                    ctx.textBaseline = "middle";
                    ctx.fillStyle = "#1d4f3e";
@@ -1538,7 +1556,7 @@ Diretoria / Secretaria ACPROBEC`
                    ctx.fillStyle = "#94a3b8";
                    var text2 = "ASSOCIADOS", text2X = Math.round((width - ctx.measureText(text2).width) / 2), text2Y = height / 2 + 30;
                    ctx.fillText(text2, text2X, text2Y);
-                   ctx.save();
+                   ctx.restore();
                  }
                }]}
              />
@@ -1658,68 +1676,14 @@ Diretoria / Secretaria ACPROBEC`
         )}
       </div>
 
-      {selectedIds.length > 0 && (
-        <div className="flex items-center justify-between p-4 bg-red-50 border border-red-100 rounded-2xl animate-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-3">
-             <CheckSquare className="text-red-600" size={18} />
-             <span className="text-sm font-bold text-red-800">{selectedIds.length} selecionados</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-px bg-red-200 mx-2" />
-            <button onClick={() => handleBatchUpdateRecorrencia(true)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-[#0e2d22] text-white rounded-lg text-[10px] font-black uppercase shadow-sm hover:opacity-90 transition-opacity">Recor. Ativar</button>
-            <button onClick={() => handleBatchUpdateRecorrencia(false)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-slate-600 border border-slate-200 rounded-lg text-[10px] font-black uppercase shadow-sm">Recor. Parar</button>
-            <button onClick={handleBatchUpdateConta} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-blue-600 border border-blue-100 rounded-lg text-[10px] font-black uppercase shadow-sm">Definir Conta</button>
-            <div className="h-6 w-px bg-red-200 mx-2" />
-            <button onClick={() => handleBatchUpdatePlanoSaude('Ativo')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Plano Ativo</button>
-            <button onClick={() => handleBatchUpdatePlanoSaude('Aguardando Declaração')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-orange-500 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Aguard. Declaração</button>
-            <button onClick={() => handleBatchUpdatePlanoSaude('Não Possui')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-white text-slate-400 border border-slate-200 rounded-lg text-[10px] font-black uppercase shadow-sm">Remover Plano</button>
-            <div className="h-6 w-px bg-red-200 mx-2" />
-            <button onClick={() => handleBatchUpdateTermo('Enviado ao HGU')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Enviado HGU</button>
-            <button onClick={() => handleBatchUpdateTermo('Assinatura Pendente')} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm">Pendente</button>
-            <div className="h-6 w-px bg-red-200 mx-2" />
-            <button onClick={() => setIsBatchRecurrenceModalOpen(true)} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase shadow-sm flex items-center gap-2 hover:bg-emerald-700 transition-colors">
-              <Zap size={12} /> Gerar Mensalidades
-            </button>
-            <div className="h-6 w-px bg-red-200 mx-2" />
-            <select 
-              onChange={(e) => {
-                if (e.target.value) handleBatchUpdateStatus(e.target.value)
-                e.target.value = ''
-              }} 
-              value="" 
-              disabled={isUpdatingBulk}
-              className="px-3 py-1.5 bg-white text-slate-700 border border-slate-200 rounded-lg text-[10px] font-black uppercase shadow-sm outline-none cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <option value="" disabled>Alterar Status</option>
-              <option value="ativo">Marcar como ATIVO</option>
-              <option value="inativo">Marcar como INATIVO</option>
-              <option value="pendente">Marcar como PENDENTE</option>
-              <option value="inadimplente">Marcar como INADIMPLENTE</option>
-              <option value="abonado">Marcar como ABONADO</option>
-            </select>
-            <div className="h-6 w-px bg-red-200 mx-2" />
-            <select 
-              onChange={(e) => {
-                if (e.target.value) handleBatchUpdateVencimento(Number(e.target.value))
-                e.target.value = ''
-              }} 
-              value="" 
-              disabled={isUpdatingBulk}
-              className="px-3 py-1.5 bg-white text-indigo-600 border border-indigo-100 rounded-lg text-[10px] font-black uppercase shadow-sm outline-none cursor-pointer hover:bg-slate-50 transition-colors"
-            >
-              <option value="" disabled>Alterar Vencimento</option>
-              {Array.from({ length: 30 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>Dia {String(i + 1).padStart(2, '0')}</option>
-              ))}
-            </select>
-            {(excluir || isAdmin) && (
-              <button onClick={handleBulkDelete} disabled={isUpdatingBulk} className="px-3 py-1.5 bg-[#be123c] text-white rounded-lg text-[10px] font-black uppercase shadow-md flex items-center gap-2 hover:opacity-90 transition-opacity"><Trash2 size={12} /> Excluir</button>
-            )}
-          </div>
-        </div>
-      )}
-
-
+      <BatchActionBarAssociados
+        selectedCount={selectedIds.length}
+        onClear={() => setSelectedIds([])}
+        onDelete={(excluir || isAdmin) ? handleBulkDelete : undefined}
+        onUpdate={handleBulkEdit}
+        onGerarMensalidades={() => setIsBatchRecurrenceModalOpen(true)}
+        contas={contas}
+      />
 
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
         <DataTable 
@@ -1847,7 +1811,7 @@ Diretoria / Secretaria ACPROBEC`
             label: 'Categoria', 
             type: 'select', 
             required: true, 
-            defaultValue: 'Mensalidade', 
+            defaultValue: categoriasContabeis.find(c => c.nome.toLowerCase().includes('mensalidade'))?.nome || '', 
             options: categoriasContabeis.map(c => ({ value: c.nome, label: c.nome.toUpperCase() })) 
           },
           { 
@@ -2047,12 +2011,12 @@ Diretoria / Secretaria ACPROBEC`
                   ) : (
                     <Doughnut 
                       data={expandedChart.chartData} 
-                      options={{ responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } } }} 
+                      options={{ responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { color: '#1e293b', boxWidth: 10, usePointStyle: true, pointStyle: 'circle', font: { family: 'Inter, sans-serif', size: 12, weight: 600 }, padding: 15 } } } }} 
                       plugins={[{
                         id: 'centerTextModal',
                         beforeDraw: function(chart: any) {
                           var width = chart.width, height = chart.height, ctx = chart.ctx;
-                          ctx.restore();
+                          ctx.save();
                           ctx.font = "900 64px Inter, sans-serif";
                           ctx.textBaseline = "middle";
                           ctx.fillStyle = "#1d4f3e";
@@ -2063,7 +2027,7 @@ Diretoria / Secretaria ACPROBEC`
                           ctx.fillStyle = "#94a3b8";
                           var text2 = "ASSOCIADOS", text2X = Math.round((width - ctx.measureText(text2).width) / 2), text2Y = height / 2 + 30;
                           ctx.fillText(text2, text2X, text2Y);
-                          ctx.save();
+                          ctx.restore();
                         }
                       }]}
                     />
@@ -2331,6 +2295,7 @@ Diretoria / Secretaria ACPROBEC`
         isOpen={isPreviewAdesoesOpen}
         onClose={() => setIsPreviewAdesoesOpen(false)}
         previewData={previewAdesoesData}
+        associados={associados}
         onConfirm={handleConfirmGerarAdesoes}
       />
 

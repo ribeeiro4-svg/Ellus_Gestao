@@ -23,6 +23,7 @@ import CobrancaDrawer from '@/features/cobranca/components/CobrancaDrawer'
 import CobrancaStatusCell from '@/features/cobranca/components/CobrancaStatusCell'
 import { calcularTotalAtualizado } from '@/features/cobranca/utils/cobrancaUtils'
 import SuspensaoModal from './SuspensaoModal'
+import AbonoLancamentoModal from '@/components/financeiro/AbonoLancamentoModal'
 import { FileText, ScrollText } from 'lucide-react'
 import jsPDF from 'jspdf'
 import { useTenant } from '@/lib/hooks/useTenant'
@@ -84,6 +85,11 @@ export default function InadimplenciaTab({
   const [isCleaning, setIsCleaning] = useState(false)
   const [cobrancaDrawerOpen, setCobrancaDrawerOpen] = useState(false)
   const [selectedAssociadoCobranca, setSelectedAssociadoCobranca] = useState<any>(null)
+  
+  // Seletor de Meses para cobrança
+  const [isSeletorMesesOpen, setIsSeletorMesesOpen] = useState(false)
+  const [lancsParaCobrar, setLancsParaCobrar] = useState<any[]>([])
+  const [checkedLancs, setCheckedLancs] = useState<string[]>([])
 
   // Novos Filtros e Batch
   const [filterMonth, setFilterMonth] = useState<number>(-1)
@@ -109,6 +115,7 @@ export default function InadimplenciaTab({
   const [filterMesesAtraso, setFilterMesesAtraso] = useState<string>('ALL')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
+  const [isAbonoModalOpen, setIsAbonoModalOpen] = useState(false)
 
   // Lançamentos atrasados (detalhado) - Base de cálculo real
   const lancamentosAtrasados = useMemo(() => {
@@ -125,7 +132,8 @@ export default function InadimplenciaTab({
         const assoc = associados.find(a => a.id === l.associado_id)
         const matchSearch = (!searchTerm || 
                 l.descricao.toLowerCase().includes(searchLower) ||
-                assoc?.nome.toLowerCase().includes(searchLower))
+                (l.status_cobranca && l.status_cobranca.toLowerCase().includes(searchLower)) ||
+                (assoc?.nome && assoc.nome.toLowerCase().includes(searchLower)))
 
         const matchCobranca = filterStatusCobranca === 'ALL' || 
                              (filterStatusCobranca === 'PENDENTE' ? !l.status_cobranca : l.status_cobranca === filterStatusCobranca)
@@ -217,6 +225,19 @@ export default function InadimplenciaTab({
     })
     if (!res?.error) {
       logAction('BAIXA DE PAGAMENTO', `Lançamento ${item.id} (${item.descricao}) marcado como PAGO na aba de Inadimplência.`)
+      
+      if (item.associado_id) {
+        fetch(`/api/cobranca/associado/${item.associado_id}/acao`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            etapa: 'Pagamento Realizado',
+            canal: 'sistema',
+            textoEnviado: `Liquidado em Inadimplência: ${item.descricao || 'Mensalidade'}`,
+            observacao: `Pagamento confirmado e liquidado (R$ ${item.valor.toFixed(2)})`
+          })
+        }).catch(console.error)
+      }
     }
   }
 
@@ -254,6 +275,28 @@ export default function InadimplenciaTab({
       logAction('EXCLUSÃO EM LOTE', `${allLancamentoIds.length} lançamentos foram excluídos simultaneamente.`)
       setSelectedIds([])
       setIsConfirmDeleteOpen(false)
+    } else {
+      alert(res.error)
+    }
+  }
+
+  const handleBulkAbonar = async (motivo: string) => {
+    const allLancamentoIds = selectedIds.flatMap(groupId => {
+      const group = mappedInadimplentes.find(g => g.id === groupId)
+      return group ? group.lancamentos.map(l => l.id) : []
+    })
+
+    if (allLancamentoIds.length === 0) return
+
+    const dataToUpdate: any = {
+      status: 'cancelado',
+      banco_original_memo: `[ABONO] Motivo: ${motivo} | Por: Sistema`
+    }
+    const res = await atualizarBulk(allLancamentoIds, dataToUpdate)
+    if (!res.error) {
+      logAction('ABONO EM LOTE', `${allLancamentoIds.length} lançamentos foram abonados. Motivo: ${motivo}`)
+      setSelectedIds([])
+      setIsAbonoModalOpen(false)
     } else {
       alert(res.error)
     }
@@ -307,10 +350,19 @@ export default function InadimplenciaTab({
     }
   }
 
-  const handleCobrar = (assoc: any) => {
+  const handleCobrar = (assoc: any, lancsDaPessoa?: any[]) => {
     if (!assoc) return
     setSelectedAssociadoCobranca(assoc)
-    setCobrancaDrawerOpen(true)
+    if (lancsDaPessoa && lancsDaPessoa.length > 1) {
+      // Abre o modal de seleção antes de abrir o painel
+      setLancsParaCobrar(lancsDaPessoa)
+      setCheckedLancs(lancsDaPessoa.map(l => l.id))
+      setIsSeletorMesesOpen(true)
+    } else {
+      setLancsParaCobrar(lancsDaPessoa || [])
+      setCheckedLancs(lancsDaPessoa ? [lancsDaPessoa[0]?.id].filter(Boolean) : [])
+      setCobrancaDrawerOpen(true)
+    }
   }
 
   const handleExportarExcel = () => {
@@ -492,12 +544,22 @@ export default function InadimplenciaTab({
     { 
       header: 'Associado / Descrição', 
       key: 'descricao', 
-      render: (g: any) => (
-        <div className="flex flex-col">
-          <span className="text-sm font-bold text-slate-900">{g.descricao}</span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{g.meses} {g.meses === 1 ? 'pendência' : 'pendências'}</span>
-        </div>
-      )
+      render: (g: any) => {
+        const hasEmCobranca = g.lancamentos.some((l: any) => l.status_cobranca === 'EM COBRANÇA')
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-slate-900">{g.descricao}</span>
+              {hasEmCobranca && (
+                <span className="text-[9px] font-black bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded border border-orange-200 flex items-center gap-1">
+                  <AlertTriangle size={8} /> EM COBRANÇA
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{g.meses} {g.meses === 1 ? 'pendência' : 'pendências'}</span>
+          </div>
+        )
+      }
     },
     { 
       header: 'Tempo de Atraso', 
@@ -527,10 +589,13 @@ export default function InadimplenciaTab({
       header: 'Cobrança', 
       key: 'status_cobranca', 
       render: (g: any) => {
-        const oldestStatus = g.lancamentos[0]?.status_cobranca
-        return oldestStatus ? (
-          <span className={`status-badge ${statusCobrancaClass(oldestStatus)}`}>
-            {oldestStatus}
+        const hasEmCobranca = g.lancamentos.some((l: any) => l.status_cobranca === 'EM COBRANÇA')
+        const firstStatus = g.lancamentos.find((l: any) => l.status_cobranca)?.status_cobranca
+        const displayStatus = hasEmCobranca ? 'EM COBRANÇA' : firstStatus
+
+        return displayStatus ? (
+          <span className={`status-badge ${statusCobrancaClass(displayStatus)}`}>
+            {displayStatus}
           </span>
         ) : <span className="text-[10px] text-slate-300 italic">Pendente</span>
       }
@@ -547,8 +612,8 @@ export default function InadimplenciaTab({
           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             {g.assoc && (editar || criar || isAdmin) && (
               <button 
-                onClick={(e) => { e.stopPropagation(); handleCobrar(g.assoc) }} 
-                title="Cobrar via Painel" 
+                onClick={(e) => { e.stopPropagation(); handleCobrar(g.assoc, g.lancamentos) }} 
+                title="Acionar Cobrança" 
                 className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
               >
                 <MessageCircle size={14} />
@@ -651,7 +716,7 @@ export default function InadimplenciaTab({
                     <div className="text-right">
                        <p className="text-base font-black text-red-600">{fmtR(item.totalAtualizado || item.totalOriginal)}</p>
                        <button 
-                         onClick={() => handleCobrar(item.assoc)}
+                         onClick={() => handleCobrar(item.assoc, item.lancamentos)}
                          className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors mt-1"
                        >
                          Acionar Cobrança
@@ -784,6 +849,8 @@ export default function InadimplenciaTab({
         onDelete={(excluir || isAdmin) ? () => setIsConfirmDeleteOpen(true) : undefined}
         onUpdate={(editar || isAdmin) ? handleBulkUpdate : undefined}
         onInvertType={(editar || isAdmin) ? handleInvertTypeBulk : undefined}
+        onMarkCobranca={(editar || isAdmin) ? () => handleBulkUpdate({ status_cobranca: 'EM COBRANÇA' }) : undefined}
+        onAbonar={(editar || isAdmin) ? () => setIsAbonoModalOpen(true) : undefined}
         categories={categorias}
       />
 
@@ -793,6 +860,13 @@ export default function InadimplenciaTab({
         onConfirm={handleBulkDelete}
         title="Excluir Lançamentos Selecionados"
         message={`Você está prestes a excluir ${selectedIds.length} lançamentos. Esta ação não pode ser desfeita. Deseja continuar?`}
+      />
+
+      <AbonoLancamentoModal
+        isOpen={isAbonoModalOpen}
+        onClose={() => setIsAbonoModalOpen(false)}
+        lancamentoCount={selectedIds.flatMap(id => mappedInadimplentes.find(g => g.id === id)?.lancamentos.map(l => l.id) || []).length}
+        onConfirm={handleBulkAbonar}
       />
 
       <InadimplenciaLogModal 
@@ -845,7 +919,7 @@ export default function InadimplenciaTab({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <button onClick={() => { setIsGroupModalOpen(false); handleCobrar(selectedGroupDetails.assoc); }} title="Cobrar via WhatsApp" className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
+                      <button onClick={() => { setIsGroupModalOpen(false); handleCobrar(selectedGroupDetails.assoc, [i]); }} title="Acionar Cobrança (este item)" className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
                         <MessageCircle size={16} />
                       </button>
                       <button onClick={() => { setIsGroupModalOpen(false); handleMarcarPago(i); }} title="Marcar como Pago" className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">
@@ -911,7 +985,7 @@ export default function InadimplenciaTab({
                      <ShieldAlert size={16} /> Suspensão
                    </button>
                    <button 
-                     onClick={() => handleCobrar(selectedGroupDetails.assoc)}
+                     onClick={() => handleCobrar(selectedGroupDetails.assoc, selectedGroupDetails.lancamentos)}
                      className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-500 transition-all shadow-md"
                    >
                      <MessageCircle size={16} /> Acionar Cobrança
@@ -933,9 +1007,65 @@ export default function InadimplenciaTab({
       <CobrancaDrawer 
         associadoId={selectedAssociadoCobranca?.id || null}
         associadoNome={selectedAssociadoCobranca?.nome || ''}
+        lancamentosIds={checkedLancs}
         isOpen={cobrancaDrawerOpen}
         onClose={() => setCobrancaDrawerOpen(false)}
       />
+
+      {isSeletorMesesOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-4 animate-in zoom-in-95 duration-200">
+            <div>
+              <h3 className="text-sm font-black text-slate-800">O que deseja cobrar?</h3>
+              <p className="text-[11px] text-slate-500 font-medium mt-1">
+                Selecione os meses/vencimentos que serão incluídos na mensagem de cobrança.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              {lancsParaCobrar.sort((a,b) => new Date(a.data).getTime() - new Date(b.data).getTime()).map(l => {
+                const venc = new Date(l.data).toLocaleDateString('pt-BR')
+                return (
+                  <label key={l.id} className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50 cursor-pointer transition-all">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded border-slate-300 text-emerald-500 focus:ring-emerald-500"
+                      checked={checkedLancs.includes(l.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) setCheckedLancs(prev => [...prev, l.id])
+                        else setCheckedLancs(prev => prev.filter(id => id !== l.id))
+                      }}
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-black text-slate-700">{fmtR(l.valor)}</span>
+                      <span className="text-[10px] font-bold text-slate-400">Vencimento: {venc}</span>
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button 
+                onClick={() => setIsSeletorMesesOpen(false)}
+                className="flex-1 py-3 bg-slate-100 text-slate-500 font-black text-[10px] uppercase rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  setIsSeletorMesesOpen(false)
+                  setCobrancaDrawerOpen(true)
+                }}
+                disabled={checkedLancs.length === 0}
+                className="flex-1 py-3 bg-emerald-600 text-white font-black text-[10px] uppercase rounded-xl hover:bg-emerald-500 transition-colors disabled:opacity-50"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

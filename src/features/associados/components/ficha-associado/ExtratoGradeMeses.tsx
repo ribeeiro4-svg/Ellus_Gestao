@@ -14,6 +14,7 @@ export default function ExtratoGradeMeses({ extrato }: ExtratoGradeMesesProps) {
           mes={m.mes}
           valor={m.valor}
           status={m.status}
+          isEmCobranca={m.lancamento?.status_cobranca === 'EM COBRANÇA'}
         />
       ))}
     </div>

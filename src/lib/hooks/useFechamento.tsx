@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, createContext, useContext } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 
@@ -11,7 +11,20 @@ export interface FechamentoPeriodo {
   snapshot?: any[]
 }
 
+const FechamentoContext = createContext<ReturnType<typeof useFechamentoInternal> | null>(null)
+
+export function FechamentoProvider({ children }: { children: React.ReactNode }) {
+  const value = useFechamentoInternal()
+  return <FechamentoContext.Provider value={value}>{children}</FechamentoContext.Provider>
+}
+
 export function useFechamento() {
+  const context = useContext(FechamentoContext)
+  if (!context) throw new Error('useFechamento deve ser usado dentro de um FechamentoProvider')
+  return context
+}
+
+function useFechamentoInternal() {
   const tenantId = useTenantId()
   const sb = createClient()
   const [fechamentos, setFechamentos] = useState<FechamentoPeriodo[]>([])

@@ -668,8 +668,17 @@ export default function DiretoriaTab() {
             <div className="p-6 overflow-y-auto bg-slate-50/50 flex-1">
               {(() => {
                 const myDocs = lancamentos.filter(l => l.diretor_id === ledgerMember.id && l.status === 'pago')
+                
+                // Filtro para ignorar salários e impostos da conta corrente (devendo)
+                const isDebt = (l: any) => {
+                  if (l.tipo !== 'despesa') return false;
+                  const cat = (l.categoria || '').toUpperCase();
+                  if (cat.includes('PRÓ-LABORE') || cat.includes('PRO-LABORE') || cat.includes('HONORÁRIOS') || cat.includes('INSS') || cat.includes('SALÁRIO') || cat.includes('IMPOSTO')) return false;
+                  return true;
+                }
+
                 const entradas = myDocs.filter(l => l.tipo === 'receita').reduce((s, a) => s + a.valor, 0)
-                const retiradas = myDocs.filter(l => l.tipo === 'despesa').reduce((s, a) => s + a.valor, 0)
+                const retiradas = myDocs.filter(l => isDebt(l)).reduce((s, a) => s + a.valor, 0)
                 const isWarning = retiradas > entradas
 
                 return (
@@ -703,8 +712,13 @@ export default function DiretoriaTab() {
                               <div className="text-xs font-bold text-gray-900">{l.descricao}</div>
                               <div className="text-[10px] text-gray-400 mt-0.5">{fmtData(l.data)} • {l.categoria}</div>
                             </div>
-                            <div className={`text-xs font-black p-2 rounded-xl border ${l.tipo === 'receita' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
-                              {l.tipo === 'receita' ? '+' : '-'}{fmtR(l.valor)}
+                            <div className="flex flex-col items-end">
+                              <div className={`text-xs font-black p-2 rounded-xl border ${l.tipo === 'receita' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                                {l.tipo === 'receita' ? '+' : '-'}{fmtR(l.valor)}
+                              </div>
+                              {l.tipo === 'despesa' && !isDebt(l) && (
+                                <span className="text-[8px] font-bold text-gray-400 mt-1 uppercase">Não afeta saldo</span>
+                              )}
                             </div>
                           </li>
                         ))}

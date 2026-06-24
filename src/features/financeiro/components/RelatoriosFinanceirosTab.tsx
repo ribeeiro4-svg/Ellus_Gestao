@@ -10,6 +10,7 @@ import { useCategorias } from '@/lib/hooks/useCategorias'
 import { useContas } from '@/lib/hooks/useContas'
 import { useFechamento } from '@/lib/hooks/useFechamento'
 import { useTenant } from '@/lib/hooks/useTenant'
+import { createClient } from '@/lib/supabase/client'
 import DataTable from '@/components/ui/DataTable'
 import { fmtR, fmtData, getMesIdx, getAnoIdx, getBruto, safeSum, MESES } from '@/lib/utils/formatters'
 import StatusBadge from '@/components/ui/StatusBadge'
@@ -53,6 +54,30 @@ export default function RelatoriosFinanceirosTab({
   const [timeRange, setTimeRange] = useState<'month' | 'today' | '7d' | '14d' | '30d'>('month')
   const [provisionType, setProvisionType] = useState<'all' | 'receita' | 'despesa'>('all')
 
+  const [cobrancaLogs, setCobrancaLogs] = useState<any[]>([])
+  const [loadingCobranca, setLoadingCobranca] = useState(false)
+
+  React.useEffect(() => {
+    if (selectedReport !== 'auditoria_cobrancas' || !tenant?.id) return
+    const fetchLogs = async () => {
+      setLoadingCobranca(true)
+      const sb = createClient()
+      const startObj = new Date(filterYear, filterMonth !== -1 ? filterMonth : 0, 1)
+      const endObj = new Date(filterYear, filterMonth !== -1 ? filterMonth + 1 : 12, 0)
+      
+      const { data } = await sb.from('cobranca_acoes')
+        .select('*, associados(nome, cpf, telefone)')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', startObj.toISOString())
+        .lte('created_at', endObj.toISOString())
+        .order('created_at', { ascending: false })
+      
+      setCobrancaLogs(data || [])
+      setLoadingCobranca(false)
+    }
+    fetchLogs()
+  }, [selectedReport, tenant?.id, filterMonth, filterYear])
+
   const reports = [
     { id: 'fluxo', title: 'Fluxo de Caixa Analítico', desc: 'Lista completa de ingressos e dispêndios detalhados', icon: BarChart2, color: 'text-blue-600', bg: 'bg-blue-50' },
     { id: 'receitas', title: 'Relatório de Receitas', desc: 'Detalhamento de todos os ingressos e mensalidades', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -65,6 +90,7 @@ export default function RelatoriosFinanceirosTab({
     { id: 'hoje', title: 'Movimentação do Dia', desc: 'Resumo de tudo que vence ou foi pago no dia de hoje', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { id: 'curto_prazo', title: 'Análise de Curto Prazo', desc: 'Relatório detalhado dos últimos 7, 14 ou 30 dias', icon: TrendingDown, color: 'text-rose-600', bg: 'bg-rose-50' },
     { id: 'provisoes', title: 'Relatório de Provisões', desc: 'Projeção de entradas e saídas pendentes agrupadas por dia', icon: Zap, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { id: 'auditoria_cobrancas', title: 'Auditoria de Cobranças', desc: 'Relatório de rastreabilidade de cobranças efetuadas e pagamentos confirmados', icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50' },
   ]
 
   const getLinkedName = (item: any) => {
@@ -137,6 +163,8 @@ export default function RelatoriosFinanceirosTab({
       // Definir quais relatórios operam em regime de CAIXA (Liquidez)
       const isCashRegime = selectedReport ? ['fluxo', 'categorias', 'contas', 'receitas_mensal', 'despesas_mensal'].includes(selectedReport) : false
       
+      if (selectedReport === 'auditoria_cobrancas') return false // Treated separately
+
       // No regime de caixa, mostramos APENAS o que foi realizado
       if (isCashRegime && !isRealized) return false
 
@@ -1532,6 +1560,51 @@ export default function RelatoriosFinanceirosTab({
                 </div>
               )}
             </div>
+          ) : selectedReport === 'auditoria_cobrancas' ? (
+            <DataTable 
+              columns={[
+                { 
+                  header: 'Data', 
+                  key: 'created_at', 
+                  filterValue: (i: any) => fmtData(i.created_at),
+                  render: (i: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(i.created_at)}</span> 
+                },
+                { 
+                  header: 'Associado', 
+                  key: 'associado_id', 
+                  filterValue: (i: any) => i.associados?.nome || '',
+                  render: (i: any) => <span className="text-sm font-bold text-slate-800">{i.associados?.nome || 'N/A'}</span>
+                },
+                { 
+                  header: 'Ação / Etapa', 
+                  key: 'etapa', 
+                  filterValue: (i: any) => i.etapa || '',
+                  render: (i: any) => <StatusBadge status={i.etapa === 'Pagamento Realizado' ? 'pago' : 'em_andamento'} type="lancamento" label={i.etapa} />
+                },
+                { 
+                  header: 'Canal', 
+                  key: 'canal', 
+                  filterValue: (i: any) => i.canal || '',
+                  render: (i: any) => <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{i.canal || 'SISTEMA'}</span>
+                },
+                { 
+                  header: 'Detalhes', 
+                  key: 'observacao', 
+                  filterValue: (i: any) => `${i.texto_enviado} ${i.observacao}`,
+                  render: (i: any) => (
+                    <div className="text-xs text-slate-500 flex flex-col gap-1 max-w-sm">
+                      <span className="font-bold text-slate-700 leading-tight">{i.texto_enviado}</span>
+                      {i.observacao && <span className="italic text-[10px] leading-tight">{i.observacao}</span>}
+                    </div>
+                  )
+                }
+              ]} 
+              data={cobrancaLogs} 
+              loading={loadingCobranca} 
+              showFilterInputs={true}
+              exportable={true}
+              exportFilename="Auditoria_Cobrancas"
+            />
           ) : (
             <DataTable 
               columns={columns} 

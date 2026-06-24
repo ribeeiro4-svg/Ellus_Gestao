@@ -18,7 +18,7 @@ interface FichaAssociadoModalProps {
 
 export default function FichaAssociadoModal({ isOpen, onClose, associadoId, onAtualizar }: FichaAssociadoModalProps) {
   const [abaAtiva, setAbaAtiva] = useState<'cadastrais' | 'financeiro' | 'historico' | 'recorrencia'>('cadastrais')
-  const { associado, extrato, atendimentos, loading } = useFichaAssociado(associadoId)
+  const { associado, extrato, atendimentos, historicoCobrancas, loading } = useFichaAssociado(associadoId)
 
   if (!isOpen) return null
 
@@ -83,7 +83,7 @@ export default function FichaAssociadoModal({ isOpen, onClose, associadoId, onAt
               {abaAtiva === 'cadastrais' ? (
                 <FichaAbaDadosCadastrais associado={associado} />
               ) : abaAtiva === 'financeiro' ? (
-                <FichaAbaExtratoFinanceiro extrato={extrato} />
+                <FichaAbaExtratoFinanceiro extrato={extrato} historicoCobrancas={historicoCobrancas || []} />
               ) : abaAtiva === 'historico' ? (
                 <FichaAbaHistoricoAtendimentos atendimentos={atendimentos || []} />
               ) : (
@@ -93,7 +93,7 @@ export default function FichaAssociadoModal({ isOpen, onClose, associadoId, onAt
 
             <FichaRodape 
               onClose={onClose} 
-              onExportPdf={() => gerarPdfFicha(associado, extrato, atendimentos)} 
+              onExportPdf={() => gerarPdfFicha(associado, extrato, atendimentos, historicoCobrancas)} 
             />
           </>
         ) : (

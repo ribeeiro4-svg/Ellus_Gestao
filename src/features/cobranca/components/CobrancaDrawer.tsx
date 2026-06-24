@@ -8,6 +8,7 @@ interface CobrancaDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   associadoNome?: string;
+  lancamentosIds?: string[];
 }
 
 const CANAL_OPTIONS = [
@@ -33,7 +34,7 @@ const URGENCIA_ICON: Record<string, React.ReactNode> = {
   positivo:<CheckCircle2 size={14} />,
 };
 
-export default function CobrancaDrawer({ associadoId, isOpen, onClose, associadoNome }: CobrancaDrawerProps) {
+export default function CobrancaDrawer({ associadoId, isOpen, onClose, associadoNome, lancamentosIds }: CobrancaDrawerProps) {
   const [activeTab, setActiveTab] = useState<'historico' | 'acordos'>('historico');
   const [resumo, setResumo] = useState<any>(null);
   const [historico, setHistorico] = useState<any[]>([]);
@@ -71,8 +72,9 @@ export default function CobrancaDrawer({ associadoId, isOpen, onClose, associado
   const loadData = async () => {
     setLoading(true);
     try {
+      const qs = lancamentosIds?.length ? `?lancs=${lancamentosIds.join(',')}` : '';
       const [resResumo, resHist, resAcordos] = await Promise.all([
-        fetch(`/api/cobranca/associado/${associadoId}/resumo`),
+        fetch(`/api/cobranca/associado/${associadoId}/resumo${qs}`),
         fetch(`/api/cobranca/associado/${associadoId}/historico`),
         fetch(`/api/cobranca/associado/${associadoId}/acordos`),
       ]);
@@ -100,7 +102,8 @@ export default function CobrancaDrawer({ associadoId, isOpen, onClose, associado
   useEffect(() => {
     if (!showNovaAcao || !codigoSelecionado || !associadoId) return;
     setCarregandoTexto(true);
-    fetch(`/api/cobranca/associado/${associadoId}/texto/${codigoSelecionado}`)
+    const qs = lancamentosIds?.length ? `?lancs=${lancamentosIds.join(',')}` : '';
+    fetch(`/api/cobranca/associado/${associadoId}/texto/${codigoSelecionado}${qs}`)
       .then(res => res.json())
       .then(data => setTextoGerado(data.texto || ''))
       .catch(() => setTextoGerado('Erro ao gerar texto. Edite manualmente.'))
@@ -116,6 +119,14 @@ export default function CobrancaDrawer({ associadoId, isOpen, onClose, associado
 
     setSalvandoAcao(true);
     try {
+      const lancsSelecionados = resumo?.itens?.filter((i: any) => lancamentosIds?.includes(i.id)) || [];
+      const lancsText = lancsSelecionados.map((l: any) => `${l.descricao} - R$ ${l.valor}`).join(' | ');
+      
+      let obsFinal = observacao;
+      if (lancsText) {
+        obsFinal = obsFinal ? `${obsFinal} (Lanc: ${lancsText})` : `(Lanc: ${lancsText})`;
+      }
+
       await fetch(`/api/cobranca/associado/${associadoId}/acao`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -123,7 +134,7 @@ export default function CobrancaDrawer({ associadoId, isOpen, onClose, associado
           etapa: codigoSelecionado,
           canal: canalSelecionado,
           textoEnviado: textoGerado,
-          observacao,
+          observacao: obsFinal,
           dias_atraso_momento: resumo?.diasAtraso,
           valor_momento: resumo?.totalAtualizado?.total
         })

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createAdminSupabase } from '@/lib/auth/rbac'
 import { requireAdmin, AuthenticatedRequest } from '@/lib/auth/rbac'
 
+export const dynamic = 'force-dynamic'
+
 export const GET = requireAdmin(async (req: AuthenticatedRequest) => {
   const url = new URL(req.url)
   const colaborador_id = url.searchParams.get('colaborador_id')

@@ -45,60 +45,31 @@ export default function AssociadosLogModal({ isOpen, onClose, logs, title = 'Rel
 
     let currentY = 55
 
-    // --- SEÇÃO 1: ALTERAÇÕES CADASTRAIS ---
-    const cadastroLogs = logs.filter(l => l.descricao === 'Alteração de Vencimento')
-    if (cadastroLogs.length > 0) {
-      doc.setTextColor(0, 0, 0)
-      doc.setFontSize(14)
-      doc.text('Alterações Cadastrais (Associados)', 14, currentY)
-      currentY += 10
+    const hasValue = totalValue > 0
+    const head = hasValue 
+      ? [['Data', 'Descrição', 'Associado', 'Valor', 'Status/Ação']]
+      : [['Data', 'Descrição', 'Associado', 'Status/Ação']]
 
-      const cadastroRows = cadastroLogs.map(l => [
-        l.associado || '--',
-        l.mensagem,
-        l.status.toUpperCase()
-      ])
-
-      ;(doc as any).autoTable({
-        startY: currentY,
-        head: [['Associado', 'Resultado', 'Status']],
-        body: cadastroRows,
-        headStyles: { fillColor: [16, 185, 129] },
-        styles: { fontSize: 8 },
-      })
-      
-      currentY = (doc as any).lastAutoTable.finalY + 20
-    }
-
-    // --- SEÇÃO 2: AJUSTES FINANCEIROS ---
-    const financeiroLogs = logs.filter(l => l.descricao === 'Ajuste de Data Financeira')
-    if (financeiroLogs.length > 0) {
-      // Forçar nova página se não houver muito espaço ou conforme solicitado ("outra página")
-      if (cadastroLogs.length > 0) {
-        doc.addPage()
-        currentY = 20
-      }
-
-      doc.setTextColor(0, 0, 0)
-      doc.setFontSize(14)
-      doc.text('Lista de Lançamentos Alterados', 14, currentY)
-      currentY += 10
-
-      const financeiroRows = financeiroLogs.map(l => [
-        l.associado || '--',
+    const tableRows = logs.map(l => {
+      const row = [
         fmtData(l.data),
-        l.mensagem,
-        l.status.toUpperCase()
-      ])
+        l.descricao,
+        l.associado || '--',
+      ]
+      if (hasValue) {
+        row.push(l.valor ? fmtR(l.valor) : '--')
+      }
+      row.push(`${l.status.toUpperCase()}: ${l.mensagem}`)
+      return row
+    })
 
-      ;(doc as any).autoTable({
-        startY: currentY,
-        head: [['Associado', 'Data Original', 'Ação Realizada', 'Status']],
-        body: financeiroRows,
-        headStyles: { fillColor: [16, 185, 129] },
-        styles: { fontSize: 8 },
-      })
-    }
+    ;(doc as any).autoTable({
+      startY: currentY,
+      head: head,
+      body: tableRows,
+      headStyles: { fillColor: [16, 185, 129] },
+      styles: { fontSize: 8 },
+    })
 
     doc.save(`auditoria_vencimento_${new Date().getTime()}.pdf`)
   }

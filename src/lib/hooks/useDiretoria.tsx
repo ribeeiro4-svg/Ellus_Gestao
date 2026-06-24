@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, createContext, useContext } from 'react'
 import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
@@ -28,7 +28,20 @@ export interface Diretor {
   periodos?: DiretorPeriodo[]
 }
 
+const DiretoriaContext = createContext<ReturnType<typeof useDiretoriaInternal> | null>(null)
+
+export function DiretoriaProvider({ children }: { children: React.ReactNode }) {
+  const value = useDiretoriaInternal()
+  return <DiretoriaContext.Provider value={value}>{children}</DiretoriaContext.Provider>
+}
+
 export function useDiretoria() {
+  const context = useContext(DiretoriaContext)
+  if (!context) throw new Error('useDiretoria deve ser usado dentro de um DiretoriaProvider')
+  return context
+}
+
+function useDiretoriaInternal() {
   const tenantId = useTenantId()
   const sb = createClient()
 

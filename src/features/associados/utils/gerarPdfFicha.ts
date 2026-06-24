@@ -7,10 +7,13 @@ const GREEN_PRIMARY = [29, 158, 117] as const // #1D9E75
 const GRAY_TEXT = [100, 116, 139] as const
 const BLACK_TEXT = [30, 41, 59] as const
 
-export const gerarPdfFicha = async (associado: any, extrato: any[], atendimentos: any[] = []) => {
+export const gerarPdfFicha = async (associado: any, extrato: any[], atendimentos: any[] = [], historicoCobrancas: any[] = []) => {
   const doc = new jsPDF()
   const desdeStr = formatAssociadoDesde(associado.data_assinatura || associado.data_ingresso)
   
+  const hasAtendimentos = atendimentos && atendimentos.length > 0
+  const totalPages = hasAtendimentos ? 3 : 2
+
   // --- PÁGINA 1: DADOS CADASTRAIS ---
   renderHeader(doc, 'Ficha do Associado', associado.nome)
   
@@ -78,7 +81,7 @@ export const gerarPdfFicha = async (associado: any, extrato: any[], atendimentos
   y = renderGridData(doc, statusData, y)
   
   // Rodapé da Página 1
-  renderFooter(doc, 1, 3)
+  renderFooter(doc, 1, totalPages)
   
   // --- PÁGINA 2: EXTRATO FINANCEIRO ---
   doc.addPage()
@@ -88,7 +91,7 @@ export const gerarPdfFicha = async (associado: any, extrato: any[], atendimentos
   y = 50
   
   // Resumo Financeiro
-  const totalPago = extrato.filter(m => m.status === 'pago' || m.status === 'adesao').reduce((acc, curr) => acc + curr.valor, 0)
+  const totalPago = extrato.filter(m => m.status === 'pago' || m.status === 'adesao_paga').reduce((acc, curr) => acc + curr.valor, 0)
   const totalAberto = extrato.filter(m => m.status === 'pendente').reduce((acc, curr) => acc + curr.valor, 0)
   const situacao = totalAberto > 0 ? 'Com Pendências' : 'Em Dia'
   
@@ -109,7 +112,13 @@ export const gerarPdfFicha = async (associado: any, extrato: any[], atendimentos
     for (let j = 0; j < 3; j++) {
       const idx = i + j
       const mesData = extrato[idx] || { mes: MESES[idx], valor: 0, status: 'vazio' }
-      row.push(`${mesData.mes.toUpperCase()}\n${fmtR(mesData.valor)}\n${mesData.status.toUpperCase()}`)
+      let statusText = mesData.status === 'nao_cobrado' ? 'NÃO COBRADO' : mesData.status === 'a_vencer' ? 'A VENCER' : mesData.status === 'adesao_paga' ? 'ADESÃO PAGA' : mesData.status === 'vazio' ? 'VAZIO' : mesData.status.toUpperCase()
+      
+      if (mesData.lancamento?.status_cobranca === 'EM COBRANÇA') {
+        statusText += '\n(EM COBRANÇA)'
+      }
+
+      row.push(`${mesData.mes.toUpperCase()}\n${fmtR(mesData.valor)}\n${statusText}`)
     }
     tableData.push(row)
   }
@@ -120,51 +129,135 @@ export const gerarPdfFicha = async (associado: any, extrato: any[], atendimentos
     body: tableData,
     theme: 'grid',
     styles: {
-      fontSize: 10,
-      cellPadding: 8,
+      fontSize: 9,
+      cellPadding: 4,
       halign: 'center',
       valign: 'middle',
       font: 'helvetica',
-      lineWidth: 0.5,
-      lineColor: [240, 240, 240]
+      lineWidth: 0.1,
+      lineColor: [226, 232, 240], // slate-200
+      textColor: [51, 65, 85] // slate-700
     },
     didParseCell: (data) => {
-      const text = data.cell.text[2] || ''
-      if (text === 'PAGO') data.cell.styles.fillColor = [209, 250, 229] // bg-emerald-100
-      if (text === 'ADESAO') data.cell.styles.fillColor = [219, 234, 254] // bg-blue-100
-      if (text === 'PENDENTE') data.cell.styles.fillColor = [254, 243, 199] // bg-amber-100
+      const text = data.cell.text.join('\n')
+      if (text.includes('PAGO') || text.includes('ADESÃO PAGA')) {
+        data.cell.styles.fillColor = [209, 250, 229] // emerald-100
+        data.cell.styles.textColor = [6, 78, 59] // emerald-900
+      } else if (text.includes('ADESAO') || text.includes('ADESÃO')) {
+        data.cell.styles.fillColor = [219, 234, 254] // blue-100
+        data.cell.styles.textColor = [30, 58, 138] // blue-900
+      } else if (text.includes('PENDENTE')) {
+        data.cell.styles.fillColor = [254, 243, 199] // amber-100
+        data.cell.styles.textColor = [120, 53, 15] // amber-900
+      } else if (text.includes('A VENCER') || text.includes('VENCER')) {
+        data.cell.styles.fillColor = [238, 242, 255] // indigo-50
+        data.cell.styles.textColor = [67, 56, 202] // indigo-700
+      } else {
+        data.cell.styles.fillColor = [248, 250, 252] // slate-50
+        data.cell.styles.textColor = [148, 163, 184] // slate-400
+      }
     }
   })
+
+  y = (doc as any).lastAutoTable.finalY + 20
+
+  // Histórico de Cobranças
+  if (historicoCobrancas && historicoCobrancas.length > 0) {
+    doc.setFontSize(11)
+    doc.setTextColor(...GREEN_PRIMARY)
+    doc.text('HISTÓRICO DE COBRANÇAS', 20, y)
+    y += 8
+
+    const cobrancasTableData = historicoCobrancas.map(c => {
+      const dataAcao = c.data_agendamento ? new Date(c.data_agendamento) : c.created_at ? new Date(c.created_at) : null
+      const dataStr = dataAcao 
+        ? `${dataAcao.toLocaleDateString('pt-BR')} ${dataAcao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+        : '--'
+      const responsavel = c.responsavel_setor || '--'
+      let observacao = c.etapas_concluidas?.observacao || '--'
+      
+      const lancMatch = observacao.match(/\(Lanc:\s*(.*?)\)/);
+      let lancamentosText = '--';
+      let vencimentoText = '--';
+      
+      if (lancMatch) {
+        lancamentosText = lancMatch[1];
+        observacao = observacao.replace(lancMatch[0], '').trim();
+        observacao = observacao.replace(/-\s*Data base da cobrança informada\.$/, '').replace(/^-\s*/, '').trim();
+      }
+
+      // Tenta extrair Venc: do formato novo
+      const vencMatch = lancamentosText.match(/Venc:\s*([\d\/]+)/i);
+      if (vencMatch) {
+        vencimentoText = vencMatch[1];
+        lancamentosText = lancamentosText.replace(/\|\s*Venc:\s*[\d\/]+/i, '').replace(/Venc:\s*[\d\/]+/i, '').trim();
+      } else {
+        // Fallback pro formato antigo digitado na observação
+        const obsVencMatch = observacao.match(/vencimento:\s*([\d\/]+)/i);
+        if (obsVencMatch) {
+          vencimentoText = obsVencMatch[1];
+        }
+      }
+
+      if (vencimentoText !== '--' && vencimentoText.length <= 5) {
+        const ano = dataAcao ? dataAcao.getFullYear() : new Date().getFullYear();
+        vencimentoText = `${vencimentoText}/${ano}`;
+      }
+
+      if (!observacao) observacao = '--'
+
+      return [dataStr, `Cobrança (${responsavel})`, vencimentoText, lancamentosText, observacao]
+    })
+
+    autoTable(doc, {
+      startY: y,
+      head: [['DATA/HORA', 'AÇÃO', 'VENCIMENTO', 'LANÇAMENTOS', 'OBSERVAÇÃO']],
+      body: cobrancasTableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [249, 115, 22], // orange-500
+        textColor: [255, 255, 255],
+        fontSize: 9,
+        fontStyle: 'bold'
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 5,
+        valign: 'middle',
+        font: 'helvetica',
+        lineWidth: 0.5,
+        lineColor: [240, 240, 240]
+      },
+      columnStyles: {
+        2: { cellWidth: 32 }
+      }
+    })
+  }
   
   // Rodapé da Página 2
-  renderFooter(doc, 2, 3)
+  renderFooter(doc, 2, totalPages)
 
   // --- PÁGINA 3: HISTÓRICO DE ATENDIMENTOS ---
-  doc.addPage()
-  renderHeader(doc, 'Histórico de Atendimentos', associado.nome)
-  
-  y = 50
-  
-  const atendTableData = (atendimentos || []).map(a => {
-    const dataAtendimento = a.data_agendamento ? new Date(a.data_agendamento) : a.created_at ? new Date(a.created_at) : null
-    const dataStr = dataAtendimento 
-      ? `${dataAtendimento.toLocaleDateString('pt-BR')} ${dataAtendimento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
-      : '--'
-    const isAgendado = !!a.responsavel_id
-    const tipo = isAgendado ? 'Agendamento' : 'Avulso'
-    const responsavelPresencial = a.responsavel_setor || '--'
-    const status = (a.status === 'em_andamento' ? 'Em Andamento' : a.status || '').toUpperCase()
-    const observacao = a.etapas_concluidas?.observacao || '--'
+  if (hasAtendimentos) {
+    doc.addPage()
+    renderHeader(doc, 'Histórico de Atendimentos', associado.nome)
     
-    return [dataStr, tipo, responsavelPresencial, status, observacao]
-  })
+    y = 50
+    
+    const atendTableData = atendimentos.map(a => {
+      const dataAtendimento = a.data_agendamento ? new Date(a.data_agendamento) : a.created_at ? new Date(a.created_at) : null
+      const dataStr = dataAtendimento 
+        ? `${dataAtendimento.toLocaleDateString('pt-BR')} ${dataAtendimento.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+        : '--'
+      const isAgendado = !!a.responsavel_id
+      const tipo = isAgendado ? 'Agendamento' : 'Avulso'
+      const responsavelPresencial = a.responsavel_setor || '--'
+      const status = (a.status === 'em_andamento' ? 'Em Andamento' : a.status || '').toUpperCase()
+      const observacao = a.etapas_concluidas?.observacao || '--'
+      
+      return [dataStr, tipo, responsavelPresencial, status, observacao]
+    })
 
-  if (atendTableData.length === 0) {
-    doc.setFontSize(10)
-    doc.setTextColor(...GRAY_TEXT)
-    doc.setFont('helvetica', 'italic')
-    doc.text('Nenhum atendimento registrado para este associado.', 20, y)
-  } else {
     autoTable(doc, {
       startY: y,
       head: [['DATA/HORA', 'TIPO', 'RESP. PRESENCIAL', 'STATUS', 'OBSERVAÇÃO']],
@@ -188,10 +281,10 @@ export const gerarPdfFicha = async (associado: any, extrato: any[], atendimentos
         4: { cellWidth: 70 }
       }
     })
-  }
 
-  // Rodapé da Página 3
-  renderFooter(doc, 3, 3)
+    // Rodapé da Página 3
+    renderFooter(doc, 3, totalPages)
+  }
   
   // Download
   const fileName = getFileName(associado.nome, desdeStr)

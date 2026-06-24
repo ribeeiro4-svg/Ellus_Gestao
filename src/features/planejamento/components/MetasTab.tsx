@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react'
 import { 
   Target, CheckCircle2, Save, TrendingUp, Activity,
-  ArrowUpCircle, ArrowDownCircle, Trash2, Calendar, ArrowRightLeft, Users
+  ArrowUpCircle, ArrowDownCircle, Trash2, Calendar, ArrowRightLeft, Users, Star
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -61,6 +61,22 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
   React.useEffect(() => {
     refetchFin(selectedAno)
   }, [selectedAno, refetchFin])
+
+  const [favorites, setFavorites] = useState<string[]>([])
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem('planejamento_favorites_acprobec')
+    if (saved) setFavorites(JSON.parse(saved))
+  }, [])
+
+  const toggleFavorite = (categoria: string) => {
+    const newFavs = favorites.includes(categoria) 
+      ? favorites.filter(f => f !== categoria) 
+      : [...favorites, categoria]
+    setFavorites(newFavs)
+    localStorage.setItem('planejamento_favorites_acprobec', JSON.stringify(newFavs))
+  }
 
   const totalProLabore = useMemo(() => {
     return diretoria.filter(d => d.status === 'ativo').reduce((s, d) => {
@@ -182,7 +198,22 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
   }
 
   const columns = useMemo(() => [
-    { header: 'Categoria', key: 'categoria', render: (i: any) => <span className="text-xs font-bold text-slate-700">{i.categoria}</span> },
+    { 
+      header: 'Categoria', 
+      key: 'categoria', 
+      render: (i: any) => (
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => toggleFavorite(i.categoria)}
+            className={`transition-colors flex-shrink-0 ${favorites.includes(i.categoria) ? 'text-amber-400 hover:text-amber-500' : 'text-slate-200 hover:text-amber-400'}`}
+            title="Favoritar"
+          >
+            <Star size={14} fill={favorites.includes(i.categoria) ? 'currentColor' : 'none'} />
+          </button>
+          <span className="text-xs font-bold text-slate-700">{i.categoria}</span>
+        </div>
+      ) 
+    },
     { 
       header: 'Planejado', 
       key: 'planejado', 
@@ -208,7 +239,13 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
         return <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{diff > 0 ? '+' : ''}{fmtR(Math.round(diff * 100) / 100)}</span>
       }
     }
-  ], [editValues, selectedCategories])
+  ], [editValues, selectedCategories, favorites])
+
+  const filteredComparativo = useMemo(() => {
+    return showOnlyFavorites 
+      ? comparativo.filter(c => favorites.includes(c.categoria))
+      : comparativo
+  }, [comparativo, showOnlyFavorites, favorites])
 
   const receitasChartData = { labels: comparativo.filter(c => c.tipo === 'receita').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.planejado), backgroundColor: 'rgba(59, 130, 246, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.realizado), backgroundColor: '#10b981', borderRadius: 4 }] }
   
@@ -277,9 +314,18 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
                 </button>
               )}
             </div>
-            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+                className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-xl transition-all ${showOnlyFavorites ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+              >
+                <Star size={12} fill={showOnlyFavorites ? 'currentColor' : 'none'} />
+                {showOnlyFavorites ? 'FAVORITAS' : 'TODAS'}
+              </button>
+              <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button>
+            </div>
           </div>
-          <DataTable columns={columns} data={comparativo} loading={loadFin || loadOrc} selectedIds={selectedCategories} onSelectChange={setSelectedCategories} idKey="categoria" />
+          <DataTable columns={columns} data={filteredComparativo} loading={loadFin || loadOrc} selectedIds={selectedCategories} onSelectChange={setSelectedCategories} idKey="categoria" />
         </div>
       </div>
 

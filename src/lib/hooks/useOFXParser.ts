@@ -75,9 +75,10 @@ export function useOFXParser() {
 
       if (isNaN(rawAmount)) rawAmount = 0
 
-      // REGRA DE OURO: O sinal do valor determina se é crédito ou débito
-      // Créditos são positivos, Débitos são negativos no OFX padrão
-      const isCredit = rawAmount > 0 || type.includes('DEP') || type.includes('CREDIT')
+      // REGRA DE OURO: O tipo (TRNTYPE) é a fonte primária de verdade.
+      // Se o banco enviar DEBIT com valor positivo, ainda deve ser débito.
+      const upperType = type.toUpperCase()
+      const isCredit = upperType.includes('CREDIT') || upperType.includes('DEP') || (rawAmount > 0 && !upperType.includes('DEB'))
       const amount = Math.abs(rawAmount)
 
       // Inferência automática da forma de pagamento

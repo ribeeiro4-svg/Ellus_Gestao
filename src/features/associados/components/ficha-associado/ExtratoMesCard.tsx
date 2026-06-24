@@ -6,9 +6,10 @@ interface ExtratoMesCardProps {
   mes: string
   valor: number
   status: 'pago' | 'adesao' | 'pendente' | 'nao_cobrado' | 'futuro' | string
+  isEmCobranca?: boolean
 }
 
-export default function ExtratoMesCard({ mes, valor, status }: ExtratoMesCardProps) {
+export default function ExtratoMesCard({ mes, valor, status, isEmCobranca }: ExtratoMesCardProps) {
   const getStyles = () => {
     switch (status) {
       case 'pago':
@@ -18,6 +19,14 @@ export default function ExtratoMesCard({ mes, valor, status }: ExtratoMesCardPro
           badge: 'bg-emerald-500 text-white', 
           icon: <Check size={10} />, 
           label: 'Pago' 
+        }
+      case 'adesao_paga':
+        return { 
+          bg: 'bg-emerald-50 border-emerald-100', 
+          text: 'text-emerald-700', 
+          badge: 'bg-emerald-500 text-white', 
+          icon: <Check size={10} />, 
+          label: 'Adesão Paga' 
         }
       case 'adesao':
         return { 
@@ -34,6 +43,14 @@ export default function ExtratoMesCard({ mes, valor, status }: ExtratoMesCardPro
           badge: 'bg-amber-500 text-white', 
           icon: <Clock size={10} />, 
           label: 'Pendente' 
+        }
+      case 'a_vencer':
+        return { 
+          bg: 'bg-indigo-50 border-indigo-100', 
+          text: 'text-indigo-700', 
+          badge: 'bg-indigo-400 text-white', 
+          icon: <Calendar size={10} />, 
+          label: 'A Vencer' 
         }
       case 'futuro':
         return { 
@@ -69,6 +86,15 @@ export default function ExtratoMesCard({ mes, valor, status }: ExtratoMesCardPro
         <span className={`text-sm font-black ${styles.text}`}>{fmtR(valor)}</span>
         <span className={`text-[9px] font-bold uppercase tracking-tight opacity-70`}>{styles.label}</span>
       </div>
+
+      {isEmCobranca && (
+        <div className="absolute top-0 right-0 left-0 h-1 bg-orange-500 animate-pulse" />
+      )}
+      {isEmCobranca && (
+        <span className="absolute bottom-2 right-2 text-[7px] font-black uppercase text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-sm">
+          Em Cobrança
+        </span>
+      )}
     </div>
   )
 }

@@ -111,7 +111,9 @@ export default function ManualLinkLancamentoModal({
                         </div>
                         <div className="text-left">
                           <p className="text-sm font-black text-gray-800 uppercase">{assoc.nome}</p>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase">{assoc.cpf || 'Sem Documento'}</p>
+                          <p className="text-[10px] font-bold text-gray-400 uppercase">
+                            {assoc.cpf || 'Sem Documento'}{assoc.email ? ` | ${assoc.email}` : ''}
+                          </p>
                         </div>
                       </div>
                       <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black opacity-0 group-hover:opacity-100 transition-all">SELECIONAR</div>
@@ -140,7 +142,9 @@ export default function ManualLinkLancamentoModal({
                   </div>
                   <div>
                     <p className="text-sm font-black text-indigo-900 uppercase">{selectedAssoc.nome}</p>
-                    <p className="text-[10px] font-bold text-indigo-400 uppercase">{selectedAssoc.cpf || 'Sem Documento'}</p>
+                    <p className="text-[10px] font-bold text-indigo-400 uppercase">
+                      {selectedAssoc.cpf || 'Sem Documento'}{selectedAssoc.email ? ` | ${selectedAssoc.email}` : ''}
+                    </p>
                   </div>
                 </div>
                 <button 

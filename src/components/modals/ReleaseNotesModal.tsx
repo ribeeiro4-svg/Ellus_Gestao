@@ -56,6 +56,7 @@ export default function ReleaseNotesModal() {
   const [isOpen, setIsOpen] = useState(false)
   const [isClosing, setIsClosing] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
+  const [showAnimation, setShowAnimation] = useState(false)
 
   const [dontShowAgain, setDontShowAgain] = useState(false)
 
@@ -63,9 +64,15 @@ export default function ReleaseNotesModal() {
     const hideForever = localStorage.getItem('release_notes_v5_hide_forever')
     const seenSession = sessionStorage.getItem('release_notes_v5_seen_session')
     
-    if (!hideForever && !seenSession) {
-      const timer = setTimeout(() => setIsOpen(true), 1200)
-      return () => clearTimeout(timer)
+    if (!seenSession) {
+      if (!hideForever) {
+        const timer = setTimeout(() => setIsOpen(true), 1200)
+        return () => clearTimeout(timer)
+      } else {
+        setShowAnimation(true)
+        sessionStorage.setItem('release_notes_v5_seen_session', 'true')
+        setTimeout(() => setShowAnimation(false), 2000)
+      }
     }
   }, [])
 
@@ -79,6 +86,8 @@ export default function ReleaseNotesModal() {
     setTimeout(() => {
       setIsOpen(false)
       setIsClosing(false)
+      setShowAnimation(true)
+      setTimeout(() => setShowAnimation(false), 2000)
     }, 800)
   }
 
@@ -94,6 +103,23 @@ export default function ReleaseNotesModal() {
     if (currentStep > 0) {
       setCurrentStep(prev => prev - 1)
     }
+  }
+
+  if (showAnimation) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-[#071a12] flex items-center justify-center animate-in fade-in duration-300">
+        <GeometricBackground opacity={0.2} />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(45,140,111,0.15)_0%,transparent_70%)] pointer-events-none"></div>
+
+        <div className="relative z-10 flex flex-col items-center justify-center animate-in zoom-in-50 fade-in duration-700 ease-out">
+            <LogoV2 variant="white" className="h-32 w-auto object-contain drop-shadow-[0_0_40px_rgba(45,140,111,0.8)]" />
+            <div className="mt-12 flex items-center gap-3 text-[#2d8c6f] font-black uppercase tracking-[0.2em] text-sm animate-pulse">
+               <div className="w-5 h-5 border-[3px] border-current border-t-transparent rounded-full animate-spin"></div>
+               Preparando seu ambiente...
+            </div>
+        </div>
+      </div>
+    )
   }
 
   if (!isOpen) return null

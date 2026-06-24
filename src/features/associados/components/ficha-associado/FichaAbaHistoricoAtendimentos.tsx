@@ -57,11 +57,13 @@ export default function FichaAbaHistoricoAtendimentos({ atendimentos }: FichaAba
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                        isAgendado 
-                          ? 'bg-purple-100 text-purple-700 border border-purple-200/50' 
-                          : 'bg-teal-100 text-teal-700 border border-teal-200/50'
+                        a.is_cobranca
+                          ? 'bg-orange-100 text-orange-700 border border-orange-200/50'
+                          : isAgendado 
+                            ? 'bg-purple-100 text-purple-700 border border-purple-200/50' 
+                            : 'bg-teal-100 text-teal-700 border border-teal-200/50'
                       }`}>
-                        {isAgendado ? 'Agendamento' : 'Avulso'}
+                        {a.is_cobranca ? 'Cobrança' : isAgendado ? 'Agendamento' : 'Avulso'}
                       </span>
                     </td>
                     <td className="px-6 py-4">

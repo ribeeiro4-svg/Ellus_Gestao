@@ -1,10 +1,23 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { Meta, MetaInput } from '@/lib/types'
 
+const MetasContext = createContext<ReturnType<typeof useMetasInternal> | null>(null)
+
+export function MetasProvider({ children }: { children: React.ReactNode }) {
+  const value = useMetasInternal()
+  return <MetasContext.Provider value={value}>{children}</MetasContext.Provider>
+}
+
 export function useMetas() {
+  const context = useContext(MetasContext)
+  if (!context) throw new Error('useMetas deve ser usado dentro de um MetasProvider')
+  return context
+}
+
+function useMetasInternal() {
   const tenantId = useTenantId()
   const [metas, setMetas] = useState<Meta[]>([])
   const [loading, setLoading] = useState(true)

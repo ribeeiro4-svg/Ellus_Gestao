@@ -14,6 +14,7 @@ import FiltrosTarefas from '@/features/gestao-tarefas/components/FiltrosTarefas'
 import TarefaModal from '@/features/gestao-tarefas/components/TarefaModal'
 import ModelosResolucoesTab from '@/features/gestao-tarefas/components/ModelosResolucoesTab'
 import CrudModal, { Field } from '@/components/ui/CrudModal'
+import { AssociadoLancamentos } from '@/components/ui/AssociadoLancamentos'
 import { Tarefa, StatusTarefa } from '@/lib/types'
 
 export default function GestaoTarefasPage() {
@@ -120,6 +121,13 @@ function GestaoTarefasContent() {
         ...usuarios.map(u => ({ value: u.id, label: u.nome + ' (USUÁRIO)' })),
         ...diretoria.map(d => ({ value: d.id, label: d.nome + ' (DIRETORIA)' }))
       ]
+    },
+    {
+      name: 'lancamentos_associado',
+      label: '',
+      type: 'info',
+      showIf: (formData: any) => !!formData.associado_id,
+      render: (formData: any) => <AssociadoLancamentos associadoId={formData.associado_id} />
     },
     { 
       name: 'status', 

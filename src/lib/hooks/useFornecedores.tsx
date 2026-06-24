@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
-
 export interface Fornecedor {
   id: string
   nome: string
@@ -14,7 +13,20 @@ export interface Fornecedor {
   created_at: string
 }
 
+const FornecedoresContext = createContext<ReturnType<typeof useFornecedoresInternal> | null>(null)
+
+export function FornecedoresProvider({ children }: { children: React.ReactNode }) {
+  const value = useFornecedoresInternal()
+  return <FornecedoresContext.Provider value={value}>{children}</FornecedoresContext.Provider>
+}
+
 export function useFornecedores() {
+  const context = useContext(FornecedoresContext)
+  if (!context) throw new Error('useFornecedores deve ser usado dentro de um FornecedoresProvider')
+  return context
+}
+
+function useFornecedoresInternal() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([])
   const [loading, setLoading] = useState(true)
   const tenantId = useTenantId()

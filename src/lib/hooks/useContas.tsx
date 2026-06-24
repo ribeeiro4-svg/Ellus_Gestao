@@ -1,10 +1,23 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, createContext, useContext } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { ContaBancaria } from '@/lib/types'
 
+const ContasContext = createContext<ReturnType<typeof useContasInternal> | null>(null)
+
+export function ContasProvider({ children }: { children: React.ReactNode }) {
+  const value = useContasInternal()
+  return <ContasContext.Provider value={value}>{children}</ContasContext.Provider>
+}
+
 export function useContas() {
+  const context = useContext(ContasContext)
+  if (!context) throw new Error('useContas deve ser usado dentro de um ContasProvider')
+  return context
+}
+
+function useContasInternal() {
   const tenantId = useTenantId()
   const [contas, setContas] = useState<ContaBancaria[]>([])
   const [loading, setLoading] = useState(true)

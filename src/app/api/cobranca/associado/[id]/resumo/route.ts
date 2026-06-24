@@ -37,16 +37,26 @@ export async function GET(
   const admin = getAdminClient();
   const associadoId = params.id;
 
+  const { searchParams } = new URL(request.url);
+  const lancsParam = searchParams.get('lancs');
+
+  let queryLancamentos = admin
+    .from('lancamentos')
+    .select('*')
+    .eq('associado_id', associadoId);
+
+  if (lancsParam) {
+    queryLancamentos = queryLancamentos.in('id', lancsParam.split(','));
+  } else {
+    queryLancamentos = queryLancamentos
+      .or('status.ilike.%pendente%,status.ilike.%aberto%,status.ilike.%atrasado%')
+      .ilike('tipo', '%receita%');
+  }
+
   const [{ data: config }, { data: associado }, { data: lancamentos }, { data: ultimaAcaoArr }] = await Promise.all([
     admin.from('cobranca_configuracoes').select('*').eq('tenant_id', tenantId).limit(1).maybeSingle(),
     admin.from('associados').select('telefone, nome, suspensao_data, suspensao_motivo').eq('id', associadoId).maybeSingle(),
-    admin
-      .from('lancamentos')
-      .select('*')
-      .eq('associado_id', associadoId)
-      .or('status.ilike.%pendente%,status.ilike.%aberto%,status.ilike.%atrasado%')
-      .ilike('tipo', '%receita%')
-      .order('data', { ascending: true }),
+    queryLancamentos.order('data', { ascending: true }),
     admin
       .from('cobranca_acoes')
       .select('*')

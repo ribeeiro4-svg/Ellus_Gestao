@@ -159,3 +159,80 @@ export async function cleanupWrongMensalidadePatternAction(tenantId: string) {
     return { success: false, error: err.message }
   }
 }
+
+/**
+ * Corrige o calendário de conciliação para garantir que todos os dias de 01/01/2026 a 23/06/2026 estejam registrados
+ */
+export async function fixCalendarioMissingDaysAction() {
+  const sb = await createServerSupabase()
+  try {
+    // 1. Obter contas bancárias para iterar
+    const { data: contas, error: contasError } = await sb.from('contas_bancarias').select('id, tenant_id')
+    if (contasError) throw contasError
+    if (!contas || contas.length === 0) return { success: true, count: 0, message: 'Nenhuma conta encontrada' }
+
+    const startDate = new Date('2026-01-01T12:00:00Z')
+    const endDate = new Date('2026-06-23T12:00:00Z')
+    const todosOsDias: string[] = []
+    
+    let curr = new Date(startDate)
+    while (curr <= endDate) {
+      todosOsDias.push(curr.toISOString().split('T')[0])
+      curr.setUTCDate(curr.getUTCDate() + 1)
+    }
+
+    let totalInseridos = 0
+
+    for (const conta of contas) {
+      const { id: contaId, tenant_id: tenantId } = conta
+      
+      // Busca dias já registrados
+      const { data: existentes } = await sb.from('conciliacao_calendario_dias')
+        .select('data')
+        .eq('tenant_id', tenantId)
+        .eq('conta_id', contaId)
+        .in('data', todosOsDias)
+        
+      const existentesDatas = new Set(existentes?.map(e => e.data) || [])
+      const diasFaltando = todosOsDias.filter(d => !existentesDatas.has(d))
+      
+      if (diasFaltando.length > 0) {
+        // Busca lançamentos financeiros (da tabela lancamentos ou cora_staged)
+        const { data: lancamentos } = await sb.from('lancamentos')
+          .select('data')
+          .eq('tenant_id', tenantId)
+          .eq('conta_id', contaId)
+          .in('data', diasFaltando)
+          
+        const { data: cora } = await sb.from('cora_staged')
+          .select('data')
+          .eq('tenant_id', tenantId)
+          .in('data', diasFaltando)
+          
+        const diasComTransacao = new Set([
+          ...(lancamentos?.map(l => l.data) || []),
+          ...(cora?.map(c => c.data) || [])
+        ])
+        
+        const novosRegistros = diasFaltando.map(d => ({
+          tenant_id: tenantId,
+          conta_id: contaId,
+          data: d,
+          primeira_conciliacao_em: new Date().toISOString(),
+          conciliado_por_nome: 'Sistema (Correção em Lote)',
+          conciliado_por_email: 'sistema@ellus.com',
+          periodo_conciliado: '01/01/2026 a 23/06/2026',
+          teve_transacoes: diasComTransacao.has(d)
+        }))
+        
+        const { error: insertError } = await sb.from('conciliacao_calendario_dias').insert(novosRegistros)
+        if (insertError) console.error('Erro ao inserir dias faltando:', insertError)
+        else totalInseridos += novosRegistros.length
+      }
+    }
+    
+    return { success: true, count: totalInseridos, message: `Calendário ajustado. ${totalInseridos} dias adicionados.` }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}

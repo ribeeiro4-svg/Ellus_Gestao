@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, createContext, useContext } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
 import type { CenarioSimulacao, ProLaboreItem, CenarioInput, ProLaborePeriodo, Lancamento } from '@/lib/types'
@@ -22,7 +22,20 @@ const DEFAULT_CENARIO: CenarioSimulacao = {
   created_at: new Date().toISOString()
 }
 
+const ProjecaoContext = createContext<ReturnType<typeof useProjecaoInternal> | null>(null)
+
+export function ProjecaoProvider({ children }: { children: React.ReactNode }) {
+  const value = useProjecaoInternal()
+  return <ProjecaoContext.Provider value={value}>{children}</ProjecaoContext.Provider>
+}
+
 export function useProjecao() {
+  const context = useContext(ProjecaoContext)
+  if (!context) throw new Error('useProjecao deve ser usado dentro de um ProjecaoProvider')
+  return context
+}
+
+function useProjecaoInternal() {
   const tenantId = useTenantId()
   const [cenario, setCenario] = useState<CenarioSimulacao>(DEFAULT_CENARIO)
   const [visao, setVisao] = useState<'mensal' | 'anual'>('mensal')

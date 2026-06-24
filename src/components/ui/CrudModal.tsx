@@ -131,6 +131,9 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
             {fields.map(field => {
               if (field.showIf && !field.showIf(formData)) return null
 
+              const isEmptyField = (formData[field.name] === undefined || formData[field.name] === null || formData[field.name] === '');
+              const bgClass = isEmptyField ? 'bg-red-50 border-red-100/50' : 'bg-slate-50 border-slate-100';
+
               return (
                 <div key={field.name} className="space-y-2">
                   {field.type !== 'info' && field.type !== 'checkbox' && (
@@ -169,7 +172,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                               required={field.required}
                               value={formData[field.name] ?? ''}
                               onChange={e => handleChange(field.name, e.target.value)}
-                              className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-${isDespesa ? 'rose-500' : 'emerald-500'} focus:ring-4 focus:ring-${isDespesa ? 'rose-50' : 'emerald-50'} transition-all cursor-pointer appearance-none`}
+                              className={`w-full px-5 py-3.5 ${bgClass} rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-${isDespesa ? 'rose-500' : 'emerald-500'} focus:ring-4 focus:ring-${isDespesa ? 'rose-50' : 'emerald-50'} transition-all cursor-pointer appearance-none`}
                             >
                               <option value="" disabled>Selecione...</option>
                               {field.options?.map(opt => (
@@ -210,7 +213,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                       value={formData[field.name] ?? ''}
                       onChange={e => handleChange(field.name, e.target.value)}
                       rows={field.rows || 4}
-                      className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-${isDespesa ? 'rose-500' : 'emerald-500'} focus:ring-4 focus:ring-${isDespesa ? 'rose-50' : 'emerald-50'} transition-all placeholder:text-slate-300 resize-none min-h-[120px]`}
+                      className={`w-full px-5 py-3.5 ${bgClass} rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-${isDespesa ? 'rose-500' : 'emerald-500'} focus:ring-4 focus:ring-${isDespesa ? 'rose-50' : 'emerald-50'} transition-all placeholder:text-slate-300 resize-none min-h-[120px]`}
                     />
                   ) : (
                     <input
@@ -219,7 +222,7 @@ export default function CrudModal({ isOpen, onClose, title, fields, initialData,
                       placeholder={field.placeholder}
                       value={formData[field.name] ?? ''}
                       onChange={e => handleChange(field.name, field.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
-                      className={`w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-${isDespesa ? 'rose-500' : 'emerald-500'} focus:ring-4 focus:ring-${isDespesa ? 'rose-50' : 'emerald-50'} transition-all placeholder:text-slate-300`}
+                      className={`w-full px-5 py-3.5 ${bgClass} rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-${isDespesa ? 'rose-500' : 'emerald-500'} focus:ring-4 focus:ring-${isDespesa ? 'rose-50' : 'emerald-50'} transition-all placeholder:text-slate-300`}
                     />
                   )}
                 </div>

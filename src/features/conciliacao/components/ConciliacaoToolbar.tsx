@@ -52,14 +52,14 @@ export default function ConciliacaoToolbar({
   onSelectAll
 }: ConciliacaoToolbarProps) {
   return (
-    <div className="sticky top-[20px] z-[40] flex items-center justify-between gap-6 bg-[#0e2d22] backdrop-blur-xl py-2.5 px-10 rounded-[32px] border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.4)] animate-in slide-in-from-top-4 mb-8">
-      <div className="flex items-center gap-10">
+    <div className="sticky top-[20px] z-[40] flex items-center justify-between gap-4 bg-[#0e2d22] backdrop-blur-xl py-2.5 px-6 rounded-[32px] border border-emerald-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.4)] animate-in slide-in-from-top-4 mb-8">
+      <div className="flex items-center gap-6">
         <div className="flex flex-col">
           <span className="text-[8px] text-emerald-400 font-black uppercase tracking-[1.5px] mb-1">CONTA</span>
           <select 
             value={selectedContaId} 
             onChange={(e) => onContaChange(e.target.value)} 
-            className="bg-transparent border border-emerald-500/40 rounded-lg text-[10px] font-black text-white px-3 py-1 cursor-pointer outline-none transition-all hover:border-emerald-500/60 w-40"
+            className="bg-transparent border border-emerald-500/40 rounded-lg text-[10px] font-black text-white px-3 py-1 cursor-pointer outline-none transition-all hover:border-emerald-500/60 w-32"
           >
             {contas.map((c: any) => <option key={c.id} value={c.id} className="bg-[#0e2d22] text-white py-2">{c.nome}</option>)}
           </select>
@@ -67,19 +67,19 @@ export default function ConciliacaoToolbar({
 
         <div className="h-8 w-px bg-white/20" />
         
-        <div className="flex items-center gap-12">
+        <div className="flex items-center gap-6">
           <div className="flex flex-col">
             <span className="text-emerald-400 font-black uppercase tracking-[1.5px] text-[8px] mb-1">Resumo Financeiro</span>
-            <div className="flex items-center gap-28">
-              <div className="flex items-center gap-4 whitespace-nowrap">
-                <span className="text-[7px] font-black text-white/60 uppercase tracking-wider">Itens Extrato ({totalItemsCount}):</span>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3 whitespace-nowrap">
+                <span className="text-[7px] font-black text-white/60 uppercase tracking-wider">Itens ({totalItemsCount}):</span>
                 <span className="text-[12px] font-black text-white tracking-tight">{fmtR(totalEntradas - totalSaidas)}</span>
               </div>
-              <div className="flex items-center gap-4 border-l border-white/20 pl-28 whitespace-nowrap">
+              <div className="flex items-center gap-3 border-l border-white/20 pl-6 whitespace-nowrap">
                 <span className="text-[7px] font-black text-emerald-400 uppercase tracking-wider">Entradas:</span>
                 <span className="text-[12px] font-black text-emerald-400 tracking-tight">+{fmtR(totalEntradas)}</span>
               </div>
-              <div className="flex items-center gap-4 border-l border-white/20 pl-28 whitespace-nowrap">
+              <div className="flex items-center gap-3 border-l border-white/20 pl-6 whitespace-nowrap">
                 <span className="text-[7px] font-black text-rose-400 uppercase tracking-wider">Saídas:</span>
                 <span className="text-[12px] font-black text-rose-400 tracking-tight">-{fmtR(totalSaidas)}</span>
               </div>
