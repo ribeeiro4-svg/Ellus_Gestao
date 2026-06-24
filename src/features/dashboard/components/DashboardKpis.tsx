@@ -45,11 +45,11 @@ export default function DashboardKpis({ metrics }: DashboardKpisProps) {
 
   return (
     <div className="flex items-center gap-3 mb-8 w-full">
-      <div className="flex flex-wrap items-stretch gap-2 flex-1">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 flex-1">
         {cards.map(k => (
-          <div key={k.label} className="bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 backdrop-blur-2xl border border-white/5 rounded-2xl py-8 px-6 flex-1 min-w-[140px] shadow-2xl transition-all hover:border-emerald-500/40">
-            <div className="text-[10px] font-black text-white uppercase mb-2 tracking-wider">{k.label}</div>
-            <div className={`text-4xl font-black ${k.color} tracking-tight`}>{k.value}</div>
+          <div key={k.label} className="bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 backdrop-blur-2xl border border-white/5 rounded-2xl py-5 px-4 md:py-8 md:px-6 shadow-2xl transition-all hover:border-emerald-500/40">
+            <div className="text-[9px] md:text-[10px] font-black text-white uppercase mb-1.5 md:mb-2 tracking-wider">{k.label}</div>
+            <div className={`text-xl md:text-3xl font-black ${k.color} tracking-tight`}>{k.value}</div>
           </div>
         ))}
       </div>
