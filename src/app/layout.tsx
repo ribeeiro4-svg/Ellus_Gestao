@@ -19,6 +19,14 @@ export const metadata: Metadata = {
   description: "Sistema de gestão inteligente. Especialista em gestão de associações e benefícios. [Build v2.0]",
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

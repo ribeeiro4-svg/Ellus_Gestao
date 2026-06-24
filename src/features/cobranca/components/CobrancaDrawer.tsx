@@ -50,6 +50,8 @@ export default function CobrancaDrawer({ associadoId, isOpen, onClose, associado
   const [observacao, setObservacao] = useState('');
   const [salvandoAcao, setSalvandoAcao] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'enviado' | 'erro'>('idle');
+  const [emailAssunto, setEmailAssunto] = useState('');
 
   // Exclusão de Histórico
   const [selectedHistoricoIds, setSelectedHistoricoIds] = useState<string[]>([]);
@@ -127,32 +129,57 @@ export default function CobrancaDrawer({ associadoId, isOpen, onClose, associado
         obsFinal = obsFinal ? `${obsFinal} (Lanc: ${lancsText})` : `(Lanc: ${lancsText})`;
       }
 
-      await fetch(`/api/cobranca/associado/${associadoId}/acao`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          etapa: codigoSelecionado,
-          canal: canalSelecionado,
-          textoEnviado: textoGerado,
-          observacao: obsFinal,
-          dias_atraso_momento: resumo?.diasAtraso,
-          valor_momento: resumo?.totalAtualizado?.total
-        })
-      });
+      if (canalSelecionado === 'email') {
+        // Envia via API de e-mail (registra ação também)
+        const assunto = emailAssunto || 'Notificação de Cobrança';
+        const res = await fetch(`/api/cobranca/associado/${associadoId}/email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            texto: textoGerado,
+            assunto,
+            etapa: codigoSelecionado,
+            diasAtraso: resumo?.diasAtraso,
+            valorMomento: resumo?.totalAtualizado?.total,
+          })
+        });
+        const result = await res.json();
+        if (!res.ok) {
+          alert('Erro ao enviar e-mail: ' + (result.error || 'Tente novamente'));
+          setSalvandoAcao(false);
+          return;
+        }
+        setEmailStatus('enviado');
+        setTimeout(() => setEmailStatus('idle'), 4000);
+      } else {
+        // Registra manualmente para canais não-email
+        await fetch(`/api/cobranca/associado/${associadoId}/acao`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            etapa: codigoSelecionado,
+            canal: canalSelecionado,
+            textoEnviado: textoGerado,
+            observacao: obsFinal,
+            dias_atraso_momento: resumo?.diasAtraso,
+            valor_momento: resumo?.totalAtualizado?.total
+          })
+        });
 
-      if (canalSelecionado === 'whatsapp' && targetWin) {
-        // Monta o número com +55 e sem caracteres não-numéricos
-        const rawPhone = (resumo?.telefone || '').replace(/\D/g, '');
-        const phone = rawPhone ? `55${rawPhone}` : '';
-        const waUrl = phone
-          ? `https://wa.me/${phone}?text=${encodeURIComponent(textoGerado)}`
-          : `https://wa.me/?text=${encodeURIComponent(textoGerado)}`;
-        targetWin.location.href = waUrl;
+        if (canalSelecionado === 'whatsapp' && targetWin) {
+          const rawPhone = (resumo?.telefone || '').replace(/\D/g, '');
+          const phone = rawPhone ? `55${rawPhone}` : '';
+          const waUrl = phone
+            ? `https://wa.me/${phone}?text=${encodeURIComponent(textoGerado)}`
+            : `https://wa.me/?text=${encodeURIComponent(textoGerado)}`;
+          targetWin.location.href = waUrl;
+        }
       }
 
       setShowNovaAcao(false);
       setObservacao('');
       setTextoGerado('');
+      setEmailAssunto('');
       loadData();
     } catch (e) {
       if (targetWin) targetWin.close();
@@ -422,6 +449,27 @@ export default function CobrancaDrawer({ associadoId, isOpen, onClose, associado
                     />
                   </div>
 
+                  {/* Campo de assunto para e-mail */}
+                  {canalSelecionado === 'email' && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assunto do E-mail</label>
+                      <input
+                        type="text"
+                        value={emailAssunto}
+                        onChange={e => setEmailAssunto(e.target.value)}
+                        placeholder="Ex: Notificação de Cobrança — ACPROBEC"
+                        className="w-full p-3 bg-white border border-slate-200 rounded-2xl text-xs outline-none focus:border-emerald-400 transition-colors"
+                      />
+                    </div>
+                  )}
+
+                  {/* Feedback de e-mail enviado */}
+                  {emailStatus === 'enviado' && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-[11px] font-bold">
+                      ✅ E-mail enviado com sucesso!
+                    </div>
+                  )}
+
                   <div className="flex gap-2 pt-1">
                     <button onClick={() => setShowNovaAcao(false)} className="flex-1 py-3 bg-slate-100 text-slate-500 text-[10px] font-black uppercase rounded-2xl hover:bg-slate-200 transition-colors">
                       Cancelar
@@ -431,10 +479,10 @@ export default function CobrancaDrawer({ associadoId, isOpen, onClose, associado
                       disabled={salvandoAcao}
                       className="flex-1 py-3 bg-emerald-600 text-white text-[10px] font-black uppercase rounded-2xl hover:bg-emerald-500 transition-colors shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {salvandoAcao ? 'Salvando...' : (
+                     {salvandoAcao ? 'Enviando...' : (
                         <>
-                          {canalSelecionado === 'whatsapp' ? <MessageCircle size={14} /> : '✓'}
-                          {canalSelecionado === 'whatsapp' ? 'Salvar e Enviar' : 'Salvar Registro'}
+                          {canalSelecionado === 'whatsapp' ? <MessageCircle size={14} /> : canalSelecionado === 'email' ? '📧' : '✓'}
+                          {canalSelecionado === 'whatsapp' ? 'Salvar e Enviar' : canalSelecionado === 'email' ? 'Enviar E-mail' : 'Salvar Registro'}
                         </>
                       )}
                     </button>
