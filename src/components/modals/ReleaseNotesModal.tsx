@@ -1,46 +1,46 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Sparkles, ChevronRight, ChevronLeft, ClipboardList, DollarSign, UserSearch, ShieldCheck, Activity, CheckCircle2 } from 'lucide-react'
+import { X, Sparkles, ChevronRight, ChevronLeft, ClipboardList, DollarSign, UserSearch, ShieldCheck, Activity, CheckCircle2, BookMarked, Smartphone, Mail } from 'lucide-react'
 import Image from 'next/image'
 import LogoV2 from '@/components/ui/LogoV2'
 
 const TOUR_STEPS = [
   {
-    title: 'O elo que faltava na sua gestão.',
-    description: 'Cada módulo conectado, cada processo no lugar certo. A versão 2.0 chega para fechar o ciclo.',
+    title: 'A versão mais completa do sistema.',
+    description: 'Mobilidade, processos documentados e cobranças automatizadas. A versão 2.0 fecha o ciclo da gestão inteligente.',
     icon: Sparkles,
     color: 'emerald'
+  },
+  {
+    title: 'Sistema 100% responsivo no celular.',
+    description: 'Acesse dashboards, tabelas, cards e módulos completos direto do seu smartphone. O sistema se adapta automaticamente a qualquer tela, sem perder nenhuma funcionalidade.',
+    icon: Smartphone,
+    color: 'blue'
+  },
+  {
+    title: 'Manual de Procedimentos integrado.',
+    description: '21 POPs documentados para os 13 módulos do sistema. Consulte o passo a passo de cada processo, filtre por área e exporte em PDF direto pelo sistema — sem sair do painel.',
+    icon: BookMarked,
+    color: 'indigo'
+  },
+  {
+    title: 'Cobranças por e-mail com um clique.',
+    description: 'Além do WhatsApp, agora você envia as notificações de cobrança direto por e-mail. O sistema gera o texto personalizado, monta o layout profissional e registra no histórico automaticamente.',
+    icon: Mail,
+    color: 'amber'
   },
   {
     title: 'Organize o trabalho da equipe sem sair do sistema.',
     description: 'Crie tarefas, defina responsáveis e acompanhe o andamento em tempo real com um quadro Kanban integrado. Do pendente ao concluído, tudo em um só lugar.',
     icon: ClipboardList,
-    color: 'blue'
-  },
-  {
-    title: 'Tudo sobre o associado em uma única tela.',
-    description: 'Histórico financeiro, atendimentos, situação no plano de saúde e documentos reunidos em uma ficha completa. Menos cliques, mais contexto na hora de decidir.',
-    icon: UserSearch,
-    color: 'indigo'
-  },
-  {
-    title: 'Cobranças automáticas, processo padronizado.',
-    description: 'Da notificação inicial ao acordo de parcelamento, o sistema guia cada etapa da régua de cobrança. Menos inadimplência, mais tempo para o que importa.',
-    icon: DollarSign,
-    color: 'amber'
+    color: 'cyan'
   },
   {
     title: 'Cada pessoa vê só o que precisa ver.',
     description: 'Defina permissões por perfil de acesso e garanta que cada colaborador opere apenas dentro da sua área. Segurança e controle sem complicar o dia a dia.',
     icon: ShieldCheck,
     color: 'rose'
-  },
-  {
-    title: 'Registro completo de tudo que acontece.',
-    description: 'Cada atendimento registrado, cada ação rastreada. O módulo de auditoria garante transparência total nas operações e facilita qualquer prestação de contas.',
-    icon: Activity,
-    color: 'cyan'
   },
   {
     title: 'Pronto para começar?',
@@ -61,8 +61,8 @@ export default function ReleaseNotesModal() {
   const [dontShowAgain, setDontShowAgain] = useState(false)
 
   useEffect(() => {
-    const hideForever = localStorage.getItem('release_notes_v5_hide_forever')
-    const seenSession = sessionStorage.getItem('release_notes_v5_seen_session')
+    const hideForever = localStorage.getItem('release_notes_v6_hide_forever')
+    const seenSession = sessionStorage.getItem('release_notes_v6_seen_session')
     
     if (!seenSession) {
       if (!hideForever) {
@@ -70,7 +70,7 @@ export default function ReleaseNotesModal() {
         return () => clearTimeout(timer)
       } else {
         setShowAnimation(true)
-        sessionStorage.setItem('release_notes_v5_seen_session', 'true')
+        sessionStorage.setItem('release_notes_v6_seen_session', 'true')
         setTimeout(() => setShowAnimation(false), 2000)
       }
     }
@@ -78,9 +78,9 @@ export default function ReleaseNotesModal() {
 
   const handleClose = () => {
     if (dontShowAgain) {
-      localStorage.setItem('release_notes_v5_hide_forever', 'true')
+      localStorage.setItem('release_notes_v6_hide_forever', 'true')
     }
-    sessionStorage.setItem('release_notes_v5_seen_session', 'true')
+    sessionStorage.setItem('release_notes_v6_seen_session', 'true')
     
     setIsClosing(true)
     setTimeout(() => {
