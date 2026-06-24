@@ -64,7 +64,9 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
                     </div>
                     <div className="text-left">
                       <p className="text-sm font-black text-gray-800 uppercase group-hover:text-emerald-900 transition-colors">{assoc.nome}</p>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase">{assoc.cpf || 'Sem Documento'}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">
+                        {assoc.cpf || 'Sem Documento'}{assoc.email ? ` | ${assoc.email}` : ''}
+                      </p>
                     </div>
                   </div>
                   <CheckCircle2 size={18} className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-all" />

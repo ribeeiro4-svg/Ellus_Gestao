@@ -12,7 +12,6 @@ export async function fixBankAccountsAction(providedTenantId?: string) {
     if (usuario?.tenant_id) tenantId = usuario.tenant_id
   }
 
-  // 1. Buscar todas as contas bancárias do tenant
   const { data: contasBancarias } = await sb.from('contas_bancarias').select('*').eq('tenant_id', tenantId)
   
   if (!contasBancarias || contasBancarias.length === 0) return { success: true, message: 'Nenhuma conta bancária encontrada' }
@@ -20,7 +19,6 @@ export async function fixBankAccountsAction(providedTenantId?: string) {
   let count = 0
   
   for (const conta of contasBancarias) {
-    // 2. Verificar se já existe mapeamento
     const mappingKey = `banco_${conta.id}`
     const { data: existingMap } = await sb.from('configuracoes_contabeis')
       .select('*')
@@ -30,12 +28,11 @@ export async function fixBankAccountsAction(providedTenantId?: string) {
 
     if (existingMap) continue
 
-    // 3. Determinar o código pai baseado no tipo
-    // 1.1.1.01 -> Caixa Geral
-    // 1.1.1.02 -> Bancos Conta Movimento
-    const parentCodigo = conta.tipo === 'caixa_fisico' ? '1.1.1.01' : '1.1.1.02'
+    // NOVO PADRÃO ITG 2002:
+    // 1.1.1.1 -> Caixa
+    // 1.1.1.2 -> Bancos conta Movimento
+    const parentCodigo = conta.tipo === 'caixa_fisico' ? '1.1.1.1' : '1.1.1.2'
     
-    // 4. Achar a última conta para gerar código sequencial
     const { data: ultimasContas } = await sb.from('plano_contas')
       .select('codigo')
       .eq('tenant_id', tenantId)
@@ -56,7 +53,6 @@ export async function fixBankAccountsAction(providedTenantId?: string) {
     const novoCodigo = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
     const { data: pai } = await sb.from('plano_contas').select('id').eq('tenant_id', tenantId).eq('codigo', parentCodigo).single()
 
-    // 5. Criar a conta no Plano de Contas
     const { data: novaConta } = await sb.from('plano_contas').insert({
       tenant_id: tenantId,
       codigo: novoCodigo,
@@ -71,13 +67,12 @@ export async function fixBankAccountsAction(providedTenantId?: string) {
     }).select('id').single()
 
     if (novaConta) {
-      // 6. Criar o mapeamento na configuracoes_contabeis
       await sb.from('configuracoes_contabeis').insert({
         tenant_id: tenantId,
         categoria_nome: mappingKey,
         conta_contabil_codigo: novoCodigo,
         conta_contabil_nome: `Banco: ${conta.nome}`,
-        tipo: 'dispendio', // Usamos um tipo padrão, mas o importante é o de/para
+        tipo: 'dispendio',
         updated_at: new Date().toISOString()
       })
       count++
@@ -91,7 +86,7 @@ export async function fixBankAccountsAction(providedTenantId?: string) {
     await sbAdmin.from('contabil_logs').insert({
       tenant_id: tenantId,
       acao: 'MAPEAMENTO BANCO',
-      detalhes: `Mapeamento automático concluído. ${count} novas contas contábeis analíticas foram criadas e vinculadas aos bancos cadastrados.`
+      detalhes: `Mapeamento automático concluído. ${count} novas contas contábeis analíticas foram criadas e vinculadas aos bancos cadastrados no padrão ITG 2002.`
     })
   }
 

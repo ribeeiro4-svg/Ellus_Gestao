@@ -213,11 +213,15 @@ export async function vincularEDocumentoReprocessarAction(params: {
 
     await sb.from('lancamentos_contabeis').update(updatePayload).eq('id', lancamentoId)
 
-    // 3. (Removido o re-sync daqui) 
-    // O lançamento contábil já existe. Acabamos de atualizá-lo com os dados da nota.
-    // Chamar sincronizarLancamentoContabil aqui estava criando uma duplicata.
-    // Não precisamos sincronizar pois o lançamento já está no banco e já foi mapeado.
-
+    // 3. Inserir Log de Auditoria
+    const sbAdminLogger = createAdminSupabase()
+    const { data: { user } } = await sb.auth.getUser()
+    await sbAdminLogger.from('contabil_logs').insert({
+      tenant_id: lanc.tenant_id,
+      acao: 'VINCULO_MANUAL',
+      detalhes: `Vínculo manual da nota ${docNumero || docId} ao lançamento contábil ${lancamentoId}.`,
+      usuario_email: user?.email || 'sistema@integracao.com'
+    })
 
     return { success: true }
   } catch (err: any) {
@@ -264,44 +268,91 @@ export async function getContabilLogsAction() {
 }
 
 /**
- * Repara a numeração de lançamentos que foram "bagunçados" pela re-sincronização.
- * Busca no histórico o padrão "Ref: 2026/XXXXXX" e restaura o número original.
+ * REORDENAÇÃO CRONOLÓGICA DEFINITIVA (LÓGICA DE FERRO)
+ * Garante que a numeração siga a data real do fato contábil.
  */
 export async function repararNumeracaoAction() {
+  const { getMyTenantIdAction } = await import('@/app/actions/tenantActions')
+  const tenantId = await getMyTenantIdAction()
+  if (!tenantId) return { error: 'Tenant não identificado' }
+
   const sbAdmin = createAdminSupabase()
   
-  // 1. Buscar lançamentos que tenham "Ref:" no histórico (onde guardamos o número original antes do re-processamento)
-  const { data: lancs } = await sbAdmin
+  // 1. Buscar TODOS os lançamentos de 2026
+  const { data: lancs, error: fetchErr } = await sbAdmin
     .from('lancamentos_contabeis')
-    .select('id, numero_lancamento, historico')
-    .ilike('historico', '%Ref: %/%')
+    .select('id, data_lancamento, numero_lancamento, created_at')
+    .eq('tenant_id', tenantId)
+    .gte('data_lancamento', '2026-01-01')
+    .lte('data_lancamento', '2026-12-31')
   
-  if (!lancs || lancs.length === 0) {
-    // Tenta conserto manual do específico relatado pelo usuário se ainda não foi corrigido
-    const { data: especifico } = await sbAdmin.from('lancamentos_contabeis').select('id').eq('numero_lancamento', '2026/002163').maybeSingle()
-    if (especifico) {
-      await sbAdmin.from('lancamentos_contabeis').update({ numero_lancamento: '2026/001389' }).eq('id', especifico.id)
-      return { success: true, message: 'Lançamento 2026/002163 corrigido para 2026/001389 com sucesso.' }
-    }
-    return { success: true, message: 'Nenhum lançamento para reparo encontrado.' }
-  }
+  if (fetchErr) return { error: `Erro ao buscar lançamentos: ${fetchErr.message}` }
+  if (!lancs || lancs.length === 0) return { success: true, message: 'Nenhum lançamento encontrado para reordenar.' }
 
-  let reparados = 0
-  for (const l of lancs) {
-    const match = l.historico.match(/Ref:\s*(\d{4}\/\d{6})/)
-    if (match && match[1] && match[1] !== l.numero_lancamento) {
-      const originalNum = match[1]
-      // Verificar se o número original já não está sendo usado por outro (segurança)
-      const { data: conflito } = await sbAdmin.from('lancamentos_contabeis').select('id').eq('numero_lancamento', originalNum).maybeSingle()
-      
-      if (!conflito) {
-        await sbAdmin.from('lancamentos_contabeis').update({ numero_lancamento: originalNum }).eq('id', l.id)
-        reparados++
+  // 2. ORDENAÇÃO CRONOLÓGICA ROBUSTA
+  const ordenados = [...lancs].sort((a, b) => {
+    // Função auxiliar para garantir data comparável (YYYY-MM-DD)
+    const parseDate = (d: string) => {
+      if (!d) return 0
+      // Se for YYYY-MM-DD
+      if (d.includes('-')) return new Date(d + 'T12:00:00').getTime()
+      // Se for DD/MM/YYYY
+      if (d.includes('/')) {
+        const [day, month, year] = d.split('/')
+        return new Date(`${year}-${month}-${day}T12:00:00`).getTime()
       }
+      return new Date(d).getTime()
     }
-  }
 
-  return { success: true, message: `Reparo concluído. ${reparados} lançamentos voltaram à numeração original.` }
+    const t1 = parseDate(a.data_lancamento)
+    const t2 = parseDate(b.data_lancamento)
+    
+    if (t1 !== t2) return t1 - t2
+    
+    // Desempate por criação (ordem cronológica de inserção no mesmo dia)
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  })
+
+  try {
+    // 3. PASSO 1: RESET (Evita UNIQUE constraint violations)
+    // Usamos um prefixo único baseado no timestamp para garantir que não haja colisões
+    const resetPrefix = `RESET_${Date.now()}/`
+    for (const l of ordenados) {
+      await sbAdmin
+        .from('lancamentos_contabeis')
+        .update({ numero_lancamento: `${resetPrefix}${l.id.slice(0, 8)}` })
+        .eq('id', l.id)
+    }
+
+    // 4. PASSO 2: ATRIBUIÇÃO SEQUENCIAL PERFEITA
+    let seq = 1
+    const ano = '2026'
+    for (const l of ordenados) {
+      const novoNumero = `${ano}/${seq.toString().padStart(6, '0')}`
+      await sbAdmin
+        .from('lancamentos_contabeis')
+        .update({ numero_lancamento: novoNumero })
+        .eq('id', l.id)
+      seq++
+    }
+
+    const msg = `Sequência reconstruída! O primeiro lançamento de 2026 é agora o ${ano}/000001. Total: ${ordenados.length} lançamentos organizados por data de fato.`
+    
+    await sbAdmin.from('contabil_logs').insert({
+      tenant_id: tenantId,
+      acao: 'REORDENACAO_CRONOLOGICA',
+      detalhes: msg,
+      usuario_email: 'sistema@admin.com'
+    })
+
+    return { 
+      success: true, 
+      message: msg 
+    }
+  } catch (err: any) {
+    console.error('[Contábil] Erro na reordenação global:', err)
+    return { error: `Erro durante a reordenação: ${err.message}` }
+  }
 }
 
 /**
@@ -313,7 +364,19 @@ export async function fixSpecificEntryAction(currentNum: string, targetNum: stri
     .from('lancamentos_contabeis')
     .update({ numero_lancamento: targetNum })
     .eq('numero_lancamento', currentNum)
+    .select('tenant_id')
+    .single()
   
   if (error) return { success: false, error: error.message }
+
+  if (data) {
+    await sbAdmin.from('contabil_logs').insert({
+      tenant_id: data.tenant_id,
+      acao: 'CORRECAO_MANUAL',
+      detalhes: `Lançamento renumerado manualmente de ${currentNum} para ${targetNum}.`,
+      usuario_email: 'sistema@admin.com'
+    })
+  }
+
   return { success: true }
 }

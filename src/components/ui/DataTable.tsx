@@ -1,5 +1,5 @@
 import { ReactNode, useMemo, useState } from 'react'
-import { Check, ArrowUpDown, ChevronUp, ChevronDown, Search as SearchIcon } from 'lucide-react'
+import { Check, ArrowUpDown, ChevronUp, ChevronDown, Search as SearchIcon, Download } from 'lucide-react'
 
 interface DataTableProps<T> {
   columns: {
@@ -10,6 +10,7 @@ interface DataTableProps<T> {
     className?: string
     sortable?: boolean
     filterable?: boolean
+    stopClickPropagation?: boolean
   }[]
   data: T[]
   loading?: boolean
@@ -19,6 +20,9 @@ interface DataTableProps<T> {
   onRowClick?: (item: T) => void
   idKey?: keyof T // Chave que identifica o registro (default: 'id')
   showFilterInputs?: boolean
+  headerActions?: ReactNode
+  exportable?: boolean
+  exportFilename?: string
 }
 
 export default function DataTable<T>({ 
@@ -30,7 +34,10 @@ export default function DataTable<T>({
   onSelectChange,
   onRowClick,
   idKey = 'id' as keyof T,
-  showFilterInputs: initialShowFilters = false
+  showFilterInputs: initialShowFilters = false,
+  headerActions,
+  exportable = false,
+  exportFilename = 'Exportacao'
 }: DataTableProps<T>) {
   
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -118,7 +125,7 @@ export default function DataTable<T>({
   return (
     <div className="bg-white rounded-[24px] border border-slate-200 shadow-sm overflow-hidden flex flex-col relative min-h-[200px]">
       {loading && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-[2px] transition-all animate-in fade-in duration-300">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/60 backdrop-blur-[2px] transition-all animate-in fade-in duration-300 no-print print:hidden">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin shadow-inner"></div>
             <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest animate-pulse">Sincronizando...</span>
@@ -126,7 +133,36 @@ export default function DataTable<T>({
         </div>
       )}
       {/* Table Header with Global Filter Toggle */}
-      <div className="px-6 py-2 border-b border-slate-100 bg-slate-50/20 flex justify-end">
+      <div className="px-6 py-2 border-b border-slate-100 bg-slate-50/20 flex justify-end items-center gap-3">
+        {headerActions}
+        {exportable && (
+          <button 
+            onClick={async () => {
+              const XLSX = await import('xlsx')
+              const exportColumns = columns.filter(c => c.header && c.header.trim() !== '')
+              const excelData = processedData.map(row => {
+                const rowData: any = {}
+                exportColumns.forEach(col => {
+                  let value = col.filterValue ? col.filterValue(row) : (row as any)[col.key as string]
+                  if (typeof value === 'object' && value !== null) value = JSON.stringify(value)
+                  rowData[col.header] = value
+                })
+                return rowData
+              })
+              const worksheet = XLSX.utils.json_to_sheet(excelData)
+              const workbook = XLSX.utils.book_new()
+              XLSX.utils.book_append_sheet(workbook, worksheet, "Dados")
+              const now = new Date()
+              const dateStr = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}`
+              XLSX.writeFile(workbook, `${exportFilename}_${dateStr}.xlsx`)
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+            title="Exportar para Excel"
+          >
+            <Download size={12} />
+            Exportar Excel
+          </button>
+        )}
         <button 
           onClick={() => setShowFilterInputs(!showFilterInputs)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showFilterInputs ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
@@ -155,7 +191,7 @@ export default function DataTable<T>({
                 return (
                   <th 
                     key={i} 
-                    className={`px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest group ${col.className || ''}`}
+                    className={`whitespace-nowrap px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest group ${col.className || ''}`}
                   >
                     <div 
                       className="flex items-center gap-2 cursor-pointer hover:text-slate-600"
@@ -222,7 +258,15 @@ export default function DataTable<T>({
                       </td>
                     )}
                     {columns.map((col, colIndex) => (
-                      <td key={colIndex} className={`px-6 py-4 ${col.className || ''}`} onClick={col.key === 'acoes' ? (e) => e.stopPropagation() : undefined}>
+                      <td 
+                        key={colIndex} 
+                        className={`px-6 py-4 ${col.className || ''}`} 
+                        onClick={(e) => {
+                          if (col.key === 'acoes' || col.stopClickPropagation) {
+                            e.stopPropagation()
+                          }
+                        }}
+                      >
                         {col.render ? col.render(item) : (item[col.key as keyof T] as ReactNode)}
                       </td>
                     ))}

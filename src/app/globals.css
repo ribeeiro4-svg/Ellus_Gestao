@@ -1,7 +1,20 @@
-/* Version: 1.0.1 - Design Restoration Support */
+/* Version: 1.0.2 - Design Restoration & Scrollbar Utils */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .custom-scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
 
 :root {
   --sidebar-w: 260px;
@@ -92,7 +105,7 @@ body::before {
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66z' fill='none' stroke='%232d8c6f' stroke-width='0.8' stroke-opacity='0.28'/%3E%3Cpath d='M28 100L0 84V52l28-16 28 16v32L28 100z' fill='none' stroke='%232d8c6f' stroke-width='0.8' stroke-opacity='0.22'/%3E%3C/svg%3E");
   background-size: 56px 100px;
-  opacity: 1;
+  opacity: 0.7;
 }
 
 /* ── SIDEBAR ── */
@@ -282,7 +295,7 @@ body::before {
   box-shadow: 0 8px 32px rgba(14, 45, 34, 0.05);
   display: flex;
   flex-direction: column;
-  height: 400px !important; /* Increased to fill the page as requested */
+  min-height: 300px;
 }
 
 .chart-card:hover {
@@ -400,5 +413,126 @@ body::before {
   canvas {
     max-width: 100% !important;
     height: auto !important;
+  }
+}
+
+/* ── UTILITIES ── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.custom-scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── RESPONSIVE MOBILE ── */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-w: 0px;
+    --topbar-h: 60px;
+  }
+
+  /* Layout */
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    width: 280px !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .sidebar-overlay.mobile-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Main content padding */
+  .main-content {
+    padding: 12px !important;
+  }
+
+  /* KPI Cards — reduz texto gigante */
+  .kpi-card h3,
+  .kpi-card .text-2xl,
+  .kpi-card .text-3xl {
+    font-size: 1.25rem !important;
+  }
+
+  /* Grids de 4 colunas → 2 colunas no mobile */
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Grids de 3 colunas → 1 coluna no mobile */
+  .grid-cols-3,
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  /* Grids de 2 colunas — mantém 1 coluna */
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  /* Texto grande em dashboards */
+  .text-4xl { font-size: 1.5rem !important; }
+  .text-5xl { font-size: 1.75rem !important; }
+  .text-6xl { font-size: 2rem !important; }
+
+  /* Tabela — garante scroll horizontal visível */
+  .overflow-x-auto {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Padding interno de cards grandes */
+  .rounded-\[32px\] {
+    padding: 16px !important;
+  }
+
+  /* Topbar mobile */
+  .topbar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  /* Flex row → col em containers de filtros/headers */
+  .xl\:flex-row {
+    flex-direction: column !important;
+  }
+
+  /* Botões de ação não ficam cortados */
+  .flex-wrap {
+    flex-wrap: wrap !important;
   }
 }

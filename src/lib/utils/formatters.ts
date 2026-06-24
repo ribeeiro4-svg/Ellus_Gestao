@@ -46,11 +46,15 @@ export const roundMoney = (v: number) => {
 }
 
 export const safeSum = (a: number, b: number) => {
-  return Math.round(((a || 0) + (b || 0)) * 100) / 100
+  const vA = Math.round((a || 0) * 100)
+  const vB = Math.round((b || 0) * 100)
+  return (vA + vB) / 100
 }
 
 export const safeDiff = (a: number, b: number) => {
-  return Math.round(((a || 0) - (b || 0)) * 100) / 100
+  const vA = Math.round((a || 0) * 100)
+  const vB = Math.round((b || 0) * 100)
+  return (vA - vB) / 100
 }
 
 export const statusAssocClass = (s: string) => {
@@ -58,6 +62,7 @@ export const statusAssocClass = (s: string) => {
     case 'ativo': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
     case 'inadimplente': return 'bg-rose-100 text-rose-700 border-rose-200'
     case 'cancelado': return 'bg-slate-100 text-slate-700 border-slate-200'
+    case 'abonado': return 'bg-indigo-100 text-indigo-700 border-indigo-200'
     default: return 'bg-gray-100 text-gray-700 border-gray-200'
   }
 }
@@ -65,9 +70,19 @@ export const statusAssocClass = (s: string) => {
 export const statusLancClass = (s: string) => {
   switch (s?.toLowerCase()) {
     case 'pago': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    case 'abonado': return 'bg-indigo-100 text-indigo-700 border-indigo-200'
     case 'aberto': return 'bg-amber-100 text-amber-700 border-amber-200'
     case 'atrasado': return 'bg-rose-100 text-rose-700 border-rose-200'
+    case 'processando': return 'bg-blue-100 text-blue-700 border-blue-200'
     default: return 'bg-gray-100 text-gray-700 border-gray-200'
+  }
+}
+
+export const statusCobrancaClass = (s: string) => {
+  switch (s?.toUpperCase()) {
+    case 'EM COBRANÇA': return 'bg-orange-100 text-orange-700 border-orange-200'
+    case 'NEGOCIADO': return 'bg-violet-100 text-violet-700 border-violet-200'
+    default: return 'bg-slate-100 text-slate-500 border-slate-200'
   }
 }
 
@@ -92,70 +107,97 @@ export const STATUS_LANCAMENTO = [
 
 export function getBruto(l: any): number {
   if (!l) return 0
-  const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
-  const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0
-  const v = Number(l.valor) || 0
-  return Math.round((v + taxaVal) * 100) / 100
+  const v = Math.abs(Number(l.valor) || 0)
+  let t = Math.abs(Number(l.taxa) || 0)
+  
+  if (t === 0) {
+    const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/)
+    if (match) {
+      t = Math.abs(parseFloat(match[1].replace(/\./g, '').replace(',', '.')))
+    }
+  }
+
+  return Math.round((v + t) * 100) / 100
+}
+
+export function getNet(l: any): number {
+  if (!l) return 0
+  return Math.abs(Number(l.valor) || 0)
 }
 
 export function getMesIdx(dataStr: any): number {
   if (!dataStr) return -1
-  if (dataStr instanceof Date) return dataStr.getMonth()
-  const str = String(dataStr).trim()
-  
-  // Detecção prioritária de formato ISO YYYY-MM-DD
-  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (isoMatch) return (parseInt(isoMatch[2], 10) || 0) - 1
-
-  if (str.includes('-')) {
-    const parts = str.split('T')[0].split(' ')[0].split('-')
-    if (parts.length >= 2) {
-      const mes = parts[0].length === 4 ? parts[1] : parts[1]
-      return (parseInt(mes, 10) || 0) - 1
-    }
-  } 
-  
-  if (str.includes('/')) {
-    const parts = str.split('/')
-    if (parts.length >= 2) {
-      // Formato BR: DD/MM/YYYY ou YYYY/MM/DD
-      const mes = parts[0].length === 4 ? parts[1] : parts[1]
-      return (parseInt(mes, 10) || 0) - 1
-    }
-  }
-
   try {
-    const d = new Date(str)
-    if (!isNaN(d.getTime())) return d.getMonth()
-  } catch (e) {}
-
-  return -1
+    const s = String(dataStr)
+    // Tenta formato DD/MM/AAAA
+    if (s.includes('/')) {
+      const parts = s.split('/')
+      if (parts.length >= 2) return parseInt(parts[1]) - 1
+    }
+    // Tenta formato AAAA-MM-DD
+    if (s.includes('-')) {
+      const parts = s.split('T')[0].split('-')
+      if (parts.length >= 2) {
+        // Se a primeira parte tiver 4 dígitos, é AAAA-MM-DD
+        if (parts[0].length === 4) return parseInt(parts[1]) - 1
+        // Se a última parte tiver 4 dígitos, é DD-MM-AAAA
+        return parseInt(parts[1]) - 1
+      }
+    }
+    const d = new Date(dataStr)
+    return isNaN(d.getTime()) ? -1 : d.getUTCMonth()
+  } catch (e) {
+    return -1
+  }
 }
 
 export function getAnoIdx(dataStr: any): number {
   if (!dataStr) return -1
-  if (dataStr instanceof Date) return dataStr.getFullYear()
-  const str = String(dataStr).trim()
-  
-  if (str.includes('-')) {
-    const parts = str.split('T')[0].split(' ')[0].split('-')
-    if (parts.length >= 1) {
-      return parts[0].length === 4 ? parseInt(parts[0], 10) : parseInt(parts[2], 10)
-    }
-  } 
-  
-  if (str.includes('/')) {
-    const parts = str.split('/')
-    if (parts.length >= 1) {
-      const last = parts[parts.length - 1]
-      if (last.length === 4) return parseInt(last, 10)
-    }
-  }
-
   try {
-    const d = new Date(str)
-    if (!isNaN(d.getTime())) return d.getFullYear()
-  } catch (e) {}
+    const s = String(dataStr)
+    if (s.includes('/')) {
+      const parts = s.split('/')
+      if (parts.length >= 3) return parseInt(parts[2])
+    }
+    if (s.includes('-')) {
+      const parts = s.split('T')[0].split('-')
+      if (parts.length >= 1) {
+        if (parts[0].length === 4) return parseInt(parts[0])
+        if (parts.length >= 3) return parseInt(parts[2])
+      }
+    }
+    const d = new Date(dataStr)
+    return isNaN(d.getTime()) ? -1 : d.getUTCFullYear()
+  } catch (e) {
+    return -1
+  }
+}
 
-  return -1
+export function getDiaIdx(dataStr: any): number {
+  if (!dataStr) return -1
+  try {
+    const s = String(dataStr)
+    if (s.includes('/')) {
+      const parts = s.split('/')
+      if (parts.length >= 1) return parseInt(parts[0])
+    }
+    if (s.includes('-')) {
+      const parts = s.split('T')[0].split('-')
+      if (parts.length >= 3) {
+        if (parts[0].length === 4) return parseInt(parts[2])
+        return parseInt(parts[0])
+      }
+    }
+    const d = new Date(dataStr)
+    return isNaN(d.getTime()) ? -1 : d.getUTCDate()
+  } catch (e) {
+    return -1
+  }
+}
+
+export function isRealized(l: any): boolean {
+  if (!l) return false
+  if (!!l.data_conciliacao) return true
+  const s = (l.status || '').toLowerCase()
+  return ['pago', 'efetivado', 'concluido', 'recebido', 'sucesso', 'parcial'].includes(s)
 }

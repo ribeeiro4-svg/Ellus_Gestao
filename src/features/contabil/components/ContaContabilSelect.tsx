@@ -6,7 +6,7 @@ interface Props {
   value?: string
   currentLabel?: string  // nome/descrição do mapeamento já salvo (para fallback visual)
   onChange: (item: { codigo: string; descricao: string; classificacao: string }) => void
-  tipo?: 'ingresso' | 'dispesa' | 'ativo' | 'passivo' | 'patrimonio'
+  tipo?: 'ingresso' | 'despesa' | 'ativo' | 'passivo' | 'patrimonio'
 }
 
 export default function ContaContabilSelect({ value, currentLabel, onChange, tipo }: Props) {
@@ -17,7 +17,7 @@ export default function ContaContabilSelect({ value, currentLabel, onChange, tip
     const analiticas = plano.contasAnaliticas
     if (!tipo) return analiticas
     if (tipo === 'ingresso') return analiticas.filter(c => c.classificacao === 'ingresso')
-    if (tipo === 'dispesa') return analiticas  // Dispêndio: mostra TODAS (qualquer grupo pode ser mapeado)
+    if (tipo === 'despesa') return analiticas  // Dispêndio: mostra TODAS (qualquer grupo pode ser mapeado)
     return analiticas.filter(c => c.classificacao === tipo)
   }, [plano.contasAnaliticas, tipo])
 

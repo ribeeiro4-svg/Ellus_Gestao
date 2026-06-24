@@ -47,9 +47,9 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
   const grupos = [
     { cls: 'ativo', label: '1. ATIVO', color: 'text-blue-700' },
     { cls: 'passivo', label: '2. PASSIVO', color: 'text-rose-700' },
-    { cls: 'patrimonio_social', label: '2.3 PATRIMÔNIO SOCIAL', color: 'text-purple-700' },
+    { cls: 'patrimonio_social', label: '2.4 PATRIMÔNIO SOCIAL', color: 'text-purple-700' },
     { cls: 'ingresso', label: '3. INGRESSOS', color: 'text-emerald-700' },
-    { cls: 'despesa', label: '4. DISPÊNDIOS', color: 'text-orange-700' },
+    { cls: 'despesa', label: '4. DESPESAS', color: 'text-orange-700' },
   ]
 
   const imprimirBalancetePDF = () => {
@@ -98,6 +98,7 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
                 const totais = calcTotais(cls)
                 const contasCls = contas.filter((c: any) => c.classificacao === cls && c.tipo === 'analitica')
                   .filter((c: any) => saldos[c.id]?.debitos > 0 || saldos[c.id]?.creditos > 0)
+                  .sort((a: any, b: any) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
                 
                 if (contasCls.length === 0) return ''
 
@@ -136,7 +137,7 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
               </tr>
             </tbody>
           </table>
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
         </body>
       </html>
     `

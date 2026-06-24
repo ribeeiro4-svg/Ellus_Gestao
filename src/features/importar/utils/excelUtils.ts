@@ -24,14 +24,14 @@ export const downloadTemplate = (type: 'financeiro' | 'associados' | 'prolabore'
   
   if (type === 'financeiro') {
     data = [
-      ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status', 'Forma Pagamento', 'Nome da Conta', 'Recorrência Ativa', 'Valor Recebido', 'Troco via PIX'],
-      ['2024-04-01', 'Mensalidade Abril', 'Mensalidade', 'Receita', 150.00, 'Recebido', 'PIX', 'Cora ACPROBEC', 'Sim', 150.00, 'Não']
+      ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status', 'Forma Pagamento', 'Nome da Conta', 'Recorrência Ativa', 'Valor Recebido', 'Troco via PIX', 'Competência Mês', 'Competência Ano', 'Taxa'],
+      ['2024-04-01', 'Mensalidade Abril', 'Mensalidade', 'Receita', 150.00, 'Recebido', 'PIX', 'Cora ACPROBEC', 'Sim', 150.00, 'Não', 4, 2024, 0]
     ]
     filename = 'modelo_financeiro.xlsx'
   } else if (type === 'associados') {
     data = [
-      ['ID', 'Nome', 'CPF / CNPJ', 'Categoria', 'Email', 'Data Ingresso', 'Mensalidade', 'Status'],
-      ['1001', 'João da Silva', '12345678901', 'Pleno', 'joao@email.com', '2023-01-10', 150.00, 'Ativo']
+      ['ID', 'Nome', 'CPF / CNPJ', 'Categoria', 'Email', 'Telefone', 'Data Ingresso', 'Mensalidade', 'Status', 'Vencimento Dia', 'Recorrência Ativa', 'Plano de Saúde', 'Status Termo'],
+      ['1001', 'João da Silva', '12345678901', 'Pleno', 'joao@email.com', '(11) 99999-9999', '2023-01-10', 150.00, 'Ativo', 10, 'Sim', 'Ativo', 'Assinado']
     ]
     filename = 'modelo_associados.xlsx'
   } else if (type === 'prolabore') {
@@ -45,5 +45,30 @@ export const downloadTemplate = (type: 'financeiro' | 'associados' | 'prolabore'
   const ws = XLSX.utils.aoa_to_sheet(data)
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Modelo')
-  XLSX.writeFile(wb, filename)
+  
+  // Use manual download for better browser support
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  window.URL.revokeObjectURL(url)
+}
+
+export const exportToExcel = (data: any[], filename: string) => {
+  const ws = XLSX.utils.json_to_sheet(data)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Dados')
+  
+  // Use manual download for better browser support
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  window.URL.revokeObjectURL(url)
 }

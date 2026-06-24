@@ -30,14 +30,14 @@ export interface Usuario {
   tenant_id: string
   nome: string
   email: string
-  role: 'admin' | 'tesoureiro' | 'viewer'
+  role: 'admin' | 'presidente' | 'vice-presidente' | 'tesoureiro' | 'diretoria' | 'secretaria' | 'viewer'
   created_at: string
 }
 
 // ─── Financeiro ────────────────────────────────────────────────────────────
 export type TipoLancamento = 'receita' | 'despesa'
-export type StatusLancamento = 'pago' | 'aberto' | 'atrasado' | 'parcial' | 'cancelado'
-export type FormaPagamento = 'Dinheiro' | 'PIX' | 'Boleto' | 'Transferência' | 'Cartão' | undefined
+export type StatusLancamento = 'pago' | 'aberto' | 'atrasado' | 'parcial' | 'cancelado' | 'em_processamento' | 'abonado'
+export type FormaPagamento = 'Dinheiro' | 'PIX' | 'Boleto' | 'Transferência' | 'Cartão' | 'Fundo de Caixa' | undefined
 
 export interface Lancamento {
   id: string
@@ -63,7 +63,9 @@ export interface Lancamento {
   diretor_id?: string // ID do diretor vinculado (opcional)
   competencia_mes?: number // Mês de competência (0-11)
   competencia_ano?: number // Ano de competência
+  status_cobranca?: string // Status de cobrança (ex: EM COBRANÇA, NEGOCIADO)
   banco_original_memo?: string // Histórico oculto da transação bancária
+  data_caixa?: string // Data real da movimentação bancária (extrato) — diferente de competência e conciliação
   nfse_vinculo?: {
     nfse_id: string
     nfse: {
@@ -71,6 +73,11 @@ export interface Lancamento {
       xml_url?: string
     }
   }[]
+  is_ec_destino?: boolean // Marcação para encontro de contas (destino)
+  id_origem?: string // ID do lançamento de origem (remanejo)
+  valor_pago_ec?: number // Valor total recebido via encontro de contas
+  conta_debito_id?: string // ID da conta contábil de débito (personalizado)
+  conta_credito_id?: string // ID da conta contábil de crédito (personalizado)
   created_at: string
   updated_at: string
 }
@@ -89,7 +96,7 @@ export interface LancamentoInput extends Omit<Lancamento, 'id' | 'tenant_id' | '
 }
 
 // ─── Associados ────────────────────────────────────────────────────────────
-export type StatusAssociado = 'ativo' | 'inativo' | 'inadimplente' | 'pendente'
+export type StatusAssociado = 'ativo' | 'inativo' | 'inadimplente' | 'pendente' | 'suspenso' | 'abonado'
 
 export interface Associado {
   id: string
@@ -113,6 +120,16 @@ export interface Associado {
   plano_saude?: string // Ativo, Aguardando Declaração, Não Possui
   termo_status?: string // Enviado ao HGU, Assinatura Pendente
   zapsign_sync_at?: string // Data da última sincronização com ZapSign
+  data_assinatura?: string // Data que assinou o documento na ZapSign (Associado desde)
+  suspensao_motivo?: string // 1 - Suspensão Por Inadimplência; 2 - Suspensão por Ordem Judicial; 3 - Suspensão por Outro(s) Motivo(s)
+  suspensao_data?: string // Data e hora do registro da suspensão
+  suspensao_arquivo_url?: string // Link para o PDF de suspensão assinado
+  codigo_hgu?: string // Código do plano HGU
+  dependentes?: { nome: string, data_nascimento?: string, codigo_hgu?: string, data_inclusao?: string }[] // Lista de dependentes
+  data_inclusao_plano?: string // Data de inclusão no plano HGU
+  termo_cancelamento_url?: string // Link para o termo assinado
+  abono_motivo?: string // Motivo do abono
+  abono_usuario?: string // Usuário que autorizou o abono
   created_at: string
   updated_at: string
 }
@@ -174,12 +191,12 @@ export interface DashboardKPIs {
 export interface EvolucaoMensal {
   mes: number // 0-11
   label: string
-  receita: number
-  despesa: number
-  resultado: number
-  margem: number
-  assocAtivos: number
-  assocInadimplentes: number
+  receita: number | null
+  despesa: number | null
+  resultado: number | null
+  margem: number | null
+  assocAtivos: number | null
+  assocInadimplentes: number | null
 }
 
 // ─── Importação ────────────────────────────────────────────────────────────
@@ -331,6 +348,32 @@ export interface RecrutamentoKPIs {
   conversaoFinal: number // Currículos recebidos vs Fila de Contratação
 }
 
+export interface DiretorPeriodo {
+  id: string
+  valor: number
+  mes_inicio: number
+  ano_inicio: number
+  mes_fim?: number
+  ano_fim?: number
+}
+
+export interface Diretor {
+  id: string
+  tenant_id: string
+  nome: string
+  cargo: string
+  cpf: string | null
+  email: string | null
+  telefone: string | null
+  pro_labore_base: number
+  status: 'ativo' | 'inativo'
+  endereco?: string | null
+  chave_pix?: string | null
+  banco_info?: string | null
+  created_at: string
+  periodos?: DiretorPeriodo[]
+}
+
 // ─── API Response ──────────────────────────────────────────────────────────
 export interface ApiResponse<T> {
   data?: T
@@ -338,3 +381,63 @@ export interface ApiResponse<T> {
   message?: string
 }
 
+
+// ─── Gestão de Tarefas ─────────────────────────────────────────────────────
+export type PrioridadeTarefa = 'Alta' | 'Média' | 'Baixa'
+export type StatusTarefa = 'A Fazer' | 'Em Andamento' | 'Aguardando' | 'Concluído'
+
+export interface Tarefa {
+  id: string
+  tenant_id: string
+  titulo: string
+  descricao?: string
+  responsavel_id?: string
+  associado_id?: string
+  status: StatusTarefa
+  prioridade: PrioridadeTarefa
+  categoria?: string
+  prazo?: string
+  criado_por?: string
+  created_at: string
+  updated_at: string
+  // Virtual fields for UI
+  responsavel_nome?: string
+  associado_nome?: string
+}
+
+export interface TarefaComentario {
+  id: string
+  tenant_id: string
+  tarefa_id: string
+  autor_id?: string
+  texto: string
+  created_at: string
+  // Virtual
+  autor_nome?: string
+}
+
+export interface ModeloMensagem {
+  id: string
+  tenant_id: string
+  nome: string
+  categoria?: string
+  texto: string
+  variaveis_json: string[]
+  criado_por?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface Resolucao {
+  id: string
+  tenant_id: string
+  titulo: string
+  categoria?: string
+  conteudo: string
+  tags_json: string[]
+  favorito: boolean
+  visualizacoes: number
+  criado_por?: string
+  created_at: string
+  updated_at: string
+}

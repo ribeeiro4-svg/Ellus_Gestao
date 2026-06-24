@@ -184,8 +184,17 @@ export async function garantirFornecedorAction(params: {
   razaoSocial: string;
   tenantId: string;
   isPrestador?: boolean;
+  endereco?: {
+    cep?: string;
+    logradouro?: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cidade?: string;
+    uf?: string;
+  };
 }) {
-  const { cnpj, razaoSocial, tenantId, isPrestador = true } = params
+  const { cnpj, razaoSocial, tenantId, isPrestador = true, endereco } = params
   const sbAdmin = createAdminSupabase()
   const cleanedCnpj = cnpj.replace(/\D/g, '')
 
@@ -210,31 +219,45 @@ export async function garantirFornecedorAction(params: {
   
   let contaContabilId = null
   try {
-    // Lógica para gerar código sequencial no grupo 2.1.3.01 (Fornecedores Nacionais)
+    const parentCodigo = '2.1.2'
+    
+    // 1. Garantir conta pai
+    let { data: pai } = await sbAdmin.from('plano_contas').select('*').eq('tenant_id', tenantId).eq('codigo', parentCodigo).maybeSingle()
+    
+    if (!pai) {
+      const { data: novaPai } = await sbAdmin.from('plano_contas').insert({
+        tenant_id: tenantId, codigo: parentCodigo, descricao: 'FORNECEDORES',
+        nivel: 3, tipo: 'sintetica', natureza: 'credora', classificacao: 'passivo', aceita_lancamentos: false, ativa: true
+      }).select().single()
+      pai = novaPai
+    } else if (pai.tipo === 'analitica') {
+      await sbAdmin.from('plano_contas').update({ tipo: 'sintetica', aceita_lancamentos: false }).eq('id', pai.id)
+    }
+
+    // 2. Proximo codigo
     const { data: ultimasContas } = await sbAdmin.from('plano_contas')
       .select('codigo')
       .eq('tenant_id', tenantId)
-      .like('codigo', '2.1.3.01.%')
+      .like('codigo', `${parentCodigo}.%`)
       .order('codigo', { ascending: false })
       .limit(1)
 
-    let novoCodigo = '2.1.3.01.100'
+    let nextSeq = 1
     if (ultimasContas && ultimasContas.length > 0) {
       const ultimo = ultimasContas[0].codigo
       const partes = ultimo.split('.')
       const sequencial = parseInt(partes[partes.length - 1], 10)
-      if (!isNaN(sequencial) && sequencial >= 100) {
-        novoCodigo = `2.1.3.01.${String(sequencial + 1).padStart(3, '0')}`
-      }
+      if (!isNaN(sequencial)) nextSeq = sequencial + 1
     }
 
-    const { data: pai } = await sbAdmin.from('plano_contas').select('id').eq('tenant_id', tenantId).eq('codigo', '2.1.3.01').single()
+    const novoCodigo = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
 
+    // 3. Criar conta
     const { data: novaConta } = await sbAdmin.from('plano_contas').insert({
       tenant_id: tenantId,
       codigo: novoCodigo,
-      descricao: `Fornecedor: ${razaoSocial}`,
-      nivel: 5,
+      descricao: `FORNECEDOR: ${razaoSocial.toUpperCase()}`,
+      nivel: 4,
       tipo: 'analitica',
       natureza: 'credora',
       classificacao: 'passivo',
@@ -256,7 +279,15 @@ export async function garantirFornecedorAction(params: {
       cpf_cnpj: cleanedCnpj,
       is_prestador_servicos: isPrestador,
       status: 'ativo',
-      conta_contabil_id: contaContabilId
+      conta_contabil_id: contaContabilId,
+      // Novos campos de endereço
+      cep: endereco?.cep,
+      logradouro: endereco?.logradouro,
+      numero: endereco?.numero,
+      complemento: endereco?.complemento,
+      bairro: endereco?.bairro,
+      cidade: endereco?.cidade,
+      uf: endereco?.uf
     })
     .select('*')
     .single()
@@ -625,6 +656,118 @@ export async function vincularNFeALancamentoAction(nfeId: string, lancamentoId: 
     })
 
     return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+/**
+ * Server Action robusta para buscar dados de uma NFS-e para visualização interna.
+ * Bypassa RLS via Admin Client para garantir acesso em todos os módulos.
+ */
+export async function getNFSeParaVisualizacaoAction(params: { id?: string; numero?: string; tenantId?: string }) {
+  const { id, numero, tenantId } = params
+  const sbAdmin = createAdminSupabase()
+  
+  try {
+    let nfse = null
+
+    // 1. Tentar por ID se fornecido
+    if (id && id !== 'undefined') {
+      let q = sbAdmin
+        .from('nfse_entradas')
+        .select('*, prestador:fornecedores(*)')
+        .eq('id', id)
+      
+      if (tenantId) q = q.eq('tenant_id', tenantId)
+      
+      const { data } = await q.maybeSingle()
+      nfse = data
+    }
+
+    // 2. Fallback por Número se falhar ou ID não fornecido
+    if (!nfse && numero && numero !== '...') {
+      const cleanNum = numero.replace(/\D/g, '')
+      const patterns = [
+        cleanNum,
+        cleanNum.padStart(4, '0'),
+        cleanNum.padStart(6, '0'),
+        cleanNum.padStart(8, '0'),
+        cleanNum.padStart(11, '0'),
+        numero
+      ]
+      const uniquePatterns = [...new Set(patterns)]
+      
+      let q = sbAdmin
+        .from('nfse_entradas')
+        .select('*, prestador:fornecedores(*)')
+        .in('numero_nfse', uniquePatterns)
+      
+      if (tenantId) q = q.eq('tenant_id', tenantId)
+      
+      const { data } = await q.order('data_emissao', { ascending: false }).limit(1).maybeSingle()
+      nfse = data
+    }
+
+    if (!nfse) throw new Error(`Nota ${numero || id} não localizada no banco de dados fiscal.`)
+    return { success: true, data: nfse }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Lança uma NFS-e manualmente quando o XML não está disponível
+ */
+export async function lancarNFSeManualAction(payload: any) {
+  const sb = await createServerSupabase()
+  const sbAdmin = createAdminSupabase()
+  
+  try {
+    const { data: { user } } = await sb.auth.getUser()
+    const tenantId = user?.app_metadata?.tenant_id || user?.user_metadata?.tenant_id || '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
+
+    // 1. Garantir Prestador com Endereço
+    const prestador = await garantirFornecedorAction({
+      cnpj: payload.cnpj_prestador,
+      razaoSocial: payload.razao_social_prestador,
+      tenantId,
+      endereco: {
+        cep: payload.cep,
+        logradouro: payload.logradouro,
+        numero: payload.numero_end,
+        complemento: payload.complemento,
+        bairro: payload.bairro,
+        cidade: payload.cidade,
+        uf: payload.uf
+      }
+    })
+    if (prestador.error) throw new Error(prestador.error)
+
+    // 2. Salvar Nota
+    const data: any = {
+      tenant_id: tenantId,
+      prestador_id: prestador.id,
+      numero_nfse: payload.numero_nfse,
+      data_emissao: payload.data_emissao,
+      data_competencia: payload.data_competencia || payload.data_emissao,
+      valor_bruto: payload.valor_bruto,
+      valor_liquido: payload.valor_liquido,
+      valor_irrf: payload.valor_irrf || 0,
+      valor_pis: payload.valor_pis || 0,
+      valor_cofins: payload.valor_cofins || 0,
+      valor_csll: payload.valor_csll || 0,
+      valor_iss: payload.valor_iss || 0,
+      iss_retido: payload.iss_retido || false,
+      descricao_servico: payload.descricao_servico,
+      codigo_servico_lc116: payload.codigo_servico_lc116,
+      situacao: 'autorizada',
+      status_escrituracao: 'pendente'
+    }
+
+    const { data: nova, error } = await sbAdmin.from('nfse_entradas').insert(data).select('id').single()
+    if (error) throw new Error(error.message)
+
+    return { success: true, id: nova.id }
   } catch (err: any) {
     return { success: false, error: err.message }
   }

@@ -46,6 +46,7 @@ export function useLancamentosContabeis() {
     let q = sb.from('lancamentos_contabeis')
       .select('*, lancamentos_partidas(valor, tipo_partida, conta:conta_id(codigo, descricao))')
       .eq('tenant_id', tenantId)
+      .gte('data_competencia', '2026-01-01') // Filtro rigoroso: apenas dados do novo plano (2026+)
       .order('numero_lancamento', { ascending: false })
       .limit(1000)
 

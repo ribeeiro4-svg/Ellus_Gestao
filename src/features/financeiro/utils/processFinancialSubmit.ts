@@ -2,6 +2,7 @@ export async function processFinancialSubmit(
   data: any,
   editingItem: any,
   associados: any[],
+  contas: any[],
   actions: {
     inserir: (d: any) => Promise<any>,
     atualizar: (id: string, d: any) => Promise<any>,
@@ -37,18 +38,30 @@ export async function processFinancialSubmit(
     }
   }
 
+  // Automação de Conta Bancária baseada na Forma de Pagamento
+  let autoContaId = data.conta_id
+  const forma = data.forma_pagamento
+  
+  if (['PIX', 'Transferência', 'Boleto'].includes(forma)) {
+    const cora = contas.find(c => c.nome.toUpperCase().includes('CORA PJ'))
+    if (cora) autoContaId = cora.id
+  } else if (forma === 'Dinheiro') {
+    const caixa = contas.find(c => c.nome.toUpperCase().includes('CAIXA ESPECIE'))
+    if (caixa) autoContaId = caixa.id
+  }
+
   const safeData = {
     ...data,
     valor: parseValue(data.valor),
     associado_id: cleanId(data.associado_id),
     fornecedor_id: cleanId(data.fornecedor_id),
     diretor_id: cleanId(data.diretor_id),
-    conta_id: cleanId(data.conta_id),
+    conta_id: cleanId(autoContaId),
     competencia_mes: data.competencia_mes !== undefined && data.competencia_mes !== '' ? Number(data.competencia_mes) : undefined,
     competencia_ano: data.competencia_ano !== undefined && data.competencia_ano !== '' ? Number(data.competencia_ano) : undefined,
   }
 
-  const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, ...dbData } = safeData
+  const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, nfse_vinculo, lancamentos_contabeis, ...dbData } = safeData
   
   const getComp = (dtStr: string) => {
     const p = dtStr.includes('-') ? dtStr.split('-').map(Number) : dtStr.split('/').reverse().map(Number)

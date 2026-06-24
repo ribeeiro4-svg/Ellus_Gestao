@@ -17,12 +17,21 @@ export async function GET() {
         descricao VARCHAR NOT NULL,
         codigo_interno VARCHAR,
         data_aquisicao DATE,
+        data_entrada DATE,
         valor_aquisicao NUMERIC(15,2),
         vida_util_meses INTEGER,
         status VARCHAR DEFAULT 'pendente_analise',
         observacoes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+
+      -- Garantir coluna data_entrada se a tabela já existir
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'bens_duraveis' AND column_name = 'data_entrada') THEN
+          ALTER TABLE bens_duraveis ADD COLUMN data_entrada DATE;
+        END IF;
+      END $$;
 
       CREATE TABLE IF NOT EXISTS bens_duraveis_manutencoes (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -34,6 +43,19 @@ export async function GET() {
         custo NUMERIC(15,2) DEFAULT 0,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
+      
+      -- Garantir colunas de vínculo em manutenções
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'bens_duraveis_manutencoes' AND column_name = 'prestador_id') THEN
+          ALTER TABLE bens_duraveis_manutencoes ADD COLUMN prestador_id UUID REFERENCES fornecedores(id);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'bens_duraveis_manutencoes' AND column_name = 'nfe_id') THEN
+          -- Usamos text ou uuid dependendo de como o sistema armazena, 
+          -- mas como as tabelas de notas usam UUID, mantemos UUID.
+          ALTER TABLE bens_duraveis_manutencoes ADD COLUMN nfe_id UUID;
+        END IF;
+      END $$;
 
       -- Correção de limites de caracteres que causam erro na escrituração
       ALTER TABLE nfe_entradas_itens ALTER COLUMN cst_icms TYPE VARCHAR(10);
