@@ -27,7 +27,8 @@ import {
   BookOpen,
   ChevronLeft,
   Menu,
-  ClipboardList
+  ClipboardList,
+  BookMarked
 } from 'lucide-react'
 
 const MENU = [
@@ -58,6 +59,7 @@ const MENU = [
       { href: '/estrategia', icon: Target, label: 'Metas e Projetos' },
       { href: '/gestao-tarefas', icon: ClipboardList, label: 'Gestão de Tarefas' },
       { href: '/bens-duraveis', icon: Briefcase, label: 'Bens Duráveis' },
+      { href: '/pop', icon: BookMarked, label: 'Manual de Procedimentos' },
     ]
   },
   { 
@@ -126,7 +128,7 @@ export default function Sidebar() {
       '/importar': 'importar',
     }
 
-    if (href === '/configuracoes') return true // Sempre visível para a aba Minha Conta
+    if (href === '/configuracoes' || href === '/pop') return true // Sempre visível para a aba Minha Conta e Manuais
 
     const moduloName = routeToModuleMap[href]
     if (moduloName) {
