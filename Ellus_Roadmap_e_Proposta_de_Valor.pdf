@@ -1,0 +1,586 @@
+%PDF-1.3
+%ºß¬à
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 6285
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F2 22 Tf
+25.2999999999999972 TL
+0.043 0.133 0.094 rg
+56.6929133858267775 785.1970866141732586 Td
+(Éllus Gestão Estratégica) Tj
+ET
+BT
+/F2 14 Tf
+16.0999999999999979 TL
+0.176 0.549 0.435 rg
+56.6929133858267775 762.5199212598424765 Td
+(Proposta de Valor, Robustez Técnica & Roadmap) Tj
+ET
+0.18 0.55 0.44 RG
+1.4173228346456694 w
+56.6929133858267775 751.1813385826770855 m
+538.5826771653544256 751.1813385826770855 l
+S
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.043 0.133 0.094 rg
+56.6929133858267775 722.8348818897637784 Td
+(1. O PROBLEMA QUE O ÉLLUS RESOLVE \(DORES DO MERCADO\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 705.8270078740157487 Td
+(Empresas de médio e grande porte, cooperativas e clínicas enfrentam dificuldades diárias que drenam) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 690.2364566929134071 Td
+(margem de lucro e aumentam o risco operacional:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 659.0553543307086102 Td
+(- Fragmentação de Ferramentas: Uso de planilhas isoladas, gerenciadores de tarefas externos \(Trello/Asana\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 643.4648031496062686 Td
+(e softwares financeiros/contábeis que não se integram.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 627.8742519685039269 Td
+(- Falta de Visão Estratégica Real-Time: Diretores tomam decisões baseadas em dados retroativos de 30 dias) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 612.2837007874015853 Td
+(obtidos da contabilidade tradicional.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 596.69314960629913 Td
+(- Vulnerabilidade de Compliance: Ausência de histórico de auditoria confiável sobre quem alterou) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 581.1025984251967884 Td
+(lançamentos financeiros e rotinas de escrituração contábil.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 565.5120472440944468 Td
+(- Inadimplência Oculta: Falta de alertas preditivos e réguas de faturamento integradas diretamente à conta) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 549.9214960629921052 Td
+(bancária corporativa.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.043 0.133 0.094 rg
+56.6929133858267775 517.3230708661417339 Td
+(2. A PROPOSTA DE VALOR DO SOFTWARE) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 500.3151968503936473 Td
+(O Éllus Gestão Estratégica atua como um ERP Estratégico \(Single Source of Truth\), conectando todos os) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 484.7246456692913057 Td
+(setores da empresa.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 453.5435433070865656 Td
+(- Visão 360 Graus: O gestor acompanha a produtividade da equipe, o andamento de projetos/OKRs, e a) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 437.952992125984224 Td
+(saúde do fluxo de caixa na mesma plataforma.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 422.3624409448818255 Td
+(- Controladoria Automatizada: Lançamentos financeiros alimentam diretamente a escrituração fiscal e as) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 406.7718897637794839 Td
+(demonstrações contábeis \(DRE e Balancetes\). Menos digitação, zero erro humano.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 391.1813385826770855 Td
+(- Multi-tenant Nativo: Arquitetura SaaS pronta para hospedar múltiplos clientes com isolamento lógico rígido) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 375.5907874015747439 Td
+(de dados em bancos de dados relacionais de alta performance.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.043 0.133 0.094 rg
+56.6929133858267775 342.9923622047243725 Td
+(3. ROBUSTEZ TÉCNICA & ARQUITETURA) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 325.9844881889763428 Td
+(- Front-end Moderno: Construído com React, Next.js \(App Router\) e Tailwind CSS para proporcionar máxima) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 310.3939370078740012 Td
+(velocidade, modularização e uma experiência de usuário \(UX\) premium.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 294.8033858267715459 Td
+(- Banco de Dados & Back-end: Apoiado no Supabase \(PostgreSQL\), garantindo transações ACID confiáveis,) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 279.2128346456692043 Td
+(buscas velozes e escalabilidade sob demanda.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 263.6222834645668627 Td
+(- Controle de Acesso \(RBAC\): Sistema robusto de perfis e permissões, permitindo limitar o acesso a) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 248.0317322834645211 Td
+(visualização, edição ou exclusão de cada módulo.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 232.4411811023621794 Td
+(- Logs e Auditoria: Auditoria nativa para rastrear todas as alterações de lançamentos críticos, fechamento de) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 216.8506299212597241 Td
+(competências e conciliação bancária.) Tj
+ET
+BT
+/F2 12 Tf
+13.7999999999999989 TL
+0.043 0.133 0.094 rg
+56.6929133858267775 184.2522047244093528 Td
+(4. ROADMAP DE EVOLUÇÃO COMERCIAL \(12 MESES\)) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 167.2443307086613231 Td
+(Trimestre 1 \(Meses 1-3\) - Automação de Faturamento & Onboarding:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 151.6537795275589815 Td
+(Integração do faturamento SaaS automático via Stripe/Cora para planos de assinatura. Desenvolvimento do) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 136.0632283464566399 Td
+(fluxo de auto-cadastro \(onboarding\) para novos clientes em menos de 5 minutos.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 104.882125984251843 Td
+(Trimestre 2 \(Meses 4-6\) - API Pública & Integrações:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 89.2915748031495013 Td
+(Disponibilização de APIs seguras para conexões externas e central de notificações via WhatsApp para) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 73.7010236220471597 Td
+(cobranças e agendamentos.) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.588 g
+481.8897637795275841 28.3466929133857093 Td
+(Página 1 de 2) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.588 g
+56.6929133858267775 28.3466929133857093 Td
+(Áurea Inteligência Empresarial) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 1023
+>>
+stream
+1.4173228346456694 w
+0.18 0.55 0.44 RG
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 769.6065354330708033 Td
+(Trimestre 3 \(Meses 7-9\) - Inteligência Artificial \(IA\) & Auditoria:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 754.0159842519684616 Td
+(Mecanismo preditivo de fluxo de caixa baseado em IA e painel visual de logs de auditoria de dados.) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 722.8348818897637784 Td
+(Trimestre 4 \(Meses 10-12\) - App Mobile & Marketplace:) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 707.2443307086614368 Td
+(Lançamento do aplicativo móvel focado em aprovações rápidas, relatórios executivos e marketplace de) Tj
+ET
+BT
+/F1 10 Tf
+11.5 TL
+0.235 g
+56.6929133858267775 691.6537795275589815 Td
+(serviços integrados.) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.588 g
+481.8897637795275841 28.3466929133857093 Td
+(Página 2 de 2) Tj
+ET
+BT
+/F3 8 Tf
+9.1999999999999993 TL
+0.588 g
+56.6929133858267775 28.3466929133857093 Td
+(Áurea Inteligência Empresarial) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R ]
+/Count 2
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 7 0 R
+/F2 8 0 R
+/F3 9 0 R
+/F4 10 0 R
+/F5 11 0 R
+/F6 12 0 R
+/F7 13 0 R
+/F8 14 0 R
+/F9 15 0 R
+/F10 16 0 R
+/F11 17 0 R
+/F12 18 0 R
+/F13 19 0 R
+/F14 20 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+21 0 obj
+<<
+/Producer (jsPDF 2.5.2)
+/CreationDate (D:20260625113310-03'00')
+>>
+endobj
+22 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 23
+0000000000 65535 f 
+0000007701 00000 n 
+0000009526 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000006489 00000 n 
+0000006626 00000 n 
+0000007764 00000 n 
+0000007889 00000 n 
+0000008019 00000 n 
+0000008152 00000 n 
+0000008290 00000 n 
+0000008414 00000 n 
+0000008543 00000 n 
+0000008675 00000 n 
+0000008811 00000 n 
+0000008939 00000 n 
+0000009066 00000 n 
+0000009195 00000 n 
+0000009328 00000 n 
+0000009430 00000 n 
+0000009776 00000 n 
+0000009862 00000 n 
+trailer
+<<
+/Size 23
+/Root 22 0 R
+/Info 21 0 R
+/ID [ <743581E712C76D5E0160A14F4F9DFA0F> <743581E712C76D5E0160A14F4F9DFA0F> ]
+>>
+startxref
+9966
+%%EOF
