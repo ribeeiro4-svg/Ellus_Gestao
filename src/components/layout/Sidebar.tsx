@@ -26,6 +26,8 @@ import {
   FileText,
   BookOpen,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   Menu,
   ClipboardList,
   BookMarked
@@ -33,46 +35,41 @@ import {
 
 const MENU = [
   { 
-    section: 'Principal', 
+    section: 'Início', 
     items: [
-      { href: '/resumo', icon: BarChart3, label: 'Dashboard' },
+      { href: '/resumo', icon: BarChart3, label: 'Visão Geral' },
+    ]
+  },
+  { 
+    section: 'Gente & Atendimentos', 
+    items: [
+      { href: '/associados', icon: Users, label: 'Cadastro de Vidas' },
+      { href: '/atendimentos', icon: Calendar, label: 'Agenda & Atendimentos' },
+      { href: '/recrutamento', icon: BarChart3, label: 'Recrutamento & Seleção' },
     ]
   },
   { 
     section: 'Financeiro', 
     items: [
-      { href: '/financeiro', icon: Wallet, label: 'Financeiro' },
-      { href: '/planejamento', icon: Target, label: 'Planejamento' },
+      { href: '/financeiro', icon: Wallet, label: 'Gestão Financeira' },
+      { href: '/planejamento', icon: Target, label: 'Planejamento Orçamentário' },
       { href: '/fechamento', icon: Lock, label: 'Fechamento Mensal' },
     ]
   },
   { 
-    section: 'Vidas', 
+    section: 'Gestão Estratégica', 
     items: [
-      { href: '/associados', icon: Users, label: 'Gestão de Vidas' },
-      { href: '/atendimentos', icon: Calendar, label: 'Atendimentos e Agendamentos' },
+      { href: '/estrategia', icon: Target, label: 'Metas & Projetos' },
+      { href: '/gestao-tarefas', icon: ClipboardList, label: 'Painel de Tarefas' },
+      { href: '/bens-duraveis', icon: Briefcase, label: 'Gestão de Ativos' },
+      { href: '/pop', icon: BookMarked, label: 'Manuais de Processos' },
     ]
   },
   { 
-    section: 'Gerencial', 
+    section: 'Controladoria', 
     items: [
-      { href: '/estrategia', icon: Target, label: 'Metas e Projetos' },
-      { href: '/gestao-tarefas', icon: ClipboardList, label: 'Gestão de Tarefas' },
-      { href: '/bens-duraveis', icon: Briefcase, label: 'Bens Duráveis' },
-      { href: '/pop', icon: BookMarked, label: 'Manual de Procedimentos' },
-    ]
-  },
-  { 
-    section: 'Recrutamento', 
-    items: [
-      { href: '/recrutamento', icon: BarChart3, label: 'Recrutamento' },
-    ]
-  },
-  { 
-    section: 'Fiscal & Contábil', 
-    items: [
-      { href: '/fiscal', icon: FileText, label: 'Escrituração Fiscal' },
-      { href: '/contabil', icon: BookOpen, label: 'Contabilidade' },
+      { href: '/fiscal', icon: FileText, label: 'Rotinas Fiscais' },
+      { href: '/contabil', icon: BookOpen, label: 'Contabilidade Geral' },
     ]
   },
 ]
@@ -88,6 +85,32 @@ export default function Sidebar() {
   const [permissoes, setPermissoes] = useState<Record<string, any>>({})
   const [isAdmin, setIsAdmin] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    const initialState: Record<string, boolean> = {}
+    MENU.forEach(m => {
+      initialState[m.section] = true
+    })
+    return initialState
+  })
+
+  const toggleSection = (section: string) => {
+    if (isCollapsed) return
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+
+  const allExpanded = MENU.every(m => !collapsedSections[m.section])
+
+  const toggleAllSections = () => {
+    const newState: Record<string, boolean> = {}
+    const targetState = allExpanded ? true : false
+    MENU.forEach(m => {
+      newState[m.section] = targetState
+    })
+    setCollapsedSections(newState)
+  }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -198,15 +221,32 @@ export default function Sidebar() {
       </button>
 
       <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'} ${isMobileOpen ? 'mobile-open' : ''}`}>
-        <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-6 items-center text-center'}`}>
-          <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center gap-4 mb-4'}`}>
-            <div className={`${isCollapsed ? 'w-10 h-10' : 'w-28 h-28'} rounded-[24px] bg-[#0A2618] border border-emerald-900/30 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-xl transition-all duration-500`}>
-              <img src="/ellos_logo_dark.svg" alt="Éllos" className={`w-full h-full object-contain ${isCollapsed ? 'scale-125' : 'scale-[1.8]'}`} />
+        <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'py-4 px-6 items-center text-center'}`}>
+          <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center mb-2'}`}>
+            <div 
+              onClick={() => router.push('/resumo')}
+              className={`${isCollapsed ? 'w-10 h-10' : 'w-20 h-20'} cursor-pointer hover:scale-105 rounded-full flex items-center justify-center overflow-hidden shrink-0 shadow-xl transition-all duration-500 border
+              ${customLogo.includes('ellos') ? 'bg-[#0A2618] border-emerald-900/30 p-2' : 'bg-white border-white/10'}`}>
+              <img 
+                src={customLogo} 
+                alt={customName} 
+                className={`w-full h-full ${customLogo.includes('ellos') ? 'object-contain scale-[1.5]' : 'object-contain p-1'}`} 
+              />
             </div>
           </div>
         </div>
 
-      <nav className="flex-1 py-4 overflow-y-auto scrollbar-none">
+      <nav className="flex-1 py-2 overflow-y-auto scrollbar-none">
+        {!isCollapsed && (
+          <div className="px-5 mb-4 mt-2 flex justify-center animate-in fade-in duration-300">
+            <button
+              onClick={toggleAllSections}
+              className="text-[9px] text-emerald-400/50 hover:text-emerald-400 transition-colors uppercase tracking-widest font-bold cursor-pointer"
+            >
+              {allExpanded ? 'Recolher Todos' : 'Expandir Todos'}
+            </button>
+          </div>
+        )}
         {MENU.map(({ section, items }) => {
           const visivelItems = items.filter(i => canSee(i.href))
           if (visivelItems.length === 0) return null
@@ -214,12 +254,17 @@ export default function Sidebar() {
           return (
             <div key={section} className={`sidebar-section py-2 transition-all ${isCollapsed ? 'px-0' : ''}`}>
               {!isCollapsed && (
-                <div className="sidebar-label text-[9.5px] font-bold text-white/20 tracking-[1.4px] uppercase px-5 pb-2 animate-in fade-in duration-300">
-                  {section}
+                <div 
+                  onClick={() => toggleSection(section)}
+                  className="sidebar-label text-[13px] font-bold text-white/50 tracking-[1.4px] uppercase px-5 pb-2 animate-in fade-in duration-300 flex items-center justify-between cursor-pointer hover:text-white transition-colors"
+                >
+                  <span>{section}</span>
+                  {collapsedSections[section] ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                 </div>
               )}
-              <div className="space-y-0.5">
-                {visivelItems.map(({ href, icon: Icon, label }) => {
+              {(!collapsedSections[section] || isCollapsed) && (
+                <div className="space-y-0.5 animate-in slide-in-from-top-2 fade-in duration-200">
+                  {visivelItems.map(({ href, icon: Icon, label }) => {
                 const active = isActive(href)
                 const IconComponent = Icon as any
                 return (
@@ -242,18 +287,19 @@ export default function Sidebar() {
                     {active && isCollapsed && <div className="absolute inset-[4px_8px] rounded-lg -z-10 bg-white/10" />}
                   </div>
                 )})}
+                </div>
+              )}
             </div>
-          </div>
-        )})}
-      </nav>
+          )})}
+        </nav>
 
-      <div className={`sidebar-footer mt-auto border-t border-white/5 relative z-10 flex flex-col gap-4 transition-all ${isCollapsed ? 'p-4 items-center' : 'p-8'}`}>
+      <div className={`sidebar-footer mt-auto border-t border-white/5 relative z-10 flex flex-col gap-3 transition-all ${isCollapsed ? 'p-4 items-center' : 'py-4 px-6'}`}>
         <div className={`flex items-center gap-3 transition-all ${isCollapsed ? 'flex-col gap-4' : ''}`}>
-          <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-white/40 overflow-hidden shrink-0 shadow-lg">
+          <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 overflow-hidden shrink-0 shadow-lg">
              {tenant?.logo_url && tenant.logo_url.startsWith('http') ? (
                <img src={tenant.logo_url} alt="Logo" className="w-full h-full object-cover" />
              ) : (
-               <Users size={24} />
+               <Users size={18} />
              )}
           </div>
           {!isCollapsed && (
@@ -272,14 +318,14 @@ export default function Sidebar() {
           </div>
         </div>
         {!isCollapsed && (
-          <div className="w-full flex flex-col items-center mt-2 animate-in fade-in duration-500">
-            <div className="text-[10px] text-white/50 tracking-[2px] font-bold uppercase mb-4">Versão 2.0</div>
-            <div className="w-full h-[1px] bg-white/5 mb-3"></div>
+          <div className="w-full flex flex-col items-center mt-1 animate-in fade-in duration-500">
+            <div className="text-[10px] text-white/50 tracking-[2px] font-bold uppercase mb-2">Versão 2.0</div>
+            <div className="w-full h-[1px] bg-white/5 mb-2"></div>
             <p className="text-[8px] text-white/30 tracking-[1px] font-bold uppercase text-center leading-[1.4]">
               Desenvolvido por<br/>
               <span className="text-white/50">Áurea Inteligência Empresarial</span>
             </p>
-            <div className="w-full h-[1px] bg-white/5 mt-3"></div>
+            <div className="w-full h-[1px] bg-white/5 mt-2"></div>
           </div>
         )}
       </div>

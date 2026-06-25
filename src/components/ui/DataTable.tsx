@@ -1,5 +1,5 @@
 import { ReactNode, useMemo, useState } from 'react'
-import { Check, ArrowUpDown, ChevronUp, ChevronDown, Search as SearchIcon, Download } from 'lucide-react'
+import { Check, ArrowUpDown, ChevronUp, ChevronDown, Search as SearchIcon, Download, Type } from 'lucide-react'
 
 interface DataTableProps<T> {
   columns: {
@@ -44,6 +44,7 @@ export default function DataTable<T>({
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({})
   const [showFilterInputs, setShowFilterInputs] = useState(initialShowFilters)
+  const [compactFont, setCompactFont] = useState(false)
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
@@ -164,6 +165,14 @@ export default function DataTable<T>({
           </button>
         )}
         <button 
+          onClick={() => setCompactFont(!compactFont)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${compactFont ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+          title="Alternar tamanho da fonte e espaçamentos"
+        >
+          <Type size={12} />
+          {compactFont ? 'Fonte Normal' : 'Reduzir Fonte'}
+        </button>
+        <button 
           onClick={() => setShowFilterInputs(!showFilterInputs)}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showFilterInputs ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
         >
@@ -191,7 +200,7 @@ export default function DataTable<T>({
                 return (
                   <th 
                     key={i} 
-                    className={`whitespace-nowrap px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest group ${col.className || ''}`}
+                    className={`whitespace-nowrap ${compactFont ? 'px-3 py-1.5' : 'px-6 py-4'} text-[11px] font-bold text-slate-400 uppercase tracking-widest group ${col.className || ''}`}
                   >
                     <div 
                       className="flex items-center gap-2 cursor-pointer hover:text-slate-600"
@@ -248,7 +257,7 @@ export default function DataTable<T>({
                     className={`transition-colors group ${isSelected ? 'bg-blue-50/30' : ''} ${onRowClick ? 'cursor-pointer hover:bg-slate-50' : 'hover:bg-slate-50/50'} ${getRowClassName ? getRowClassName(item) : ''}`}
                   >
                     {onSelectChange && (
-                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <td className={`${compactFont ? 'px-4 py-2' : 'px-6 py-4'}`} onClick={(e) => e.stopPropagation()}>
                         <div 
                           onClick={(e) => handleSelectOne(e, id)}
                           className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-all ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-300 group-hover:border-slate-400'}`}
@@ -260,7 +269,7 @@ export default function DataTable<T>({
                     {columns.map((col, colIndex) => (
                       <td 
                         key={colIndex} 
-                        className={`px-6 py-4 ${col.className || ''}`} 
+                        className={`${compactFont ? 'px-3 py-1.5 text-[10px] [&_*]:!text-[10px] [&_*]:!leading-tight' : 'px-6 py-4'} ${col.className || ''}`} 
                         onClick={(e) => {
                           if (col.key === 'acoes' || col.stopClickPropagation) {
                             e.stopPropagation()
