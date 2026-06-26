@@ -207,11 +207,11 @@ export default function DashboardPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-3 h-12 px-8 bg-emerald-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-900/40">
-              <FileText size={16} /> Exportar
+            <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-2 h-10 px-4 bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-900/40">
+              <FileText size={14} /> Exportar
             </button>
-            <button className="h-12 w-12 flex items-center justify-center bg-white/5 rounded-2xl border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all shadow-sm backdrop-blur-md">
-              <Filter size={18} />
+            <button className="h-10 w-10 flex items-center justify-center bg-white/5 rounded-xl border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all shadow-sm backdrop-blur-md">
+              <Filter size={14} />
             </button>
           </div>
         </div>
