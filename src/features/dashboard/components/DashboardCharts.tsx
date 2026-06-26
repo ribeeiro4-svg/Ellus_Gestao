@@ -234,7 +234,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
   const Card = ({ icon, title, subtitle, onClick, children }: any) => (
     <div
       onClick={onClick}
-      className="chart-card group relative !p-5 cursor-pointer !bg-gradient-to-br !from-[#040d0a]/95 !to-[#071a12]/95 !backdrop-blur-2xl !border-white/5 hover:!border-emerald-500/40 shadow-2xl transition-all flex flex-col h-full min-h-0 overflow-hidden"
+      className="chart-card group relative !p-5 cursor-pointer !bg-gradient-to-br !from-[#040d0a]/95 !to-[#071a12]/95 !backdrop-blur-2xl !border-white/5 hover:!border-emerald-500/40 shadow-2xl transition-all flex flex-col h-full min-h-[320px] overflow-hidden"
     >
       <div className="absolute top-5 right-5 text-white/20 group-hover:text-emerald-400 transition-colors z-20"><Maximize2 size={16} /></div>
       <div className="chart-header !mb-3 relative z-10 shrink-0">
@@ -251,11 +251,11 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
   )
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col gap-4">
+    <div className="w-full flex flex-col gap-4">
       {/* Linha 1 */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Fluxo Mensal — INALTERADO */}
-        <div className="lg:col-span-2 min-h-0 flex flex-col">
+        <div className="lg:col-span-2 flex flex-col">
           <Card icon={receitaConfig.icon} title={receitaConfig.title} subtitle={receitaConfig.subtitle} onClick={() => setExpandedChart(receitaConfig)}>
             <div className="w-full h-full min-h-0 flex flex-col">
               <div className="flex-1 min-h-0 relative">
@@ -265,7 +265,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
           </Card>
         </div>
         {/* Mix da Carteira — Gauge Semicircular */}
-        <div className="min-h-0 flex flex-col">
+        <div className="flex flex-col">
           <Card icon={<UsersIcon size={16} />} title="Mix da Carteira" subtitle="Associados por Status" onClick={() => {}}>
             <GaugeMixCarteira ativos={ativos} inadimplentes={inadimplentes} inativos={inativos} />
           </Card>
@@ -273,15 +273,15 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
       </div>
 
       {/* Linha 2 */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Pendências ZapSign — Radial SVG */}
-        <div className="min-h-0 flex flex-col">
+        <div className="flex flex-col">
           <Card icon={<ZapIcon size={16} />} title="Pendências ZapSign" subtitle="Contratos aguardando assinatura" onClick={() => {}}>
             <RadialZapSign pendentes={zapsignPendentes} regularizados={regularizados} />
           </Card>
         </div>
         {/* Atingimento de Metas — Barras + Linha */}
-        <div className="min-h-0 flex flex-col">
+        <div className="flex flex-col">
           <Card icon={<Target size={16} />} title="Atingimento de Metas" subtitle="Planejado vs Realizado (Mês Atual)" onClick={() => setExpandedChart({ title: 'Atingimento de Metas', subtitle: 'Planejado vs Realizado', icon: <Target size={16} />, chartType: 'bar', chartData: { labels: ['Ingresso','Dispêndio'], datasets: [{ label:'Realizado', data:[realizadoRec,realizadoDesp], backgroundColor:['rgba(29,158,117,0.7)','rgba(226,75,74,0.65)'] }] }, tableData: { headers:['Tipo','Realizado','Meta'], rows:[['Ingresso',fmtR(realizadoRec),fmtR(planejadoRec)],['Dispêndio',fmtR(realizadoDesp),fmtR(planejadoDesp)]] } })}>
             <MetasChart
               realizadoRec={realizadoRec} realizadoDesp={realizadoDesp}

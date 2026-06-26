@@ -223,8 +223,8 @@ export default function DashboardPage() {
         <DashboardKpis metrics={metrics} />
       </div>
 
-      {/* Charts Section — ocupa todo o espaço restante */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      {/* Charts Section */}
+      <div className="w-full flex flex-col">
         <DashboardCharts metrics={metrics} onChartClick={() => {}} />
       </div>
 
