@@ -4,11 +4,13 @@ import { Plus, Save, Loader2, Trash2, RotateCcw, Search, ChevronRight, History, 
 import { useConfiguracoesContabeis } from '@/features/contabil/hooks/useConfiguracoesContabeis'
 import VincularDocumentoModal from './VincularDocumentoModal'
 import { getLogsAction } from '@/features/fiscal/actions/logActions'
+import { useTenant } from '@/lib/hooks/useTenant'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtData = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
 
 export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
+  const { tenant } = useTenant()
   const { lancamentos, loading, inserir, estornar, excluir, buscarPartidas } = lancHook
   const { contasAnaliticas } = planoHook
   const [showForm, setShowForm] = useState(false)
@@ -61,7 +63,9 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 20px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header { display: flex; align-items: center; justify-content: center; gap: 15px; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header-logo { max-height: 45px; border-radius: 6px; object-fit: contain; }
+            .header-text { text-align: left; }
             .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
             .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; }
@@ -83,8 +87,11 @@ export default function LivroDiario({ lancHook, planoHook }: { lancHook: any; pl
         </head>
         <body>
           <div class="header">
-            <h1>ACPROBEC — LIVRO DIÁRIO</h1>
-            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${lancHook.periodo || 'GERAL'}</p>
+            ${tenant?.logo_url ? `<img src="${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />` : ''}
+            <div class="header-text">
+              <h1>ACPROBEC — LIVRO DIÁRIO</h1>
+              <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${lancHook.periodo || 'GERAL'}</p>
+            </div>
           </div>
           <table>
             <thead>

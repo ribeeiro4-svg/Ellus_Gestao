@@ -7,6 +7,7 @@ interface ReportOptions {
   treasurer: string;
   sections: string[];
   charts: Record<string, string>;
+  logoUrl?: string;
   data: {
     metrics: any;
     financeiro: any[];
@@ -15,7 +16,7 @@ interface ReportOptions {
   }
 }
 
-export function generateReportHtml({ title, period, treasurer, sections, charts, data }: ReportOptions) {
+export function generateReportHtml({ title, period, treasurer, sections, charts, logoUrl, data }: ReportOptions) {
   const sectionsHtml = sections.map(section => {
     switch (section) {
       case 'dashboard': return buildDashboardSection(data.metrics, charts);
@@ -40,10 +41,12 @@ export function generateReportHtml({ title, period, treasurer, sections, charts,
     <body>
       <div class="cover">
         <div class="cover-content">
-          <div class="cover-logo">
+          <div class="cover-logo" style="${logoUrl ? 'background: transparent; box-shadow: none; width: auto; height: 80px;' : ''}">
+            ${logoUrl ? `<img src="${logoUrl}" style="max-height: 80px; max-width: 250px; object-fit: contain; border-radius: 12px;" onerror="this.style.display='none'" />` : `
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
               <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
+            `}
           </div>
           <h1 class="cover-title">${title}</h1>
           <div class="cover-subtitle">${period}</div>
@@ -53,6 +56,16 @@ export function generateReportHtml({ title, period, treasurer, sections, charts,
       </div>
 
       <div class="container">
+        <div class="report-page-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--slate-100); padding-bottom: 15px; margin-bottom: 30px;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            ${logoUrl ? `<img src="${logoUrl}" style="max-height: 40px; border-radius: 6px; object-fit: contain;" onerror="this.style.display='none'" />` : ''}
+            <div>
+              <h2 style="margin: 0; font-size: 14px; font-weight: 900; color: var(--slate-900); text-transform: uppercase;">${title}</h2>
+              <p style="margin: 2px 0 0; font-size: 9px; color: var(--slate-400); font-weight: bold;">${period}</p>
+            </div>
+          </div>
+          <div style="font-size: 9px; color: var(--slate-400); font-weight: bold; text-transform: uppercase;">Responsável: ${treasurer}</div>
+        </div>
         ${sectionsHtml}
       </div>
     </body>

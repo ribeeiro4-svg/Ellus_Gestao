@@ -1,11 +1,13 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { Loader2, Download, Calendar } from 'lucide-react'
+import { useTenant } from '@/lib/hooks/useTenant'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 export default function Balancete({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
+  const { tenant } = useTenant()
   const { calcularBalancete } = lancHook
   const { contas } = planoHook
   const ano = new Date().getFullYear()
@@ -60,7 +62,9 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 20px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header { display: flex; align-items: center; justify-content: center; gap: 15px; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
+            .header-logo { max-height: 45px; border-radius: 6px; object-fit: contain; }
+            .header-text { text-align: left; }
             .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
             .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 9px; }
@@ -79,8 +83,11 @@ export default function Balancete({ lancHook, planoHook }: { lancHook: any; plan
         </head>
         <body>
           <div class="header">
-            <h1>ACPROBEC — BALANCETE DE VERIFICAÇÃO</h1>
-            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${currentPeriod}</p>
+            ${tenant?.logo_url ? `<img src="${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />` : ''}
+            <div class="header-text">
+              <h1>ACPROBEC — BALANCETE DE VERIFICAÇÃO</h1>
+              <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${currentPeriod}</p>
+            </div>
           </div>
           <table>
             <thead>
