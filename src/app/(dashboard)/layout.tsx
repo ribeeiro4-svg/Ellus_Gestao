@@ -14,7 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Sidebar />
           <div id="main-scroll-container" className="flex-1 flex flex-col min-w-0 h-screen relative overflow-hidden overflow-y-auto scroll-smooth">
             <Topbar />
-            <main className="main-content flex-1 flex flex-col min-h-0 p-4 lg:p-8">
+            <main className="main-content flex-1 flex flex-col min-h-0 p-4 lg:px-8 lg:pb-8 lg:pt-3">
               {children}
             </main>
           </div>
