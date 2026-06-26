@@ -6,8 +6,11 @@ import { POPS, PopItem } from './pops-data'
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 import RotinaGerenciavelTab from './components/RotinaGerenciavelTab'
 
+import { usePermissions } from '@/lib/hooks/usePermissions'
+
 export default function POPPage() {
   const { currentUser } = useCurrentUser()
+  const { isAdmin } = usePermissions('pop')
   const [busca, setBusca] = useState('')
   const [moduloSelecionado, setModuloSelecionado] = useState<string>('Todos')
   const [popAberto, setPopAberto] = useState<PopItem | null>(null)
@@ -26,11 +29,16 @@ export default function POPPage() {
   }
 
   const roleSeguro = currentUser?.role?.toLowerCase() || ''
+  
+  // Safe check for email with lowercasing, just in case
+  const isEmailSeguro = currentUser?.email?.toLowerCase() === 'ribeeiro4@gmail.com'
+
   const isElegibleForRotina = 
+    isAdmin ||
     roleSeguro === 'admin' || 
     roleSeguro === 'administrador' ||
     roleSeguro === 'tesoureiro' || 
-    currentUser?.email === 'ribeeiro4@gmail.com'
+    isEmailSeguro
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-20">
