@@ -151,6 +151,10 @@ export default function POPPage() {
           </div>
         )}
       </div>
+        </>
+      ) : (
+        isElegibleForRotina && <RotinaGerenciavelTab onOpenPop={setPopAberto} />
+      )}
 
       {/* Drawer / Modal do POP */}
       {popAberto && (
@@ -280,10 +284,6 @@ export default function POPPage() {
             </div>
           </div>
         </div>
-      )}
-        </>
-      ) : (
-        isElegibleForRotina && <RotinaGerenciavelTab onOpenPop={setPopAberto} />
       )}
 
     </div>
