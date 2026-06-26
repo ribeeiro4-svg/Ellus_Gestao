@@ -313,6 +313,7 @@ export default function Sidebar() {
               <LogOut size={16} />
             </button>
           </div>
+        </div>
       </div>
     </aside>
   </div>
