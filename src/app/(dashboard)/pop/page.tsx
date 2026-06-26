@@ -25,7 +25,12 @@ export default function POPPage() {
     window.print()
   }
 
-  const isElegibleForRotina = currentUser?.role === 'admin' || currentUser?.role === 'tesoureiro'
+  const roleSeguro = currentUser?.role?.toLowerCase() || ''
+  const isElegibleForRotina = 
+    roleSeguro === 'admin' || 
+    roleSeguro === 'administrador' ||
+    roleSeguro === 'tesoureiro' || 
+    currentUser?.email === 'ribeeiro4@gmail.com'
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-20">
