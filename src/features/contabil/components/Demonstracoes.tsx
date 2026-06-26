@@ -68,8 +68,8 @@ export default function Demonstracoes({ lancHook, planoHook, initialTab = 'dsd' 
           </div>
           ${conteudo.innerHTML}
           <div class="footer">
-            <img src="/ellos_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
-            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllos Gestão
+            <img src="/ellus_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllus Gestão
           </div>
         </body>
       </html>

@@ -1118,8 +1118,8 @@ Diretoria / Secretaria ACPROBEC`
           ${inativos.length > 0 ? renderTable(inativos, 'Associados Inativos', '#94a3b8') : ''}
 
           <div class="footer">
-            <img src="/ellos_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
-            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllos Gestão
+            <img src="/ellus_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllus Gestão
           </div>
         </body>
       </html>

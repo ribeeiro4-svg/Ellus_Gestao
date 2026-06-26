@@ -9,15 +9,15 @@ async function run() {
   const { data, error } = await supabase
     .from('tenants')
     .update({ 
-      nome: 'Éllos',
-      logo_url: '/ellos_logo_dark.svg'
+      nome: 'Éllus',
+      logo_url: '/ellus_logo_dark.svg'
     })
     .neq('nome', '')
 
   if (error) {
     console.error('Erro:', error)
   } else {
-    console.log('Sucesso! Tenant atualizado para Éllos.')
+    console.log('Sucesso! Tenant atualizado para Éllus.')
   }
 }
 
