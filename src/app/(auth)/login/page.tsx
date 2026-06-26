@@ -85,7 +85,7 @@ function LoginContent() {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="exemplo@ellos.com.br"
+                  placeholder="exemplo@ellus.com.br"
                   className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-4 focus:ring-blue-600/10 focus:border-blue-600 focus:bg-white transition-all placeholder:text-slate-400 text-slate-700 font-medium"
                 />
               </div>
