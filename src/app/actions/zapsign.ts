@@ -149,7 +149,7 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           categoria: 'ZapSign',
           mensalidade: 50,
           status: sysStatus,
-          data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
+          data_ingresso: (signer.signed_at ? signer.signed_at.split('T')[0] : undefined) as any,
           codigo: stableKey,
           zapsign_doc_token: doc.token,
           zapsign_signers: normalizedSigners,
