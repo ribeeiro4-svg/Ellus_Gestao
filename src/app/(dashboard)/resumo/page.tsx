@@ -103,7 +103,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="relative flex flex-col gap-4 animate-in fade-in duration-500 h-full overflow-hidden">
+    <div className="relative flex flex-col gap-4 animate-in fade-in duration-500">
       {/* Fundo Escuro Exclusivo Dashboard */}
       <div className="fixed inset-0 z-[-1] bg-[#0a1a14] pointer-events-none" />
       <div 
