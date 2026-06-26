@@ -234,7 +234,7 @@ export default function DashboardCharts({ metrics, onChartClick }: DashboardChar
   const Card = ({ icon, title, subtitle, onClick, children }: any) => (
     <div
       onClick={onClick}
-      className="chart-card group relative !p-5 cursor-pointer !bg-gradient-to-br !from-[#040d0a]/95 !to-[#071a12]/95 !backdrop-blur-2xl !border-white/5 hover:!border-emerald-500/40 shadow-2xl transition-all flex flex-col h-full min-h-[320px] overflow-hidden"
+      className="chart-card group relative !p-5 cursor-pointer !bg-gradient-to-br !from-[#040d0a]/95 !to-[#071a12]/95 !backdrop-blur-2xl !border-white/5 hover:!border-emerald-500/40 shadow-2xl transition-all flex flex-col h-full min-h-[290px] overflow-hidden"
     >
       <div className="absolute top-5 right-5 text-white/20 group-hover:text-emerald-400 transition-colors z-20"><Maximize2 size={16} /></div>
       <div className="chart-header !mb-3 relative z-10 shrink-0">

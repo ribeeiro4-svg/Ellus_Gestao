@@ -103,7 +103,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="relative flex flex-col gap-4 animate-in fade-in duration-500">
+    <div className="relative flex flex-col gap-3 animate-in fade-in duration-500">
       {/* Fundo Escuro Exclusivo Dashboard */}
       <div className="fixed inset-0 z-[-1] bg-[#0a1a14] pointer-events-none" />
       <div 
@@ -116,14 +116,14 @@ export default function DashboardPage() {
       <div className="fixed inset-0 z-[-1] pointer-events-none bg-gradient-to-b from-emerald-500/5 via-transparent to-[#0a1a14]" />
 
       {/* Dashboard Header - Estilo Hub Premium */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 backdrop-blur-2xl p-6 rounded-[32px] border border-white/5 shadow-2xl relative z-50">
-        <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20">
-            <Calendar size={28} />
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 backdrop-blur-2xl py-3.5 px-6 rounded-2xl border border-white/5 shadow-2xl relative z-50">
+        <div className="flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20">
+            <Calendar size={22} />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight leading-tight">Dashboard Interativo</h1>
-            <p className="text-sm text-white/60 font-bold uppercase tracking-widest opacity-70">Inteligência de Dados — ACPROBEC</p>
+            <h1 className="text-xl font-black text-white tracking-tight leading-tight">Dashboard Interativo</h1>
+            <p className="text-[11px] text-white/60 font-bold uppercase tracking-widest opacity-70">Inteligência de Dados — ACPROBEC</p>
           </div>
         </div>
 
