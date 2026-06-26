@@ -224,25 +224,12 @@ export default function Sidebar() {
       <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'} ${isMobileOpen ? 'mobile-open' : ''}`}>
         <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'py-4 px-6 items-center text-center'}`}>
           <div className={`logo-badge flex transition-all w-full ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center mb-2'}`}>
-            {customLogo.includes('ellus') ? (
-              <div 
-                onClick={() => router.push('/resumo')}
-                className={`cursor-pointer hover:opacity-85 transition-opacity w-full flex items-center justify-center ${isCollapsed ? 'h-10 px-1' : 'h-16 px-2'}`}
-              >
-                <LogoV2 variant="white" className="w-full h-full object-contain" />
-              </div>
-            ) : (
-              <div 
-                onClick={() => router.push('/resumo')}
-                className={`${isCollapsed ? 'w-10 h-10' : 'w-20 h-20'} cursor-pointer hover:scale-105 rounded-full flex items-center justify-center overflow-hidden shrink-0 shadow-xl transition-all duration-500 border bg-white border-white/10`}
-              >
-                <img 
-                  src={customLogo} 
-                  alt={customName} 
-                  className="w-full h-full object-contain p-1" 
-                />
-              </div>
-            )}
+            <div 
+              onClick={() => router.push('/resumo')}
+              className={`cursor-pointer hover:opacity-85 transition-opacity w-full flex items-center justify-center ${isCollapsed ? 'h-10 px-1' : 'h-16 px-2'}`}
+            >
+              <LogoV2 variant="white" className="w-full h-full object-contain" />
+            </div>
           </div>
         </div>
 
