@@ -1,13 +1,17 @@
 'use client'
 
 import React, { useState } from 'react'
-import { BookMarked, Search, Filter, FileText, Download, Printer, X, CheckCircle2, ChevronRight, AlertTriangle, Target } from 'lucide-react'
+import { BookMarked, Search, Filter, FileText, Download, Printer, X, CheckCircle2, ChevronRight, AlertTriangle, Target, Lock } from 'lucide-react'
 import { POPS, PopItem } from './pops-data'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
+import RotinaGerenciavelTab from './components/RotinaGerenciavelTab'
 
 export default function POPPage() {
+  const { currentUser } = useCurrentUser()
   const [busca, setBusca] = useState('')
   const [moduloSelecionado, setModuloSelecionado] = useState<string>('Todos')
   const [popAberto, setPopAberto] = useState<PopItem | null>(null)
+  const [activeTab, setActiveTab] = useState<'manuais' | 'rotina'>('manuais')
 
   const modulos = ['Todos', ...Array.from(new Set(POPS.map(p => p.modulo))).sort()]
 
@@ -20,6 +24,8 @@ export default function POPPage() {
   const handlePrint = () => {
     window.print()
   }
+
+  const isElegibleForRotina = currentUser?.role === 'admin' || currentUser?.role === 'tesoureiro'
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-700 pb-20">
@@ -48,31 +54,56 @@ export default function POPPage() {
         </div>
       </div>
 
-      {/* Barra de Filtros */}
-      <div className="flex flex-col md:flex-row gap-4 no-print">
-        <div className="flex-1 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <input 
-            type="text"
-            placeholder="Buscar procedimento por título ou código..."
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-            className="w-full pl-12 pr-4 py-3.5 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="relative min-w-[250px]">
-          <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <select
-            value={moduloSelecionado}
-            onChange={e => setModuloSelecionado(e.target.value)}
-            className="w-full pl-12 pr-10 py-3.5 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-700 appearance-none cursor-pointer"
+      {/* Tabs */}
+      <div className="flex items-center gap-4 border-b border-slate-200 no-print pb-2 px-2">
+        <button
+          onClick={() => setActiveTab('manuais')}
+          className={`pb-2 px-4 text-sm font-bold uppercase tracking-wider transition-all border-b-2 ${
+            activeTab === 'manuais' ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Manuais (POPs)
+        </button>
+        {isElegibleForRotina && (
+          <button
+            onClick={() => setActiveTab('rotina')}
+            className={`pb-2 px-4 text-sm font-bold uppercase tracking-wider transition-all border-b-2 flex items-center gap-2 ${
+              activeTab === 'rotina' ? 'border-amber-500 text-amber-700' : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
           >
-            {modulos.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </div>
+            <Lock size={14} className={activeTab === 'rotina' ? 'text-amber-500' : 'text-slate-300'}/>
+            Rotina Gerenciável
+          </button>
+        )}
       </div>
+
+      {activeTab === 'manuais' ? (
+        <>
+          {/* Barra de Filtros */}
+          <div className="flex flex-col md:flex-row gap-4 no-print">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text"
+                placeholder="Buscar procedimento por título ou código..."
+                value={busca}
+                onChange={e => setBusca(e.target.value)}
+                className="w-full pl-12 pr-4 py-3.5 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-700"
+              />
+            </div>
+            <div className="relative min-w-[250px]">
+              <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <select
+                value={moduloSelecionado}
+                onChange={e => setModuloSelecionado(e.target.value)}
+                className="w-full pl-12 pr-10 py-3.5 bg-white rounded-2xl border-none shadow-sm focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-slate-700 appearance-none cursor-pointer"
+              >
+                {modulos.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
       {/* Grid de POPs */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 no-print">
@@ -236,6 +267,10 @@ export default function POPPage() {
             </div>
           </div>
         </div>
+      )}
+        </>
+      ) : (
+        isElegibleForRotina && <RotinaGerenciavelTab />
       )}
 
     </div>
