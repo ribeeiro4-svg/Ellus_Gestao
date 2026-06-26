@@ -66,7 +66,7 @@ export default function Topbar() {
         <div className={`breadcrumb text-[12px] flex items-center gap-1.5 font-medium uppercase tracking-wider ${
           isDarkBg ? 'text-emerald-500/80' : 'text-[var(--text3)]'
         }`}>
-          Éllos 
+          Éllus 
           <span className="breadcrumb-sep opacity-40">/</span> 
           <span className={`${
             isDarkBg ? 'text-white' : 'text-[var(--text1)]'

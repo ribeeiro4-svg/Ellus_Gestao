@@ -229,7 +229,7 @@ export default function POPPage() {
                 )}
 
                 <div className="mt-16 pt-8 border-t border-slate-200 text-center text-[10px] text-slate-400 uppercase tracking-widest font-bold">
-                  Documento gerado pelo sistema Éllos Gestão Estratégica
+                  Documento gerado pelo sistema Éllus Gestão Estratégica
                 </div>
 
               </div>

@@ -15,7 +15,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard — Éllos · ÁUREA Tech",
+  title: "Dashboard — Éllus · ÁUREA Tech",
   description: "Sistema de gestão inteligente. Especialista em gestão de associações e benefícios. [Build v2.0]",
 };
 

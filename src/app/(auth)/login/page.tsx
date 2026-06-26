@@ -145,7 +145,7 @@ function LoginContent() {
         </div>
         
         <p className="text-center mt-8 text-slate-500 text-[11px]">
-          &copy; {new Date().getFullYear()} Éllos. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Éllus. Todos os direitos reservados.
         </p>
       </div>
     </div>
