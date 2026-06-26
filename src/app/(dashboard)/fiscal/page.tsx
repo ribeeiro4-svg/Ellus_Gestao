@@ -109,7 +109,7 @@ export default function FiscalPage() {
   const getActiveIcon = () => {
     const tab = tabs.find(t => t.id === activeTab)
     const Icon = (tab as any)?.icon || FileText
-    return <Icon size={28} />
+    return <Icon size={22} />
   }
 
 
@@ -135,11 +135,11 @@ export default function FiscalPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-3 animate-in fade-in duration-700">
       {/* Header Centralizado - Estilo Hub Premium */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/60 shadow-sm">
-        <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white/40 backdrop-blur-md py-3.5 px-6 rounded-2xl border border-white/60 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
             {getActiveIcon()}
           </div>
           <div>
@@ -151,7 +151,7 @@ export default function FiscalPage() {
               </button>
 
               <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Escrituração Fiscal</h1>
+                <h1 className="text-xl font-black text-slate-800 tracking-tight leading-tight">Escrituração Fiscal</h1>
                 {nfeHook.stats.pendentes > 0 && (
                   <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-50 border border-orange-100 rounded-full animate-pulse">
                     <AlertTriangle size={10} className="text-orange-500" />
@@ -160,7 +160,7 @@ export default function FiscalPage() {
                 )}
               </div>
             </div>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest opacity-70 mt-1">EFD-ICMS/IPI • Modelo 55 • SPED — ACPROBEC</p>
+            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest opacity-70 mt-1">EFD-ICMS/IPI • Modelo 55 • SPED — ACPROBEC</p>
           </div>
         </div>
 

@@ -226,7 +226,7 @@ export default function Sidebar() {
           <div className={`logo-badge flex transition-all w-full ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center mb-2'}`}>
             <div 
               onClick={() => router.push('/resumo')}
-              className={`cursor-pointer hover:opacity-85 transition-opacity w-full flex items-center justify-center ${isCollapsed ? 'h-10 px-1 scale-110' : 'h-20 px-0 scale-[1.35]'}`}
+              className={`cursor-pointer hover:opacity-85 transition-opacity w-full flex items-center justify-center ${isCollapsed ? 'h-10 px-1 scale-110' : 'h-20 px-0 scale-[1.6]'}`}
             >
               <LogoV2 variant="white" className="w-full h-full object-contain" />
             </div>

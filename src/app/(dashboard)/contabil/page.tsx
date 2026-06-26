@@ -67,7 +67,7 @@ export default function ContabilPage() {
   const getActiveIcon = () => {
     const tab = tabs.find(t => t.id === activeTab)
     const Icon = (tab as any)?.icon || BookOpen
-    return <Icon size={28} />
+    return <Icon size={22} />
   }
 
 
@@ -177,11 +177,11 @@ export default function ContabilPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
+    <div className="flex flex-col gap-3 animate-in fade-in duration-700">
       {/* Header Centralizado - Estilo Hub Premium */}
-      <div className="relative z-50 flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/60 shadow-sm">
-        <div className="flex items-center gap-5">
-          <div className="w-14 h-14 rounded-2xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
+      <div className="relative z-50 flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white/40 backdrop-blur-md py-3.5 px-6 rounded-2xl border border-white/60 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
             {getActiveIcon()}
           </div>
           <div>
@@ -375,8 +375,8 @@ export default function ContabilPage() {
                 </>
               )}
             </div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Contabilidade</h1>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-widest opacity-70">ITG 2002 (R1) — Livro Diário • ECD • SPED</p>
+            <h1 className="text-xl font-black text-slate-800 tracking-tight leading-tight">Contabilidade</h1>
+            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest opacity-70">ITG 2002 (R1) — Livro Diário • ECD • SPED</p>
           </div>
         </div>
 

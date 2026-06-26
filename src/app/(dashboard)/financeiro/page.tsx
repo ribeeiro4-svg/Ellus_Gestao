@@ -1331,11 +1331,11 @@ export default function FinanceiroPage() {
   ], [associados, usuarios, diretoria]);
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between bg-white p-4 rounded-[32px] border border-slate-100 shadow-sm gap-4">
+    <div className="flex flex-col gap-3 animate-in fade-in duration-700">
+      <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between bg-white py-3 px-5 rounded-2xl border border-slate-100 shadow-sm gap-4">
         <div className="flex items-center gap-4 pl-2">
-          <div className="w-14 h-14 rounded-[20px] bg-[#0b2218] flex items-center justify-center text-emerald-400 shadow-sm shrink-0">
-            <BarChart2 size={24} />
+          <div className="w-11 h-11 rounded-xl bg-[#0b2218] flex items-center justify-center text-emerald-400 shadow-sm shrink-0">
+            <BarChart2 size={20} />
           </div>
           <div className="flex flex-col">
             <div className="mb-0.5">
@@ -1384,8 +1384,8 @@ export default function FinanceiroPage() {
                 }}
               />
             </div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none mb-0.5">Fluxo de Caixa</h1>
-            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Gestão Financeira Unificada — ACPROBEC</p>
+            <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none mb-0.5">Fluxo de Caixa</h1>
+            <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Gestão Financeira Unificada — ACPROBEC</p>
           </div>
         </div>
 
