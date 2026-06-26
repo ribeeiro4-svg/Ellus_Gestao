@@ -313,18 +313,6 @@ export default function Sidebar() {
               <LogOut size={16} />
             </button>
           </div>
-        </div>
-        {!isCollapsed && (
-          <div className="w-full flex flex-col items-center mt-1 animate-in fade-in duration-500">
-            <div className="text-[10px] text-white/50 tracking-[2px] font-bold uppercase mb-2">Versão 2.0</div>
-            <div className="w-full h-[1px] bg-white/5 mb-2"></div>
-            <p className="text-[8px] text-white/30 tracking-[1px] font-bold uppercase text-center leading-[1.4]">
-              Desenvolvido por<br/>
-              <span className="text-white/50">Áurea Inteligência Empresarial</span>
-            </p>
-            <div className="w-full h-[1px] bg-white/5 mt-2"></div>
-          </div>
-        )}
       </div>
     </aside>
   </div>
