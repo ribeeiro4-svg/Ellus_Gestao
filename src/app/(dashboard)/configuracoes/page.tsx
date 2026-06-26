@@ -285,6 +285,38 @@ export default function ConfigPage() {
     }
   }
 
+  const sortedAndFilteredCategorias = useMemo(() => {
+    let result = [...(categorias || [])];
+    
+    if (filtroBusca) {
+      result = result.filter(c => c.nome.toLowerCase().includes(filtroBusca.toLowerCase()));
+    }
+
+    result.sort((a, b) => {
+      let valA: any = a.nome;
+      let valB: any = b.nome;
+
+      if (sortColumn === 'terminologia') {
+        const mapA = (configuracoes || []).find(c => c.categoria_nome === a.nome);
+        const mapB = (configuracoes || []).find(c => c.categoria_nome === b.nome);
+        valA = mapA ? mapA.conta_contabil_nome || '' : '';
+        valB = mapB ? mapB.conta_contabil_nome || '' : '';
+      } else if (sortColumn === 'uso') {
+        valA = (lancamentos || []).filter(l => l.categoria === a.nome).length;
+        valB = (lancamentos || []).filter(l => l.categoria === b.nome).length;
+      } else {
+        valA = a.nome;
+        valB = b.nome;
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [categorias, filtroBusca, sortColumn, sortDirection, configuracoes, lancamentos])
+
   if (loadingTenant && !tenant) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 gap-4 py-20">
@@ -320,38 +352,6 @@ export default function ConfigPage() {
       setSortDirection('asc')
     }
   }
-
-  const sortedAndFilteredCategorias = useMemo(() => {
-    let result = [...(categorias || [])];
-    
-    if (filtroBusca) {
-      result = result.filter(c => c.nome.toLowerCase().includes(filtroBusca.toLowerCase()));
-    }
-
-    result.sort((a, b) => {
-      let valA: any = a.nome;
-      let valB: any = b.nome;
-
-      if (sortColumn === 'terminologia') {
-        const mapA = (configuracoes || []).find(c => c.categoria_nome === a.nome);
-        const mapB = (configuracoes || []).find(c => c.categoria_nome === b.nome);
-        valA = mapA ? mapA.conta_contabil_nome || '' : '';
-        valB = mapB ? mapB.conta_contabil_nome || '' : '';
-      } else if (sortColumn === 'uso') {
-        valA = (lancamentos || []).filter(l => l.categoria === a.nome).length;
-        valB = (lancamentos || []).filter(l => l.categoria === b.nome).length;
-      } else {
-        valA = a.nome;
-        valB = b.nome;
-      }
-
-      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [categorias, filtroBusca, sortColumn, sortDirection, configuracoes, lancamentos])
 
   return (
     <div className="flex flex-col flex-1 gap-3 animate-in fade-in duration-500 pb-20">
