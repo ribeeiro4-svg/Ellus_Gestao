@@ -14,6 +14,12 @@
   .custom-scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+  .h-screen {
+    height: 105.263vh !important;
+  }
+  .min-h-screen {
+    min-height: 105.263vh !important;
+  }
 }
 
 :root {
@@ -89,7 +95,7 @@ body {
   color: var(--text1);
   font-size: 14px;
   overflow-x: hidden;
-  min-height: 100vh;
+  min-height: 105.263vh;
   position: relative;
 }
 
