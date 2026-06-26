@@ -80,6 +80,7 @@
 /* ── BASE ── */
 html {
   background: var(--surface2);
+  zoom: 0.95;
 }
 
 body {
