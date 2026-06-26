@@ -283,7 +283,7 @@ export default function POPPage() {
       )}
         </>
       ) : (
-        isElegibleForRotina && <RotinaGerenciavelTab />
+        isElegibleForRotina && <RotinaGerenciavelTab onOpenPop={setPopAberto} />
       )}
 
     </div>

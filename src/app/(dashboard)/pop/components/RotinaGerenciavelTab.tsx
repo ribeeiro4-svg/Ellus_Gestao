@@ -6,7 +6,7 @@ import { Calendar, CheckCircle2, ChevronRight, Clock, GripVertical, FileText, La
 import Link from 'next/link'
 import { POPS } from '../pops-data'
 
-export default function RotinaGerenciavelTab() {
+export default function RotinaGerenciavelTab({ onOpenPop }: { onOpenPop?: (pop: any) => void }) {
   const [tarefas, setTarefas] = useState<TarefaTesoureiro[]>(DADOS_ROTINA_TESOUREIRO.tarefas_iniciais)
   const [tarefaAberta, setTarefaAberta] = useState<TarefaTesoureiro | null>(null)
   const [modalTab, setModalTab] = useState<'detalhes' | 'pops'>('detalhes')
@@ -217,7 +217,15 @@ export default function RotinaGerenciavelTab() {
                               </span>
                               <span className="text-[10px] text-slate-400 font-bold uppercase">{popObj.modulo}</span>
                             </div>
-                            <h4 className="text-sm font-bold text-slate-800">{popObj.titulo}</h4>
+                            <h4 className="text-sm font-bold text-slate-800 mb-2">{popObj.titulo}</h4>
+                            {onOpenPop && (
+                              <button
+                                onClick={() => onOpenPop(popObj)}
+                                className="mt-2 py-2 px-4 bg-emerald-50 text-emerald-700 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-emerald-100 transition-colors w-full text-center flex items-center justify-center gap-2"
+                              >
+                                <FileText size={14} /> Abrir POP
+                              </button>
+                            )}
                           </div>
                         )
                       })}
