@@ -16,7 +16,7 @@ import { useOFXParser } from '@/lib/hooks/useOFXParser'
 import { useConciliacaoAudit } from '@/features/conciliacao/hooks/useConciliacaoAudit'
 import { useTenantId } from '@/lib/hooks/useTenantId'
 import { useWhatsAppTemplates } from '@/lib/hooks/useWhatsAppTemplates'
-import { DEFAULT_MSG_COBRANCA } from '@/features/configuracoes/components/MensagensWhatsappTab'
+import { DEFAULT_MSG_COBRANCA, DEFAULT_MSG_ADESAO } from '@/features/configuracoes/components/MensagensWhatsappTab'
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 import { createClient } from '@/lib/supabase/client'
 import DataTable from '@/components/ui/DataTable'
@@ -1053,7 +1053,11 @@ function FinanceiroPageContent() {
                   const emojiDocument = String.fromCodePoint(0x1F4C4);
                   const emojiSmile = String.fromCodePoint(0x1F60A);
                   
-                  const templateCobranca = templates.cobranca || DEFAULT_MSG_COBRANCA;
+                  let templateCobranca = templates.cobranca || DEFAULT_MSG_COBRANCA;
+                  if (i.categoria && i.categoria.toLowerCase().includes('adesão') || i.categoria && i.categoria.toLowerCase().includes('adesao')) {
+                    templateCobranca = templates.adesao || DEFAULT_MSG_ADESAO;
+                  }
+                  
                   const valorStr = `R$ ${(i.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
                   const msg = templateCobranca
                     .replace(/\{\{nome\}\}/g, nomeCompleto)

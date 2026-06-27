@@ -7,6 +7,17 @@ import { MessageCircle, RefreshCw, Save, Info, Eye, Pencil, CheckCircle2 } from 
 // Templates padrão (exatamente o que os botões usam hoje)
 // ─────────────────────────────────────────────────────────────────────────────
 
+export const DEFAULT_MSG_ADESAO = `Olá, {{nome}}! Tudo bem?
+
+Passando para confirmar e agradecer sua adesão ao nosso plano!
+
+Aqui estão os detalhes do seu pagamento de adesão:
+
+📄 *"{{descricao}}"*
+
+Se já tiver pago, nos encaminha o comprovante de pagamento.😊
+Caso contrário, estou à disposição para enviar o boleto ou ajudar no que for preciso.`
+
 export const DEFAULT_MSG_COBRANCA = `Olá, {{nome}}! Tudo bem?
 
 Passando rapidinho pra te avisar que temos um ou mais boletos em aberto:

@@ -2,14 +2,15 @@
 import { useState, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTenantId } from './useTenantId'
-import { DEFAULT_MSG_COBRANCA, DEFAULT_MSG_HGU } from '@/features/configuracoes/components/MensagensWhatsappTab'
+import { DEFAULT_MSG_COBRANCA, DEFAULT_MSG_HGU, DEFAULT_MSG_ADESAO } from '@/features/configuracoes/components/MensagensWhatsappTab'
 
 export function useWhatsAppTemplates() {
   const tenantId = useTenantId()
   const sb = createClient()
-  const [templates, setTemplates] = useState<{ cobranca: string; hgu: string }>({
+  const [templates, setTemplates] = useState<{ cobranca: string; hgu: string; adesao?: string }>({
     cobranca: DEFAULT_MSG_COBRANCA,
-    hgu: DEFAULT_MSG_HGU
+    hgu: DEFAULT_MSG_HGU,
+    adesao: DEFAULT_MSG_ADESAO
   })
   const [loading, setLoading] = useState(true)
 
