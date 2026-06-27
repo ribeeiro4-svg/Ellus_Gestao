@@ -243,3 +243,69 @@ export async function trackIrregularitiesAction() {
   }
 }
 
+export async function auditRecorrenciaFaltantesAction(tenantId: string, mesTarget: number, anoTarget: number) {
+  const { createServerSupabase } = await import('@/lib/supabase/server')
+  const sbAdmin = await createServerSupabase()
+  if (!tenantId) return { error: 'Tenant ID não fornecido' }
+
+  try {
+    // 1. Buscar todos os associados ativos que possuem recorrência ativada
+    const { data: associadosAtivos, error: errAssoc } = await sbAdmin
+      .from('associados')
+      .select('id, nome, recorrencia_ativa')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'Ativo')
+      .eq('recorrencia_ativa', true)
+
+    if (errAssoc) throw errAssoc
+
+    // 2. Buscar todas as receitas com categoria/descrição de mensalidade no ano alvo
+    const { data: lancamentos, error: errLanc } = await sbAdmin
+      .from('lancamentos')
+      .select('id, associado_id, data, competencia_mes, competencia_ano, categoria, descricao, status')
+      .eq('tenant_id', tenantId)
+      .eq('tipo', 'receita')
+      .not('status', 'eq', 'cancelado') // ignorar cancelados
+      .or('categoria.ilike.%Mensalidade%,descricao.ilike.%Mensalidade%')
+      
+    if (errLanc) throw errLanc
+
+    const logs: any[] = []
+    const monthStr = `${anoTarget}-${(mesTarget + 1).toString().padStart(2, '0')}`
+
+    // 3. Verificar quem ficou de fora
+    for (const assoc of (associadosAtivos || [])) {
+      const lancamentosAssoc = (lancamentos || []).filter((l: any) => l.associado_id === assoc.id)
+      
+      let encontrou = false
+      for (const l of lancamentosAssoc) {
+        // Verifica se é a competência exata pedida, ou se a data (caixa) caiu no mês se não tiver competência
+        const lMes = l.competencia_mes !== null && l.competencia_mes !== undefined 
+          ? l.competencia_mes 
+          : new Date(l.data).getUTCMonth()
+          
+        const lAno = l.competencia_ano !== null && l.competencia_ano !== undefined 
+          ? l.competencia_ano 
+          : new Date(l.data).getUTCFullYear()
+
+        if (lMes === mesTarget && lAno === anoTarget) {
+          encontrou = true
+          break
+        }
+      }
+
+      if (!encontrou) {
+        logs.push({
+          status: 'erro',
+          associado: assoc.nome,
+          descricao: 'Mensalidade Faltante',
+          mensagem: `Nenhum lançamento encontrado para ${monthStr}`
+        })
+      }
+    }
+
+    return { success: true, logs }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+}

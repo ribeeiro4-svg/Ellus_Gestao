@@ -42,7 +42,8 @@ import { AssociadoLancamentos } from '@/components/ui/AssociadoLancamentos'
 import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
 import RelatoriosFinanceirosTab from '@/features/financeiro/components/RelatoriosFinanceirosTab'
 import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
-import { cleanupDuplicateMensalidadesAction, cleanupConciliacaoDuplicatesAction } from '@/app/actions/financeiro_cleanup'
+import { cleanupDuplicateMensalidadesAction, cleanupConciliacaoDuplicatesAction, cleanupWrongMensalidadePatternAction } from '@/app/actions/financeiro_cleanup'
+import { trackIrregularitiesAction, auditRecorrenciaFaltantesAction } from '@/app/actions/financeiro_irregularities'
 import FichaAssociadoModal from '@/features/associados/components/ficha-associado/FichaAssociadoModal'
 import RemanejarModal from '@/components/ui/RemanejarModal'
 import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
@@ -56,6 +57,7 @@ import NFSeLinkModal from '@/features/fiscal/components/nfse/NFSeLinkModal'
 import { gerarPdfAbono } from '@/features/financeiro/utils/gerarPdfAbono'
 import ManualLinkLancamentoModal from '@/components/conciliacao/ManualLinkLancamentoModal'
 import { usePermissions } from '@/lib/hooks/usePermissions'
+import AuditRecorrenciaModal from '@/components/ui/AuditRecorrenciaModal'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -216,6 +218,7 @@ export default function FinanceiroPage() {
   const [isAbonoModalOpen, setIsAbonoModalOpen] = useState(false)
   const [isCobrancaDateModalOpen, setIsCobrancaDateModalOpen] = useState(false)
   const [cobrancaDateTarget, setCobrancaDateTarget] = useState<string[]>([])
+  const [isAuditRecorrenciaModalOpen, setIsAuditRecorrenciaModalOpen] = useState(false)
 
   useEffect(() => {
     if (contas.length > 0 && !selectedContaId) {
@@ -1343,6 +1346,37 @@ export default function FinanceiroPage() {
                 onLimparProvisoes={handleCleanupDuplicates}
                 onLimparExtrato={handleCleanupConciliacao}
                 onRecorrenciaLote={() => setIsSyncModalOpen(true)}
+                onRastrearIrregularidades={async () => {
+                  if (!confirm('Deseja rastrear e remover mensalidades e adesões duplicadas?')) return
+                  setIsProcessingBatch(true)
+                  try {
+                    const res = await trackIrregularitiesAction()
+                    if (res.success) {
+                      setReconciliationLogs(res.logs)
+                      setIsLogModalOpen(true)
+                      refresh()
+                    } else {
+                      alert(`Erro: ${res.error || res.message}`)
+                    }
+                  } catch (e: any) { alert(`Erro: ${e.message}`) }
+                  finally { setIsProcessingBatch(false) }
+                }}
+                onLimparProjecao={async () => {
+                  if (!tenantId) return
+                  if (!confirm('Deseja limpar projeções de mensalidades antigas e mal formatadas?')) return
+                  setIsProcessingBatch(true)
+                  try {
+                    const res = await cleanupWrongMensalidadePatternAction(tenantId)
+                    if (res.success) {
+                      alert(`Limpeza concluída! ${res.count} registros removidos.`)
+                      refresh()
+                    } else {
+                      alert(`Erro: ${res.error}`)
+                    }
+                  } catch (e: any) { alert(`Erro: ${e.message}`) }
+                  finally { setIsProcessingBatch(false) }
+                }}
+                onAuditoriaRecorrencia={() => setIsAuditRecorrenciaModalOpen(true)}
                 onIntegracaoTotal={async () => {
                   if (!confirm('Deseja realizar a Integração Total (Fiscal e Contábil) de todo o exercício?')) return
                   setIsProcessingBatch(true)
@@ -1984,6 +2018,27 @@ export default function FinanceiroPage() {
         isOpen={isFichaOpen}
         onClose={() => setIsFichaOpen(false)}
         associadoId={selectedFichaId}
+      />
+
+      <AuditRecorrenciaModal
+        isOpen={isAuditRecorrenciaModalOpen}
+        onClose={() => setIsAuditRecorrenciaModalOpen(false)}
+        loading={isProcessingBatch}
+        onConfirm={async (mes, ano) => {
+          if (!tenantId) return
+          setIsProcessingBatch(true)
+          try {
+            const res = await auditRecorrenciaFaltantesAction(tenantId, mes, ano)
+            if (res.success) {
+              setReconciliationLogs(res.logs || [])
+              setIsAuditRecorrenciaModalOpen(false)
+              setIsLogModalOpen(true)
+            } else {
+              alert(`Erro: ${res.error}`)
+            }
+          } catch (e: any) { alert(`Erro: ${e.message}`) }
+          finally { setIsProcessingBatch(false) }
+        }}
       />
     </div>
   )
