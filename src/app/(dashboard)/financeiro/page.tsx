@@ -1031,7 +1031,7 @@ function FinanceiroPageContent() {
       render: (i: any) => (
         <div className="flex items-center justify-end">
           <ActionMenu>
-            {i.tipo === 'receita' && i.status !== 'pago' && i.associado_id && (
+            {i.tipo === 'receita' && i.associado_id && (
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1060,7 +1060,7 @@ function FinanceiroPageContent() {
                 <MessageCircle size={14} /> WhatsApp Cobrança
               </button>
             )}
-            {i.tipo === 'receita' && i.status !== 'pago' && i.associado_id && (
+            {i.tipo === 'receita' && i.associado_id && (
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
