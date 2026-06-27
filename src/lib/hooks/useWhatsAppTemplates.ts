@@ -7,7 +7,7 @@ import { DEFAULT_MSG_COBRANCA, DEFAULT_MSG_HGU, DEFAULT_MSG_ADESAO } from '@/fea
 export function useWhatsAppTemplates() {
   const tenantId = useTenantId()
   const sb = createClient()
-  const [templates, setTemplates] = useState<{ cobranca: string; hgu: string; adesao?: string }>({
+  const [templates, setTemplates] = useState<{ cobranca: string; hgu: string; adesao: string }>({
     cobranca: DEFAULT_MSG_COBRANCA,
     hgu: DEFAULT_MSG_HGU,
     adesao: DEFAULT_MSG_ADESAO
@@ -19,13 +19,14 @@ export function useWhatsAppTemplates() {
     setLoading(true)
     const { data, error } = await sb.from('cobranca_templates')
       .select('codigo, texto')
-      .in('codigo', ['MSG_WHATSAPP_COBRANCA', 'MSG_WHATSAPP_HGU'])
+      .in('codigo', ['MSG_WHATSAPP_COBRANCA', 'MSG_WHATSAPP_HGU', 'MSG_WHATSAPP_ADESAO'])
       .eq('tenant_id', tenantId)
 
-    if (data && data.length > 0) {
+    if (data) {
       const cobranca = data.find(d => d.codigo === 'MSG_WHATSAPP_COBRANCA')?.texto || DEFAULT_MSG_COBRANCA
       const hgu = data.find(d => d.codigo === 'MSG_WHATSAPP_HGU')?.texto || DEFAULT_MSG_HGU
-      setTemplates({ cobranca, hgu })
+      const adesao = data.find(d => d.codigo === 'MSG_WHATSAPP_ADESAO')?.texto || DEFAULT_MSG_ADESAO
+      setTemplates({ cobranca, hgu, adesao })
     }
     setLoading(false)
   }, [tenantId, sb])
@@ -62,7 +63,7 @@ export function useWhatsAppTemplates() {
           etapa: 'manual',
           canal: 'whatsapp',
           tom: 'informal',
-          titulo: codigo === 'MSG_WHATSAPP_COBRANCA' ? 'WhatsApp Cobrança Manual' : 'WhatsApp HGU Manual',
+          titulo: codigo === 'MSG_WHATSAPP_COBRANCA' ? 'WhatsApp Cobrança Manual' : codigo === 'MSG_WHATSAPP_HGU' ? 'WhatsApp HGU Manual' : 'WhatsApp Adesão Manual',
           texto,
           dias_min: 0,
           dias_max: 0
