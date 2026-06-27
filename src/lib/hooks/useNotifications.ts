@@ -273,6 +273,7 @@ export function useNotifications() {
 
     // ─── 6. ZAPSIGN — ASSOCIADOS SEM ASSINATURA ──────────────────────────────
     const semAssinatura = associados.filter(a => {
+      if (a.status === 'inativo') return false
       if (!a.zapsign_doc_token) return false
       // status pendente indica que o associado ainda não assinou
       if (a.status === 'pendente') return true
@@ -304,7 +305,7 @@ export function useNotifications() {
     if (presidente) {
       // Verificar associados com termo_status pendente para o presidente
       const termoPendente = associados.filter(
-        a => a.termo_status && (
+        a => a.status !== 'inativo' && a.termo_status && (
           a.termo_status.toLowerCase().includes('pendente') ||
           a.termo_status.toLowerCase().includes('aguardando')
         )
