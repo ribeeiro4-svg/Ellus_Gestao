@@ -38,7 +38,7 @@ export function useWhatsAppTemplates() {
     return () => window.removeEventListener('whatsapp-templates-updated', handleRefresh)
   }, [fetchTemplates])
 
-  const atualizar = async (codigo: 'MSG_WHATSAPP_COBRANCA' | 'MSG_WHATSAPP_HGU', texto: string) => {
+  const atualizar = async (codigo: 'MSG_WHATSAPP_COBRANCA' | 'MSG_WHATSAPP_HGU' | 'MSG_WHATSAPP_ADESAO', texto: string) => {
     if (!tenantId) return { error: 'Sem tenant' }
     
     // Check if exists

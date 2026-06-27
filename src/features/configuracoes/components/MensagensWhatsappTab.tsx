@@ -63,7 +63,7 @@ Diretoria / Secretaria ACPROBEC`
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface TemplateConfig {
-  key: 'msg_whatsapp_cobranca' | 'msg_whatsapp_hgu'
+  key: 'msg_whatsapp_cobranca' | 'msg_whatsapp_hgu' | 'msg_whatsapp_adesao'
   label: string
   icon: React.ReactNode
   color: string
@@ -106,6 +106,23 @@ const TEMPLATES: TemplateConfig[] = [
       { tag: '{{dependentes}}', description: 'Lista de dependentes com nome e código', example: 'Carlos Silva - 12345-01\nAna Silva - 12345-02' },
     ],
     defaultValue: DEFAULT_MSG_HGU,
+  },
+  {
+    key: 'msg_whatsapp_adesao',
+    label: 'Adesão ao Plano',
+    icon: <MessageCircle size={20} />,
+    color: 'purple',
+    description: 'Mensagem enviada quando você clica em "WhatsApp Cobrança" e o sistema identifica que a categoria do lançamento é "Adesão".',
+    usedIn: [
+      'Módulo Financeiro → Lançamento com categoria "Adesão" → "WhatsApp Cobrança"',
+    ],
+    variables: [
+      { tag: '{{nome}}', description: 'Nome completo do associado', example: 'João da Silva' },
+      { tag: '{{descricao}}', description: 'Descrição do lançamento (ex: Adesão)', example: 'Adesão - Junho/2026' },
+      { tag: '{{data}}', description: 'Data de vencimento do lançamento', example: '30/06/2026' },
+      { tag: '{{valor}}', description: 'Valor do lançamento em reais', example: 'R$ 52,59' },
+    ],
+    defaultValue: DEFAULT_MSG_ADESAO,
   },
 ]
 
@@ -323,15 +340,19 @@ function TemplateCard({
 export default function MensagensWhatsappTab() {
   const { templates, atualizar, loading } = useWhatsAppTemplates()
 
-  const getValue = (key: 'msg_whatsapp_cobranca' | 'msg_whatsapp_hgu', defaultVal: string): string => {
-    if (key === 'msg_whatsapp_cobranca') return templates.cobranca
-    if (key === 'msg_whatsapp_hgu') return templates.hgu
+  const getValue = (key: 'msg_whatsapp_cobranca' | 'msg_whatsapp_hgu' | 'msg_whatsapp_adesao', defaultVal: string): string => {
+    if (key === 'msg_whatsapp_cobranca') return templates.cobranca || defaultVal
+    if (key === 'msg_whatsapp_hgu') return templates.hgu || defaultVal
+    if (key === 'msg_whatsapp_adesao') return templates.adesao || defaultVal
     return defaultVal
   }
 
   const handleSave = async (key: string, value: string) => {
-    const codigo = key === 'msg_whatsapp_cobranca' ? 'MSG_WHATSAPP_COBRANCA' : 'MSG_WHATSAPP_HGU'
-    await atualizar(codigo, value)
+    let codigo: 'MSG_WHATSAPP_COBRANCA' | 'MSG_WHATSAPP_HGU' | 'MSG_WHATSAPP_ADESAO' | '' = ''
+    if (key === 'msg_whatsapp_cobranca') codigo = 'MSG_WHATSAPP_COBRANCA'
+    else if (key === 'msg_whatsapp_hgu') codigo = 'MSG_WHATSAPP_HGU'
+    else if (key === 'msg_whatsapp_adesao') codigo = 'MSG_WHATSAPP_ADESAO'
+    if (codigo !== '') await atualizar(codigo, value)
   }
 
   if (loading) {
