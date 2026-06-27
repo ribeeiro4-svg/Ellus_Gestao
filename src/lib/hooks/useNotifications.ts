@@ -67,7 +67,7 @@ export function useNotifications() {
         category: 'mensalidade',
         title: `${recHoje.length} mensalidade${recHoje.length > 1 ? 's' : ''} vencem hoje`,
         description: `Total: R$ ${recHoje.reduce((a, l) => a + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        link: '/financeiro',
+        link: '/financeiro?tab=receitas&status=aberto',
         count: recHoje.length,
       })
     }
@@ -83,7 +83,7 @@ export function useNotifications() {
         category: 'mensalidade',
         title: `${rec7dias.length} mensalidade${rec7dias.length > 1 ? 's' : ''} vencem nos próximos 7 dias`,
         description: `Total: R$ ${rec7dias.reduce((a, l) => a + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        link: '/financeiro',
+        link: '/financeiro?tab=receitas&status=aberto',
         count: rec7dias.length,
       })
     }
@@ -99,7 +99,7 @@ export function useNotifications() {
         category: 'mensalidade',
         title: `${rec30dias.length} mensalidade${rec30dias.length > 1 ? 's' : ''} vencem nos próximos 30 dias`,
         description: `Total: R$ ${rec30dias.reduce((a, l) => a + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        link: '/financeiro',
+        link: '/financeiro?tab=receitas&status=aberto',
         count: rec30dias.length,
       })
     }
@@ -119,7 +119,7 @@ export function useNotifications() {
         category: 'inadimplencia',
         title: `${atraso1.length} associado${atraso1.length > 1 ? 's' : ''} com 1 mês de atraso`,
         description: atraso1.slice(0, 3).map(a => a.nome).join(', ') + (atraso1.length > 3 ? '...' : ''),
-        link: '/associados',
+        link: '/associados?status=inadimplente',
         count: atraso1.length,
       })
     }
@@ -130,7 +130,7 @@ export function useNotifications() {
         category: 'inadimplencia',
         title: `${atraso2.length} associado${atraso2.length > 1 ? 's' : ''} com 2 meses de atraso`,
         description: atraso2.slice(0, 3).map(a => a.nome).join(', ') + (atraso2.length > 3 ? '...' : ''),
-        link: '/associados',
+        link: '/associados?status=inadimplente',
         count: atraso2.length,
       })
     }
@@ -141,7 +141,7 @@ export function useNotifications() {
         category: 'inadimplencia',
         title: `${atraso3mais.length} associado${atraso3mais.length > 1 ? 's' : ''} com 3+ meses de atraso`,
         description: atraso3mais.slice(0, 3).map(a => a.nome).join(', ') + (atraso3mais.length > 3 ? '...' : ''),
-        link: '/associados',
+        link: '/associados?status=inadimplente',
         count: atraso3mais.length,
       })
     }
@@ -159,7 +159,7 @@ export function useNotifications() {
         category: 'despesa',
         title: `${despHoje.length} pagamento${despHoje.length > 1 ? 's' : ''} vencem hoje`,
         description: `Total: R$ ${despHoje.reduce((a, l) => a + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        link: '/financeiro',
+        link: '/financeiro?tab=despesas&status=aberto',
         count: despHoje.length,
       })
     }
@@ -175,7 +175,7 @@ export function useNotifications() {
         category: 'despesa',
         title: `${desp7dias.length} pagamento${desp7dias.length > 1 ? 's' : ''} vencem nos próximos 7 dias`,
         description: `Total: R$ ${desp7dias.reduce((a, l) => a + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        link: '/financeiro',
+        link: '/financeiro?tab=despesas&status=aberto',
         count: desp7dias.length,
       })
     }
@@ -191,7 +191,7 @@ export function useNotifications() {
         category: 'despesa',
         title: `${desp30dias.length} pagamento${desp30dias.length > 1 ? 's' : ''} vencem nos próximos 30 dias`,
         description: `Total: R$ ${desp30dias.reduce((a, l) => a + l.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        link: '/financeiro',
+        link: '/financeiro?tab=despesas&status=aberto',
         count: desp30dias.length,
       })
     }
@@ -223,7 +223,7 @@ export function useNotifications() {
           category: 'conciliacao',
           title: 'Conciliação bancária pendente hoje',
           description: 'Nenhum lançamento foi conciliado hoje. Importe o extrato bancário.',
-          link: '/financeiro',
+          link: '/financeiro?tab=conciliacao',
         })
       }
     }
@@ -235,7 +235,7 @@ export function useNotifications() {
         category: 'conciliacao',
         title: `${diasSemConciliacao.length} dia${diasSemConciliacao.length > 1 ? 's úteis' : ' útil'} sem conciliação`,
         description: `Dias pendentes: ${diasSemConciliacao.slice(0, 3).map(d => new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')).join(', ')}`,
-        link: '/financeiro',
+        link: '/financeiro?tab=conciliacao',
         count: diasSemConciliacao.length,
       })
     }
@@ -266,7 +266,7 @@ export function useNotifications() {
         category: 'associado',
         title: `${semLancamento.length} novo${semLancamento.length > 1 ? 's associados' : ' associado'} sem lançamento`,
         description: semLancamento.slice(0, 3).map(a => a.nome).join(', ') + (semLancamento.length > 3 ? '...' : ''),
-        link: '/associados',
+        link: '/associados?filter=sem_lancamento',
         count: semLancamento.length,
       })
     }
@@ -291,7 +291,7 @@ export function useNotifications() {
         category: 'zapsign',
         title: `${semAssinatura.length} documento${semAssinatura.length > 1 ? 's' : ''} aguardando assinatura do associado`,
         description: semAssinatura.slice(0, 3).map(a => a.nome).join(', ') + (semAssinatura.length > 3 ? '...' : ''),
-        link: '/associados',
+        link: '/associados?filterTermo=pendente',
         count: semAssinatura.length,
       })
     }
@@ -317,7 +317,7 @@ export function useNotifications() {
           category: 'presidente',
           title: `${termoPendente.length} documento${termoPendente.length > 1 ? 's' : ''} aguardando assinatura do Presidente`,
           description: termoPendente.slice(0, 3).map(a => a.nome).join(', ') + (termoPendente.length > 3 ? '...' : ''),
-          link: '/associados',
+          link: '/associados?filterTermo=pendente',
           count: termoPendente.length,
         })
       }
@@ -333,7 +333,7 @@ export function useNotifications() {
         category: 'estrategia',
         title: 'Resultado do mês negativo',
         description: `Saldo atual: R$ ${resultadoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Despesas superam as receitas.`,
-        link: '/financeiro',
+        link: '/financeiro?tab=geral',
       })
     }
 
@@ -346,7 +346,7 @@ export function useNotifications() {
         category: 'estrategia',
         title: 'Saldo do caixa baixo',
         description: `Saldo disponível em caixa: R$ ${saldoCaixa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        link: '/financeiro',
+        link: '/financeiro?tab=geral',
       })
     }
 

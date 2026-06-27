@@ -115,6 +115,12 @@ function AssociadosContent() {
   React.useEffect(() => {
     const s = searchParams.get('search')
     if (s) setSearchQ(s)
+
+    const termo = searchParams.get('filterTermo')
+    if (termo) setFilterTermo(termo)
+    
+    const status = searchParams.get('status')
+    if (status) setFilterStatus(status)
   }, [searchParams])
 
   const toggleRow = (id: string) => {

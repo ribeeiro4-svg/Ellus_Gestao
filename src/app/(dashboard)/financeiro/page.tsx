@@ -1,5 +1,5 @@
 'use client'
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import React, { useMemo, useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js'
 import { Chart, Line } from 'react-chartjs-2'
@@ -31,6 +31,7 @@ import SupplierMatchModal from '@/components/conciliacao/SupplierMatchModal'
 import SupplierCreateModal from '@/components/conciliacao/SupplierCreateModal'
 import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToolbar'
 import { useFechamento } from '@/lib/hooks/useFechamento'
+import { useSearchParams } from 'next/navigation'
 import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getDiaIdx, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
 import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, FileText, CloudLightning, Trash2, Target, ArrowRightLeft, ArrowUpRight, ArrowDownRight, AlertTriangle, MoreVertical, CheckCircle2, MessageCircle, Calendar as CalendarIcon, ClipboardList } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
@@ -122,10 +123,16 @@ const ActionMenu = ({ children }: { children: React.ReactNode }) => {
   )
 }
 
-export default function FinanceiroPage() {
+function FinanceiroPageContent() {
   const { criar, editar, excluir, isAdmin } = usePermissions('financeiro')
   const tenantId = useTenantId()
   const { currentUser } = useCurrentUser()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const tab = searchParams.get('tab') as any
+    if (tab) setActiveTab(tab)
+  }, [searchParams])
   const sb = createClient()
   // Ganchos Financeiros
   const { 
@@ -2041,5 +2048,14 @@ export default function FinanceiroPage() {
         }}
       />
     </div>
+  )
+}
+
+
+export default function FinanceiroPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse">Carregando Módulo Financeiro...</div>}>
+      <FinanceiroPageContent />
+    </Suspense>
   )
 }
