@@ -15,6 +15,8 @@ import { useCoraStaged } from '@/lib/hooks/useCoraStaged'
 import { useOFXParser } from '@/lib/hooks/useOFXParser'
 import { useConciliacaoAudit } from '@/features/conciliacao/hooks/useConciliacaoAudit'
 import { useTenantId } from '@/lib/hooks/useTenantId'
+import { useWhatsAppTemplates } from '@/lib/hooks/useWhatsAppTemplates'
+import { DEFAULT_MSG_COBRANCA } from '@/features/configuracoes/components/MensagensWhatsappTab'
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 import { createClient } from '@/lib/supabase/client'
 import DataTable from '@/components/ui/DataTable'
@@ -127,6 +129,7 @@ function FinanceiroPageContent() {
   const { criar, editar, excluir, isAdmin } = usePermissions('financeiro')
   const tenantId = useTenantId()
   const { currentUser } = useCurrentUser()
+  const { templates } = useWhatsAppTemplates()
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -1050,7 +1053,15 @@ function FinanceiroPageContent() {
                   const emojiDocument = String.fromCodePoint(0x1F4C4);
                   const emojiSmile = String.fromCodePoint(0x1F60A);
                   
-                  const msg = `Olá, ${nomeCompleto}! Tudo bem?\n\nPassando rapidinho pra te avisar que temos um ou mais boletos em aberto:\n\n${emojiDocument} *"${itemDescricao}"*\n\nSe já tiver pago, desconsidera essa mensagem e nos encaminha o comprovante de pagamento.${emojiSmile}\nCaso contrário, posso te reenviar o boleto ou te ajudar com o que precisar!`;
+                  const templateCobranca = templates.cobranca || DEFAULT_MSG_COBRANCA;
+                  const valorStr = `R$ ${(i.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                  const msg = templateCobranca
+                    .replace(/\{\{nome\}\}/g, nomeCompleto)
+                    .replace(/\{\{descricao\}\}/g, itemDescricao)
+                    .replace(/\{\{data\}\}/g, dataFormatada)
+                    .replace(/\{\{valor\}\}/g, valorStr)
+                    .replace(/📄/g, emojiDocument)
+                    .replace(/😊/g, emojiSmile);
                   
                   window.open(`https://api.whatsapp.com/send?phone=55${phone}&text=${encodeURIComponent(msg)}`, '_blank');
                   document.body.click();

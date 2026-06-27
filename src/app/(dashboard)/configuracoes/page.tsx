@@ -30,7 +30,8 @@ import {
   CheckCircle2,
   ArrowRightLeft,
   Search,
-  ArrowUpDown
+  ArrowUpDown,
+  MessageCircle
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useContas } from '@/lib/hooks/useContas'
@@ -42,9 +43,10 @@ import { useTenant } from '@/lib/hooks/useTenant'
 import { useConfiguracoesContabeis } from '@/features/contabil/hooks/useConfiguracoesContabeis'
 import ContaContabilSelect from '@/features/contabil/components/ContaContabilSelect'
 import ConfigCobrancaTab from '@/features/cobranca/components/ConfigCobrancaTab'
+import MensagensWhatsappTab from '@/features/configuracoes/components/MensagensWhatsappTab'
 import { usePermissions } from '@/lib/hooks/usePermissions'
 
-type TabType = 'geral' | 'financeiro' | 'categorias' | 'cobranca' | 'acessos' | 'minha-conta' | 'importar'
+type TabType = 'geral' | 'financeiro' | 'categorias' | 'cobranca' | 'mensagens-whatsapp' | 'acessos' | 'minha-conta' | 'importar'
 
 export default function ConfigPage() {
   const [activeTab, setActiveTab] = useState<TabType>('geral')
@@ -332,6 +334,7 @@ export default function ConfigPage() {
     { id: 'financeiro', label: 'Contas Bancárias', icon: Wallet },
     { id: 'categorias', label: 'Categorias e Mapeamento', icon: BookOpen },
     { id: 'cobranca', label: 'Regras de Cobrança', icon: Zap },
+    { id: 'mensagens-whatsapp', label: 'Mensagens WhatsApp', icon: MessageCircle },
     { id: 'acessos', label: 'Controle de Acessos', icon: Shield },
     { id: 'minha-conta', label: 'Minha Conta', icon: KeyRound },
   ]
@@ -750,6 +753,10 @@ export default function ConfigPage() {
 
       {activeTab === 'cobranca' && (
         <ConfigCobrancaTab />
+      )}
+
+      {activeTab === 'mensagens-whatsapp' && (
+        <MensagensWhatsappTab />
       )}
 
       {activeTab === 'acessos' && (

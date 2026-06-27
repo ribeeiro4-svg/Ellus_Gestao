@@ -21,7 +21,9 @@ import { Plus, Mail, Phone, Copy, Trash2, CheckSquare, RefreshCw, Pencil, XCircl
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { useWhatsAppTemplates } from '@/lib/hooks/useWhatsAppTemplates'
 import { useTenant } from '@/lib/hooks/useTenant'
+import { DEFAULT_MSG_HGU } from '@/features/configuracoes/components/MensagensWhatsappTab'
 import { fetchZapSignSignedFileAction } from '@/app/actions/zapsign'
 import { fixAssociadosRecorrenciaColumnsAction, fixMonthlyFeeDescriptionsAction, fixVencimentoConstraintAction } from '@/app/actions/associados_fix'
 import { useContas } from '@/lib/hooks/useContas'
@@ -49,6 +51,7 @@ function AssociadosContent() {
   const searchParams = useSearchParams()
   const { associados, loading, isSyncing, inserir, atualizar, remover, atualizarBulk, syncZapSign, previewAdesoesFinanceiras, refresh } = useAssociados()
   const { lancamentos, inserirBulk, atualizar: atualizarFinanceiro, atualizarBulk: atualizarBulkFinanceiro, removerBulk: removerFinanceiroBulk } = useFinanceiro()
+  const { templates } = useWhatsAppTemplates()
   const { tenant } = useTenant()
   const { contas } = useContas()
   const { categorias: categoriasContabeis } = useCategorias()
