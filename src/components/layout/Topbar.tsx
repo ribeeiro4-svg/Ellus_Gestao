@@ -1,7 +1,8 @@
 'use client'
 import { usePathname, useRouter } from 'next/navigation'
-import { Download, FileText, Bell, Search, User, Trash2, ChevronRight, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { useSearch } from '@/lib/contexts/SearchContext'
+import NotificationBell from '@/components/ui/NotificationBell'
 
 const TITLES: Record<string, string> = {
   '/':              'Apresentação',
@@ -75,7 +76,7 @@ export default function Topbar() {
       </div>
 
       <div className="topbar-right flex items-center gap-[10px]">
-        {/* All action buttons removed by user request */}
+        <NotificationBell />
       </div>
     </header>
   )
