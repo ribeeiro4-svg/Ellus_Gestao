@@ -68,15 +68,54 @@ export default function RelatoriosFinanceirosTab({
       const { data } = await sb.from('cobranca_acoes')
         .select('*, associados(nome, cpf, telefone)')
         .eq('tenant_id', tenant.id)
-        .gte('created_at', startObj.toISOString())
-        .lte('created_at', endObj.toISOString())
-        .order('created_at', { ascending: false })
+        .gte('realizado_em', startObj.toISOString())
+        .lte('realizado_em', endObj.toISOString())
+        .order('realizado_em', { ascending: false })
       
       setCobrancaLogs(data || [])
       setLoadingCobranca(false)
     }
     fetchLogs()
   }, [selectedReport, tenant?.id, filterMonth, filterYear])
+
+  const filteredCobrancaLogs = useMemo(() => {
+    return cobrancaLogs.filter(log => {
+      const todayStr = new Date().toISOString().split('T')[0]
+      const logDateStr = (log.realizado_em || log.created_at).split('T')[0]
+      const logDate = new Date(logDateStr + 'T00:00:00')
+
+      let matchPeriod = true
+      if (timeRange === 'today') matchPeriod = logDateStr === todayStr
+      else if (timeRange === '7d') {
+        const limit = new Date()
+        limit.setDate(limit.getDate() - 7)
+        limit.setHours(0,0,0,0)
+        matchPeriod = logDate >= limit && logDate <= new Date()
+      }
+      else if (timeRange === '14d') {
+        const limit = new Date()
+        limit.setDate(limit.getDate() - 14)
+        limit.setHours(0,0,0,0)
+        matchPeriod = logDate >= limit && logDate <= new Date()
+      }
+      else if (timeRange === '30d') {
+        const limit = new Date()
+        limit.setDate(limit.getDate() - 30)
+        limit.setHours(0,0,0,0)
+        matchPeriod = logDate >= limit && logDate <= new Date()
+      }
+
+      const searchLower = searchTerm.toLowerCase()
+      const matchSearch = !searchLower || 
+        (log.associados?.nome || '').toLowerCase().includes(searchLower) ||
+        (log.etapa || '').toLowerCase().includes(searchLower) ||
+        (log.canal || '').toLowerCase().includes(searchLower) ||
+        (log.texto_enviado || '').toLowerCase().includes(searchLower) ||
+        (log.observacao || '').toLowerCase().includes(searchLower)
+
+      return matchPeriod && matchSearch
+    })
+  }, [cobrancaLogs, timeRange, searchTerm])
 
   const reports = [
     { id: 'fluxo', title: 'Fluxo de Caixa Analítico', desc: 'Lista completa de ingressos e dispêndios detalhados', icon: BarChart2, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -1565,9 +1604,9 @@ export default function RelatoriosFinanceirosTab({
               columns={[
                 { 
                   header: 'Data', 
-                  key: 'created_at', 
-                  filterValue: (i: any) => fmtData(i.created_at),
-                  render: (i: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(i.created_at)}</span> 
+                  key: 'realizado_em', 
+                  filterValue: (i: any) => fmtData(i.realizado_em || i.created_at),
+                  render: (i: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(i.realizado_em || i.created_at)}</span> 
                 },
                 { 
                   header: 'Associado', 
@@ -1599,7 +1638,7 @@ export default function RelatoriosFinanceirosTab({
                   )
                 }
               ]} 
-              data={cobrancaLogs} 
+              data={filteredCobrancaLogs} 
               loading={loadingCobranca} 
               showFilterInputs={true}
               exportable={true}

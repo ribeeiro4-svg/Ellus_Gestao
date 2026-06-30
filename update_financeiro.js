@@ -1,47 +1,34 @@
 const fs = require('fs');
-let path = 'c:/ÁUREA TECH - EM DEV/Éllus Gestão Estratégica/Ellus_Gestao/src/app/(dashboard)/financeiro/page.tsx';
+
+const path = 'c:/ÁUREA TECH - EM DEV/Éllus Gestão Estratégica/Ellus_Gestao/src/app/(dashboard)/financeiro/page.tsx';
 let content = fs.readFileSync(path, 'utf8');
 
-// 1. Rename FinanceiroPage to FinanceiroPageContent
-content = content.replace("export default function FinanceiroPage() {", "function FinanceiroPageContent() {");
+// 1. Add imports
+content = content.replace(
+  "import { useTenantId } from '@/lib/hooks/useTenantId'",
+  "import { useTenantId } from '@/lib/hooks/useTenantId'\nimport { useWhatsAppTemplates } from '@/lib/hooks/useWhatsAppTemplates'\nimport { DEFAULT_MSG_COBRANCA } from '@/features/configuracoes/components/MensagensWhatsappTab'"
+);
 
-// 2. Import useSearchParams from next/navigation if it's not there
-if (!content.includes('useSearchParams')) {
-  content = content.replace("import { useSearchParams, useRouter } from 'next/navigation'", "import { useSearchParams, useRouter } from 'next/navigation'");
-  if (!content.includes('next/navigation')) {
-    content = content.replace("import { useFechamento } from '@/lib/hooks/useFechamento'", "import { useFechamento } from '@/lib/hooks/useFechamento'\nimport { useSearchParams } from 'next/navigation'");
-  }
-}
-if (!content.includes('import { Suspense }')) {
-  content = content.replace("import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react'", "import React, { useMemo, useState, useEffect, useCallback, useRef, Suspense } from 'react'");
-}
+// 2. Add hook
+content = content.replace(
+  "  const tenantId = useTenantId()\n  const { currentUser } = useCurrentUser()\n  const searchParams = useSearchParams()",
+  "  const tenantId = useTenantId()\n  const { currentUser } = useCurrentUser()\n  const { templates } = useWhatsAppTemplates()\n  const searchParams = useSearchParams()"
+);
 
-// 3. Add useSearchParams logic inside FinanceiroPageContent
-const searchParamsLogic = `
-  const searchParams = useSearchParams()
+// 3. Replace message
+const oldMsg = "const msg = `Olá, ${nomeCompleto}! Tudo bem?\\n\\nPassando rapidinho pra te avisar que temos um ou mais boletos em aberto:\\n\\n${emojiDocument} *\"${itemDescricao}\"*\\n\\nSe já tiver pago, desconsidera essa mensagem e nos encaminha o comprovante de pagamento.${emojiSmile}\\nCaso contrário, posso te reenviar o boleto ou te ajudar com o que precisar!`;";
 
-  useEffect(() => {
-    const tab = searchParams.get('tab') as any
-    if (tab) setActiveTab(tab)
-    
-    // Status is handled differently? Wait, if we are in receitas or despesas, filterStatus is used? 
-    // Wait, the status filter for in the page? Let me check where it is.
-  }, [searchParams])
-`;
-// Let's just insert it after `const { currentUser } = useCurrentUser()`
-content = content.replace("const { currentUser } = useCurrentUser()", "const { currentUser } = useCurrentUser()\n  const searchParams = useSearchParams()\n\n  useEffect(() => {\n    const tab = searchParams.get('tab') as any\n    if (tab) setActiveTab(tab)\n  }, [searchParams])");
+const newMsg = `const templateCobranca = templates.cobranca || DEFAULT_MSG_COBRANCA;
+                  const valorStr = \`R$ \${(i.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\`;
+                  const msg = templateCobranca
+                    .replace(/\\{\\{nome\\}\\}/g, nomeCompleto)
+                    .replace(/\\{\\{descricao\\}\\}/g, itemDescricao)
+                    .replace(/\\{\\{data\\}\\}/g, dataFormatada)
+                    .replace(/\\{\\{valor\\}\\}/g, valorStr)
+                    .replace(/📄/g, emojiDocument)
+                    .replace(/😊/g, emojiSmile);`;
 
-// 4. Create the new default export
-const exportWrapper = `
-export default function FinanceiroPage() {
-  return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-400 font-bold uppercase tracking-widest animate-pulse">Carregando Módulo Financeiro...</div>}>
-      <FinanceiroPageContent />
-    </Suspense>
-  )
-}
-`;
-content = content + "\n" + exportWrapper;
+content = content.replace(oldMsg, newMsg);
 
-fs.writeFileSync(path, content);
-console.log('done');
+fs.writeFileSync(path, content, 'utf8');
+console.log('Financeiro updated.');

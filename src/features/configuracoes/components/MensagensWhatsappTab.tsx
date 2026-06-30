@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useWhatsAppTemplates } from '@/lib/hooks/useWhatsAppTemplates'
 import { MessageCircle, RefreshCw, Save, Info, Eye, Pencil, CheckCircle2 } from 'lucide-react'
 
@@ -149,11 +149,15 @@ function TemplateCard({
   value: string
   onSave: (key: string, value: string) => Promise<void>
 }) {
-  const [text, setText] = useState(value)
+  const [text, setText] = useState(value || config.defaultValue || '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    setText(value || config.defaultValue || '')
+  }, [value, config.defaultValue])
 
   const isDirty = text !== value
 
@@ -171,12 +175,17 @@ function TemplateCard({
     }, 0)
   }, [text])
 
-  const handleSave = async () => {
+  const onSaveClick = async () => {
     setSaving(true)
-    await onSave(config.key, text)
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    try {
+      await onSave(config.key, text)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err: any) {
+      alert(err.message || 'Erro ao salvar mensagem')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleReset = () => {
@@ -205,6 +214,16 @@ function TemplateCard({
       btnOutline: 'border-blue-200 text-blue-600 hover:bg-blue-50',
       focus: 'focus:border-blue-400 focus:ring-blue-100',
       previewBg: 'bg-blue-50/50',
+    },
+    purple: {
+      border: 'border-purple-100',
+      iconBg: 'bg-purple-50 text-purple-600',
+      chip: 'bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100',
+      badge: 'bg-purple-50 text-purple-700',
+      btn: 'bg-purple-600 hover:bg-purple-700 text-white',
+      btnOutline: 'border-purple-200 text-purple-600 hover:bg-purple-50',
+      focus: 'focus:border-purple-400 focus:ring-purple-100',
+      previewBg: 'bg-purple-50/50',
     },
   }[config.color] ?? {}
 
@@ -303,7 +322,7 @@ function TemplateCard({
         <div className="flex items-center gap-3 pt-1">
           <button
             type="button"
-            onClick={handleSave}
+            onClick={onSaveClick}
             disabled={saving || !isDirty}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed ${colorClasses.btn}`}
           >
@@ -352,7 +371,14 @@ export default function MensagensWhatsappTab() {
     if (key === 'msg_whatsapp_cobranca') codigo = 'MSG_WHATSAPP_COBRANCA'
     else if (key === 'msg_whatsapp_hgu') codigo = 'MSG_WHATSAPP_HGU'
     else if (key === 'msg_whatsapp_adesao') codigo = 'MSG_WHATSAPP_ADESAO'
-    if (codigo !== '') await atualizar(codigo, value)
+    
+    if (codigo !== '') {
+      const res = await atualizar(codigo, value)
+      if (res?.error) {
+        const errMsg = typeof res.error === 'string' ? res.error : res.error.message
+        throw new Error(errMsg || 'Erro ao salvar')
+      }
+    }
   }
 
   if (loading) {
