@@ -71,6 +71,7 @@ const MENU = [
     items: [
       { href: '/fiscal', icon: FileText, label: 'Rotinas Fiscais' },
       { href: '/contabil', icon: BookOpen, label: 'Contabilidade Geral' },
+      { href: '/auditoria-financeira', icon: ShieldCheck, label: 'Auditoria Financeira' },
     ]
   },
 ]
@@ -154,6 +155,7 @@ export default function Sidebar() {
       '/cobranca': 'cobrancas',
       '/atendimentos': 'atendimentos',
       '/auditoria': 'auditoria',
+      '/auditoria-financeira': 'auditoria',
       '/estrategia': 'estrategia',
       '/gestao-tarefas': 'gestao_tarefas',
       '/recrutamento': 'recrutamento',
