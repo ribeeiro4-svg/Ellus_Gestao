@@ -32,10 +32,14 @@ export default function SupplierMatchModal({ isOpen, onClose, extrato, onSelect,
 
   const filtered = useMemo(() => {
     if (!search) return []
-    return allItems.filter(f => 
-      f.nome.toLowerCase().includes(search.toLowerCase()) || 
-      (f.cpf_cnpj && f.cpf_cnpj.includes(search))
-    ).slice(0, 10)
+    const q = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    const cleanSearch = search.replace(/\D/g, '')
+    return allItems.filter(f => {
+      const nome = f.nome ? f.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : ''
+      if (nome.includes(q)) return true
+      if (cleanSearch && f.cpf_cnpj && f.cpf_cnpj.replace(/\D/g, '').includes(cleanSearch)) return true
+      return false
+    }).slice(0, 10)
   }, [allItems, search])
 
   const extractedDoc = useMemo(() => {

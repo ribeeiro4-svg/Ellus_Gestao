@@ -89,7 +89,11 @@ export default function Sidebar() {
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
     const initialState: Record<string, boolean> = {}
     MENU.forEach(m => {
-      initialState[m.section] = true
+      if (m.section === 'Início' || m.section === 'Controladoria') {
+        initialState[m.section] = true
+      } else {
+        initialState[m.section] = false
+      }
     })
     return initialState
   })

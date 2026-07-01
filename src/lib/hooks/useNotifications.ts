@@ -206,14 +206,14 @@ export function useNotifications() {
       // Dia útil (segunda a sexta) sem conciliação
       const dayOfWeek = d.getDay() // 0=Dom, 6=Sab
       if (dayOfWeek === 0 || dayOfWeek === 6) continue
-      const conciliadoNoDia = lancamentos.some(l => l.data_conciliacao === ds || (l.conciliado && l.data === ds))
+      const conciliadoNoDia = lancamentos.some(l => (l.data_conciliacao && l.data_conciliacao.startsWith(ds)) || (l.conciliado && l.data === ds))
       if (!conciliadoNoDia) {
         diasSemConciliacao.push(ds)
       }
     }
 
     // Verificar se hoje está sem conciliação
-    const conciliadoHoje = lancamentos.some(l => l.data_conciliacao === todayStr || (l.conciliado && l.data === todayStr))
+    const conciliadoHoje = lancamentos.some(l => (l.data_conciliacao && l.data_conciliacao.startsWith(todayStr)) || (l.conciliado && l.data === todayStr))
     if (!conciliadoHoje) {
       const dayOfWeekToday = today.getDay()
       if (dayOfWeekToday !== 0 && dayOfWeekToday !== 6) {

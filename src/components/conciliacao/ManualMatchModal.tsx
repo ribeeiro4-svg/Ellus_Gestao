@@ -16,10 +16,14 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
 
   const filtered = useMemo(() => {
     if (!search) return []
-    return associados.filter(a => 
-      a.nome.toLowerCase().includes(search.toLowerCase()) || 
-      (a.cpf && a.cpf.includes(search))
-    ).slice(0, 10)
+    const q = search.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    const cleanSearch = search.replace(/\D/g, '')
+    return associados.filter(a => {
+      const nome = a.nome ? a.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : ''
+      if (nome.includes(q)) return true
+      if (cleanSearch && a.cpf && a.cpf.replace(/\D/g, '').includes(cleanSearch)) return true
+      return false
+    }).slice(0, 10)
   }, [associados, search])
 
   if (!isOpen) return null

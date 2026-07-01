@@ -1,6 +1,7 @@
 'use client'
 import React, { useMemo, useState, useEffect } from 'react'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
+import { useCategorias } from '@/lib/hooks/useCategorias'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
@@ -12,6 +13,7 @@ import { useTenantId } from '@/lib/hooks/useTenantId'
 
 export default function FornecedoresTab() {
   const { fornecedores, loading, inserir, atualizar, excluir } = useFornecedores()
+  const { categorias: sysCategorias } = useCategorias()
   const tenantId = useTenantId()
   const planoHook = usePlanoContas()
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -534,7 +536,12 @@ export default function FornecedoresTab() {
           { name: 'cpf_cnpj', label: 'CPF ou CNPJ', type: 'text' },
           { name: 'email', label: 'E-mail', type: 'text' },
           { name: 'telefone', label: 'Telefone / WhatsApp', type: 'text' },
-          { name: 'categoria_padrao', label: 'Categoria de Despesa (ex: Energia, Aluguel, Serviços)', type: 'text' },
+          { 
+            name: 'categoria_padrao', 
+            label: 'Categoria de Despesa', 
+            type: 'select', 
+            options: sysCategorias.map(c => ({ value: c.nome.toUpperCase(), label: c.nome.toUpperCase() }))
+          },
         ]}
       />
     </div>
