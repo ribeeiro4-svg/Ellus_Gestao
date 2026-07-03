@@ -12,6 +12,7 @@ interface BulkEditModalProps {
   planoContas?: { id: string; codigo: string; descricao: string }[]
   contas?: { id: string; nome: string }[]
   diretores?: { id: string; nome: string }[]
+  associados?: { id: string; nome: string; status?: string }[]
 }
 
 const PAYMENT_METHODS = ['PIX', 'Boleto', 'Dinheiro', 'Transferência']
@@ -24,7 +25,8 @@ export default function BulkEditModal({
   categories,
   planoContas,
   contas,
-  diretores
+  diretores,
+  associados
 }: BulkEditModalProps) {
   const [formData, setFormData] = useState<any>({})
   const [step, setStep] = useState<1 | 2>(1)
@@ -69,7 +71,8 @@ export default function BulkEditModal({
       conta_id: 'Conta Bancária',
       conta_debito_id: 'Conta de Débito (Contábil)',
       conta_credito_id: 'Conta de Crédito (Contábil)',
-      diretor_id: 'Diretor Vinculado'
+      diretor_id: 'Diretor Vinculado',
+      associado_id: 'Associado Individual'
     }
     return map[k] || k
   }
@@ -81,6 +84,10 @@ export default function BulkEditModal({
     if (k === 'diretor_id') {
       if (v === 'null') return 'Desvincular'
       return diretores?.find(d => d.id === v)?.nome || v
+    }
+    if (k === 'associado_id') {
+      if (v === 'null') return 'Desvincular'
+      return associados?.find(a => a.id === v)?.nome || v
     }
     if (k === 'status') {
       if (v === 'pago') return 'Efetivado (Pago)'
@@ -333,6 +340,26 @@ export default function BulkEditModal({
                       <option value="null">Desvincular</option>
                       {diretores.map(d => (
                         <option key={d.id} value={d.id}>{d.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Associado */}
+                {associados && associados.length > 0 && (
+                  <div>
+                    <label className="flex items-center gap-2 text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                      <Bookmark size={14} className="text-blue-500" /> Associado Individual
+                    </label>
+                    <select 
+                      value={formData.associado_id || ''}
+                      onChange={(e) => handleChange('associado_id', e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                    >
+                      <option value="">Manter original</option>
+                      <option value="null">Desvincular (Nenhum)</option>
+                      {associados.filter(a => a.status === 'ativo').map(a => (
+                        <option key={a.id} value={a.id}>{a.nome}</option>
                       ))}
                     </select>
                   </div>

@@ -780,7 +780,9 @@ function FinanceiroPageContent() {
         item.categoria, 
         item.banco_original_memo, 
         (item as any).observacao,
-        item.status_cobranca
+        item.status_cobranca,
+        item.banco_transacao_id,
+        (item as any).cora_id,
       ].filter(Boolean).join(' ').toLowerCase()
       const matchSearch = searchTermsHub.length === 0 || searchTermsHub.every(term => targetTextHub.includes(term))
       
@@ -1228,10 +1230,11 @@ function FinanceiroPageContent() {
     { name: 'status', label: 'Status', type: 'select', required: true, options: [{ value: 'aberto', label: 'Provisionado' }, { value: 'pago', label: 'Efetivado (Pago)' }, { value: 'atrasado', label: 'Atrasado' }] },
     { name: 'status_cobranca', label: 'Status Cobrança', type: 'select', options: [{ value: '', label: 'Nenhum' }, { value: 'EM COBRANÇA', label: 'EM COBRANÇA' }, { value: 'NEGOCIADO', label: 'NEGOCIADO' }] },
     { name: 'conta_id', label: 'Conta', type: 'select', required: true, options: contas.map(c => ({ value: c.id, label: c.nome })) },
+    { name: 'banco_transacao_id', label: 'ID Bancário (Opcional - p/ Auditoria OFX)', type: 'text' },
     { name: 'categoria', label: 'Categoria', type: 'select', required: true, options: categorias.map(c => ({ value: c.nome, label: c.nome })) },
     { name: 'forma_pagamento', label: 'Forma', type: 'select', options: [{ value: 'PIX', label: 'PIX' }, { value: 'Boleto', label: 'Boleto' }, { value: 'Dinheiro', label: 'Dinheiro' }, { value: 'Transferência', label: 'Transferência' }] },
     { name: 'data_caixa', label: 'Data Efetiva (Caixa)', type: 'date', showIf: (f: any) => f.forma_pagamento === 'Dinheiro' && f.status === 'pago', required: true },
-    { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [{ value: '', label: 'Nenhum' }, ...associados.map(a => ({ value: a.id, label: a.nome }))] },
+    { name: 'associado_id', label: 'Associado Individual', type: 'select', showIf: (f: any) => f.tipo === 'receita', options: [{ value: '', label: 'Nenhum' }, ...associados.filter(a => a.status === 'ativo').map(a => ({ value: a.id, label: a.nome }))] },
     { 
       name: 'fornecedor_id', 
       label: 'Fornecedor', 
@@ -1559,7 +1562,7 @@ function FinanceiroPageContent() {
               );
 
               return conciliacaoSubTab === 'ofx' ? (
-              extrato.length === 0 ? (<OFXUpload onUpload={(data: any) => setExtrato(parseOFX(data))} />) : (
+              extrato.length === 0 ? (<OFXUpload onUpload={(data: any) => setExtrato(parseOFX(data).transactions)} />) : (
                 <div className="grid grid-cols-1 gap-4">
                   <div className="flex items-center justify-between px-2"><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Lista de Lançamentos ({filteredItemsConciliacao.length})</span><button onClick={() => setExtrato([])} className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><Trash2 size={14} /> LIMPAR</button></div>
                   {pendingItems.map((item: any) => renderMatchItem(item, false))}
@@ -1961,6 +1964,8 @@ function FinanceiroPageContent() {
         onClear={() => setSelectedIds([])}
         categories={categorias}
         diretores={diretoria}
+        associados={associados}
+        contas={contas}
         onMarkCobranca={(editar || isAdmin) ? handleRegistrarCobrancaLote : undefined}
         onRemoveCobranca={(editar || isAdmin) ? () => handleBulkUpdate({ status_cobranca: null as any }) : undefined}
         onAbonar={(editar || isAdmin) ? () => setIsAbonoModalOpen(true) : undefined}

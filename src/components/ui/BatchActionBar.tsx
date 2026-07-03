@@ -12,6 +12,7 @@ interface BatchActionBarProps {
   planoContas?: { id: string; codigo: string; descricao: string }[]
   contas?: { id: string; nome: string }[]
   diretores?: { id: string; nome: string }[]
+  associados?: { id: string; nome: string; status?: string }[]
   onInvertType?: () => void
   onReconciliar?: () => void
   onDownloadInvoice?: () => void
@@ -29,6 +30,7 @@ export default function BatchActionBar({
   planoContas,
   contas,
   diretores,
+  associados,
   onInvertType,
   onReconciliar,
   onMarkCobranca,
@@ -163,6 +165,7 @@ export default function BatchActionBar({
         planoContas={planoContas}
         contas={contas}
         diretores={diretores}
+        associados={associados}
       />
     </>
   )

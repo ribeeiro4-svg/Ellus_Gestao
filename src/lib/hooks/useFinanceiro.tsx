@@ -302,13 +302,13 @@ function useFinanceiroInternal() {
         Number(e.valor) === Number(i.valor) && 
         e.descricao === i.descricao
       )
-      return !isDup
+      return (i as any).force_create ? true : !isDup
     }).map(i => {
       // Limpa campos que são apenas da UI e não existem no banco
       const { 
         troco_via_pix, valor_troco, is_lote, selected_associados, 
         recorrencia_ativa, recorrencia_meses, batch_selection,
-        data_caixa,
+        data_caixa, force_create,
         ...coreData 
       } = i as any
       
