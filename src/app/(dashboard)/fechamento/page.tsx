@@ -157,7 +157,11 @@ export default function FechamentoPage() {
         const y = getAnoIdx(dateToUse)
 
         if (m === selectedMes && y === selectedAno) {
-          const v = Math.abs(Number(l.valor) || 0)
+          const valBruto = Math.abs(Number(l.valor) || 0)
+          const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/);
+          const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
+          const v = valBruto + taxaVal // Adiciona a taxa de volta para o Fechamento bater com a Auditoria
+          
           const tipo = (l.tipo || '').toLowerCase()
           const cat = (l.categoria || '').toLowerCase()
           const isTransfer = cat.includes('transferência interna')
@@ -415,7 +419,7 @@ export default function FechamentoPage() {
                                 <td className="p-3 truncate max-w-[300px]">{l.descricao}</td>
                                 <td className="p-3 text-right text-slate-300 line-through">{hasTax ? fmtR(val) : '--'}</td>
                                 <td className={`p-3 text-right font-black ${l.tipo === 'receita' ? 'text-emerald-600' : 'text-rose-600'} ${hasTax ? 'bg-emerald-50/30' : ''}`}>
-                                  {l.tipo === 'receita' ? '+' : '-'}{fmtR(val)}
+                                  {l.tipo === 'receita' ? '+' : '-'}{fmtR(val + taxaVal)}
                                 </td>
                               </tr>
                             )
