@@ -10,11 +10,16 @@ import type { Lancamento, Associado, Meta } from '@/lib/types'
 export interface ApresentacaoKpis {
   saldoCaixa: number
   receitaMes: number
+  variacaoReceita: number
   despesaMes: number
+  variacaoDespesa: number
   resultadoMes: number
+  variacaoResultado: number
   totalAtivos: number
+  variacaoAtivos: number
   novasAdesoesCount: number
   inadimplenciaRate: number
+  variacaoInadimplencia: number
   inadimplenciaValor: number
   topDevedores: { nome: string; valor: number; diasAtraso: number }[]
 }
@@ -76,6 +81,24 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
     const despesaMes = doMes.filter(l => l.tipo === 'despesa').reduce((s, l) => s + l.valor, 0)
     const resultadoMes = receitaMes - despesaMes
 
+    // Previous month calculation for variations
+    let prevMes = mesRef - 1
+    let prevAno = anoRef
+    if (prevMes < 0) { prevMes = 11; prevAno -= 1 }
+    
+    const prevMesLancamentos = lancamentos.filter(l => {
+      const d = new Date(l.data)
+      return d.getMonth() === prevMes && d.getFullYear() === prevAno && l.status === 'pago'
+    })
+    const prevReceita = prevMesLancamentos.filter(l => l.tipo === 'receita').reduce((s, l) => s + l.valor, 0)
+    const prevDespesa = prevMesLancamentos.filter(l => l.tipo === 'despesa').reduce((s, l) => s + l.valor, 0)
+    const prevResultado = prevReceita - prevDespesa
+
+    const calcVar = (curr: number, prev: number) => prev === 0 ? (curr > 0 ? 100 : 0) : ((curr - prev) / Math.abs(prev)) * 100
+    const variacaoReceita = calcVar(receitaMes, prevReceita)
+    const variacaoDespesa = calcVar(despesaMes, prevDespesa)
+    const variacaoResultado = calcVar(resultadoMes, prevResultado)
+
     // Saldo acumulado (todos pagos até hoje)
     const saldoCaixa = lancamentos
       .filter(l => l.status === 'pago')
@@ -84,6 +107,14 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
     // Associados
     const ativos = associados.filter(a => a.status === 'ativo')
     const totalAtivos = ativos.length
+
+    // Previous month active associates (estimate based on data_ingresso and status)
+    const limitePrev = new Date(prevAno, prevMes + 1, 0) // ultimo dia do mes anterior
+    const prevAtivosCount = associados.filter(assoc => {
+      if (!assoc.data_ingresso) return false
+      return new Date(assoc.data_ingresso) <= limitePrev && assoc.status === 'ativo'
+    }).length
+    const variacaoAtivos = calcVar(totalAtivos, prevAtivosCount)
 
     // Novas adesões no mês
     const novasAdesoesCount = associados.filter(a => {
@@ -101,8 +132,20 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
       ativosIds.has(l.associado_id)
     )
 
+    // Inadimplencia do mes anterior (estimate based on vencimento)
+    const atrasadosPrev = lancamentos.filter(l => {
+      const d = new Date(l.data)
+      return l.status === 'atrasado' && l.tipo === 'receita' && l.associado_id && ativosIds.has(l.associado_id) && 
+             (d.getFullYear() < prevAno || (d.getFullYear() === prevAno && d.getMonth() <= prevMes))
+    })
+    
     const inadimplentesIds = new Set(atrasados.map(l => l.associado_id))
     const inadimplenciaRate = totalAtivos > 0 ? (inadimplentesIds.size / totalAtivos) * 100 : 0
+    
+    const inadimplentesPrevIds = new Set(atrasadosPrev.map(l => l.associado_id))
+    const prevInadimplenciaRate = prevAtivosCount > 0 ? (inadimplentesPrevIds.size / prevAtivosCount) * 100 : 0
+    const variacaoInadimplencia = inadimplenciaRate - prevInadimplenciaRate
+
     const inadimplenciaValor = atrasados.reduce((s, l) => s + l.valor, 0)
 
     // Top devedores
@@ -125,11 +168,16 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
     return {
       saldoCaixa,
       receitaMes,
+      variacaoReceita,
       despesaMes,
+      variacaoDespesa,
       resultadoMes,
+      variacaoResultado,
       totalAtivos,
+      variacaoAtivos,
       novasAdesoesCount,
       inadimplenciaRate,
+      variacaoInadimplencia,
       inadimplenciaValor,
       topDevedores
     }
