@@ -59,6 +59,41 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
         ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const } },
         beginAtZero: false,
       }
+    },
+    layout: {
+      padding: {
+        top: 50
+      }
+    }
+  }
+
+  const dataLabelsPlugin = {
+    id: 'dataLabelsPlugin',
+    afterDatasetsDraw(chart: any) {
+      const { ctx } = chart
+      chart.data.datasets.forEach((dataset: any, i: number) => {
+        const meta = chart.getDatasetMeta(i)
+        meta.data.forEach((element: any, index: number) => {
+          const val = dataset.data[index]
+          const prev = index > 0 ? dataset.data[index - 1] : val
+          const diff = val - prev
+
+          // Valor total (Associados)
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
+          ctx.font = '700 16px system-ui, sans-serif'
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'bottom'
+          ctx.fillText(val.toString(), element.x, element.y - 12)
+
+          // Crescimento em relação ao mês anterior
+          if (index > 0) {
+            ctx.font = '800 13px system-ui, sans-serif'
+            ctx.fillStyle = diff > 0 ? '#34d399' : diff < 0 ? '#fb7185' : 'rgba(255,255,255,0.5)'
+            const diffText = diff > 0 ? `+${diff}` : diff.toString()
+            ctx.fillText(diffText, element.x, element.y - 32)
+          }
+        })
+      })
     }
   }
 
@@ -101,7 +136,7 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
 
         {/* Chart */}
         <div className="flex-1 min-h-0 p-4 rounded-[24px] bg-white/5 border border-white/10">
-          <Line data={chartData} options={options} />
+          <Line data={chartData} options={options} plugins={[dataLabelsPlugin]} />
         </div>
       </div>
     </div>
