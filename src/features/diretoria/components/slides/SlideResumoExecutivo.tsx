@@ -23,11 +23,11 @@ function KpiCard({ label, value, prefix, suffix, decimals, icon: Icon, color, bg
         </div>
       </div>
       <div className="flex flex-col gap-1">
-        <p className={`text-[10px] font-black uppercase tracking-[2px] opacity-70 ${iconColor}`}>{label}</p>
-        <div className="text-4xl md:text-5xl font-black text-white tracking-tight leading-none">
+        <p className={`text-[13px] font-black uppercase tracking-[2px] opacity-70 ${iconColor}`}>{label}</p>
+        <div className="text-5xl md:text-6xl font-black text-white tracking-tight leading-none mt-2 mb-1">
           <CountUp value={value} prefix={prefix} suffix={suffix} decimals={decimals} duration={900} />
         </div>
-        {sublabel && <p className="text-[11px] text-white/40 font-semibold mt-1">{sublabel}</p>}
+        {sublabel && <p className="text-sm text-white/50 font-semibold mt-1">{sublabel}</p>}
       </div>
     </div>
   )
@@ -44,10 +44,10 @@ export default function SlideResumoExecutivo({ kpis, mesRef, anoRef }: SlideResu
 
       <div className="relative z-10 flex flex-col h-full gap-6">
         {/* Header */}
-        <div className="flex flex-col gap-1">
-          <p className="text-[10px] font-black uppercase tracking-[3px] text-emerald-400/70">Resumo Executivo</p>
-          <h2 className="text-3xl font-black text-white tracking-tight">Saúde da Associação</h2>
-          <p className="text-sm text-white/30 font-semibold">{MESES[mesRef]} / {anoRef} — Visão consolidada</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-[13px] font-black uppercase tracking-[3px] text-emerald-400/70">Resumo Executivo</p>
+          <h2 className="text-5xl font-black text-white tracking-tight">Saúde da Associação</h2>
+          <p className="text-base text-white/50 font-semibold">{MESES[mesRef]} / {anoRef} — Visão consolidada</p>
         </div>
 
         {/* KPI Grid */}
@@ -97,15 +97,15 @@ export default function SlideResumoExecutivo({ kpis, mesRef, anoRef }: SlideResu
         </div>
 
         {/* Resultado destaque */}
-        <div className={`flex items-center justify-between p-5 rounded-[20px] border ${isPositivo ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
+        <div className={`flex items-center justify-between p-6 rounded-[20px] border ${isPositivo ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-rose-500/10 border-rose-500/20'}`}>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[2px] text-white/40">Resultado do Período</p>
-            <div className={`text-3xl font-black tracking-tight ${isPositivo ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <p className="text-[13px] font-black uppercase tracking-[2px] text-white/50">Resultado do Período</p>
+            <div className={`text-4xl font-black tracking-tight mt-2 ${isPositivo ? 'text-emerald-400' : 'text-rose-400'}`}>
               <CountUp value={kpis.resultadoMes} prefix="R$ " decimals={2} duration={900} />
             </div>
           </div>
-          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${isPositivo ? 'bg-emerald-500/15 border border-emerald-500/20' : 'bg-rose-500/15 border border-rose-500/20'}`}>
-            {isPositivo ? <TrendingUp size={24} className="text-emerald-400" /> : <TrendingDown size={24} className="text-rose-400" />}
+          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${isPositivo ? 'bg-emerald-500/15 border border-emerald-500/20' : 'bg-rose-500/15 border border-rose-500/20'}`}>
+            {isPositivo ? <TrendingUp size={28} className="text-emerald-400" /> : <TrendingDown size={28} className="text-rose-400" />}
           </div>
         </div>
       </div>
