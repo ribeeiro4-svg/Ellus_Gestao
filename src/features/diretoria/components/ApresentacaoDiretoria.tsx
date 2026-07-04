@@ -219,7 +219,7 @@ export default function ApresentacaoDiretoria() {
 
   // ─── MODO APRESENTAÇÃO ──────────────────────────────────────────────
   return (
-    <div ref={containerRef} className="fixed inset-0 z-[200] bg-[#040d0a] group" style={{ cursor: 'none' }}>
+    <div ref={containerRef} className="fixed inset-0 z-[200] bg-[#040d0a] group">
       {/* Cursor customizado */}
       <style>{`
         @keyframes slideInRight { from { transform: translateX(60px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
