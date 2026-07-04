@@ -1,8 +1,9 @@
 'use client'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Maximize2, Minimize2, ChevronLeft, ChevronRight, X, Monitor, Calendar, RefreshCw } from 'lucide-react'
+import { Maximize2, Minimize2, ChevronLeft, ChevronRight, X, Monitor, RefreshCw, Download } from 'lucide-react'
 import { MESES } from '@/lib/utils/formatters'
 import { useApresentacaoData } from '../hooks/useApresentacaoData'
+import { downloadHtmlApresentacao } from '../utils/exportHtmlApresentacao'
 import SlideNav from './SlideNav'
 import SlideCapa from './slides/SlideCapa'
 import SlideResumoExecutivo from './slides/SlideResumoExecutivo'
@@ -183,15 +184,29 @@ export default function ApresentacaoDiretoria() {
               </div>
             )}
 
-            {/* Start button */}
-            <button
-              onClick={startPresentation}
-              disabled={data.loading}
-              className="flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl transition-all shadow-lg shadow-emerald-900/40 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
-            >
-              <Monitor size={18} />
-              {data.loading ? 'Carregando...' : `Iniciar Apresentação — ${MESES[mesRef]} ${anoRef}`}
-            </button>
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              {/* Start button */}
+              <button
+                onClick={startPresentation}
+                disabled={data.loading}
+                className="flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl transition-all shadow-lg shadow-emerald-900/40 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
+              >
+                <Monitor size={18} />
+                {data.loading ? 'Carregando...' : `Iniciar Apresentação — ${MESES[mesRef]} ${anoRef}`}
+              </button>
+
+              {/* Download HTML button */}
+              <button
+                onClick={() => downloadHtmlApresentacao(data)}
+                disabled={data.loading}
+                className="flex items-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 text-white/70 hover:text-white font-black text-sm rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
+                title="Baixar como arquivo HTML standalone — abre no navegador sem internet"
+              >
+                <Download size={18} />
+                Baixar HTML
+              </button>
+            </div>
 
             <p className="text-[10px] text-white/20 font-bold">
               Pressione F para tela cheia · Setas para navegar · ESC para sair
