@@ -73,6 +73,7 @@ export async function middleware(request: NextRequest) {
       '/bens-duraveis': 'bens_duraveis',
       '/cobranca': 'cobrancas',
       '/atendimentos': 'atendimentos',
+      '/auditoria-financeira': 'auditoria', // Restrito: Tesoureiro e Admin apenas
       '/auditoria': 'auditoria',
       '/audit': 'auditoria', // Rota perigosa protegida
       '/estrategia': 'estrategia',

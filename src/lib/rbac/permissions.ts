@@ -50,7 +50,25 @@ const FULL_ACCESS: Permission[] = [
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   admin: FULL_ACCESS,
 
-  presidente: FULL_ACCESS,
+  // Presidente tem acesso total EXCETO auditoria (módulo restrito ao Tesoureiro)
+  presidente: [
+    'dashboard:view',
+    'associados:view', 'associados:write', 'associados:delete',
+    'atendimentos:view', 'atendimentos:write',
+    'financeiro:view', 'financeiro:write', 'financeiro:delete', 'financeiro:conciliar',
+    'planejamento:view', 'planejamento:write',
+    'fechamento:write',
+    'estrategia:view', 'estrategia:write',
+    'tarefas:view', 'tarefas:write',
+    'bens:view', 'bens:write',
+    'recrutamento:view', 'recrutamento:write',
+    'fiscal:view', 'fiscal:write',
+    'contabil:view',
+    'importar:write',
+    'configuracoes:view', 'configuracoes:write',
+    'usuarios:view', 'usuarios:write',
+    // audit:view removido intencionalmente — apenas Tesoureiro e Admin
+  ],
 
   'vice-presidente': [
     'dashboard:view',
@@ -67,7 +85,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'contabil:view',
     'configuracoes:view',
     'usuarios:view',
-    'audit:view',
+    // audit:view removido intencionalmente — apenas Tesoureiro e Admin
   ],
 
   tesoureiro: [
@@ -98,7 +116,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'recrutamento:view', 'recrutamento:write',
     'fiscal:view',
     'contabil:view',
-    'audit:view',
+    // audit:view removido intencionalmente — apenas Tesoureiro e Admin
   ],
 
   secretaria: [

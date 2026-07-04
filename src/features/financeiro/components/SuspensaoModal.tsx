@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useTenant } from '@/lib/hooks/useTenant'
 import jsPDF from 'jspdf'
 import { fmtData } from '@/lib/utils/formatters'
+import { uploadTermoSuspensaoAction } from '@/app/actions/upload-suspensao'
 
 interface SuspensaoModalProps {
   isOpen: boolean
@@ -142,31 +143,26 @@ export default function SuspensaoModal({ isOpen, onClose, associado, onConfirm }
     setError('')
     
     try {
-      const ext = file.name.split('.').pop()
-      const fileName = `${associado.tenant_id}/${associado.id}/suspensao_${Date.now()}.${ext}`
-      
-      const { data: uploadData, error: uploadError } = await sb.storage
-        .from('documentos_associados')
-        .upload(fileName, file, { upsert: true })
-        
-      if (uploadError) {
-        throw new Error(`Erro no upload: ${uploadError.message}`)
+      const formData = new FormData()
+      formData.append('tenantId', associado.tenant_id)
+      formData.append('associadoId', associado.id)
+      formData.append('file', file)
+
+      const result = await uploadTermoSuspensaoAction(formData)
+
+      if (result.error) {
+        throw new Error(result.error)
       }
-      
-      // Gera URL assinada com validade de 10 anos (funciona com bucket privado)
-      const { data: signedUrlData, error: signedUrlError } = await sb.storage
-        .from('documentos_associados')
-        .createSignedUrl(fileName, 315360000) // 10 anos em segundos
-      
-      if (signedUrlError || !signedUrlData?.signedUrl) {
-        throw new Error('Erro ao gerar URL do documento.')
+
+      if (!result.signedUrl) {
+        throw new Error('URL do documento não retornou corretamente.')
       }
         
       const suspensaoData = {
         status: 'suspenso',
         suspensao_motivo: motivo,
         suspensao_data: new Date(dataSuspensao + 'T12:00:00').toISOString(),
-        suspensao_arquivo_url: signedUrlData.signedUrl
+        suspensao_arquivo_url: result.signedUrl
       }
       
       const res = await onConfirm(suspensaoData)
@@ -247,8 +243,8 @@ export default function SuspensaoModal({ isOpen, onClose, associado, onConfirm }
                <div className="flex flex-col gap-2">
                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest pl-2">Senha de Autorização</label>
                  <input 
-                   type="password" 
-                   placeholder="Insira a senha (19072425)"
+                   type="password"
+                   placeholder="Insira a senha de autorização"
                    value={senha}
                    onChange={e => setSenha(e.target.value)}
                    className="w-full bg-slate-50 border-none px-4 py-3.5 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 ring-red-500/10 transition-all"

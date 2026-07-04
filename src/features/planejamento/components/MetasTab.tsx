@@ -281,52 +281,52 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="flex flex-col gap-6">
-          <ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado">
-            <div className="h-[210px] mt-4">
-              <Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} />
-            </div>
-          </ChartCard>
-          
-          <ChartCard title="📉 Impacto nos Ingressos" subtitle="Consumo do Faturamento por Categoria">
-            <div className="h-[260px] mt-4">
-              {totals.planejadoDespesa > 0 ? (
-                <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }} />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
-                  <Activity size={32} className="opacity-20" />
-                  <span className="text-xs font-bold uppercase tracking-widest">Nenhum dispêndio planejado</span>
-                </div>
-              )}
-            </div>
-          </ChartCard>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Superávit Projetado (%)</span>
-              {selectedCategories.length > 0 && (
-                <button onClick={() => setIsConfirmLancarOpen(true)} className="flex items-center gap-2 text-[9px] font-black text-white bg-emerald-500 px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
-                  <TrendingUp size={14} /> LANÇAR PLANEJAMENTO ({selectedCategories.length})
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
-                className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-xl transition-all ${showOnlyFavorites ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
-              >
-                <Star size={12} fill={showOnlyFavorites ? 'currentColor' : 'none'} />
-                {showOnlyFavorites ? 'FAVORITAS' : 'TODAS'}
-              </button>
-              <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button>
-            </div>
+      {/* Gráficos no topo */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado">
+          <div className="h-[210px] mt-4">
+            <Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} />
           </div>
-          <DataTable columns={columns} data={filteredComparativo} loading={loadFin || loadOrc} selectedIds={selectedCategories} onSelectChange={setSelectedCategories} idKey="categoria" />
+        </ChartCard>
+
+        <ChartCard title="📉 Impacto nos Ingressos" subtitle="Consumo do Faturamento por Categoria">
+          <div className="h-[210px] mt-4">
+            {totals.planejadoDespesa > 0 ? (
+              <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }} />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
+                <Activity size={32} className="opacity-20" />
+                <span className="text-xs font-bold uppercase tracking-widest">Nenhum dispêndio planejado</span>
+              </div>
+            )}
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Tabela de Orçamento abaixo */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Superávit Projetado (%)</span>
+            {selectedCategories.length > 0 && (
+              <button onClick={() => setIsConfirmLancarOpen(true)} className="flex items-center gap-2 text-[9px] font-black text-white bg-emerald-500 px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
+                <TrendingUp size={14} /> LANÇAR PLANEJAMENTO ({selectedCategories.length})
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+              className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-xl transition-all ${showOnlyFavorites ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+            >
+              <Star size={12} fill={showOnlyFavorites ? 'currentColor' : 'none'} />
+              {showOnlyFavorites ? 'FAVORITAS' : 'TODAS'}
+            </button>
+            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button>
+          </div>
         </div>
+        <DataTable columns={columns} data={filteredComparativo} loading={loadFin || loadOrc} selectedIds={selectedCategories} onSelectChange={setSelectedCategories} idKey="categoria" />
       </div>
 
       {/* Modais */}

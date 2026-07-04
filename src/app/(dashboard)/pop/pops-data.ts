@@ -467,5 +467,30 @@ export const POPS: PopItem[] = [
       'Ao bloquear uma permissão de "Ver" em um módulo, o menu lateral também desaparecerá para aquele perfil.'
     ],
     referencias: ['Política de Segurança da Informação']
+  },
+  {
+    id: 'pop-22',
+    codigo: 'POP-22',
+    titulo: 'Suspensão de Associado e Benefícios',
+    modulo: 'Cobrança / Inadimplência',
+    icone: 'UserX',
+    cor: 'red',
+    objetivo: 'Aplicar a regra de suspensão estatutária para associados inadimplentes a partir de 90 dias de atraso, cancelando o acesso aos benefícios da associação (incluindo Plano de Saúde).',
+    responsavel: 'Tesouraria',
+    periodicidade: 'Diária (ao identificar D+90+)',
+    passos: [
+      'Acesse "Financeiro" > aba "Inadimplência".',
+      'Localize o associado que atingiu ou ultrapassou 90 dias de atraso (badge vermelho escuro - CRÍTICO).',
+      'Clique no botão "Acionar Cobrança" para abrir o painel lateral.',
+      'Na tela de nova ação, confirme a etapa "Suspensão". O sistema gerará o texto formal baseado no art. 57 do Código Civil e no Estatuto Social.',
+      'Envie o comunicado de suspensão via E-mail e Carta para o associado.',
+      'Comunique imediatamente a operadora do Plano de Saúde (ex: HGU) sobre a exclusão/suspensão do associado.',
+      'A reativação do associado só deve ser feita mediante quitação integral ou assinatura de acordo de parcelamento.'
+    ],
+    alertas: [
+      'Não realizar a comunicação no prazo correto gera custos indevidos para a associação junto à operadora de saúde.',
+      'O associado continua devendo os valores em atraso (com multa e juros) mesmo após a suspensão.'
+    ],
+    referencias: ['Estatuto Social', 'ACPROBEC_modulo_cobranca_especificacao_tecnica']
   }
 ]

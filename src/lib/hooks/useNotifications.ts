@@ -274,12 +274,24 @@ export function useNotifications() {
     // ─── 6. ZAPSIGN — ASSOCIADOS SEM ASSINATURA ──────────────────────────────
     const semAssinatura = associados.filter(a => {
       if (a.status === 'inativo') return false
-      if (!a.zapsign_doc_token) return false
-      // status pendente indica que o associado ainda não assinou
-      if (a.status === 'pendente') return true
-      // ou verificar signatários: se tiver zapsign_signers e nenhum com status 'signed'
-      if (a.zapsign_signers && Array.isArray(a.zapsign_signers) && a.zapsign_signers.length > 0) {
-        return !a.zapsign_signers.some((s: any) => s.status === 'signed' || s.status === 'assinado')
+      
+      // Se o termo_status indica pendência, verificamos se o associado já assinou
+      if (a.termo_status && (a.termo_status.toLowerCase().includes('pendente') || a.termo_status.toLowerCase().includes('aguardando'))) {
+        
+        // Se temos os dados da zapsign e a lista de signatários, vamos checar o status do associado especificamente
+        if (a.zapsign_signers && Array.isArray(a.zapsign_signers) && a.zapsign_signers.length > 0) {
+          // Busca o signatário que corresponde ao associado (pelo email ou nome) ou pega o primeiro como fallback
+          const assocSigner = a.zapsign_signers.find((s: any) => 
+            s.email?.toLowerCase() === a.email?.toLowerCase() || 
+            s.name?.toLowerCase() === a.nome?.toLowerCase()
+          ) || a.zapsign_signers[0]
+          
+          return assocSigner.status !== 'signed' && assocSigner.status !== 'assinado'
+        }
+        
+        // Se não temos a lista de signatários (ou nem gerou o token ainda), mas o termo está pendente, 
+        // consideramos que o associado precisa assinar.
+        return true
       }
       return false
     })

@@ -795,23 +795,7 @@ export default function RelatoriosFinanceirosTab({
             </div>
           ` : ''}
 
-          ${selectedReport === 'provisoes' ? `
-            <div class="summary-title">Resumo Estratégico de Provisões</div>
-            <div class="late-cards-container">
-              <div class="late-card" style="border-left: 4px solid #f59e0b; background: #fffbeb;">
-                <span class="late-card-label" style="color: #92400e;">FUNDO DE CAIXA PROVISIONADO</span>
-                <div class="late-card-value" style="color: #d97706;">${fmtR(fundoCaixaProvisionado)}</div>
-              </div>
-              
-              ${lateProvisionsByMonth.map(item => `
-                <div class="late-card">
-                  <span class="late-card-label">${item.label}</span>
-                  <div class="late-card-value">${fmtR(item.value)}</div>
-                  <span style="font-size: 7px; font-weight: 900; color: #b45309; text-transform: uppercase; margin-top: 6px; display: block; opacity: 0.8; letter-spacing: 0.5px;">• Em Atraso</span>
-                </div>
-              `).join('')}
-            </div>
-          ` : ''}
+
           
           ${chartElement ? `
             <div class="summary-title">Análise de Provisões vs Teto de Receita</div>
@@ -1406,89 +1390,6 @@ export default function RelatoriosFinanceirosTab({
         <div id="report-table" className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
           {selectedReport === 'provisoes' ? (
             <div className="flex flex-col gap-10">
-              {/* TABELA DE INGRESSOS */}
-              {provisionsIncomeGroups.length > 0 && (
-                <div className="overflow-x-auto">
-                  <div className="px-6 py-4 bg-emerald-50/50 border-b border-emerald-100">
-                    <h3 className="text-xs font-black text-emerald-700 uppercase tracking-widest flex items-center gap-2">
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                      Detalhamento de Ingressos (Provisões)
-                    </h3>
-                  </div>
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50/30">
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[300px]">Descrição / Detalhes</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-[180px]">Valor</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-[120px]">Status</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-[120px]">Forma</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-[150px]">Conta</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {provisionsIncomeGroups.map(group => (
-                        <React.Fragment key={group.date}>
-                          <tr className="bg-slate-50/80">
-                            <td colSpan={5} className="px-6 py-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-4 bg-emerald-500 rounded-full" />
-                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                                  {group.isAtrasadosGroup ? 'Recebimentos Pendentes (Meses Anteriores)' : `Dia ${fmtData(group.date)}`}
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                          {group.items.map((l: any) => (
-                            <tr key={l.id} className="hover:bg-slate-50/30 transition-colors group">
-                              <td className="px-6 py-4">
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-bold text-slate-800 leading-tight">{l.descricao}</span>
-                                  {getLinkedName(l) && (
-                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
-                                      {getLinkedName(l)?.toUpperCase()}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <span className="text-sm font-extrabold text-emerald-600">
-                                  +{fmtR(l.valor)}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="flex justify-center">
-                                  <StatusBadge status={(l.status === 'aberto' || l.status === 'atrasado') && l.status_cobranca === 'PROCESSANDO' ? 'Processando' : l.status} type="lancamento" />
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="flex justify-center">
-                                  <PaymentBadge method={l.forma_pagamento} />
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <span className="text-[10px] font-bold text-slate-500">
-                                  {contas.find(c => c.id === l.conta_id)?.nome || 'N/A'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                      <tr className="bg-emerald-50/30 border-t-2 border-emerald-100">
-                        <td className="px-6 py-5 text-[11px] font-black text-emerald-900 uppercase tracking-[2px]">Total Geral de Ingressos Projetados</td>
-                        <td className="px-6 py-5 text-right">
-                          <span className="text-base font-black text-emerald-600">
-                            +{fmtR(totalProvisionsIncome)}
-                          </span>
-                        </td>
-                        <td colSpan={3} className="px-6 py-5 text-right italic text-[10px] font-bold text-emerald-700/50 uppercase tracking-widest">
-                          Soma de todos os recebimentos pendentes
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
 
               {/* TABELA DE DISPÊNDIOS */}
               {provisionsExpenseGroups.length > 0 && (

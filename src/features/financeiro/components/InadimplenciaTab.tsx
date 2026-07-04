@@ -23,6 +23,7 @@ import CobrancaDrawer from '@/features/cobranca/components/CobrancaDrawer'
 import CobrancaStatusCell from '@/features/cobranca/components/CobrancaStatusCell'
 import { calcularTotalAtualizado } from '@/features/cobranca/utils/cobrancaUtils'
 import SuspensaoModal from './SuspensaoModal'
+import { gerarPdfAbonoLote } from '@/features/financeiro/utils/gerarPdfAbonoLote'
 import AbonoLancamentoModal from '@/components/financeiro/AbonoLancamentoModal'
 import { FileText, ScrollText } from 'lucide-react'
 import jsPDF from 'jspdf'
@@ -116,6 +117,7 @@ export default function InadimplenciaTab({
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
   const [isAbonoModalOpen, setIsAbonoModalOpen] = useState(false)
+  const [showSuspensos, setShowSuspensos] = useState(false)
 
   // Lançamentos atrasados (detalhado) - Base de cálculo real
   const lancamentosAtrasados = useMemo(() => {
@@ -199,13 +201,22 @@ export default function InadimplenciaTab({
     return result.sort((a, b) => b.meses - a.meses)
   }, [lancamentosAtrasados, associados, cobrancaConfig])
 
-  const ticketMedioAtraso = mappedInadimplentes.length > 0 ? totalDevido / mappedInadimplentes.length : 0
-  const pctInadimpTotal = (mappedInadimplentes.length / (associados.length || 1)) * 100
+  // Separa ativos de suspensos — suspensos saem da inadimplência ativa
+  const mappedAtivos = useMemo(() =>
+    mappedInadimplentes.filter(g => (g.assoc?.status || '').toLowerCase() !== 'suspenso')
+  , [mappedInadimplentes])
+
+  const mappedSuspensos = useMemo(() =>
+    mappedInadimplentes.filter(g => (g.assoc?.status || '').toLowerCase() === 'suspenso')
+  , [mappedInadimplentes])
+
+  const ticketMedioAtraso = mappedAtivos.length > 0 ? totalDevido / mappedAtivos.length : 0
+  const pctInadimpTotal = (mappedAtivos.length / (associados.length || 1)) * 100
 
   // Curva de atraso calculada dinamicamente
   const curva = useMemo(() => {
     let m1 = 0, m2 = 0, m3 = 0, m3plus = 0
-    mappedInadimplentes.forEach(item => {
+    mappedAtivos.forEach(item => {
       const ms = item.meses
       if (ms === 1) m1++
       else if (ms === 2) m2++
@@ -213,7 +224,7 @@ export default function InadimplenciaTab({
       else if (ms > 3) m3plus++
     })
     return [m1, m2, m3, m3plus]
-  }, [mappedInadimplentes])
+  }, [mappedAtivos])
 
   const handleMarcarPago = async (item: any) => {
     if (!confirm('Deseja marcar este lançamento como pago?')) return
@@ -288,13 +299,25 @@ export default function InadimplenciaTab({
 
     if (allLancamentoIds.length === 0) return
 
+    const caixaConta = contas.find(c => c.nome.toLowerCase().includes('caixa'))
+
     const dataToUpdate: any = {
       status: 'cancelado',
-      banco_original_memo: `[ABONO] Motivo: ${motivo} | Por: Sistema`
+      banco_original_memo: `[ABONO] Motivo: ${motivo} | Por: Sistema`,
+      valor: 0,
+      forma_pagamento: 'DINHEIRO'
+    }
+    if (caixaConta) {
+      dataToUpdate.conta_id = caixaConta.id
     }
     const res = await atualizarBulk(allLancamentoIds, dataToUpdate)
     if (!res.error) {
       logAction('ABONO EM LOTE', `${allLancamentoIds.length} lançamentos foram abonados. Motivo: ${motivo}`)
+      // Gera o pdf em lote
+      const lancamentosAbonados = allLancamentoIds.map(id => lancamentos.find((l: any) => l.id === id)).filter(Boolean)
+      if (lancamentosAbonados.length > 0) {
+        gerarPdfAbonoLote(lancamentosAbonados, associados, 'download')
+      }
       setSelectedIds([])
       setIsAbonoModalOpen(false)
     } else {
@@ -639,7 +662,7 @@ export default function InadimplenciaTab({
         {[
           { label: 'Total Vencido', value: fmtR(totalDevido), sub: `${lancamentosAtrasados.length} lançamentos pendentes`, icon: ShieldAlert, color: 'var(--red)' },
           { label: 'Indíce Geral', value: fmtPct(pctInadimpTotal), sub: 'da carteira de associados', icon: TrendingDown, color: 'var(--orange)' },
-          { label: 'Ticket Médio', value: fmtR(ticketMedioAtraso), sub: 'por inadimplente', icon: Users, color: 'var(--text2)' },
+          { label: 'Ticket Médio', value: fmtR(ticketMedioAtraso), sub: 'por inadimplente ativo', icon: Users, color: 'var(--text2)' },
           { label: 'Críticos (3+ Meses)', value: curva[3], sub: 'casos de alta inadimplência', icon: AlertTriangle, color: 'var(--red)' },
         ].map(k => (
           <div key={k.label} className="kpi-card bg-white rounded-[28px] p-6 border border-slate-100 shadow-sm relative group transition-all hover:shadow-md hover:border-red-100">
@@ -704,7 +727,7 @@ export default function InadimplenciaTab({
                <ShieldAlert size={18} className="text-red-500" /> Associados em Situação Crítica
             </h4>
             <div className="flex-1 space-y-4">
-               {mappedInadimplentes.slice(0, 3).map((item, idx) => (
+               {mappedAtivos.slice(0, 3).map((item, idx) => (
                  <div key={item.assoc?.id || idx} className="flex items-center justify-between p-5 bg-red-50/20 rounded-2xl border border-red-100/30 hover:bg-red-50/40 transition-colors">
                     <div className="flex items-center gap-5">
                        <div className="w-8 h-8 rounded-full bg-red-100/50 flex items-center justify-center font-black text-red-600 text-[10px]">#{idx+1}</div>
@@ -724,9 +747,9 @@ export default function InadimplenciaTab({
                     </div>
                  </div>
                ))}
-               {mappedInadimplentes.length === 0 && (
+               {mappedAtivos.length === 0 && (
                  <div className="flex-1 flex items-center justify-center text-slate-300 italic text-sm">
-                    Nenhum inadimplente encontrado. Parabéns!
+                    Nenhum inadimplente ativo encontrado. Parabéns!
                  </div>
                )}
             </div>
@@ -826,13 +849,92 @@ export default function InadimplenciaTab({
         </div>
         <DataTable 
           columns={columns} 
-          data={mappedInadimplentes} 
+          data={mappedAtivos} 
           loading={loading} 
           onRowClick={(g) => { setSelectedGroupDetails(g); setIsGroupModalOpen(true); }}
           selectedIds={selectedIds}
           onSelectChange={setSelectedIds}
         />
       </div>
+
+      {/* ── SEÇÃO: SUSPENSOS ── */}
+      {mappedSuspensos.length > 0 && (
+        <div className="bg-slate-50 rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
+          <button
+            onClick={() => setShowSuspensos(v => !v)}
+            className="w-full p-6 flex items-center justify-between text-left hover:bg-slate-100/60 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center">
+                <ShieldAlert size={14} className="text-slate-500" />
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  Suspensos com Débitos Congelados
+                </h4>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                  {mappedSuspensos.length} associado{mappedSuspensos.length > 1 ? 's' : ''} suspenso{mappedSuspensos.length > 1 ? 's' : ''} — débitos preservados, fora da inadimplência ativa.
+                  {' '}Se reassociados, voltarão automaticamente.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="px-3 py-1 bg-slate-200 text-slate-600 rounded-full text-[10px] font-black">
+                {fmtR(mappedSuspensos.reduce((acc, g) => acc + g.totalOriginal, 0))}
+              </span>
+              <span className="text-slate-400 text-xs font-bold">{showSuspensos ? '▲ Ocultar' : '▼ Ver lista'}</span>
+            </div>
+          </button>
+
+          {showSuspensos && (
+            <div className="border-t border-slate-200 overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-100/80">
+                    <th className="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Associado</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Motivo Suspensão</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Pendências</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Original</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Meses em Atraso</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Situação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {mappedSuspensos.map(g => (
+                    <tr
+                      key={g.id}
+                      className="hover:bg-slate-100/40 transition-colors cursor-pointer"
+                      onClick={() => { setSelectedGroupDetails(g); setIsGroupModalOpen(true) }}
+                    >
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-bold text-slate-700">{g.assoc?.nome || g.descricao}</p>
+                        <p className="text-[10px] text-slate-400">{g.assoc?.cpf || ''}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs text-slate-500">{g.assoc?.suspensao_motivo || '—'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-bold text-slate-600">{g.meses} {g.meses === 1 ? 'pendência' : 'pendências'}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm font-black text-slate-500">{fmtR(g.totalOriginal)}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-xs font-bold text-amber-600">{g.diasAtraso} dias</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-2.5 py-1 bg-slate-200 text-slate-600 rounded-full text-[9px] font-black uppercase tracking-widest">
+                          ⏸ Congelado
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <CrudModal 
         isOpen={isModalOpen} 

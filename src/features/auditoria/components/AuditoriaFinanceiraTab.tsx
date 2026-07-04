@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
-import { ShieldCheck, Download, Search, AlertTriangle, CheckCircle2, FileText, Upload, Info, X, Plus, Eye, ArrowDownRight, ArrowUpRight, Activity, Trash2 } from 'lucide-react'
+import { ShieldCheck, Download, Search, AlertTriangle, CheckCircle2, FileText, Upload, Info, X, Plus, Eye, ArrowDownRight, ArrowUpRight, Activity, Trash2, Link, UserCheck, AlertCircle } from 'lucide-react'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import { useContas } from '@/lib/hooks/useContas'
@@ -11,6 +11,7 @@ import { useOFXParser, OFXTransaction, OFXParseResult } from '@/lib/hooks/useOFX
 import OFXUpload from '@/components/conciliacao/OFXUpload'
 import * as XLSX from 'xlsx'
 import { fmtR } from '@/lib/utils/formatters'
+import ImportacaoHGUTab from './ImportacaoHGUTab'
 
 const extrairTaxa = (desc: string) => {
   if (!desc) return 0;
@@ -18,8 +19,8 @@ const extrairTaxa = (desc: string) => {
   return match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
 }
 
-type AuditTab = 'adesoes' | 'extratos'
-type OFXAuditStatus = 'ok' | 'valor_divergente' | 'manual' | 'manual_outra_conta' | 'nao_encontrado' | 'duplicata' | 'data_divergente' | 'status_aberto'
+type AuditTab = 'adesoes' | 'extratos' | 'sem_vinculo' | 'importacao_hgu'
+type OFXAuditStatus = 'ok' | 'valor_divergente' | 'manual' | 'manual_outra_conta' | 'nao_encontrado' | 'duplicata' | 'data_divergente' | 'status_aberto' | 'tipo_divergente'
 
 export default function AuditoriaFinanceiraTab() {
   const { associados, loading: loadingAssoc } = useAssociados()
@@ -38,6 +39,11 @@ export default function AuditoriaFinanceiraTab() {
   const [filterTag, setFilterTag] = useState<string>('todas')
   const [filterFaltaTipo, setFilterFaltaTipo] = useState<string>('todas')
   const [isGenerating, setIsGenerating] = useState(false)
+  
+  // Filtros de Período da Tabela
+  const [anoAuditoria, setAnoAuditoria] = useState<number>(new Date().getFullYear())
+  const [mesInicial, setMesInicial] = useState<number>(1)
+  const [mesFinal, setMesFinal] = useState<number>(6)
 
   // --- Modal Gerar Faltantes ---
   const [modalGerarData, setModalGerarData] = useState<any[] | null>(null)
@@ -49,6 +55,7 @@ export default function AuditoriaFinanceiraTab() {
   const [mgFormaPagamento, setMgFormaPagamento] = useState('Boleto')
   const [mgFixoVariavel, setMgFixoVariavel] = useState('fixo')
   const [mgOQueGerar, setMgOQueGerar] = useState('tudo')
+  const [mgAno, setMgAno] = useState<number>(new Date().getFullYear())
 
   // --- Estados para Extratos ---
   const [ofxResult, setOfxResult] = useState<OFXParseResult | null>(null)
@@ -66,6 +73,16 @@ export default function AuditoriaFinanceiraTab() {
   const [novoFornecedorNome, setNovoFornecedorNome] = useState('')
   const [isSavingFornecedor, setIsSavingFornecedor] = useState(false)
   const [selectedDivergencias, setSelectedDivergencias] = useState<string[]>([])
+
+  // --- Estados para Sem Vínculo ---
+  const [searchQSemVinculo, setSearchQSemVinculo] = useState('')
+  const [filterSemVinculoApenas, setFilterSemVinculoApenas] = useState<'todos' | 'com_sugestao'>('todos')
+  const [ofxSemVinculo, setOfxSemVinculo] = useState<OFXParseResult | null>(null)
+  const [contaSemVinculoId, setContaSemVinculoId] = useState<string>('')
+  const [vinculandoId, setVinculandoId] = useState<string | null>(null)
+  // seletor inline: lancamentoId -> associadoId escolhido
+  const [seletorAberto, setSeletorAberto] = useState<string | null>(null)
+  const [seletorAssociadoId, setSeletorAssociadoId] = useState<string>('')
 
   const handleEstornarLancamento = async (id: string) => {
     if (window.confirm('Tem certeza que deseja estornar este lançamento para "Pendente"? Isso removerá ele do total do caixa Efetivado.')) {
@@ -179,16 +196,182 @@ export default function AuditoriaFinanceiraTab() {
     }
   }
 
+  // ==========================================
+  // LÓGICA: RECEITAS SEM VÍNCULO COM ASSOCIADO
+  // ==========================================
+  const semVinculoData = useMemo(() => {
+    if (!lancamentos || !associados) return []
+
+    // Somente receitas sem associado_id
+    const receitasSemVinculo = lancamentos.filter((l: any) =>
+      l.tipo === 'receita' && !l.associado_id
+    )
+
+    // Mapa FITID -> transação OFX (se arquivo carregado)
+    const ofxMap = new Map<string, any>()
+    if (ofxSemVinculo?.transactions) {
+      ofxSemVinculo.transactions.forEach((t: any) => {
+        if (t.fitid) ofxMap.set(t.fitid, t)
+      })
+    }
+
+      // Mapa otimizado de lançamentos abertos/atrasados por valor_mes_ano -> associado
+      const lancsAbertosMap = new Map<string, string>()
+      lancamentos.forEach((ml: any) => {
+        if (ml.associado_id && ['atrasado', 'aberto'].includes((ml.status || '').toLowerCase())) {
+          const mlData = ml.data_caixa || ml.data_conciliacao || ml.data
+          if (mlData && ml.valor) {
+            const key = `${Math.abs(ml.valor).toFixed(2)}_${mlData.substring(0, 7)}`
+            lancsAbertosMap.set(key, ml.associado_id)
+          }
+        }
+      })
+
+      return receitasSemVinculo.map((l: any) => {
+        // 1. Cross-reference com OFX: busca por fitid ou por valor+data+tipo crédito
+        let ofxMatch: any = null
+
+        if (ofxSemVinculo?.transactions) {
+          if (l.banco_transacao_id && ofxMap.has(l.banco_transacao_id)) {
+            ofxMatch = ofxMap.get(l.banco_transacao_id)
+          }
+          if (!ofxMatch) {
+            const dataL = l.data_caixa || l.data_conciliacao || l.data
+            ofxMatch = ofxSemVinculo.transactions.find((t: any) => {
+              if (t.type !== 'CREDIT') return false
+              const diffVal = Math.abs(Math.abs(t.amount) - Math.abs(l.valor))
+              if (diffVal > 0.01) return false
+              if (!dataL) return false
+              const diffDias = Math.abs(new Date(t.date).getTime() - new Date(dataL).getTime()) / (1000 * 60 * 60 * 24)
+              return diffDias <= 3
+            }) || null
+          }
+        }
+
+        // 2. Sugestão de associado
+        let sugestao: { associado: any; confianca: 'alta' | 'media' | 'baixa' } | null = null
+        const descLower = ((l.descricao || '') + ' ' + (l.banco_original_memo || '')).toLowerCase()
+
+        if (!sugestao && ofxMatch?.cpf_extraido) {
+          const cpfOfx = ofxMatch.cpf_extraido.replace(/\D/g, '')
+          const assocCpf = associados.find((a: any) => (a.cpf || '').replace(/\D/g, '') === cpfOfx && a.status !== 'inativo')
+          if (assocCpf) sugestao = { associado: assocCpf, confianca: 'alta' }
+        }
+
+        if (!sugestao) {
+          const assocNome = associados.find((a: any) => {
+            if (!a.nome || a.status === 'inativo') return false
+            const nomeWords = a.nome.toLowerCase().split(/\s+/).filter((w: string) => w.length >= 4)
+            return nomeWords.length > 0 && nomeWords.every((w: string) => descLower.includes(w))
+          })
+          if (assocNome) sugestao = { associado: assocNome, confianca: 'alta' }
+        }
+
+        if (!sugestao) {
+          const dataL = l.data_caixa || l.data_conciliacao || l.data
+          const mesAno = dataL ? dataL.substring(0, 7) : null
+          if (mesAno && l.valor) {
+            const key = `${Math.abs(l.valor).toFixed(2)}_${mesAno}`
+            const assocId = lancsAbertosMap.get(key)
+            if (assocId) {
+              const assocValor = associados.find((a: any) => a.id === assocId && a.status !== 'inativo')
+              if (assocValor) sugestao = { associado: assocValor, confianca: 'media' }
+            }
+          }
+        }
+
+      // d) Apenas valor bate com plano_valor do associado
+      if (!sugestao) {
+        const assocPlano = associados.find((a: any) =>
+          a.status !== 'inativo' && a.plano_valor && Math.abs((a.plano_valor || 0) - Math.abs(l.valor)) < 0.01
+        )
+        if (assocPlano) sugestao = { associado: assocPlano, confianca: 'baixa' }
+      }
+
+      // 3. Inadimplência resolvida? Verifica se o associado sugerido tem lançamento em aberto no mesmo mês
+      let inadimplenciaResolvida = false
+      if (sugestao) {
+        const dataL = l.data_caixa || l.data_conciliacao || l.data
+        const mesAno = dataL ? dataL.substring(0, 7) : null
+        if (mesAno) {
+          inadimplenciaResolvida = lancamentos.some((ml: any) =>
+            ml.associado_id === sugestao!.associado.id &&
+            ['atrasado', 'aberto'].includes((ml.status || '').toLowerCase()) &&
+            ml.data?.substring(0, 7) === mesAno
+          )
+        }
+      }
+
+      return { lancamento: l, sugestao, ofxMatch, inadimplenciaResolvida }
+    })
+  }, [lancamentos, associados, ofxSemVinculo])
+
+  const filteredSemVinculo = useMemo(() => {
+    let data = semVinculoData
+    if (filterSemVinculoApenas === 'com_sugestao') data = data.filter(d => d.sugestao !== null)
+    if (searchQSemVinculo) {
+      const q = searchQSemVinculo.toLowerCase()
+      data = data.filter(d =>
+        (d.lancamento.descricao || '').toLowerCase().includes(q) ||
+        (d.lancamento.banco_original_memo || '').toLowerCase().includes(q) ||
+        (d.sugestao?.associado?.nome || '').toLowerCase().includes(q)
+      )
+    }
+    return data
+  }, [semVinculoData, filterSemVinculoApenas, searchQSemVinculo])
+
+  const handleVincularAssociado = async (lancamentoId: string, associadoId: string, ofxMatch?: any) => {
+    if (!associadoId) return
+    setVinculandoId(lancamentoId)
+    try {
+      const payload: any = { associado_id: associadoId }
+      // Se tem correspondência OFX: atualiza também ID bancário e data
+      if (ofxMatch) {
+        if (ofxMatch.fitid) payload.banco_transacao_id = ofxMatch.fitid
+        if (ofxMatch.memo) payload.banco_original_memo = ofxMatch.memo
+        if (ofxMatch.date) {
+          payload.data = ofxMatch.date
+          payload.data_caixa = ofxMatch.date
+          payload.data_conciliacao = ofxMatch.date
+        }
+        // Garante que o status fica como pago/efetivado quando tem OFX confirmado
+        payload.status = 'pago'
+      }
+      const res = await atualizar(lancamentoId, payload)
+      if ((res as any)?.error) {
+        alert('Erro ao vincular: ' + (res as any).error)
+      } else {
+        setSeletorAberto(null)
+        setSeletorAssociadoId('')
+      }
+    } catch (err: any) {
+      alert('Erro inesperado: ' + err.message)
+    } finally {
+      setVinculandoId(null)
+    }
+  }
+
   const loading = loadingAssoc || loadingFin
 
-  const MESES_AUDITADOS = [
-    { mes: 1, label: 'Janeiro' },
-    { mes: 2, label: 'Fevereiro' },
-    { mes: 3, label: 'Março' },
-    { mes: 4, label: 'Abril' },
-    { mes: 5, label: 'Maio' },
-    { mes: 6, label: 'Junho' },
-  ]
+  const MESES_AUDITADOS = useMemo(() => {
+    const todosMeses = [
+      { mes: 1, label: 'Janeiro' },
+      { mes: 2, label: 'Fevereiro' },
+      { mes: 3, label: 'Março' },
+      { mes: 4, label: 'Abril' },
+      { mes: 5, label: 'Maio' },
+      { mes: 6, label: 'Junho' },
+      { mes: 7, label: 'Julho' },
+      { mes: 8, label: 'Agosto' },
+      { mes: 9, label: 'Setembro' },
+      { mes: 10, label: 'Outubro' },
+      { mes: 11, label: 'Novembro' },
+      { mes: 12, label: 'Dezembro' }
+    ]
+    const inicio = Math.min(mesInicial, mesFinal)
+    const fim = Math.max(mesInicial, mesFinal)
+    return todosMeses.filter(m => m.mes >= inicio && m.mes <= fim)
+  }, [mesInicial, mesFinal])
 
   // ==========================================
   // LÓGICA DE AUDITORIA DE ADESÕES
@@ -204,10 +387,20 @@ export default function AuditoriaFinanceiraTab() {
       
       const date = new Date(joinedDate + 'T12:00:00Z')
       if (isNaN(date.getTime())) return false
-      if (date.getFullYear() > 2026) return false
-      if (date.getFullYear() === 2026 && date.getMonth() > 5) return false
+      if (date.getFullYear() > anoAuditoria) return false
+      if (date.getFullYear() === anoAuditoria && date.getMonth() + 1 > Math.max(mesInicial, mesFinal)) return false
       
       return true
+    })
+
+    // Otimização: Agrupar lançamentos por associado para evitar O(N^2)
+    const lancsPorAssociado = new Map<string, any[]>()
+    lancamentos.forEach((l: any) => {
+      if (l.associado_id) {
+        const list = lancsPorAssociado.get(l.associado_id) || []
+        list.push(l)
+        lancsPorAssociado.set(l.associado_id, list)
+      }
     })
 
     const results = alvos.map((assoc: any) => {
@@ -215,7 +408,7 @@ export default function AuditoriaFinanceiraTab() {
       const joinYear = joinedDate.getFullYear()
       const joinMonth = joinedDate.getMonth() + 1
 
-      const assocLancs = lancamentos.filter((l: any) => l.associado_id === assoc.id)
+      const assocLancs = lancsPorAssociado.get(assoc.id) || []
 
       const adesaoGeral = assocLancs.find((l: any) => (l.categoria || '').toUpperCase().includes('ADESÃO') || (l.descricao || '').toUpperCase().includes('ADESÃO'))
 
@@ -223,7 +416,7 @@ export default function AuditoriaFinanceiraTab() {
       const mesesStatus: any = {}
 
       MESES_AUDITADOS.forEach(({ mes, label }) => {
-        if (joinYear === 2026 && mes < joinMonth) {
+        if (joinYear === anoAuditoria && mes < joinMonth) {
           mesesStatus[mes] = { status: 'n/a', msg: 'Não era associado' }
           return
         }
@@ -231,7 +424,7 @@ export default function AuditoriaFinanceiraTab() {
         const lancsNoMes = assocLancs.filter((l: any) => {
           if (!l.data) return false
           const [y, m] = l.data.split('-')
-          return parseInt(y) === 2026 && parseInt(m) === mes
+          return parseInt(y) === anoAuditoria && parseInt(m) === mes
         })
 
         const lancMensalidade = lancsNoMes.find((l: any) => (l.categoria || '').toUpperCase().includes('MENSALIDADE') || (l.descricao || '').toUpperCase().includes('MENSALIDADE'))
@@ -248,7 +441,7 @@ export default function AuditoriaFinanceiraTab() {
           return { status: 'warning', msg: `${tipo} em Aberto`, tipoFalta: 'nenhuma', mesNum: mes }
         }
 
-        if (joinYear === 2026 && mes === joinMonth) {
+        if (joinYear === anoAuditoria && mes === joinMonth) {
           if (!adesaoGeral) {
             divergencias.push(`Falta Adesão em ${label}`)
             mesesStatus[mes] = { status: 'erro', msg: 'Sem Adesão', tipoFalta: 'adesao', mesNum: mes }
@@ -285,7 +478,7 @@ export default function AuditoriaFinanceiraTab() {
     })
 
     return results.sort((a, b) => b.divergencias.length - a.divergencias.length)
-  }, [associados, lancamentos])
+  }, [associados, lancamentos, anoAuditoria, mesInicial, mesFinal, MESES_AUDITADOS])
 
   const filteredAdesoesData = useMemo(() => {
     let data = adesoesData
@@ -357,7 +550,7 @@ export default function AuditoriaFinanceiraTab() {
             if (mgOQueGerar === 'adesao' && status.tipoFalta !== 'adesao') return;
             if (mgOQueGerar === 'mensalidade' && status.tipoFalta !== 'mensalidade') return;
 
-            const dataVencimento = `2026-${String(mes).padStart(2, '0')}-${String(mgDia).padStart(2, '0')}`
+            const dataVencimento = `${mgAno}-${String(mes).padStart(2, '0')}-${String(mgDia).padStart(2, '0')}`
             const valorFinal = mgValor ? parseFloat(mgValor.replace(',', '.')) : (row.associado.plano_valor || 35.00)
             
             novasPendencias.push({
@@ -454,11 +647,17 @@ export default function AuditoriaFinanceiraTab() {
         const dataLanc = matchLanc.data_caixa || matchLanc.data_conciliacao || matchLanc.data || ''
         const dateMatches = dataLanc.substring(0, 7) === ofx.date.substring(0, 7)
         const isEncontroContas = (matchLanc.descricao || '').toUpperCase().includes('ENCONTRO DE CONTAS')
+        const tipoEsperado = ofx.type === 'CREDIT' ? 'receita' : 'despesa'
+        const isTipoInvertido = (matchLanc.tipo || '').toLowerCase() !== tipoEsperado
 
         if (diff > 0.01 && !isEncontroContas) {
           status = 'valor_divergente'
           msg = 'Valor divergente'
           comoResolver = `Edite o lançamento "${matchLanc.descricao}" e corrija o valor de ${fmtR(matchLancTotal)} para ${fmtR(Math.abs(ofx.amount))}`
+        } else if (isTipoInvertido && !isEncontroContas) {
+          status = 'tipo_divergente'
+          msg = 'Tipo divergente'
+          comoResolver = `O lançamento está como "${matchLanc.tipo}", mas no extrato é uma ${tipoEsperado === 'receita' ? 'Entrada (Crédito)' : 'Saída (Débito)'}. Edite-o e corrija o tipo.`
         } else if (!isPago) {
           status = 'status_aberto'
           msg = 'Lançamento não efetivado'
@@ -576,7 +775,7 @@ export default function AuditoriaFinanceiraTab() {
       }
       return { ofx, status, msg, matchLanc, duplicatas, comoResolver, matchedIds }
     }).sort((a, b) => {
-      const order: Record<OFXAuditStatus, number> = { duplicata: 0, valor_divergente: 1, data_divergente: 2, status_aberto: 3, manual_outra_conta: 4, manual: 5, nao_encontrado: 6, ok: 7 }
+      const order: Record<OFXAuditStatus, number> = { duplicata: 0, valor_divergente: 1, tipo_divergente: 2, data_divergente: 3, status_aberto: 4, manual_outra_conta: 5, manual: 6, nao_encontrado: 7, ok: 8 }
       if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status]
       return new Date(a.ofx.date).getTime() - new Date(b.ofx.date).getTime()
     })
@@ -630,7 +829,7 @@ export default function AuditoriaFinanceiraTab() {
     const periodoInicio = datas[0] || ''
     const periodoFim = datas[datas.length - 1] || ''
     const ok = extratosData.filter(d => d.status === 'ok').length
-    const divergencias = extratosData.filter(d => ['valor_divergente', 'data_divergente', 'status_aberto'].includes(d.status)).length
+    const divergencias = extratosData.filter(d => ['valor_divergente', 'data_divergente', 'status_aberto', 'tipo_divergente'].includes(d.status)).length
     const naoEncontrado = extratosData.filter(d => d.status === 'nao_encontrado').length
     const manual = extratosData.filter(d => d.status === 'manual').length
     const duplicata = extratosData.filter(d => d.status === 'duplicata').length
@@ -641,12 +840,25 @@ export default function AuditoriaFinanceiraTab() {
 
     // Variação de caixa no período segundo os lançamentos efetivados NA CONTA SELECIONADA
     const statusEfetivados = ['pago', 'efetivado', 'concluido', 'recebido', 'sucesso']
+    const lancamentosMatchados = new Set<string>()
+    extratosData.forEach(d => {
+      d.matchedIds?.forEach((id: string) => lancamentosMatchados.add(id))
+    })
+
     const lancEfetivos = lancamentosDaConta.filter((l: any) => {
+      const isEfetivo = statusEfetivados.includes((l.status || '').toLowerCase()) || l.conciliado
+      if (!isEfetivo) return false
+
+      // Se o lançamento foi casado pelo auditor (e está efetivado), sempre deve entrar na conta do sistema para este extrato,
+      // independente de a data exata dele no sistema ter extrapolado os limites mínimos e máximos da data do OFX.
+      if (lancamentosMatchados.has(l.id)) return true
+
       const dataL = l.data_caixa || l.data_conciliacao || l.data
       if (!dataL) return false
       const dataLTrunc = dataL.substring(0, 10)
       if (dataLTrunc < periodoInicio || dataLTrunc > periodoFim) return false
-      return statusEfetivados.includes((l.status || '').toLowerCase()) || l.conciliado
+      
+      return true
     })
     
     const entradasSistema = lancEfetivos.filter((l: any) => l.tipo === 'receita').reduce((acc: any, l: any) => acc + Math.abs(l.valor) + extrairTaxa(l.descricao), 0)
@@ -838,13 +1050,15 @@ export default function AuditoriaFinanceiraTab() {
           </div>
         </div>
         
-        <button 
-          onClick={activeTab === 'adesoes' ? handleExportAdesoes : handleExportExtratos} 
-          className="flex items-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg shadow-emerald-500/20"
-        >
-          <Download size={16} />
-          Exportar Excel ({activeTab === 'adesoes' ? 'Adesões' : 'Extratos'})
-        </button>
+        {activeTab !== 'sem_vinculo' && (
+          <button 
+            onClick={activeTab === 'adesoes' ? handleExportAdesoes : handleExportExtratos} 
+            className="flex items-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg shadow-emerald-500/20"
+          >
+            <Download size={16} />
+            Exportar Excel ({activeTab === 'adesoes' ? 'Adesões' : 'Extratos'})
+          </button>
+        )}
       </div>
 
       {/* TABS MENU */}
@@ -854,7 +1068,7 @@ export default function AuditoriaFinanceiraTab() {
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'adesoes' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
         >
           <FileText size={16} />
-          Adesões vs Mensalidades
+          Análise - Linha do Tempo
         </button>
         <button
           onClick={() => setActiveTab('extratos')}
@@ -863,41 +1077,81 @@ export default function AuditoriaFinanceiraTab() {
           <Upload size={16} />
           Auditoria de Extratos (OFX)
         </button>
+        <button
+          onClick={() => setActiveTab('sem_vinculo')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'sem_vinculo' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
+        >
+          <Link size={16} />
+          Receitas Sem Vínculo
+          {semVinculoData.length > 0 && (
+            <span className={`ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-black ${activeTab === 'sem_vinculo' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'}`}>
+              {semVinculoData.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('importacao_hgu')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'importacao_hgu' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
+        >
+          <Download size={16} />
+          Inadimplência HGU
+        </button>
       </div>
+
+      {/* CONTENT: IMPORTAÇÃO HGU */}
+      {activeTab === 'importacao_hgu' && (
+        <ImportacaoHGUTab />
+      )}
 
       {/* CONTENT: ADESÕES */}
       {activeTab === 'adesoes' && (
         <div className="bg-white rounded-[40px] border border-slate-100 p-8 shadow-xl shadow-slate-200/40 animate-in fade-in duration-300">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
-            <div className="flex items-center gap-4 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
-              <button 
-                onClick={() => setFilterTypeAdesoes('divergencias')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterTypeAdesoes === 'divergencias' ? 'bg-white text-rose-600 shadow-sm border border-rose-100' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Com Divergências ({adesoesData.filter(d => d.divergencias.length > 0).length})
-              </button>
-              <button 
-                onClick={() => setFilterTypeAdesoes('todos')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterTypeAdesoes === 'todos' ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                Todos Ativos ({adesoesData.length})
-              </button>
+          <div className="flex flex-col gap-4 mb-8">
+            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+              <div className="flex items-center gap-4 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+                <button 
+                  onClick={() => setFilterTypeAdesoes('divergencias')}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterTypeAdesoes === 'divergencias' ? 'bg-white text-rose-600 shadow-sm border border-rose-100' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Com Divergências ({adesoesData.filter(d => d.divergencias.length > 0).length})
+                </button>
+                <button 
+                  onClick={() => setFilterTypeAdesoes('todos')}
+                  className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterTypeAdesoes === 'todos' ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  Todos Ativos ({adesoesData.length})
+                </button>
+              </div>
+
+              <div className="relative w-full xl:w-96">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Buscar associado..."
+                  value={searchQAdesoes}
+                  onChange={e => setSearchQAdesoes(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none focus:border-slate-400 transition-colors"
+                />
+              </div>
             </div>
-            
-            <div className="flex items-center gap-4 w-full md:w-auto flex-wrap">
+
+            <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
               {filteredAdesoesData.some(d => d.divergencias.length > 0) && (
                 <button 
                   onClick={handleGerarFaltantesTodos}
                   disabled={isGenerating}
-                  className="px-4 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-lg shadow-rose-500/20 disabled:opacity-50"
+                  className="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-colors shadow-md shadow-rose-500/20 disabled:opacity-50"
                 >
                   Gerar Faltantes ({filteredAdesoesData.filter(d => d.divergencias.length > 0).length})
                 </button>
               )}
+              
+              <div className="h-6 w-px bg-slate-200 hidden md:block mx-1"></div>
+
               <select 
                 value={filterTag}
                 onChange={e => setFilterTag(e.target.value)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none focus:border-slate-400"
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-slate-400"
               >
                 <option value="todas">Qualquer Tag</option>
                 <option value="suspensao">Suspensão (2 Atrasos)</option>
@@ -907,7 +1161,7 @@ export default function AuditoriaFinanceiraTab() {
               <select 
                 value={filterFaltaTipo}
                 onChange={e => setFilterFaltaTipo(e.target.value)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none focus:border-slate-400"
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-slate-400"
               >
                 <option value="todas">Qualquer Falta</option>
                 <option value="adesao">Falta Adesão</option>
@@ -917,9 +1171,9 @@ export default function AuditoriaFinanceiraTab() {
               <select 
                 value={filterIngressoMes}
                 onChange={e => setFilterIngressoMes(e.target.value)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none focus:border-slate-400"
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-slate-400"
               >
-                <option value="todos">Qualquer Mês (Ingresso)</option>
+                <option value="todos">Mês de Ingresso (Todos)</option>
                 <option value="1">Janeiro</option>
                 <option value="2">Fevereiro</option>
                 <option value="3">Março</option>
@@ -933,16 +1187,31 @@ export default function AuditoriaFinanceiraTab() {
                 <option value="11">Novembro</option>
                 <option value="12">Dezembro</option>
               </select>
-              
-              <div className="relative flex-1 min-w-[200px] max-w-sm">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Buscar associado..."
-                  value={searchQAdesoes}
-                  onChange={e => setSearchQAdesoes(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest outline-none focus:border-slate-400"
+
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-2 py-1 ml-auto">
+                <span className="text-[9px] font-black uppercase text-slate-400 ml-1">Ano</span>
+                <input
+                  type="number"
+                  value={anoAuditoria}
+                  onChange={e => setAnoAuditoria(Number(e.target.value))}
+                  className="w-16 px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-700 outline-none"
                 />
+                <span className="text-[9px] font-black uppercase text-slate-400">De</span>
+                <select
+                  value={mesInicial}
+                  onChange={e => setMesInicial(Number(e.target.value))}
+                  className="px-1 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-700 outline-none"
+                >
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <span className="text-[9px] font-black uppercase text-slate-400">Até</span>
+                <select
+                  value={mesFinal}
+                  onChange={e => setMesFinal(Number(e.target.value))}
+                  className="px-1 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-700 outline-none mr-1"
+                >
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -1368,6 +1637,12 @@ export default function AuditoriaFinanceiraTab() {
                               <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">OK</span>
                             </div>
                           )}
+                          {row.status === 'tipo_divergente' && (
+                            <div className="flex items-center gap-1.5">
+                              <AlertTriangle size={14} className="text-orange-500 shrink-0" />
+                              <span className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Tipo Invertido</span>
+                            </div>
+                          )}
                           {row.status === 'valor_divergente' && (
                             <div className="flex items-center gap-1.5">
                               <AlertTriangle size={14} className="text-orange-500 shrink-0" />
@@ -1762,7 +2037,7 @@ export default function AuditoriaFinanceiraTab() {
                 <X size={16} />
               </button>
             </div>
-            <div className="p-6 flex flex-col gap-5">
+            <div className="p-6 flex flex-col gap-4">
               
               <div className="flex flex-col gap-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">O que deseja gerar?</label>
@@ -1771,6 +2046,25 @@ export default function AuditoriaFinanceiraTab() {
                   <option value="adesao">APENAS Adesões faltantes</option>
                   <option value="mensalidade">APENAS Mensalidades faltantes</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                  Ano da Cobrança
+                </label>
+                <input
+                  type="number"
+                  value={mgAno}
+                  onChange={e => setMgAno(Number(e.target.value))}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1 block">
+                  Dia do Vencimento
+                </label>
+                <input type="number" min="1" max="31" value={mgDia} onChange={e => setMgDia(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-500" />
               </div>
 
               <div className="flex flex-col gap-2">
@@ -1815,19 +2109,13 @@ export default function AuditoriaFinanceiraTab() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status Inicial</label>
-                  <select value={mgStatus} onChange={e => setMgStatus(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-500">
-                    <option value="atrasado">Atrasado</option>
-                    <option value="aberto">Em Aberto</option>
-                    <option value="pago">Pago</option>
-                  </select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dia do Vencimento</label>
-                  <input type="number" min="1" max="31" value={mgDia} onChange={e => setMgDia(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-500" />
-                </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Status Inicial</label>
+                <select value={mgStatus} onChange={e => setMgStatus(e.target.value)} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-indigo-500">
+                  <option value="atrasado">Atrasado</option>
+                  <option value="aberto">Em Aberto</option>
+                  <option value="pago">Pago</option>
+                </select>
               </div>
             </div>
             
@@ -1839,6 +2127,210 @@ export default function AuditoriaFinanceiraTab() {
                 {isGenerating ? 'Gerando...' : 'Gerar Lançamentos'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONTENT: RECEITAS SEM VÍNCULO */}
+      {activeTab === 'sem_vinculo' && (
+        <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+
+          {/* CARDS DE RESUMO */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col gap-1">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Receitas Sem Vínculo</span>
+              <span className="text-2xl font-black text-slate-800">{semVinculoData.length}</span>
+              <span className="text-xs text-slate-400 font-bold">lançamentos de receita</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-amber-100 p-5 shadow-sm flex flex-col gap-1">
+              <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Com Sugestão de Associado</span>
+              <span className="text-2xl font-black text-amber-600">{semVinculoData.filter(d => d.sugestao).length}</span>
+              <span className="text-xs text-amber-400 font-bold">possíveis correspondências encontradas</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-rose-100 p-5 shadow-sm flex flex-col gap-1">
+              <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Inadimplência Indevida Potencial</span>
+              <span className="text-2xl font-black text-rose-600">{semVinculoData.filter(d => d.inadimplenciaResolvida).length}</span>
+              <span className="text-xs text-rose-400 font-bold">associados que podem ter pago</span>
+            </div>
+          </div>
+
+
+          {/* FILTROS */}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+            <div className="flex items-center gap-2 flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+              <Search size={14} className="text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar por descrição, memo ou nome do associado..."
+                value={searchQSemVinculo}
+                onChange={e => setSearchQSemVinculo(e.target.value)}
+                className="flex-1 bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+              />
+            </div>
+            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-100">
+              <button
+                onClick={() => setFilterSemVinculoApenas('todos')}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${filterSemVinculoApenas === 'todos' ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Todos ({semVinculoData.length})
+              </button>
+              <button
+                onClick={() => setFilterSemVinculoApenas('com_sugestao')}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${filterSemVinculoApenas === 'com_sugestao' ? 'bg-white text-amber-600 shadow-sm border border-amber-100' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                Com Sugestão ({semVinculoData.filter(d => d.sugestao).length})
+              </button>
+            </div>
+          </div>
+
+          {/* TABELA */}
+          <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
+            {filteredSemVinculo.length === 0 ? (
+              <div className="p-16 text-center">
+                <CheckCircle2 size={40} className="mx-auto mb-4 text-emerald-400" />
+                <p className="text-sm font-black text-slate-500 uppercase tracking-widest">Nenhuma receita sem vínculo encontrada</p>
+                <p className="text-xs text-slate-400 mt-1">Todas as receitas possuem associado vinculado.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50/80 border-b border-slate-100">
+                      <th className="px-5 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição / Memo</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Conta</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Sugestão de Associado</th>
+                      <th className="px-5 py-3.5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">OFX Match</th>
+                      <th className="px-5 py-3.5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {filteredSemVinculo.map(({ lancamento: l, sugestao, ofxMatch, inadimplenciaResolvida }) => (
+                      <tr key={l.id} className={`hover:bg-slate-50/50 transition-colors ${inadimplenciaResolvida ? 'bg-rose-50/30' : ''}`}>
+                        <td className="px-5 py-4">
+                          <span className="text-xs font-bold text-slate-700">
+                            {(l.data_caixa || l.data_conciliacao || l.data || '').split('-').reverse().join('/')}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 max-w-[220px]">
+                          <p className="text-xs font-bold text-slate-800 truncate">{l.descricao || '—'}</p>
+                          {l.banco_original_memo && l.banco_original_memo !== l.descricao && (
+                            <p className="text-[10px] text-slate-400 truncate mt-0.5">{l.banco_original_memo}</p>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-xs font-black text-emerald-600">{fmtR(Math.abs(l.valor))}</span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[10px] font-bold text-slate-500">
+                            {contas?.find((c: any) => c.id === l.conta_id)?.nome || '—'}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          {sugestao ? (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                  sugestao.confianca === 'alta' ? 'bg-emerald-100 text-emerald-700' :
+                                  sugestao.confianca === 'media' ? 'bg-amber-100 text-amber-700' :
+                                  'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {sugestao.confianca === 'alta' ? '● Alta' : sugestao.confianca === 'media' ? '◐ Média' : '○ Baixa'}
+                                </span>
+                                {inadimplenciaResolvida && (
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-rose-100 text-rose-700">
+                                    ⚠ Inadimp. Indevida
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs font-bold text-slate-700">{sugestao.associado.nome}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-medium">Sem sugestão automática</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {ofxMatch ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-lg text-[9px] font-black uppercase self-start">OFX ✓</span>
+                              <span className="text-[10px] text-slate-500 font-medium">{ofxMatch.date?.split('-').reverse().join('/')}</span>
+                              <span className="text-[10px] text-slate-400 truncate max-w-[120px]">{ofxMatch.fitid}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-300 font-medium">—</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          {seletorAberto === l.id ? (
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={seletorAssociadoId}
+                                onChange={e => setSeletorAssociadoId(e.target.value)}
+                                className="flex-1 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-500"
+                                autoFocus
+                              >
+                                <option value="">Selecione...</option>
+                                {(associados || []).filter((a: any) => a.status !== 'inativo').sort((a: any, b: any) => (a.nome || '').localeCompare(b.nome || '')).map((a: any) => (
+                                  <option key={a.id} value={a.id}>{a.nome}</option>
+                                ))}
+                              </select>
+                              <button
+                                disabled={!seletorAssociadoId || vinculandoId === l.id}
+                                onClick={() => handleVincularAssociado(l.id, seletorAssociadoId, ofxMatch)}
+                                className="p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-40 transition-colors"
+                                title="Confirmar vínculo"
+                              >
+                                {vinculandoId === l.id ? (
+                                  <span className="block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                  <UserCheck size={12} />
+                                )}
+                              </button>
+                              <button
+                                onClick={() => { setSeletorAberto(null); setSeletorAssociadoId('') }}
+                                className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition-colors"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ) : sugestao ? (
+                            <div className="flex flex-col gap-1.5">
+                              <button
+                                disabled={vinculandoId === l.id}
+                                onClick={() => handleVincularAssociado(l.id, sugestao!.associado.id, ofxMatch)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase rounded-xl transition-all disabled:opacity-50 shadow-sm shadow-indigo-600/20"
+                              >
+                                {vinculandoId === l.id ? (
+                                  <span className="block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                  <Link size={10} />
+                                )}
+                                Vincular Sugestão
+                              </button>
+                              <button
+                                onClick={() => { setSeletorAberto(l.id); setSeletorAssociadoId(sugestao!.associado.id) }}
+                                className="text-[10px] text-slate-400 hover:text-slate-600 font-bold underline underline-offset-2 text-center"
+                              >
+                                Trocar associado
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setSeletorAberto(l.id); setSeletorAssociadoId('') }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-black uppercase rounded-xl transition-all"
+                            >
+                              <Plus size={10} />
+                              Vincular Associado
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

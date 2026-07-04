@@ -52,6 +52,7 @@ import RemanejarModal from '@/components/ui/RemanejarModal'
 import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
 import ConciliacaoHistoryModal from '@/components/conciliacao/ConciliacaoHistoryModal'
 import AbonoLancamentoModal from '@/components/financeiro/AbonoLancamentoModal'
+import { gerarPdfAbonoLote } from '@/features/financeiro/utils/gerarPdfAbonoLote'
 import { useConciliacaoLogs } from '@/lib/hooks/useConciliacaoLogs'
 import { useConciliacaoCalendario } from '@/lib/hooks/useConciliacaoCalendario'
 import CalendarioConciliacao from '@/features/conciliacao/components/CalendarioConciliacao'
@@ -703,12 +704,23 @@ function FinanceiroPageContent() {
   }
 
   const handleBulkAbonar = async (motivo: string) => {
+    const caixaConta = contas.find(c => c.nome.toLowerCase().includes('caixa'))
     const dataToUpdate: any = {
       status: 'cancelado',
-      banco_original_memo: `[ABONO] Motivo: ${motivo} | Por: Sistema`
+      banco_original_memo: `[ABONO] Motivo: ${motivo} | Por: Sistema`,
+      valor: 0,
+      forma_pagamento: 'DINHEIRO'
+    }
+    if (caixaConta) {
+      dataToUpdate.conta_id = caixaConta.id
     }
     const res = await atualizarBulk(selectedIds, dataToUpdate)
     if (!res.error) {
+      // Gera o pdf em lote
+      const lancamentosAbonados = selectedIds.map(id => lancamentos.find((l: any) => l.id === id)).filter(Boolean)
+      if (lancamentosAbonados.length > 0) {
+        gerarPdfAbonoLote(lancamentosAbonados, associados, 'download')
+      }
       setSelectedIds([])
       setIsAbonoModalOpen(false)
     } else {
@@ -839,8 +851,10 @@ function FinanceiroPageContent() {
       const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
       const valorComTaxa = safeSum(l.valor || 0, taxaVal);
       if ((filterMonths.includes(-1) || m <= Math.max(...filterMonths)) && l.status === 'pago') {
-        if (l.tipo === 'receita') { l.forma_pagamento === 'Dinheiro' ? fCash = safeSum(fCash, valorComTaxa) : fBank = safeSum(fBank, valorComTaxa) }
-        else { l.forma_pagamento === 'Dinheiro' ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor) }
+        const cta = contas.find(c => c.id === l.conta_id);
+        const isCash = l.forma_pagamento === 'Dinheiro' || (cta && cta.nome.toLowerCase().includes('espécie'));
+        if (l.tipo === 'receita') { isCash ? fCash = safeSum(fCash, valorComTaxa) : fBank = safeSum(fBank, valorComTaxa) }
+        else { isCash ? fCash = safeDiff(fCash, l.valor) : fBank = safeDiff(fBank, l.valor) }
       }
       if (filterMonths.includes(-1) || filterMonths.includes(m)) {
         if (l.tipo === 'receita') { isPago ? pInc = safeSum(pInc, valorComTaxa) : oInc = safeSum(oInc, valorComTaxa) }
@@ -848,7 +862,7 @@ function FinanceiroPageContent() {
       }
     })
     return { pInc, pExp, realizado: safeDiff(pInc, pExp), provisionado: oExp, receitaProjetada: safeSum(pInc, oInc), projetado: safeSum(safeDiff(pInc, pExp), safeDiff(oInc, oExp)), saldoCaixa: fCash, saldoBanco: fBank }
-  }, [lancamentos, filterDay, filterYear, filterMonths, filterDateType])
+  }, [lancamentos, filterDay, filterYear, filterMonths, filterDateType, contas])
 
   const chartData = useMemo(() => {
     const rR = Array(12).fill(0), rP = Array(12).fill(0), dR = Array(12).fill(0), dP = Array(12).fill(0)

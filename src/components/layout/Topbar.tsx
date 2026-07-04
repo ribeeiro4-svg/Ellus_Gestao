@@ -41,7 +41,7 @@ export default function Topbar() {
   }
 
   return (
-    <header className={`topbar sticky top-0 z-40 px-6 h-[var(--topbar-h)] flex items-center justify-between transition-all duration-500 ${
+    <header className={`topbar sticky top-0 z-[100] px-6 h-[var(--topbar-h)] flex items-center justify-between transition-all duration-500 ${
       isGestaoTarefas ? 'bg-[#04140e] border-b border-white/5' : ''
     }`}>
       {/* Background Geométrico para Topbar no Kanban */}

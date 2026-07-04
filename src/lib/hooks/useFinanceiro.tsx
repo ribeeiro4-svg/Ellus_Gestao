@@ -211,7 +211,10 @@ function useFinanceiroInternal() {
     if (!id || String(id) === 'undefined') return { error: 'ID do lançamento não identificado para exclusão.' }
     const item = lancamentos.find(l => l.id === id)
     if (!item) return { error: 'Lançamento não encontrado.' }
-    if (isPeriodoBloqueado(item.data)) return { error: 'Este período está fechado e não permite alterações.' }
+    if (isPeriodoBloqueado(item.data)) {
+      const pass = window.prompt('Este período está fechado.\nInsira a senha master para forçar a exclusão:')
+      if (pass !== '19072425') return { error: 'Este período está fechado e não permite alterações.' }
+    }
     
     // Lógica de Estorno de Remanejo (Encontro de Contas)
     if (item.is_ec_destino && item.id_origem) {
@@ -246,7 +249,10 @@ function useFinanceiroInternal() {
     if (!ids.length) return { error: null }
     // Verifica se algum item no lote está bloqueado
     const hasLocked = lancamentos.some(l => ids.includes(l.id) && isPeriodoBloqueado(l.data))
-    if (hasLocked) return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
+    if (hasLocked) {
+      const pass = window.prompt('Alguns itens selecionados pertencem a períodos fechados.\nInsira a senha master para forçar a exclusão:')
+      if (pass !== '19072425') return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
+    }
 
     try {
       for (let i = 0; i < ids.length; i += 100) {
@@ -268,7 +274,10 @@ function useFinanceiroInternal() {
     // Filtra os IDs da série para checar bloqueio
     const idsSerie = lancamentos.filter(l => l.recorrencia_id === recorrencia_id).map(l => l.id)
     const hasLocked = lancamentos.some(l => idsSerie.includes(l.id) && isPeriodoBloqueado(l.data))
-    if (hasLocked) return { error: 'Não é possível excluir a série: alguns itens pertencem a períodos fechados.' }
+    if (hasLocked) {
+      const pass = window.prompt('Não é possível excluir a série: alguns itens pertencem a períodos fechados.\nInsira a senha master para forçar a exclusão:')
+      if (pass !== '19072425') return { error: 'Não é possível excluir a série: alguns itens pertencem a períodos fechados.' }
+    }
 
     const { error } = await sb.from('lancamentos').delete().eq('recorrencia_id', recorrencia_id)
     if (!error) fetch()
@@ -533,7 +542,12 @@ function useFinanceiroInternal() {
   const atualizarBulk = async (ids: string[], input: Partial<LancamentoInput>) => {
     if (!ids.length) return { error: null }
     const hasLocked = lancamentos.some(l => ids.includes(l.id) && isPeriodoBloqueado(l.data))
-    if (hasLocked) return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
+    if (hasLocked) {
+      const pass = window.prompt('Alguns itens selecionados pertencem a períodos fechados.\nInsira a senha master para forçar a operação:')
+      if (pass !== '19072425') {
+        return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
+      }
+    }
     const { 
       data_caixa,
       fixo_variavel,
@@ -583,19 +597,23 @@ function useFinanceiroInternal() {
             if (input.categoria) {
               const catUpper = input.categoria.toUpperCase();
               const isAdesaoOuMensalidade = catUpper === 'ADESÃO' || catUpper === 'MENSALIDADE' || catUpper === 'MENSALIDADES';
+              const nomeAssoc = l?.associado_id ? associadosMap[l.associado_id] : null;
+              const nomeFornecedor = l?.fornecedor_id ? fornecedoresMap[l.fornecedor_id] : null;
+              const nomeDiretor = l?.diretor_id ? diretoriaMap[l.diretor_id] : null;
+              const nomeVinculado = nomeAssoc || nomeFornecedor || nomeDiretor;
               
-              if (isAdesaoOuMensalidade && l?.associado_id && associadosMap[l.associado_id]) {
+              if (isAdesaoOuMensalidade && nomeAssoc) {
                 const prefixo = catUpper === 'ADESÃO' ? 'RECEB. DE ADESÃO' : 'RECEB. DE MENSALIDADE';
-                const nomeAssoc = associadosMap[l.associado_id].toUpperCase();
-                finalDescricao = `${prefixo} - ${nomeAssoc}`;
-              } else if (!isAdesaoOuMensalidade && l?.tipo === 'despesa') {
-                const nomeFornecedor = l?.fornecedor_id ? fornecedoresMap[l.fornecedor_id] : null;
-                const nomeDiretor = l?.diretor_id ? diretoriaMap[l.diretor_id] : null;
-                const nomeVinculado = nomeFornecedor || nomeDiretor;
-                
+                finalDescricao = `${prefixo} - ${nomeAssoc.toUpperCase()}`;
+              } else {
                 if (nomeVinculado) {
-                  const catFormatada = (input.categoria || '').toUpperCase();
-                  finalDescricao = `PGTO DE ${catFormatada} - ${nomeVinculado.toUpperCase()}`;
+                  finalDescricao = l?.tipo === 'receita' 
+                    ? `RECEB. DE ${catUpper} - ${nomeVinculado.toUpperCase()}`
+                    : `PGTO DE ${catUpper} - ${nomeVinculado.toUpperCase()}`;
+                } else {
+                  finalDescricao = l?.tipo === 'receita' 
+                    ? `RECEB. DE ${catUpper}`
+                    : `PGTO DE ${catUpper}`;
                 }
               }
             }

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useMemo, useEffect } from 'react'
+import { ConfirmacaoSenhaTesoureiro } from '@/components/ui/ConfirmacaoSenhaTesoureiro'
 import { 
   Lock, 
   Unlock, 
@@ -52,6 +53,7 @@ export default function FechamentoPage() {
   const [bankAmounts, setBankAmounts] = useState<Record<string, number>>({})
   const [view, setView] = useState<'resumo' | 'ajustes'>('resumo')
   const [isSaving, setIsSaving] = useState(false)
+  const [modalSenhaAberto, setModalSenhaAberto] = useState(false)
   const sb = createClient()
 
   // Carregar valores reais do extrato para auditoria fina
@@ -83,15 +85,26 @@ export default function FechamentoPage() {
     return isPeriodoBloqueado(new Date(selectedAno, selectedMes, 1).toISOString())
   }, [selectedMes, selectedAno, isPeriodoBloqueado])
 
-  const handleReabrir = async () => {
-    const pass = prompt('Digite a senha de segurança para reabrir o período:')
-    if (pass !== '19072425') {
-      if (pass) alert('Senha de auditoria incorreta!')
-      return
-    }
+  const handleReabrir = () => {
+    // Abre o modal de confirmação de senha do Tesoureiro
+    setModalSenhaAberto(true)
+  }
+
+  const handleReabrirConfirmado = async () => {
+    setModalSenhaAberto(false)
     await reabrirPeriodo(selectedMes, selectedAno)
     alert('Período reaberto com sucesso. Os valores foram recalculados.')
   }
+
+  const handlePrint = () => {
+    const originalTitle = document.title
+    document.title = `Éllus · Relatorio de Fechamento - ${MESES[selectedMes]} ${selectedAno}`
+    window.print()
+    setTimeout(() => {
+      document.title = originalTitle
+    }, 500)
+  }
+
 
   const getRealizedInfo = (l: any) => {
     const statusLower = (l.status || '').toLowerCase()
@@ -254,6 +267,15 @@ export default function FechamentoPage() {
   return (
     <div className="p-6 space-y-6">
       
+      {/* Modal de Confirmação de Senha do Tesoureiro */}
+      <ConfirmacaoSenhaTesoureiro
+        isOpen={modalSenhaAberto}
+        onClose={() => setModalSenhaAberto(false)}
+        onConfirmed={handleReabrirConfirmado}
+        titulo="Reabrir Período Fechado"
+        descricao={`Você está prestes a reabrir ${MESES[selectedMes]}/${selectedAno}. Esta ação remove a proteção do período e permite alterações nos lançamentos. Confirme com a senha do Tesoureiro para prosseguir.`}
+      />
+
       {/* Header Original */}
       <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100">
         <div className="flex items-center gap-4">
@@ -292,7 +314,7 @@ export default function FechamentoPage() {
                   Os dados de {MESES[selectedMes]} de {selectedAno} estão consolidados e auditados.
                 </p>
                 <div className="flex items-center justify-center gap-4">
-                  <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-xl transition-all shadow-lg shadow-emerald-900/20 uppercase text-xs tracking-widest">
+                  <button onClick={handlePrint} className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold rounded-xl transition-all shadow-lg shadow-emerald-900/20 uppercase text-xs tracking-widest">
                     <FileText size={18} />
                     Relatório de Fechamento
                   </button>
@@ -317,6 +339,8 @@ export default function FechamentoPage() {
                  <tr className="text-slate-400 font-bold border-b border-gray-50 uppercase text-[9px]">
                    <th className="p-4">Conta</th>
                    <th className="p-4 text-right">Anterior</th>
+                   <th className="p-4 text-right">Entradas</th>
+                   <th className="p-4 text-right">Saídas</th>
                    <th className="p-4 text-right">Sistema</th>
                    <th className="p-4 text-right">Real</th>
                    <th className="p-4 text-right">Divergência</th>
@@ -327,12 +351,25 @@ export default function FechamentoPage() {
                    <tr key={b.conta.id} className="text-slate-600 font-medium">
                      <td className="p-4 font-bold">{b.conta.nome}</td>
                      <td className="p-4 text-right">{fmtR(b.saldoAnterior)}</td>
+                     <td className="p-4 text-right text-emerald-600">{fmtR(b.entradas)}</td>
+                     <td className="p-4 text-right text-rose-500">{fmtR(b.saidas)}</td>
                      <td className="p-4 text-right font-bold text-slate-900">{fmtR(b.saldoSistema)}</td>
                      <td className="p-4 text-right font-bold text-emerald-600">{fmtR(b.real)}</td>
                      <td className={`p-4 text-right font-bold ${Math.abs(b.diferenca) < 0.01 ? 'text-emerald-500' : 'text-rose-400'}`}>{fmtR(b.diferenca)}</td>
                    </tr>
                  ))}
                </tbody>
+               <tfoot>
+                 <tr className="border-t-2 border-gray-100 font-bold text-slate-800 bg-gray-50/30">
+                   <td className="p-4 uppercase text-[9px]">Total Geral</td>
+                   <td className="p-4 text-right text-slate-500">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.saldoAnterior), 0))}</td>
+                   <td className="p-4 text-right text-emerald-600">{fmtR(globalTotals.entradas)}</td>
+                   <td className="p-4 text-right text-rose-500">{fmtR(globalTotals.saidas)}</td>
+                   <td className="p-4 text-right text-slate-900">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.saldoSistema), 0))}</td>
+                   <td className="p-4 text-right text-emerald-600">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.real), 0))}</td>
+                   <td className="p-4 text-right text-emerald-500">OK</td>
+                 </tr>
+               </tfoot>
              </table>
           </div>
         </div>
@@ -354,6 +391,8 @@ export default function FechamentoPage() {
                  <tr className="text-slate-400 font-bold border-b border-gray-50 uppercase text-[9px]">
                    <th className="p-4">Conta</th>
                    <th className="p-4 text-right">Anterior</th>
+                   <th className="p-4 text-right">Entradas</th>
+                   <th className="p-4 text-right">Saídas</th>
                    <th className="p-4 text-right">Sistema</th>
                    <th className="p-4 text-center w-[180px]">Real (Extrato)</th>
                    <th className="p-4 text-right">Diferença</th>
@@ -364,6 +403,8 @@ export default function FechamentoPage() {
                    <tr key={b.conta.id} className="text-slate-600 font-medium">
                      <td className="p-4 font-bold">{b.conta.nome}</td>
                      <td className="p-4 text-right text-slate-400">{fmtR(b.saldoAnterior)}</td>
+                     <td className="p-4 text-right text-emerald-600">{fmtR(b.entradas)}</td>
+                     <td className="p-4 text-right text-rose-500">{fmtR(b.saidas)}</td>
                      <td className="p-4 text-right font-bold text-slate-900">{fmtR(b.saldoSistema)}</td>
                      <td className="p-4">
                        <input 
@@ -378,6 +419,19 @@ export default function FechamentoPage() {
                    </tr>
                  ))}
                </tbody>
+               <tfoot>
+                 <tr className="border-t-2 border-gray-100 font-bold text-slate-800 bg-gray-50/30">
+                   <td className="p-4 uppercase text-[9px]">Total Geral</td>
+                   <td className="p-4 text-right text-slate-500">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.saldoAnterior), 0))}</td>
+                   <td className="p-4 text-right text-emerald-600">{fmtR(globalTotals.entradas)}</td>
+                   <td className="p-4 text-right text-rose-500">{fmtR(globalTotals.saidas)}</td>
+                   <td className="p-4 text-right text-slate-900">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.saldoSistema), 0))}</td>
+                   <td className="p-4 text-right text-emerald-600">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.real), 0))}</td>
+                   <td className={`p-4 text-right ${totalDiferenca < 0.01 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                     {totalDiferenca < 0.01 ? 'OK' : fmtR(totalDiferenca)}
+                   </td>
+                 </tr>
+               </tfoot>
              </table>
           </div>
 
@@ -464,6 +518,8 @@ export default function FechamentoPage() {
             <tr className="border-b-2 border-gray-100 text-gray-400 uppercase text-[9px]">
               <th className="py-3 text-left">Conta</th>
               <th className="py-3 text-right">Anterior</th>
+              <th className="py-3 text-right">Entradas</th>
+              <th className="py-3 text-right">Saídas</th>
               <th className="py-3 text-right">Sistema</th>
               <th className="py-3 text-right">Real</th>
               <th className="py-3 text-right">Diferença</th>
@@ -474,12 +530,25 @@ export default function FechamentoPage() {
               <tr key={b.conta.id}>
                 <td className="py-3 font-bold">{b.conta.nome}</td>
                 <td className="py-3 text-right text-gray-400">{fmtR(b.saldoAnterior)}</td>
+                <td className="py-3 text-right text-emerald-600">{fmtR(b.entradas)}</td>
+                <td className="py-3 text-right text-rose-500">{fmtR(b.saidas)}</td>
                 <td className="py-3 text-right">{fmtR(b.saldoSistema)}</td>
                 <td className="py-3 text-right font-bold text-emerald-600">{fmtR(b.real)}</td>
                 <td className="py-3 text-right font-bold text-emerald-500">OK</td>
               </tr>
             ))}
           </tbody>
+          <tfoot>
+            <tr className="border-t-2 border-gray-100 font-bold text-[#0e2d22]">
+              <td className="py-3 uppercase text-[9px]">Total Geral</td>
+              <td className="py-3 text-right text-gray-400">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.saldoAnterior), 0))}</td>
+              <td className="py-3 text-right text-emerald-600">{fmtR(globalTotals.entradas)}</td>
+              <td className="py-3 text-right text-rose-500">{fmtR(globalTotals.saidas)}</td>
+              <td className="py-3 text-right">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.saldoSistema), 0))}</td>
+              <td className="py-3 text-right text-emerald-600">{fmtR(balances.reduce((sum, b) => safeSum(sum, b.real), 0))}</td>
+              <td className="py-3 text-right text-emerald-500">OK</td>
+            </tr>
+          </tfoot>
         </table>
         <div className="mt-20 grid grid-cols-2 gap-10 text-center">
           <div><div className="border-t border-gray-300 w-40 mx-auto mt-10" /><p className="text-[8px] font-bold uppercase mt-2 text-gray-400">Responsável</p></div>

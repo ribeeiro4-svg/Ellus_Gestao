@@ -139,7 +139,8 @@ function PerfisContent() {
     { chave: 'relatorios', label: 'Relatórios', secao: 'Dados' },
     // ── Administração ──
     { chave: 'configuracoes', label: 'Configurações', secao: 'Administração' },
-    { chave: 'auditoria', label: 'Auditoria', secao: 'Administração' },
+    { chave: 'auditoria', label: 'Auditoria (Logs de Acesso)', secao: 'Administração' },
+    { chave: 'auditoria_financeira', label: 'Auditoria Financeira / Controladoria', secao: 'Administração' },
   ]
 
   return (
