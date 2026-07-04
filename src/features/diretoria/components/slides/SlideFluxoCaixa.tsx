@@ -69,16 +69,16 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
       legend: {
         display: true,
         position: 'top' as const,
-        labels: { color: 'rgba(255,255,255,0.85)', font: { size: 14, weight: 'bold' as const }, boxWidth: 16, padding: 20 }
+        labels: { color: 'rgba(255,255,255,0.9)', font: { size: 14, family: 'system-ui, sans-serif', weight: '600' as const }, boxWidth: 16, padding: 20 }
       },
       tooltip: {
         backgroundColor: 'rgba(4,13,10,0.95)',
         borderColor: 'rgba(255,255,255,0.2)',
         borderWidth: 1,
         titleColor: '#fff',
-        titleFont: { size: 16, weight: 'bold' as const },
-        bodyColor: 'rgba(255,255,255,0.9)',
-        bodyFont: { size: 15 },
+        titleFont: { size: 16, family: 'system-ui, sans-serif', weight: '600' as const },
+        bodyColor: 'rgba(255,255,255,0.95)',
+        bodyFont: { size: 15, family: 'system-ui, sans-serif', weight: '500' as const },
         padding: 12,
         callbacks: {
           label: (ctx: any) => ` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
@@ -86,12 +86,12 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 14, weight: 'bold' as const } } },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 14, family: 'system-ui, sans-serif', weight: '600' as const } } },
       y: {
         grid: { color: 'rgba(255,255,255,0.05)' },
         ticks: {
-          color: 'rgba(255,255,255,0.6)',
-          font: { size: 14, weight: 'bold' as const },
+          color: 'rgba(255,255,255,0.7)',
+          font: { size: 14, family: 'system-ui, sans-serif', weight: '600' as const },
           callback: (v: any) => `R$ ${(v / 1000).toFixed(0)}k`
         }
       }
