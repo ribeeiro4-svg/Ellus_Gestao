@@ -13,21 +13,21 @@ interface SlideResumoExecutivoProps {
   anoRef: number
 }
 
-function KpiCard({ label, value, prefix, suffix, decimals, icon: Icon, color, sublabel }:
-  { label: string; value: number; prefix?: string; suffix?: string; decimals?: number; icon: any; color: string; sublabel?: string }) {
+function KpiCard({ label, value, prefix, suffix, decimals, icon: Icon, color, bgColor, iconColor, sublabel }:
+  { label: string; value: number; prefix?: string; suffix?: string; decimals?: number; icon: any; color: string; bgColor: string; iconColor: string; sublabel?: string }) {
   return (
-    <div className={`relative flex flex-col gap-4 p-6 rounded-[24px] bg-white/5 border ${color} overflow-hidden group hover:bg-white/8 transition-all duration-300`}>
+    <div className={`relative flex flex-col gap-4 p-6 rounded-[24px] ${bgColor} border ${color} overflow-hidden group hover:brightness-110 transition-all duration-300`}>
       <div className="flex items-start justify-between">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-white/5 border border-white/10`}>
-          <Icon size={18} className="text-white/60" />
+          <Icon size={18} className={iconColor} />
         </div>
       </div>
       <div className="flex flex-col gap-1">
-        <p className="text-[10px] font-black uppercase tracking-[2px] text-white/40">{label}</p>
+        <p className={`text-[10px] font-black uppercase tracking-[2px] opacity-70 ${iconColor}`}>{label}</p>
         <div className="text-4xl md:text-5xl font-black text-white tracking-tight leading-none">
           <CountUp value={value} prefix={prefix} suffix={suffix} decimals={decimals} duration={900} />
         </div>
-        {sublabel && <p className="text-[11px] text-white/30 font-semibold mt-1">{sublabel}</p>}
+        {sublabel && <p className="text-[11px] text-white/40 font-semibold mt-1">{sublabel}</p>}
       </div>
     </div>
   )
@@ -58,7 +58,9 @@ export default function SlideResumoExecutivo({ kpis, mesRef, anoRef }: SlideResu
             prefix="R$ "
             decimals={2}
             icon={Wallet}
+            bgColor="bg-emerald-900/20"
             color="border-emerald-500/20"
+            iconColor="text-emerald-200"
             sublabel="Posição consolidada"
           />
           <KpiCard
@@ -67,7 +69,9 @@ export default function SlideResumoExecutivo({ kpis, mesRef, anoRef }: SlideResu
             prefix="R$ "
             decimals={2}
             icon={TrendingUp}
-            color="border-blue-500/20"
+            bgColor="bg-teal-900/20"
+            color="border-teal-500/20"
+            iconColor="text-teal-200"
             sublabel="Valores efetivados"
           />
           <KpiCard
@@ -76,14 +80,18 @@ export default function SlideResumoExecutivo({ kpis, mesRef, anoRef }: SlideResu
             suffix="%"
             decimals={1}
             icon={AlertTriangle}
-            color={kpis.inadimplenciaRate > 15 ? 'border-rose-500/30' : 'border-amber-500/20'}
+            bgColor={kpis.inadimplenciaRate > 15 ? 'bg-rose-900/20' : 'bg-lime-900/20'}
+            color={kpis.inadimplenciaRate > 15 ? 'border-rose-500/30' : 'border-lime-500/20'}
+            iconColor={kpis.inadimplenciaRate > 15 ? 'text-rose-200' : 'text-lime-200'}
             sublabel={`R$ ${kpis.inadimplenciaValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em aberto`}
           />
           <KpiCard
             label="Associados Ativos"
             value={kpis.totalAtivos}
             icon={Users}
-            color="border-violet-500/20"
+            bgColor="bg-cyan-900/20"
+            color="border-cyan-500/20"
+            iconColor="text-cyan-200"
             sublabel={`+${kpis.novasAdesoesCount} no período`}
           />
         </div>
