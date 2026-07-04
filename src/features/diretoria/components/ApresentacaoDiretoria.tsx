@@ -112,7 +112,7 @@ export default function ApresentacaoDiretoria() {
   // ─── TELA DE CONFIGURAÇÃO ───────────────────────────────────────────
   if (isConfiguring) {
     return (
-      <div className="flex flex-col gap-3 h-[calc(100vh-85px)] min-h-[600px] animate-in fade-in duration-700">
+      <div className="flex-1 w-full flex flex-col gap-3 min-h-[600px] animate-in fade-in duration-700">
         {/* Header */}
         <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 backdrop-blur-2xl py-3.5 px-6 rounded-2xl border border-white/5 shadow-2xl">
           <div className="flex items-center gap-4">
