@@ -1,7 +1,11 @@
 
 'use client'
 import React, { useState, useEffect, useMemo } from 'react'
-import ImportarTab from './ImportarTab'
+import dynamic from 'next/dynamic'
+const ImportarTab = dynamic(() => import('./ImportarTab'), { ssr: false })
+const ConfigCobrancaTab = dynamic(() => import('@/features/cobranca/components/ConfigCobrancaTab'), { ssr: false })
+const MensagensWhatsappTab = dynamic(() => import('@/features/configuracoes/components/MensagensWhatsappTab'), { ssr: false })
+
 import { 
   Settings, 
   CreditCard,
@@ -42,8 +46,6 @@ import CrudModal from '@/components/ui/CrudModal'
 import { useTenant } from '@/lib/hooks/useTenant'
 import { useConfiguracoesContabeis } from '@/features/contabil/hooks/useConfiguracoesContabeis'
 import ContaContabilSelect from '@/features/contabil/components/ContaContabilSelect'
-import ConfigCobrancaTab from '@/features/cobranca/components/ConfigCobrancaTab'
-import MensagensWhatsappTab from '@/features/configuracoes/components/MensagensWhatsappTab'
 import { usePermissions } from '@/lib/hooks/usePermissions'
 
 type TabType = 'geral' | 'financeiro' | 'categorias' | 'cobranca' | 'mensagens-whatsapp' | 'acessos' | 'minha-conta' | 'importar'
