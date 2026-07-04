@@ -31,7 +31,8 @@ import {
   ChevronUp,
   Menu,
   ClipboardList,
-  BookMarked
+  BookMarked,
+  Monitor
 } from 'lucide-react'
 
 const MENU = [
@@ -64,6 +65,7 @@ const MENU = [
       { href: '/gestao-tarefas', icon: ClipboardList, label: 'Painel de Tarefas' },
       { href: '/bens-duraveis', icon: Briefcase, label: 'Gestão de Ativos' },
       { href: '/pop', icon: BookMarked, label: 'Manuais de Processos' },
+      { href: '/diretoria', icon: Monitor, label: 'Apresentar Resultados' },
     ]
   },
   { 
@@ -165,6 +167,11 @@ export default function Sidebar() {
     }
 
     if (href === '/configuracoes' || href === '/pop') return true // Sempre visível para a aba Minha Conta e Manuais
+
+    // Apresentar Resultados: apenas Admin ou perfil de Tesoureiro (financeiro.ver)
+    if (href === '/diretoria') {
+      return isAdmin || permissoes['financeiro']?.ver === true
+    }
 
     const moduloName = routeToModuleMap[href]
     if (moduloName) {
