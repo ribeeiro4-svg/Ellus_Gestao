@@ -33,10 +33,10 @@ function StatusBadge({ percentual, prazo }: { percentual: number; prazo?: string
   const prazoDate = prazo ? new Date(prazo) : null
   const isOverdue = prazoDate && prazoDate < today && percentual < 100
 
-  if (percentual >= 100) return <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">✓ Concluída</span>
-  if (isOverdue) return <span className="text-[9px] font-black text-rose-400 bg-rose-500/15 border border-rose-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Atrasada</span>
-  if (percentual >= 70) return <span className="text-[9px] font-black text-amber-400 bg-amber-500/15 border border-amber-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider">Em Andamento</span>
-  return <span className="text-[9px] font-black text-white/30 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Iniciada</span>
+  if (percentual >= 100) return <span className="text-[11px] font-black text-emerald-400 bg-emerald-500/15 border border-emerald-500/20 px-3 py-1 rounded-full uppercase tracking-wider">✓ Concluída</span>
+  if (isOverdue) return <span className="text-[11px] font-black text-rose-400 bg-rose-500/15 border border-rose-500/20 px-3 py-1 rounded-full uppercase tracking-wider">Atrasada</span>
+  if (percentual >= 70) return <span className="text-[11px] font-black text-amber-400 bg-amber-500/15 border border-amber-500/20 px-3 py-1 rounded-full uppercase tracking-wider">Em Andamento</span>
+  return <span className="text-[11px] font-black text-white/30 bg-white/5 border border-white/10 px-3 py-1 rounded-full uppercase tracking-wider">Iniciada</span>
 }
 
 export default function SlideMetas({ metas }: SlideMertasProps) {
@@ -60,24 +60,24 @@ export default function SlideMetas({ metas }: SlideMertasProps) {
 
       <div className="relative z-10 flex flex-col h-full gap-5">
         <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[3px] text-orange-400/70">Accountability</p>
-            <h2 className="text-3xl font-black text-white tracking-tight">Metas e OKRs</h2>
-            <p className="text-sm text-white/30 font-semibold mt-1">Progresso das iniciativas estratégicas</p>
+          <div className="flex flex-col gap-2">
+            <p className="text-[13px] font-black uppercase tracking-[3px] text-orange-400/80">Accountability</p>
+            <h2 className="text-5xl font-black text-white tracking-tight">Metas e OKRs</h2>
+            <p className="text-base text-white/50 font-semibold mt-1">Progresso das iniciativas estratégicas</p>
           </div>
-          <div className="flex gap-3">
-            <div className="p-3 rounded-[16px] bg-white/5 border border-emerald-500/20 text-center min-w-[70px]">
-              <p className="text-2xl font-black text-emerald-400">{concluidas}</p>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Concluídas</p>
+          <div className="flex gap-4">
+            <div className="p-4 rounded-[20px] bg-white/5 border border-emerald-500/20 text-center min-w-[100px]">
+              <p className="text-4xl font-black text-emerald-400">{concluidas}</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-white/40 mt-1">Concluídas</p>
             </div>
-            <div className="p-3 rounded-[16px] bg-white/5 border border-white/10 text-center min-w-[70px]">
-              <p className="text-2xl font-black text-white">{metas.length}</p>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Total</p>
+            <div className="p-4 rounded-[20px] bg-white/5 border border-white/10 text-center min-w-[100px]">
+              <p className="text-4xl font-black text-white">{metas.length}</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-white/40 mt-1">Total</p>
             </div>
             {emRisco > 0 && (
-              <div className="p-3 rounded-[16px] bg-white/5 border border-rose-500/20 text-center min-w-[70px]">
-                <p className="text-2xl font-black text-rose-400">{emRisco}</p>
-                <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Atrasadas</p>
+              <div className="p-4 rounded-[20px] bg-white/5 border border-rose-500/20 text-center min-w-[100px]">
+                <p className="text-4xl font-black text-rose-400">{emRisco}</p>
+                <p className="text-[11px] font-black uppercase tracking-widest text-white/40 mt-1">Atrasadas</p>
               </div>
             )}
           </div>
@@ -91,26 +91,26 @@ export default function SlideMetas({ metas }: SlideMertasProps) {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 flex-1 overflow-hidden">
+          <div className="flex flex-col gap-4 flex-1 overflow-hidden">
             {metasExibir.map((meta) => (
-              <div key={meta.id} className="flex items-center gap-4 p-4 rounded-[18px] bg-white/5 border border-white/8 hover:bg-white/8 transition-all">
+              <div key={meta.id} className="flex items-center gap-4 p-5 rounded-[20px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <p className="text-sm font-black text-white/80 truncate flex-1">{meta.meta}</p>
+                  <div className="flex items-center gap-4 mb-3">
+                    <p className="text-base font-black text-white/90 truncate flex-1">{meta.meta}</p>
                     <StatusBadge percentual={meta.pct} prazo={meta.prazo} />
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <AnimatedBar percentual={meta.pct} />
-                    <span className="text-[11px] font-black text-white/50 w-10 text-right shrink-0">{meta.pct.toFixed(0)}%</span>
+                    <span className="text-[13px] font-black text-white/60 w-12 text-right shrink-0">{meta.pct.toFixed(0)}%</span>
                   </div>
                   {meta.prazo && (
-                    <p className="text-[9px] text-white/20 font-semibold mt-1">Prazo: {new Date(meta.prazo).toLocaleDateString('pt-BR')} · {meta.responsavel}</p>
+                    <p className="text-[12px] text-white/40 font-semibold mt-2">Prazo: {new Date(meta.prazo).toLocaleDateString('pt-BR')} · {meta.responsavel}</p>
                   )}
                 </div>
               </div>
             ))}
             {metas.length > 7 && (
-              <p className="text-[10px] text-white/20 font-bold text-center">+{metas.length - 7} outras metas</p>
+              <p className="text-[12px] text-white/40 font-bold text-center mt-2">+{metas.length - 7} outras metas</p>
             )}
           </div>
         )}

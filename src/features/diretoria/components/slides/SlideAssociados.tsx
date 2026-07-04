@@ -44,17 +44,19 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
       legend: { display: false },
       tooltip: {
         backgroundColor: 'rgba(4,13,10,0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.2)',
         borderWidth: 1,
-        titleColor: 'rgba(255,255,255,0.8)',
-        bodyColor: 'rgba(255,255,255,0.6)',
+        titleColor: '#fff',
+        titleFont: { size: 16, family: 'system-ui, sans-serif', weight: 'normal' as const },
+        bodyColor: 'rgba(255,255,255,0.95)',
+        bodyFont: { size: 15, family: 'system-ui, sans-serif', weight: 'normal' as const },
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 12, weight: 'bold' as const } } },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const } } },
       y: {
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 11 } },
+        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const } },
         beginAtZero: false,
       }
     }
@@ -67,32 +69,32 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
 
       <div className="relative z-10 flex flex-col h-full gap-5">
         <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[3px] text-violet-400/70">Saúde da Base</p>
-            <h2 className="text-3xl font-black text-white tracking-tight">Associados</h2>
-            <p className="text-sm text-white/30 font-semibold mt-1">Evolução e saúde da base associativa</p>
+          <div className="flex flex-col gap-2">
+            <p className="text-[13px] font-black uppercase tracking-[3px] text-violet-400/80">Saúde da Base</p>
+            <h2 className="text-5xl font-black text-white tracking-tight">Associados</h2>
+            <p className="text-base text-white/50 font-semibold mt-1">Evolução e saúde da base associativa</p>
           </div>
           {/* KPIs rápidos */}
           <div className="flex gap-4">
-            <div className="flex flex-col items-center gap-1 p-4 rounded-[20px] bg-white/5 border border-violet-500/20 min-w-[100px]">
-              <Users size={16} className="text-violet-400" />
-              <div className="text-3xl font-black text-violet-400">
+            <div className="flex flex-col items-center gap-1 p-5 rounded-[20px] bg-white/5 border border-violet-500/20 min-w-[120px]">
+              <Users size={20} className="text-violet-400" />
+              <div className="text-4xl font-black text-violet-400 mt-1">
                 <CountUp value={kpis.totalAtivos} duration={900} />
               </div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Ativos</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-white/40 mt-1">Ativos</p>
             </div>
-            <div className="flex flex-col items-center gap-1 p-4 rounded-[20px] bg-white/5 border border-emerald-500/20 min-w-[100px]">
-              <UserPlus size={16} className="text-emerald-400" />
-              <div className="text-3xl font-black text-emerald-400">
+            <div className="flex flex-col items-center gap-1 p-5 rounded-[20px] bg-white/5 border border-emerald-500/20 min-w-[120px]">
+              <UserPlus size={20} className="text-emerald-400" />
+              <div className="text-4xl font-black text-emerald-400 mt-1">
                 <CountUp value={kpis.novasAdesoesCount} duration={900} />
               </div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Novas Adesões</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-white/40 mt-1">Novas Adesões</p>
             </div>
-            <div className={`flex flex-col items-center gap-1 p-4 rounded-[20px] bg-white/5 border min-w-[100px] ${crescimento >= 0 ? 'border-emerald-500/20' : 'border-rose-500/20'}`}>
-              <div className={`text-3xl font-black ${crescimento >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            <div className={`flex flex-col items-center gap-1 p-5 rounded-[20px] bg-white/5 border min-w-[120px] ${crescimento >= 0 ? 'border-emerald-500/20' : 'border-rose-500/20'}`}>
+              <div className={`text-4xl font-black mt-6 ${crescimento >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {crescimento >= 0 ? '+' : ''}{crescimento}
               </div>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Crescimento</p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-white/40 mt-1">Crescimento</p>
             </div>
           </div>
         </div>

@@ -37,10 +37,13 @@ function DonutSection({ title, items, colors }: { title: string; items: Composic
       legend: { display: false },
       tooltip: {
         backgroundColor: 'rgba(4,13,10,0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.2)',
         borderWidth: 1,
-        titleColor: 'rgba(255,255,255,0.8)',
-        bodyColor: 'rgba(255,255,255,0.6)',
+        titleColor: '#fff',
+        titleFont: { size: 16, family: 'system-ui, sans-serif', weight: 'normal' as const },
+        bodyColor: 'rgba(255,255,255,0.95)',
+        bodyFont: { size: 15, family: 'system-ui, sans-serif', weight: 'normal' as const },
+        padding: 12,
         callbacks: {
           label: (ctx: any) => ` R$ ${ctx.parsed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (${((ctx.parsed / total) * 100).toFixed(1)}%)`
         }
@@ -50,29 +53,29 @@ function DonutSection({ title, items, colors }: { title: string; items: Composic
 
   return (
     <div className="flex flex-col gap-4 flex-1">
-      <p className="text-[10px] font-black uppercase tracking-[2px] text-white/40">{title}</p>
+      <p className="text-[13px] font-black uppercase tracking-[2px] text-white/50">{title}</p>
       <div className="flex gap-6 items-center">
-        <div className="relative w-36 h-36 shrink-0">
+        <div className="relative w-40 h-40 shrink-0">
           {items.length > 0 ? (
             <>
               <Doughnut data={data} options={options} />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-[9px] text-white/30 font-bold uppercase">Total</p>
-                <p className="text-sm font-black text-white">R$ {(total / 1000).toFixed(0)}k</p>
+                <p className="text-[11px] text-white/40 font-bold uppercase tracking-widest">Total</p>
+                <p className="text-xl font-black text-white mt-1">R$ {(total / 1000).toFixed(0)}k</p>
               </div>
             </>
           ) : (
             <div className="w-full h-full rounded-full border-2 border-dashed border-white/10 flex items-center justify-center">
-              <p className="text-[9px] text-white/20 font-bold">Sem dados</p>
+              <p className="text-xs text-white/30 font-bold">Sem dados</p>
             </div>
           )}
         </div>
-        <div className="flex flex-col gap-2 flex-1 min-w-0">
+        <div className="flex flex-col gap-3 flex-1 min-w-0">
           {items.map((item, i) => (
-            <div key={item.categoria} className="flex items-center gap-2 group">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: colors[i] || '#666' }} />
-              <p className="text-[11px] font-bold text-white/60 truncate flex-1">{item.categoria}</p>
-              <p className="text-[11px] font-black text-white/80 shrink-0">{item.percentual.toFixed(0)}%</p>
+            <div key={item.categoria} className="flex items-center gap-3 group">
+              <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: colors[i] || '#666' }} />
+              <p className="text-[13px] font-bold text-white/70 truncate flex-1">{item.categoria}</p>
+              <p className="text-[13px] font-black text-white/90 shrink-0">{item.percentual.toFixed(0)}%</p>
             </div>
           ))}
         </div>
@@ -88,10 +91,10 @@ export default function SlideComposicao({ receitas, despesas }: SlideComposicaoP
       <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/3 via-transparent to-transparent" />
 
       <div className="relative z-10 flex flex-col h-full gap-6">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-[3px] text-emerald-400/70">Financeiro</p>
-          <h2 className="text-3xl font-black text-white tracking-tight">Composição Financeira</h2>
-          <p className="text-sm text-white/30 font-semibold mt-1">De onde vem e para onde vai o dinheiro</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-[13px] font-black uppercase tracking-[3px] text-emerald-400/80">Financeiro</p>
+          <h2 className="text-5xl font-black text-white tracking-tight">Composição Financeira</h2>
+          <p className="text-base text-white/50 font-semibold mt-1">De onde vem e para onde vai o dinheiro</p>
         </div>
 
         <div className="grid grid-cols-2 gap-8 flex-1">
@@ -104,14 +107,15 @@ export default function SlideComposicao({ receitas, despesas }: SlideComposicaoP
         </div>
 
         {/* Insight */}
-        <div className="flex items-center gap-3 p-4 rounded-[16px] bg-white/3 border border-white/8">
-          <div className="w-1.5 h-8 rounded-full bg-emerald-400/60 shrink-0" />
-          <p className="text-[12px] text-white/40 font-semibold">
+        <div className="flex items-center gap-4 p-5 rounded-[20px] bg-white/5 border border-white/10 mt-2">
+          <div className="w-1.5 h-10 rounded-full bg-emerald-400/60 shrink-0" />
+          <p className="text-[14px] text-white/60 font-semibold">
             {receitas[0] && `Maior fonte de receita: `}
-            <span className="text-white/70">{receitas[0]?.categoria || '—'}</span>
+            <span className="text-white">{receitas[0]?.categoria || '—'}</span>
             {receitas[0] && ` (${receitas[0].percentual.toFixed(0)}% do total)`}
-            {despesas[0] && ` · Maior despesa: `}
-            <span className="text-white/70">{despesas[0]?.categoria || '—'}</span>
+            {despesas[0] && <span className="mx-2 text-white/20">|</span>}
+            {despesas[0] && `Maior despesa: `}
+            <span className="text-white">{despesas[0]?.categoria || '—'}</span>
             {despesas[0] && ` (${despesas[0].percentual.toFixed(0)}%)`}
           </p>
         </div>

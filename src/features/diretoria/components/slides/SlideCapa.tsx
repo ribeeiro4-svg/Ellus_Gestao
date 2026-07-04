@@ -32,33 +32,33 @@ export default function SlideCapa({ tenantNome, tenantLogo, mesRef, anoRef }: Sl
         </div>
 
         {/* Tag */}
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[3px]">Reunião de Diretoria</span>
+        <div className="flex items-center gap-2 px-5 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[13px] font-black text-emerald-400 uppercase tracking-[3px]">Reunião de Diretoria</span>
         </div>
 
         {/* Title */}
-        <div className="flex flex-col gap-3">
-          <h1 className="text-6xl md:text-7xl font-black text-white tracking-tight leading-none">
+        <div className="flex flex-col gap-4">
+          <h1 className="text-7xl md:text-8xl font-black text-white tracking-tight leading-none">
             Relatório
             <br />
             <span className="text-emerald-400">Gerencial</span>
           </h1>
-          <p className="text-xl font-bold text-white/40 uppercase tracking-[4px]">
+          <p className="text-2xl font-bold text-white/50 uppercase tracking-[4px] mt-2">
             {MESES[mesRef]} / {anoRef}
           </p>
         </div>
 
         {/* Organization name */}
-        <div className="mt-2">
-          <p className="text-sm font-black text-white/60 uppercase tracking-[3px]">{tenantNome}</p>
+        <div className="mt-4">
+          <p className="text-lg font-black text-white/70 uppercase tracking-[3px]">{tenantNome}</p>
         </div>
 
         {/* Bottom instruction */}
-        <div className="mt-8 flex items-center gap-2 text-white/20">
-          <div className="w-8 h-px bg-white/20" />
-          <span className="text-[9px] font-bold uppercase tracking-widest">Use as setas ou clique para navegar</span>
-          <div className="w-8 h-px bg-white/20" />
+        <div className="mt-12 flex items-center gap-4 text-white/30">
+          <div className="w-12 h-px bg-white/20" />
+          <span className="text-[11px] font-bold uppercase tracking-widest">Use as setas ou clique para navegar</span>
+          <div className="w-12 h-px bg-white/20" />
         </div>
       </div>
     </div>

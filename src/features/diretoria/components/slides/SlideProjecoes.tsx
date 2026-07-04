@@ -67,24 +67,27 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
       legend: {
         display: true,
         position: 'top' as const,
-        labels: { color: 'rgba(255,255,255,0.5)', font: { size: 11, weight: 'bold' as const }, boxWidth: 12 }
+        labels: { color: 'rgba(255,255,255,0.9)', font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const }, boxWidth: 16, padding: 20 }
       },
       tooltip: {
         backgroundColor: 'rgba(4,13,10,0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.2)',
         borderWidth: 1,
-        titleColor: 'rgba(255,255,255,0.8)',
-        bodyColor: 'rgba(255,255,255,0.6)',
+        titleColor: '#fff',
+        titleFont: { size: 16, family: 'system-ui, sans-serif', weight: 'normal' as const },
+        bodyColor: 'rgba(255,255,255,0.95)',
+        bodyFont: { size: 15, family: 'system-ui, sans-serif', weight: 'normal' as const },
+        padding: 12,
         callbacks: {
           label: (ctx: any) => ` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
         }
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 12, weight: 'bold' as const } } },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const } } },
       y: {
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: 'rgba(255,255,255,0.4)', callback: (v: any) => `R$ ${(v / 1000).toFixed(0)}k` }
+        ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const }, callback: (v: any) => `R$ ${(v / 1000).toFixed(0)}k` }
       }
     }
   }
@@ -101,20 +104,21 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
 
       <div className="relative z-10 flex flex-col h-full gap-5">
         <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[3px] text-blue-400/70">Para Onde Vamos</p>
-            <h2 className="text-3xl font-black text-white tracking-tight">Projeções Anuais</h2>
-            <p className="text-sm text-white/30 font-semibold mt-1">Realizado + projeção baseada no cenário de simulação</p>
+        <div className="flex items-start justify-between">
+          <div className="flex flex-col gap-2">
+            <p className="text-[13px] font-black uppercase tracking-[3px] text-blue-400/80">Para Onde Vamos</p>
+            <h2 className="text-5xl font-black text-white tracking-tight">Projeções Anuais</h2>
+            <p className="text-base text-white/50 font-semibold mt-1">Realizado + projeção baseada no cenário de simulação</p>
           </div>
 
           <div className="flex gap-4">
-            <div className="p-4 rounded-[20px] bg-white/5 border border-emerald-500/20 text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Acumulado Realizado</p>
-              <p className="text-xl font-black text-emerald-400">R$ {(saldoAcumulado / 1000).toFixed(0)}k</p>
+            <div className="p-5 rounded-[20px] bg-white/5 border border-emerald-500/20 text-right min-w-[180px]">
+              <p className="text-[12px] font-black uppercase tracking-widest text-white/40 mb-2">Acumulado Realizado</p>
+              <p className="text-3xl font-black text-emerald-400">R$ {(saldoAcumulado / 1000).toFixed(0)}k</p>
             </div>
-            <div className="p-4 rounded-[20px] bg-white/5 border border-blue-500/20 text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Receita Projetada (Restante)</p>
-              <p className="text-xl font-black text-blue-400">R$ {(projecaoReceitaResto / 1000).toFixed(0)}k</p>
+            <div className="p-5 rounded-[20px] bg-white/5 border border-blue-500/20 text-right min-w-[180px]">
+              <p className="text-[12px] font-black uppercase tracking-widest text-white/40 mb-2">Receita Projetada</p>
+              <p className="text-3xl font-black text-blue-400">R$ {(projecaoReceitaResto / 1000).toFixed(0)}k</p>
             </div>
           </div>
         </div>
@@ -124,18 +128,18 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
         </div>
 
         {/* Legend realizado vs projetado */}
-        <div className="flex items-center gap-3 p-3 rounded-[14px] bg-white/3 border border-white/8">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-px bg-emerald-400" />
-            <span className="text-[10px] font-bold text-white/40">Sólido = Realizado</span>
+        <div className="flex items-center gap-4 p-4 rounded-[14px] bg-white/5 border border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-1 bg-emerald-400" />
+            <span className="text-[13px] font-bold text-white/60">Sólido = Realizado</span>
           </div>
-          <div className="w-px h-3 bg-white/15" />
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-px bg-white/30" style={{ borderTop: '1px dashed rgba(255,255,255,0.3)' }} />
-            <span className="text-[10px] font-bold text-white/40">Pontilhado = Projeção futura</span>
+          <div className="w-px h-4 bg-white/20" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-1 bg-white/30" style={{ borderTop: '2px dashed rgba(255,255,255,0.4)' }} />
+            <span className="text-[13px] font-bold text-white/60">Pontilhado = Projeção futura</span>
           </div>
-          <div className="w-px h-3 bg-white/15" />
-          <span className="text-[10px] font-bold text-white/30">Mês de referência: {MESES[mesRef]}</span>
+          <div className="w-px h-4 bg-white/20" />
+          <span className="text-[13px] font-bold text-white/50">Mês de referência: {MESES[mesRef]}</span>
         </div>
       </div>
     </div>
