@@ -230,6 +230,23 @@ function FinanceiroPageContent() {
   const [isCobrancaDateModalOpen, setIsCobrancaDateModalOpen] = useState(false)
   const [cobrancaDateTarget, setCobrancaDateTarget] = useState<string[]>([])
   const [isAuditRecorrenciaModalOpen, setIsAuditRecorrenciaModalOpen] = useState(false)
+  const [cashReservePercentage, setCashReservePercentage] = useState(20)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('@ellus:cashReservePercentage')
+      if (saved) {
+        setCashReservePercentage(Number(saved))
+      }
+    }
+  }, [])
+
+  const handleCashReserveChange = (val: number) => {
+    setCashReservePercentage(val)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('@ellus:cashReservePercentage', val.toString())
+    }
+  }
 
   useEffect(() => {
     if (contas.length > 0 && !selectedContaId) {
@@ -1475,8 +1492,8 @@ function FinanceiroPageContent() {
 
       <FinancialKpiGrid 
         kpis={kpiData} 
-        cashReservePercentage={10}
-        onCashReservePercentageChange={() => {}}
+        cashReservePercentage={cashReservePercentage}
+        onCashReservePercentageChange={handleCashReserveChange}
         hasReserveAccount={contas?.some(c => c.nome.toLowerCase().includes('fundo')) || false}
         onFixAccount={() => alert('Para criar a conta de Fundo de Caixa, vá nas Configurações > Contas Bancárias.')}
         onNewIngresso={(criar || isAdmin) ? () => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) } : undefined} 
@@ -1493,7 +1510,7 @@ function FinanceiroPageContent() {
       {activeTab === 'inadimplencia' ? (
         <InadimplenciaTab />
       ) : activeTab === 'relatorios' ? (
-        <RelatoriosFinanceirosTab />
+        <RelatoriosFinanceirosTab cashReservePercentage={cashReservePercentage} />
       ) : activeTab === 'calendario' ? (
         <CalendarioConciliacao contas={contas} />
       ) : activeTab === 'conciliacao' ? (
