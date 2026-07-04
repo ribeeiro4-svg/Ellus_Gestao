@@ -42,8 +42,9 @@ import BatchActionBar from '@/components/ui/BatchActionBar'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 
 import { AssociadoLancamentos } from '@/components/ui/AssociadoLancamentos'
-import InadimplenciaTab from '@/features/financeiro/components/InadimplenciaTab'
-import RelatoriosFinanceirosTab from '@/features/financeiro/components/RelatoriosFinanceirosTab'
+import dynamic from 'next/dynamic'
+const InadimplenciaTab = dynamic(() => import('@/features/financeiro/components/InadimplenciaTab'), { ssr: false })
+const RelatoriosFinanceirosTab = dynamic(() => import('@/features/financeiro/components/RelatoriosFinanceirosTab'), { ssr: false })
 import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction, cleanupConciliacaoDuplicatesAction, cleanupWrongMensalidadePatternAction } from '@/app/actions/financeiro_cleanup'
 import { trackIrregularitiesAction, auditRecorrenciaFaltantesAction } from '@/app/actions/financeiro_irregularities'
@@ -55,7 +56,7 @@ import AbonoLancamentoModal from '@/components/financeiro/AbonoLancamentoModal'
 import { gerarPdfAbonoLote } from '@/features/financeiro/utils/gerarPdfAbonoLote'
 import { useConciliacaoLogs } from '@/lib/hooks/useConciliacaoLogs'
 import { useConciliacaoCalendario } from '@/lib/hooks/useConciliacaoCalendario'
-import CalendarioConciliacao from '@/features/conciliacao/components/CalendarioConciliacao'
+const CalendarioConciliacao = dynamic(() => import('@/features/conciliacao/components/CalendarioConciliacao'), { ssr: false })
 import { tempFixDatabaseAction } from '@/app/actions/zapsign'
 import NFSeLinkModal from '@/features/fiscal/components/nfse/NFSeLinkModal'
 import { gerarPdfAbono } from '@/features/financeiro/utils/gerarPdfAbono'
