@@ -30,7 +30,7 @@ export default function SlideNav({ current, total, onPrev, onNext, slideTitle }:
       </div>
 
       {/* Slide counter */}
-      <div className="absolute top-7 right-8 z-50 text-[13px] font-black text-white/70 uppercase tracking-widest">
+      <div className="absolute bottom-5 right-8 z-50 text-[13px] font-black text-white/70 uppercase tracking-widest">
         {current + 1} / {total}
       </div>
 
