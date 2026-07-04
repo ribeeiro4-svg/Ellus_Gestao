@@ -26,7 +26,7 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
       label: 'Associados Ativos',
       data: evolucao.map(e => e.ativos),
       borderColor: 'rgba(139,92,246,0.9)',
-      backgroundColor: 'rgba(139,92,246,0.1)',
+      backgroundColor: 'rgba(139,92,246,0.02)',
       pointBackgroundColor: 'rgba(139,92,246,1)',
       pointRadius: 5,
       pointHoverRadius: 8,
@@ -135,7 +135,7 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
         </div>
 
         {/* Chart */}
-        <div className="flex-1 min-h-0 p-4 rounded-[24px] bg-white/5 border border-white/10">
+        <div className="flex-1 min-h-0 p-4 rounded-[24px] bg-transparent border border-white/10">
           <Line data={chartData} options={options} plugins={[dataLabelsPlugin]} />
         </div>
       </div>
