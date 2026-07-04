@@ -58,9 +58,9 @@ export default function SlideResumoExecutivo({ kpis, mesRef, anoRef }: SlideResu
             prefix="R$ "
             decimals={2}
             icon={Wallet}
-            bgColor="bg-emerald-900/20"
-            color="border-emerald-500/20"
-            iconColor="text-emerald-200"
+            bgColor="bg-emerald-900/50"
+            color="border-emerald-500/40"
+            iconColor="text-emerald-300"
             sublabel="Posição consolidada"
           />
           <KpiCard
@@ -69,9 +69,9 @@ export default function SlideResumoExecutivo({ kpis, mesRef, anoRef }: SlideResu
             prefix="R$ "
             decimals={2}
             icon={TrendingUp}
-            bgColor="bg-teal-900/20"
-            color="border-teal-500/20"
-            iconColor="text-teal-200"
+            bgColor="bg-teal-900/50"
+            color="border-teal-500/40"
+            iconColor="text-teal-300"
             sublabel="Valores efetivados"
           />
           <KpiCard
@@ -80,18 +80,18 @@ export default function SlideResumoExecutivo({ kpis, mesRef, anoRef }: SlideResu
             suffix="%"
             decimals={1}
             icon={AlertTriangle}
-            bgColor={kpis.inadimplenciaRate > 15 ? 'bg-rose-900/20' : 'bg-lime-900/20'}
-            color={kpis.inadimplenciaRate > 15 ? 'border-rose-500/30' : 'border-lime-500/20'}
-            iconColor={kpis.inadimplenciaRate > 15 ? 'text-rose-200' : 'text-lime-200'}
+            bgColor={kpis.inadimplenciaRate > 15 ? 'bg-rose-900/50' : 'bg-lime-900/50'}
+            color={kpis.inadimplenciaRate > 15 ? 'border-rose-500/50' : 'border-lime-500/40'}
+            iconColor={kpis.inadimplenciaRate > 15 ? 'text-rose-300' : 'text-lime-300'}
             sublabel={`R$ ${kpis.inadimplenciaValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em aberto`}
           />
           <KpiCard
             label="Associados Ativos"
             value={kpis.totalAtivos}
             icon={Users}
-            bgColor="bg-cyan-900/20"
-            color="border-cyan-500/20"
-            iconColor="text-cyan-200"
+            bgColor="bg-cyan-900/50"
+            color="border-cyan-500/40"
+            iconColor="text-cyan-300"
             sublabel={`+${kpis.novasAdesoesCount} no período`}
           />
         </div>
