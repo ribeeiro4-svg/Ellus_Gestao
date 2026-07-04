@@ -14,7 +14,7 @@ export default function SlideNav({ current, total, onPrev, onNext, slideTitle }:
   return (
     <>
       {/* Top progress bar */}
-      <div className="absolute top-0 left-0 right-0 z-50 flex items-center gap-2 px-8 pt-4">
+      <div className="absolute top-0 left-0 right-0 z-50 flex items-center gap-2 px-8 pt-3">
         {Array.from({ length: total }).map((_, i) => (
           <div
             key={i}
@@ -30,12 +30,12 @@ export default function SlideNav({ current, total, onPrev, onNext, slideTitle }:
       </div>
 
       {/* Slide counter */}
-      <div className="absolute top-4 right-8 z-50 text-[10px] font-black text-white/40 uppercase tracking-widest">
+      <div className="absolute top-7 right-8 z-50 text-[13px] font-black text-white/70 uppercase tracking-widest">
         {current + 1} / {total}
       </div>
 
       {/* Slide title */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 text-[10px] font-black text-white/40 uppercase tracking-widest">
+      <div className="absolute top-7 left-1/2 -translate-x-1/2 z-50 text-[13px] font-black text-white/80 uppercase tracking-widest">
         {slideTitle}
       </div>
 
