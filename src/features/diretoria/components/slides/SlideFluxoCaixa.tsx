@@ -60,7 +60,7 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
     ]
   }
 
-  const options = {
+    const options = {
     responsive: true,
     maintainAspectRatio: false,
     animation: { duration: 900, easing: 'easeOutQuart' as const },
@@ -69,26 +69,29 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
       legend: {
         display: true,
         position: 'top' as const,
-        labels: { color: 'rgba(255,255,255,0.5)', font: { size: 11, weight: 'bold' as const }, boxWidth: 12, padding: 16 }
+        labels: { color: 'rgba(255,255,255,0.85)', font: { size: 14, weight: 'bold' as const }, boxWidth: 16, padding: 20 }
       },
       tooltip: {
         backgroundColor: 'rgba(4,13,10,0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'rgba(255,255,255,0.2)',
         borderWidth: 1,
-        titleColor: 'rgba(255,255,255,0.8)',
-        bodyColor: 'rgba(255,255,255,0.6)',
+        titleColor: '#fff',
+        titleFont: { size: 16, weight: 'bold' as const },
+        bodyColor: 'rgba(255,255,255,0.9)',
+        bodyFont: { size: 15 },
+        padding: 12,
         callbacks: {
           label: (ctx: any) => ` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
         }
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 12, weight: 'bold' as const } } },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.6)', font: { size: 14, weight: 'bold' as const } } },
       y: {
         grid: { color: 'rgba(255,255,255,0.05)' },
         ticks: {
-          color: 'rgba(255,255,255,0.4)',
-          font: { size: 11 },
+          color: 'rgba(255,255,255,0.6)',
+          font: { size: 14, weight: 'bold' as const },
           callback: (v: any) => `R$ ${(v / 1000).toFixed(0)}k`
         }
       }
@@ -103,30 +106,30 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
       <div className="relative z-10 flex flex-col h-full gap-5">
         {/* Header */}
         <div className="flex items-start justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[3px] text-emerald-400/70">Financeiro</p>
-            <h2 className="text-3xl font-black text-white tracking-tight">Fluxo de Caixa</h2>
-            <p className="text-sm text-white/30 font-semibold mt-1">Últimos 6 meses — valores efetivados</p>
+          <div className="flex flex-col gap-2">
+            <p className="text-[13px] font-black uppercase tracking-[3px] text-emerald-400/80">Financeiro</p>
+            <h2 className="text-5xl font-black text-white tracking-tight">Fluxo de Caixa</h2>
+            <p className="text-base text-white/50 font-semibold mt-1">Últimos 6 meses — valores efetivados</p>
           </div>
           {/* Mini KPIs */}
-          <div className="flex gap-4">
+          <div className="flex gap-6 mt-2">
             <div className="text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Total Entradas</p>
-              <div className="text-xl font-black text-emerald-400">
+              <p className="text-[12px] font-black uppercase tracking-widest text-white/50">Total Entradas</p>
+              <div className="text-3xl font-black text-emerald-400 mt-1">
                 <CountUp value={totalReceita} prefix="R$ " decimals={0} duration={900} />
               </div>
             </div>
-            <div className="w-px h-10 bg-white/10 self-center" />
+            <div className="w-px h-12 bg-white/10 self-center" />
             <div className="text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Total Saídas</p>
-              <div className="text-xl font-black text-rose-400">
+              <p className="text-[12px] font-black uppercase tracking-widest text-white/50">Total Saídas</p>
+              <div className="text-3xl font-black text-rose-400 mt-1">
                 <CountUp value={totalDespesa} prefix="R$ " decimals={0} duration={900} />
               </div>
             </div>
-            <div className="w-px h-10 bg-white/10 self-center" />
+            <div className="w-px h-12 bg-white/10 self-center" />
             <div className="text-right">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/30">Resultado</p>
-              <div className={`text-xl font-black ${totalResultado >= 0 ? 'text-yellow-400' : 'text-rose-400'}`}>
+              <p className="text-[12px] font-black uppercase tracking-widest text-white/50">Resultado</p>
+              <div className={`text-3xl font-black mt-1 ${totalResultado >= 0 ? 'text-yellow-400' : 'text-rose-400'}`}>
                 <CountUp value={totalResultado} prefix="R$ " decimals={0} duration={900} />
               </div>
             </div>
