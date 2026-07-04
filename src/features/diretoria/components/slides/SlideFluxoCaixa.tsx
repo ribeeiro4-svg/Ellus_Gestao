@@ -87,7 +87,7 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 16, family: 'system-ui, sans-serif', weight: 'normal' as const } } },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 16, family: 'system-ui, sans-serif', weight: 'normal' as const }, autoSkip: false, maxRotation: 0 } },
       y: {
         grid: { color: 'rgba(255,255,255,0.05)' },
         ticks: {
