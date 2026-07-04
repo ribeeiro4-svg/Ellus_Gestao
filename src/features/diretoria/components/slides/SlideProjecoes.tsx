@@ -36,7 +36,7 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
         label: 'Receita Projetada',
         data: receitaData,
         borderColor: 'rgba(16,185,129,0.8)',
-        backgroundColor: 'rgba(16,185,129,0.08)',
+        backgroundColor: 'rgba(16,185,129,0.02)',
         pointBackgroundColor: projecaoAnual.map(m => m.mes <= mesRef ? 'rgba(16,185,129,1)' : 'rgba(16,185,129,0.4)'),
         pointRadius: 5,
         borderWidth: 2,
@@ -48,7 +48,7 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
         label: 'Despesa Projetada',
         data: despesaData,
         borderColor: 'rgba(251,113,133,0.7)',
-        backgroundColor: 'rgba(251,113,133,0.05)',
+        backgroundColor: 'rgba(251,113,133,0.02)',
         pointBackgroundColor: projecaoAnual.map(m => m.mes <= mesRef ? 'rgba(251,113,133,1)' : 'rgba(251,113,133,0.4)'),
         pointRadius: 5,
         borderWidth: 2,
@@ -104,7 +104,6 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
 
       <div className="relative z-10 flex flex-col h-full gap-5">
         <div className="flex items-start justify-between">
-        <div className="flex items-start justify-between">
           <div className="flex flex-col gap-2">
             <p className="text-[13px] font-black uppercase tracking-[3px] text-blue-400/80">Para Onde Vamos</p>
             <h2 className="text-5xl font-black text-white tracking-tight">Projeções Anuais</h2>
@@ -123,7 +122,7 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 p-4 rounded-[24px] bg-white/5 border border-white/10">
+        <div className="flex-1 min-h-0 p-4 rounded-[24px] bg-transparent border border-white/10">
           <Line data={chartData} options={options} />
         </div>
 
