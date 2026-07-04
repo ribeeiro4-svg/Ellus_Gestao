@@ -112,7 +112,7 @@ export default function ApresentacaoDiretoria() {
   // ─── TELA DE CONFIGURAÇÃO ───────────────────────────────────────────
   if (isConfiguring) {
     return (
-      <div className="flex flex-col gap-3 animate-in fade-in duration-700">
+      <div className="flex flex-col gap-3 h-[calc(100vh-120px)] min-h-[600px] animate-in fade-in duration-700">
         {/* Header */}
         <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 backdrop-blur-2xl py-3.5 px-6 rounded-2xl border border-white/5 shadow-2xl">
           <div className="flex items-center gap-4">
@@ -127,7 +127,7 @@ export default function ApresentacaoDiretoria() {
         </div>
 
         {/* Config Card */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 rounded-2xl border border-white/5 shadow-2xl">
+        <div className="relative flex-1 overflow-hidden bg-gradient-to-br from-[#040d0a]/95 to-[#071a12]/95 rounded-2xl border border-white/5 shadow-2xl flex flex-col items-center justify-center">
           <div className="absolute inset-0 opacity-15" style={{ backgroundImage: HEX_PATTERN, backgroundSize: '56px 100px' }} />
           <div className="absolute inset-0 bg-gradient-radial-center" style={{ background: 'radial-gradient(ellipse at center, rgba(5,46,22,0.3) 0%, transparent 70%)' }} />
 
