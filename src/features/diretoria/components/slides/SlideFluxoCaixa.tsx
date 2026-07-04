@@ -69,29 +69,30 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
       legend: {
         display: true,
         position: 'top' as const,
-        labels: { color: 'rgba(255,255,255,0.9)', font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const }, boxWidth: 16, padding: 20 }
+        labels: { color: 'rgba(255,255,255,0.9)', font: { size: 20, family: 'system-ui, sans-serif', weight: 'normal' as const }, boxWidth: 24, padding: 30 }
       },
       tooltip: {
         backgroundColor: 'rgba(4,13,10,0.95)',
         borderColor: 'rgba(255,255,255,0.2)',
         borderWidth: 1,
         titleColor: '#fff',
-        titleFont: { size: 16, family: 'system-ui, sans-serif', weight: 'normal' as const },
+        titleFont: { size: 22, family: 'system-ui, sans-serif', weight: 'normal' as const },
         bodyColor: 'rgba(255,255,255,0.95)',
-        bodyFont: { size: 15, family: 'system-ui, sans-serif', weight: 'normal' as const },
-        padding: 12,
+        bodyFont: { size: 20, family: 'system-ui, sans-serif', weight: 'normal' as const },
+        padding: 16,
+        boxPadding: 8,
         callbacks: {
           label: (ctx: any) => ` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
         }
       }
     },
     scales: {
-      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const } } },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.7)', font: { size: 16, family: 'system-ui, sans-serif', weight: 'normal' as const } } },
       y: {
         grid: { color: 'rgba(255,255,255,0.05)' },
         ticks: {
           color: 'rgba(255,255,255,0.7)',
-          font: { size: 14, family: 'system-ui, sans-serif', weight: 'normal' as const },
+          font: { size: 16, family: 'system-ui, sans-serif', weight: 'normal' as const },
           callback: (v: any) => `R$ ${(v / 1000).toFixed(0)}k`
         }
       }
