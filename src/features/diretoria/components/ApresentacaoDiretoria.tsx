@@ -1,10 +1,12 @@
 'use client'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Maximize2, Minimize2, ChevronLeft, ChevronRight, X, Monitor, RefreshCw, Download } from 'lucide-react'
+import { Maximize2, Minimize2, ChevronLeft, ChevronRight, X, Monitor, RefreshCw, Download, Settings } from 'lucide-react'
 import { MESES } from '@/lib/utils/formatters'
 import { useApresentacaoData } from '../hooks/useApresentacaoData'
 import { downloadHtmlApresentacao } from '../utils/exportHtmlApresentacao'
 import SlideNav from './SlideNav'
+import ExecutiveCockpit from './cockpit/ExecutiveCockpit'
+import ExecutiveConfig from './cockpit/ExecutiveConfig'
 import SlideCapa from './slides/SlideCapa'
 import SlideResumoExecutivo from './slides/SlideResumoExecutivo'
 import SlideFluxoCaixa from './slides/SlideFluxoCaixa'
@@ -35,6 +37,8 @@ export default function ApresentacaoDiretoria() {
   const [mesRef, setMesRef] = useState(now.getMonth())
   const [anoRef, setAnoRef] = useState(now.getFullYear())
   const [isConfiguring, setIsConfiguring] = useState(true)
+  const [isCockpit, setIsCockpit] = useState(false)
+  const [isEipConfig, setIsEipConfig] = useState(false)
   const [isPresenting, setIsPresenting] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [direction, setDirection] = useState<'next' | 'prev' | null>(null)
@@ -87,7 +91,14 @@ export default function ApresentacaoDiretoria() {
     }
   }
 
+  const goToCockpit = () => {
+    setIsConfiguring(false)
+    setIsCockpit(true)
+  }
+
   const startPresentation = () => {
+    setIsCockpit(false)
+    setIsEipConfig(false)
     setIsConfiguring(false)
     setIsPresenting(true)
     setCurrentSlide(0)
@@ -109,7 +120,17 @@ export default function ApresentacaoDiretoria() {
     }
   }
 
-  // ─── TELA DE CONFIGURAÇÃO ───────────────────────────────────────────
+  // ─── TELA DE CONFIGURAÇÃO DO EIE ──────────────────────────────────
+  if (isEipConfig) {
+    return <ExecutiveConfig onClose={() => setIsEipConfig(false)} />
+  }
+
+  // ─── TELA DO EXECUTIVE COCKPIT ────────────────────────────────────
+  if (isCockpit) {
+    return <ExecutiveCockpit onStartPresentation={startPresentation} />
+  }
+
+  // ─── TELA DE SELEÇÃO DE MÊS ─────────────────────────────────────────
   if (isConfiguring) {
     return (
       <div className="flex-1 w-full flex flex-col gap-3 min-h-[600px] animate-in fade-in duration-700">
@@ -186,14 +207,24 @@ export default function ApresentacaoDiretoria() {
 
             {/* Action buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-3">
+              {/* Settings button */}
+              <button
+                onClick={() => setIsEipConfig(true)}
+                disabled={data.loading}
+                className="flex items-center gap-3 px-6 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-black text-sm rounded-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
+                title="Configurar Metas e Pesos do EIE"
+              >
+                <Settings size={18} />
+              </button>
+
               {/* Start button */}
               <button
-                onClick={startPresentation}
+                onClick={goToCockpit}
                 disabled={data.loading}
                 className="flex items-center gap-3 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl transition-all shadow-lg shadow-emerald-900/40 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
               >
                 <Monitor size={18} />
-                {data.loading ? 'Carregando...' : `Iniciar Apresentação — ${MESES[mesRef]} ${anoRef}`}
+                {data.loading ? 'Carregando...' : `Acessar Cockpit — ${MESES[mesRef]} ${anoRef}`}
               </button>
 
               {/* Download HTML button */}

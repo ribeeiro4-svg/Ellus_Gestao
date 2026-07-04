@@ -6,13 +6,17 @@ import { AssociadosProvider } from '@/lib/hooks/useAssociados'
 import { MetasProvider } from '@/lib/hooks/useMetas'
 import { ProjecaoProvider } from '@/lib/hooks/useProjecao'
 
+import { ExecutiveInsightProvider } from '@/lib/eip/providers/ExecutiveInsightProvider'
+
 export default function DiretoriaPage() {
   return (
     <FinanceiroProvider>
       <AssociadosProvider>
         <MetasProvider>
           <ProjecaoProvider>
-            <ApresentacaoDiretoria />
+            <ExecutiveInsightProvider>
+              <ApresentacaoDiretoria />
+            </ExecutiveInsightProvider>
           </ProjecaoProvider>
         </MetasProvider>
       </AssociadosProvider>
