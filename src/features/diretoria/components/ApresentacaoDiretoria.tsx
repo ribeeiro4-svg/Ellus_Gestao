@@ -8,26 +8,40 @@ import SlideNav from './SlideNav'
 import ExecutiveCockpit from './cockpit/ExecutiveCockpit'
 import ExecutiveConfig from './cockpit/ExecutiveConfig'
 import SlideCapa from './slides/SlideCapa'
-import SlideResumoExecutivo from './slides/SlideResumoExecutivo'
+import SlideDashboardSaude from './slides/SlideDashboardSaude'
+import SlideTimeline from './slides/SlideTimeline'
+import SlideDiagnostico from './slides/SlideDiagnostico'
+import SlideReceitas from './slides/SlideReceitas'
+import SlideDespesas from './slides/SlideDespesas'
+import SlideWaterfall from './slides/SlideWaterfall'
 import SlideFluxoCaixa from './slides/SlideFluxoCaixa'
-import SlideComposicao from './slides/SlideComposicao'
 import SlideInadimplencia from './slides/SlideInadimplencia'
 import SlideAssociados from './slides/SlideAssociados'
+import SlideRiscos from './slides/SlideRiscos'
+import SlideOportunidades from './slides/SlideOportunidades'
+import SlideIndicadores from './slides/SlideIndicadores'
 import SlideProjecoes from './slides/SlideProjecoes'
-import SlideMetas from './slides/SlideMetas'
-import SlideDecisoes from './slides/SlideDecisoes'
+import SlidePlanoAcao from './slides/SlidePlanoAcao'
+import SlideMensagemFinal from './slides/SlideMensagemFinal'
 import { useProjecao } from '@/lib/hooks/useProjecao'
 
 const SLIDE_TITLES = [
-  'Abertura',
-  'Resumo Executivo',
-  'Fluxo de Caixa',
-  'Composição Financeira',
-  'Inadimplência',
-  'Associados',
-  'Projeções',
-  'Metas e OKRs',
-  'Decisões',
+  'Capa Estratégica',
+  'Dashboard de Saúde Geral',
+  'Executive Timeline',
+  'Diagnóstico e Acontecimentos',
+  'Receitas e Tendências',
+  'Despesas e Ofensores',
+  'Resultado Financeiro (Waterfall)',
+  'Fluxo de Caixa e Forecast',
+  'Análise de Inadimplência',
+  'Performance de Associados',
+  'Matriz de Riscos',
+  'Matriz de Oportunidades',
+  'Indicadores Estratégicos',
+  'Cenários e Perspectivas',
+  'Plano de Ação Executável',
+  'Mensagem Final',
 ]
 
 const HEX_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66z' fill='none' stroke='%2334d399' stroke-width='1.0' stroke-opacity='0.5'/%3E%3Cpath d='M28 100L0 84V52l28-16 28 16v32L28 100z' fill='none' stroke='%2334d399' stroke-width='1.0' stroke-opacity='0.4'/%3E%3C/svg%3E")`
@@ -108,14 +122,21 @@ export default function ApresentacaoDiretoria() {
   const renderSlide = () => {
     switch (currentSlide) {
       case 0: return <SlideCapa tenantNome={data.tenantNome} tenantLogo={data.tenantLogo} mesRef={mesRef} anoRef={anoRef} />
-      case 1: return <SlideResumoExecutivo kpis={data.kpis} mesRef={mesRef} anoRef={anoRef} />
-      case 2: return <SlideFluxoCaixa fluxo={data.fluxo6Meses} />
-      case 3: return <SlideComposicao receitas={data.composicaoReceitas} despesas={data.composicaoDespesas} />
-      case 4: return <SlideInadimplencia kpis={data.kpis} />
-      case 5: return <SlideAssociados kpis={data.kpis} evolucao={data.evolucaoAssociados} />
-      case 6: return <SlideProjecoes projecaoAnual={projecaoAnual} mesRef={mesRef} />
-      case 7: return <SlideMetas metas={data.metas} />
-      case 8: return <SlideDecisoes />
+      case 1: return <SlideDashboardSaude />
+      case 2: return <SlideTimeline />
+      case 3: return <SlideDiagnostico />
+      case 4: return <SlideReceitas kpis={data.kpis} fluxo={data.fluxo6Meses} />
+      case 5: return <SlideDespesas kpis={data.kpis} fluxo={data.fluxo6Meses} />
+      case 6: return <SlideWaterfall />
+      case 7: return <SlideFluxoCaixa fluxo={data.fluxo6Meses} />
+      case 8: return <SlideInadimplencia kpis={data.kpis} />
+      case 9: return <SlideAssociados kpis={data.kpis} evolucao={data.evolucaoAssociados} />
+      case 10: return <SlideRiscos />
+      case 11: return <SlideOportunidades />
+      case 12: return <SlideIndicadores />
+      case 13: return <SlideProjecoes projecaoAnual={projecaoAnual} mesRef={mesRef} />
+      case 14: return <SlidePlanoAcao />
+      case 15: return <SlideMensagemFinal />
       default: return null
     }
   }

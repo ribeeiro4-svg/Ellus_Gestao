@@ -100,7 +100,7 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
   }
 
   return (
-    <div className="w-full h-full flex flex-col relative overflow-hidden bg-[#040d0a] p-10">
+    <div className="w-full h-full flex flex-col relative overflow-hidden bg-[#020806] p-12">
       <div className="absolute inset-0 opacity-20" style={{ backgroundImage: HEX_PATTERN, backgroundSize: '56px 100px' }} />
       <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/3 via-transparent to-transparent" />
 
