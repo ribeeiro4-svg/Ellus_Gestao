@@ -55,7 +55,6 @@ const MENU = [
     items: [
       { href: '/financeiro', icon: Wallet, label: 'Gestão Financeira' },
       { href: '/planejamento', icon: Target, label: 'Planejamento Orçamentário' },
-      { href: '/fechamento', icon: Lock, label: 'Fechamento Mensal' },
     ]
   },
   { 
@@ -71,6 +70,7 @@ const MENU = [
   { 
     section: 'Controladoria', 
     items: [
+      { href: '/fechamento', icon: Lock, label: 'Fechamento Mensal' },
       { href: '/fiscal', icon: FileText, label: 'Rotinas Fiscais' },
       { href: '/contabil', icon: BookOpen, label: 'Contabilidade Geral' },
       { href: '/auditoria-financeira', icon: ShieldCheck, label: 'Auditoria Financeira' },
