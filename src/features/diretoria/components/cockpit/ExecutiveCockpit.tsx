@@ -20,7 +20,7 @@ export default function ExecutiveCockpit({ onStartPresentation }: ExecutiveCockp
       {/* Header do Cockpit */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-white/90">Executive Cockpit</h1>
+          <h1 className="text-3xl font-black tracking-tight text-white/90">Cockpit Executivo</h1>
           <p className="text-white/50 mt-2">Visão Geral Estratégica • {context.empresa.name} • {context.competencia}</p>
         </div>
         
@@ -102,7 +102,7 @@ export default function ExecutiveCockpit({ onStartPresentation }: ExecutiveCockp
                       <p className="text-white/80 text-sm leading-relaxed">{alert.insight?.text}</p>
                       {alert.insight?.explainability && (
                         <div className="mt-3 text-xs text-white/40 flex items-center gap-2">
-                          <span className="bg-white/10 px-2 py-0.5 rounded">Explainability</span>
+                          <span className="bg-white/10 px-2 py-0.5 rounded">Motivo</span>
                           {alert.insight.explainability.join(' • ')}
                         </div>
                       )}
