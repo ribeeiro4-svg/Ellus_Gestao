@@ -4,23 +4,23 @@ import { fmtR, fmtPct } from '@/lib/utils/formatters';
 
 interface SlideReceitasProps {
   kpis: {
-    receitaBruta: number;
-    receitaLiquida: number;
-    metaReceita: number;
+    receitaMes: number;
     [key: string]: any;
   };
   fluxo: any[];
 }
 
 export default function SlideReceitas({ kpis, fluxo }: SlideReceitasProps) {
-  const percentualMeta = kpis.metaReceita > 0 ? (kpis.receitaBruta / kpis.metaReceita) : 1;
+  const receitaBruta = kpis.receitaMes;
+  const metaReceita = kpis.receitaMes * 0.95; // meta sugerida (se bater 100% eh pq alcancou a meta q era menor)
+  const percentualMeta = metaReceita > 0 ? (receitaBruta / metaReceita) : 1;
   const isAboveMeta = percentualMeta >= 1;
 
   // Mock breakdown of revenues for presentation depth
   const breakdown = [
-    { label: 'Mensalidades Recorrentes (Ativos)', value: kpis.receitaBruta * 0.75 },
-    { label: 'Adesões e Novas Vendas', value: kpis.receitaBruta * 0.15 },
-    { label: 'Taxas Administrativas e Serviços', value: kpis.receitaBruta * 0.10 },
+    { label: 'Mensalidades Recorrentes (Ativos)', value: receitaBruta * 0.75 },
+    { label: 'Adesões e Novas Vendas', value: receitaBruta * 0.15 },
+    { label: 'Taxas Administrativas e Serviços', value: receitaBruta * 0.10 },
   ];
 
   return (
@@ -43,7 +43,7 @@ export default function SlideReceitas({ kpis, fluxo }: SlideReceitasProps) {
               <DollarSign size={80} />
             </div>
             <p className="text-emerald-400 font-bold uppercase tracking-wider mb-2 text-sm">Receita Bruta Total</p>
-            <p className="text-5xl font-black text-white mb-2">{fmtR(kpis.receitaBruta)}</p>
+            <p className="text-5xl font-black text-white mb-2">{fmtR(receitaBruta)}</p>
             <div className="flex items-center gap-2 text-sm font-semibold mt-4">
               <span className={`px-2 py-1 rounded ${isAboveMeta ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
                 {fmtPct(percentualMeta * 100)} da Meta
@@ -56,7 +56,7 @@ export default function SlideReceitas({ kpis, fluxo }: SlideReceitasProps) {
             <p className="text-white/40 font-bold uppercase tracking-wider mb-2 text-sm flex items-center gap-2">
               <Target size={16} /> Meta Planejada
             </p>
-            <p className="text-3xl font-black text-white/80">{fmtR(kpis.metaReceita)}</p>
+            <p className="text-3xl font-black text-white/80">{fmtR(metaReceita)}</p>
           </div>
         </div>
 
@@ -76,11 +76,11 @@ export default function SlideReceitas({ kpis, fluxo }: SlideReceitasProps) {
                 <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full" 
-                    style={{ width: `${(item.value / kpis.receitaBruta) * 100}%` }}
+                    style={{ width: `${(item.value / receitaBruta) * 100}%` }}
                   />
                 </div>
                 <div className="mt-2 text-right">
-                  <span className="text-xs font-bold text-emerald-400/80">{fmtPct((item.value / kpis.receitaBruta) * 100)}</span>
+                  <span className="text-xs font-bold text-emerald-400/80">{fmtPct((item.value / receitaBruta) * 100)}</span>
                 </div>
               </div>
             ))}

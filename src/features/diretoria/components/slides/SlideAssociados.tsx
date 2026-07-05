@@ -8,7 +8,7 @@ import { Users, UserPlus } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Filler, Tooltip, Legend)
 
-const HEX_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66z' fill='none' stroke='%2334d399' stroke-width='1.0' stroke-opacity='0.5'/%3E%3Cpath d='M28 100L0 84V52l28-16 28 16v32L28 100z' fill='none' stroke='%2334d399' stroke-width='1.0' stroke-opacity='0.4'/%3E%3C/svg%3E")`
+const HEX_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66z' fill='none' stroke='%2334d399' stroke-width='1.0' stroke-opacity='0.1'/%3E%3Cpath d='M28 100L0 84V52l28-16 28 16v32L28 100z' fill='none' stroke='%2334d399' stroke-width='1.0' stroke-opacity='0.05'/%3E%3C/svg%3E")`
 
 interface SlideAssociadosProps {
   kpis: ApresentacaoKpis
@@ -98,7 +98,7 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
   }
 
   return (
-    <div className="w-full h-full flex flex-col relative overflow-hidden bg-[#040d0a] p-10">
+    <div className="w-full h-full flex flex-col relative overflow-hidden bg-[#020806] p-12">
       <div className="absolute inset-0 opacity-20" style={{ backgroundImage: HEX_PATTERN, backgroundSize: '56px 100px' }} />
       <div className="absolute inset-0 bg-gradient-to-b from-violet-500/3 via-transparent to-transparent" />
 

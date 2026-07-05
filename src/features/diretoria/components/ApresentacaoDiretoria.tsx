@@ -122,7 +122,7 @@ export default function ApresentacaoDiretoria() {
   const renderSlide = () => {
     switch (currentSlide) {
       case 0: return <SlideCapa tenantNome={data.tenantNome} tenantLogo={data.tenantLogo} mesRef={mesRef} anoRef={anoRef} />
-      case 1: return <SlideDashboardSaude />
+      case 1: return <SlideDashboardSaude kpis={data.kpis} />
       case 2: return <SlideTimeline />
       case 3: return <SlideDiagnostico />
       case 4: return <SlideReceitas kpis={data.kpis} fluxo={data.fluxo6Meses} />

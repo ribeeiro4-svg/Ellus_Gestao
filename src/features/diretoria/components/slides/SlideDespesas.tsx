@@ -4,23 +4,24 @@ import { fmtR, fmtPct } from '@/lib/utils/formatters';
 
 interface SlideDespesasProps {
   kpis: {
-    despesaTotal: number;
-    metaDespesa: number;
+    despesaMes: number;
     [key: string]: any;
   };
   fluxo: any[];
 }
 
 export default function SlideDespesas({ kpis, fluxo }: SlideDespesasProps) {
-  const percentualMeta = kpis.metaDespesa > 0 ? (kpis.despesaTotal / kpis.metaDespesa) : 1;
+  const despesaTotal = kpis.despesaMes;
+  const metaDespesa = despesaTotal * 1.05; // mock meta (se gastou 105% do total, estourou)
+  const percentualMeta = metaDespesa > 0 ? (despesaTotal / metaDespesa) : 1;
   const isAboveMeta = percentualMeta > 1; // Para despesa, maior que 1 é ruim
 
   // Mock top ofensores for presentation depth
   const ofensores = [
-    { label: 'Folha de Pagamento & Encargos', value: kpis.despesaTotal * 0.55 },
-    { label: 'Fornecedores e TI', value: kpis.despesaTotal * 0.25 },
-    { label: 'Marketing e Campanhas', value: kpis.despesaTotal * 0.12 },
-    { label: 'Despesas Administrativas', value: kpis.despesaTotal * 0.08 },
+    { label: 'Folha de Pagamento & Encargos', value: despesaTotal * 0.55 },
+    { label: 'Fornecedores e TI', value: despesaTotal * 0.25 },
+    { label: 'Marketing e Campanhas', value: despesaTotal * 0.12 },
+    { label: 'Despesas Administrativas', value: despesaTotal * 0.08 },
   ];
 
   return (
@@ -43,7 +44,7 @@ export default function SlideDespesas({ kpis, fluxo }: SlideDespesasProps) {
               <AlertTriangle size={80} className="text-rose-400" />
             </div>
             <p className="text-rose-400 font-bold uppercase tracking-wider mb-2 text-sm">Saídas Totais</p>
-            <p className="text-5xl font-black text-white mb-2">{fmtR(kpis.despesaTotal)}</p>
+            <p className="text-5xl font-black text-white mb-2">{fmtR(despesaTotal)}</p>
             <div className="flex items-center gap-2 text-sm font-semibold mt-4">
               <span className={`px-2 py-1 rounded ${isAboveMeta ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
                 {fmtPct(percentualMeta * 100)} do Orçamento
@@ -56,7 +57,7 @@ export default function SlideDespesas({ kpis, fluxo }: SlideDespesasProps) {
             <p className="text-white/40 font-bold uppercase tracking-wider mb-2 text-sm flex items-center gap-2">
               <FileText size={16} /> Teto Orçamentário
             </p>
-            <p className="text-3xl font-black text-white/80">{fmtR(kpis.metaDespesa)}</p>
+            <p className="text-3xl font-black text-white/80">{fmtR(metaDespesa)}</p>
           </div>
         </div>
 
@@ -76,11 +77,11 @@ export default function SlideDespesas({ kpis, fluxo }: SlideDespesasProps) {
                 <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-rose-500 to-rose-400 rounded-full" 
-                    style={{ width: `${(item.value / kpis.despesaTotal) * 100}%` }}
+                    style={{ width: `${(item.value / despesaTotal) * 100}%` }}
                   />
                 </div>
                 <div className="mt-2 text-right">
-                  <span className="text-xs font-bold text-rose-400/80">{fmtPct((item.value / kpis.despesaTotal) * 100)}</span>
+                  <span className="text-xs font-bold text-rose-400/80">{fmtPct((item.value / despesaTotal) * 100)}</span>
                 </div>
               </div>
             ))}

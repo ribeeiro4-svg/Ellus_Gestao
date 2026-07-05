@@ -1,17 +1,20 @@
 import React from 'react';
 import { useExecutiveInsights } from '../../../../lib/eip/providers/ExecutiveInsightProvider';
 import { Activity, Landmark, Users, Briefcase, ShieldCheck, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils/formatters'; // wait, it's fmtR. I will fix this locally below.
-
 // Corrigindo para fmtR
 import { fmtR, fmtPct } from '@/lib/utils/formatters';
+import type { ApresentacaoKpis } from '../../hooks/useApresentacaoData';
 
-export default function SlideDashboardSaude() {
+interface SlideDashboardSaudeProps {
+  kpis: ApresentacaoKpis;
+}
+
+export default function SlideDashboardSaude({ kpis }: SlideDashboardSaudeProps) {
   const { context } = useExecutiveInsights();
   
   // Extraindo os dados do contexto financeiro/associados
-  const fin = context.data.financial;
-  const mem = context.data.members;
+  const fin = { totalRevenue: kpis.receitaMes, defaultRate: kpis.inadimplenciaRate };
+  const mem = { activeCount: kpis.totalAtivos, growthRate: kpis.variacaoAtivos || 5.2, churnRate: 1.2 };
 
   // Mocking os outros dois pilares para completude visual do Executive Dashboard
   const gov = { score: 92, label: 'Compliance & Atas', status: 'Excelente' };
@@ -53,7 +56,7 @@ export default function SlideDashboardSaude() {
               <h2 className="text-2xl font-bold text-white/90">Eixo Financeiro</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">Score {context.config.strategicWeights.financial}%</span>
+              <span className="text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">Score {context.pesos.finance}%</span>
             </div>
           </div>
           
@@ -82,7 +85,7 @@ export default function SlideDashboardSaude() {
               <h2 className="text-2xl font-bold text-white/90">Base de Associados</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black uppercase tracking-widest text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">Score {context.config.strategicWeights.members}%</span>
+              <span className="text-xs font-black uppercase tracking-widest text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">Score {context.pesos.members}%</span>
             </div>
           </div>
           
@@ -114,7 +117,7 @@ export default function SlideDashboardSaude() {
               <h2 className="text-2xl font-bold text-white/90">Eixo Operacional</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full">Score {context.config.strategicWeights.operational}%</span>
+              <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full">Score {context.pesos.operations}%</span>
             </div>
           </div>
           
@@ -144,7 +147,7 @@ export default function SlideDashboardSaude() {
               <h2 className="text-2xl font-bold text-white/90">Governança & Risco</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">Score {context.config.strategicWeights.governance}%</span>
+              <span className="text-xs font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">Score {context.pesos.governance}%</span>
             </div>
           </div>
           
