@@ -40,7 +40,7 @@ export default function SlideOportunidades() {
         <Lightbulb className="text-amber-400" size={36} /> Mapa de Oportunidades
       </h1>
       <p className="text-white/50 text-lg mb-10 relative z-10">
-        Alavancas de crescimento e otimizações identificadas pelo Trend Engine.
+        Alavancas de crescimento e otimizações identificadas pelo Motor de Tendências.
       </p>
 
       <div className="flex-1 grid grid-cols-3 gap-6 relative z-10">

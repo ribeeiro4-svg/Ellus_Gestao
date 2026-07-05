@@ -9,8 +9,8 @@ interface ExecutiveCockpitProps {
 export default function ExecutiveCockpit({ onStartPresentation }: ExecutiveCockpitProps) {
   const { context, insights, isProcessing } = useExecutiveInsights();
 
-  // Função provisória de Mock para o Score de Saúde
-  const healthScore = 91; // Mock: Isso virá do ScoringEngine depois
+  // Função provisória de Mock para o Índice de Saúde
+  const indiceSaude = 91; // Mock: Isso virá do Motor de Pontuação depois
   
   // Extrai apenas os insights válidos (que "passaram" nas regras e retornaram um alerta)
   const activeAlerts = Object.values(insights).filter(r => !r.passed && r.insight);
@@ -36,14 +36,14 @@ export default function ExecutiveCockpit({ onStartPresentation }: ExecutiveCockp
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4 flex-1">
         
-        {/* Painel Esquerdo: Health Score */}
+        {/* Painel Esquerdo: Índice de Saúde */}
         <div className="bg-white/5 border border-white/5 rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <ShieldCheck size={120} />
           </div>
           <h2 className="text-white/60 font-semibold uppercase tracking-wider text-sm mb-4">Saúde Geral da Organização</h2>
           <div className="text-7xl font-black text-emerald-400 tabular-nums">
-            {healthScore}
+            {indiceSaude}
             <span className="text-2xl text-white/40 ml-1">/100</span>
           </div>
           <div className="mt-4 px-4 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-full text-sm font-bold border border-emerald-500/20">
@@ -51,7 +51,7 @@ export default function ExecutiveCockpit({ onStartPresentation }: ExecutiveCockp
           </div>
           
           <div className="w-full space-y-3 mt-10">
-            {/* Scores setoriais (Mocks para a fundação) */}
+            {/* Índices setoriais (Mocks para a fundação) */}
             <div className="flex justify-between items-center text-sm">
               <span className="text-white/70">Financeiro</span>
               <div className="flex items-center gap-3 w-1/2">

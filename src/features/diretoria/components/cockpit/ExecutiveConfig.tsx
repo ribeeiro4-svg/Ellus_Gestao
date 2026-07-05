@@ -23,7 +23,7 @@ export default function ExecutiveConfig({ onClose }: ExecutiveConfigProps) {
             <Settings className="text-emerald-400" />
             Parâmetros do Motor (EIE)
           </h1>
-          <p className="text-white/50 mt-1">Calibre as metas e os pesos estratégicos para a inteligência artificial calcular os Scores.</p>
+          <p className="text-white/50 mt-1">Calibre as metas e os pesos estratégicos para a inteligência artificial calcular o Índice de Saúde.</p>
         </div>
         <button 
           onClick={handleSave}
@@ -71,7 +71,7 @@ export default function ExecutiveConfig({ onClose }: ExecutiveConfigProps) {
         <div className="space-y-6">
           <h2 className="text-lg font-bold text-amber-400 flex items-center gap-2">
             <Scale size={20} />
-            Pesos do Health Score (%)
+            Pesos do Índice de Saúde (%)
           </h2>
           
           <div className="bg-white/5 p-4 rounded-lg border border-white/5 space-y-4">

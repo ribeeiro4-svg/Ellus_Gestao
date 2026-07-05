@@ -17,7 +17,7 @@ export default function SlideDashboardSaude({ kpis }: SlideDashboardSaudeProps) 
   const mem = { activeCount: kpis.totalAtivos, growthRate: kpis.variacaoAtivos || 5.2, churnRate: 1.2 };
 
   // Mocking os outros dois pilares para completude visual do Executive Dashboard
-  const gov = { score: 92, label: 'Compliance & Atas', status: 'Excelente' };
+  const gov = { score: 92, label: 'Conformidade & Atas', status: 'Excelente' };
   const ops = { score: 88, label: 'SLA de Atendimento', status: 'Estável' };
 
   const formatTrend = (value: number, inverse: boolean = false) => {
@@ -56,7 +56,7 @@ export default function SlideDashboardSaude({ kpis }: SlideDashboardSaudeProps) 
               <h2 className="text-2xl font-bold text-white/90">Eixo Financeiro</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">Score {context.pesos.finance}%</span>
+              <span className="text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">Nota {context.pesos.finance}%</span>
             </div>
           </div>
           
@@ -85,7 +85,7 @@ export default function SlideDashboardSaude({ kpis }: SlideDashboardSaudeProps) 
               <h2 className="text-2xl font-bold text-white/90">Base de Associados</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black uppercase tracking-widest text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">Score {context.pesos.members}%</span>
+              <span className="text-xs font-black uppercase tracking-widest text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">Nota {context.pesos.members}%</span>
             </div>
           </div>
           
@@ -98,7 +98,7 @@ export default function SlideDashboardSaude({ kpis }: SlideDashboardSaudeProps) 
               </div>
             </div>
             <div>
-              <p className="text-white/40 text-sm font-semibold mb-1">Taxa de Churn</p>
+              <p className="text-white/40 text-sm font-semibold mb-1">Taxa de Cancelamento</p>
               <div className="flex items-baseline gap-3">
                 <p className="text-3xl font-black text-white">{fmtPct(mem.churnRate)}</p>
                 {formatTrend(-0.5, true)} {/* mock trend */}
@@ -117,7 +117,7 @@ export default function SlideDashboardSaude({ kpis }: SlideDashboardSaudeProps) 
               <h2 className="text-2xl font-bold text-white/90">Eixo Operacional</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full">Score {context.pesos.operations}%</span>
+              <span className="text-xs font-black uppercase tracking-widest text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full">Nota {context.pesos.operations}%</span>
             </div>
           </div>
           
@@ -147,7 +147,7 @@ export default function SlideDashboardSaude({ kpis }: SlideDashboardSaudeProps) 
               <h2 className="text-2xl font-bold text-white/90">Governança & Risco</h2>
             </div>
             <div className="text-right">
-              <span className="text-xs font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">Score {context.pesos.governance}%</span>
+              <span className="text-xs font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">Nota {context.pesos.governance}%</span>
             </div>
           </div>
           

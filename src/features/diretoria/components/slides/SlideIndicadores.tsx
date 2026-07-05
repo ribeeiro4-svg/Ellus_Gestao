@@ -24,7 +24,7 @@ export default function SlideIndicadores() {
         <Target className="text-blue-400" size={36} /> Indicadores Táticos (KPIs)
       </h1>
       <p className="text-white/50 text-lg mb-10 relative z-10">
-        Acompanhamento granular das métricas operacionais que compõem o Health Score.
+        Acompanhamento granular das métricas operacionais que compõem o Índice de Saúde.
       </p>
 
       <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-6 relative z-10">
