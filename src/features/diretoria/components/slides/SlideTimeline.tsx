@@ -1,6 +1,6 @@
 import React from 'react';
 import { GitCommit, TrendingUp, TrendingDown, Calendar } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils/formatters';
+import { fmtR } from '@/lib/utils/formatters';
 
 export default function SlideTimeline() {
   const timelineEvents = [
@@ -79,7 +79,7 @@ export default function SlideTimeline() {
                 <p className="text-sm text-white/50 mb-4 line-clamp-2">{ev.description}</p>
                 
                 <div className={`text-xl font-black ${isGain ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {isGain ? '+' : ''}{formatCurrency(ev.impact)}
+                  {isGain ? '+' : ''}{fmtR(ev.impact)}
                 </div>
               </div>
             </div>

@@ -10,7 +10,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { formatCurrency } from '@/lib/utils/formatters';
+import { fmtR } from '@/lib/utils/formatters';
 
 ChartJS.register(
   CategoryScale,
@@ -94,7 +94,7 @@ export default function SlideWaterfall() {
           label: (context: any) => {
             const index = context.dataIndex;
             const item = waterfallData[index];
-            return `${item.label}: ${formatCurrency(item.value)}`;
+            return `${item.label}: ${fmtR(item.value)}`;
           }
         }
       },
@@ -105,7 +105,7 @@ export default function SlideWaterfall() {
         grid: { color: 'rgba(255,255,255,0.05)' },
         ticks: { 
           color: 'rgba(255,255,255,0.5)',
-          callback: (value: any) => formatCurrency(value)
+          callback: (value: any) => fmtR(value)
         }
       },
       x: {
@@ -136,17 +136,17 @@ export default function SlideWaterfall() {
         <div className="flex-1 flex flex-col gap-4">
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6">
             <h3 className="text-emerald-400/80 text-sm font-bold uppercase tracking-wider mb-2">Entradas Brutas</h3>
-            <p className="text-3xl font-black text-emerald-400">{formatCurrency(130000)}</p>
+            <p className="text-3xl font-black text-emerald-400">{fmtR(130000)}</p>
           </div>
           
           <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-6">
             <h3 className="text-rose-400/80 text-sm font-bold uppercase tracking-wider mb-2">Saídas Totais</h3>
-            <p className="text-3xl font-black text-rose-400">{formatCurrency(95000)}</p>
+            <p className="text-3xl font-black text-rose-400">{fmtR(95000)}</p>
           </div>
 
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6 mt-auto">
             <h3 className="text-blue-400/80 text-sm font-bold uppercase tracking-wider mb-2">Resultado Final</h3>
-            <p className="text-4xl font-black text-blue-400">{formatCurrency(35000)}</p>
+            <p className="text-4xl font-black text-blue-400">{fmtR(35000)}</p>
             <p className="text-xs text-white/40 mt-2">Margem Líquida de 26.9%</p>
           </div>
         </div>
