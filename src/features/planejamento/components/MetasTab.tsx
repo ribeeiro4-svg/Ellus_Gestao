@@ -284,15 +284,15 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       {/* Gráficos no topo */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado">
-          <div className="h-[210px] mt-4">
+          <div className="h-[320px] mt-4">
             <Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} />
           </div>
         </ChartCard>
 
         <ChartCard title="📉 Impacto nos Ingressos" subtitle="Consumo do Faturamento por Categoria">
-          <div className="h-[210px] mt-4">
+          <div className="h-[320px] mt-4">
             {totals.planejadoDespesa > 0 ? (
-              <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }} />
+              <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { padding: 12, boxWidth: 10, font: { size: 9, weight: 'bold' } } } } }} />
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
                 <Activity size={32} className="opacity-20" />
