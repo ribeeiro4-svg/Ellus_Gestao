@@ -18,6 +18,14 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
   const totalDespesa = fluxo.reduce((s, m) => s + m.despesa, 0)
   const totalResultado = totalReceita - totalDespesa
 
+  const getGradient = (ctx: any, chartArea: any, colorStart: string, colorEnd: string) => {
+    if (!chartArea) return colorStart;
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradient.addColorStop(0, colorStart);
+    gradient.addColorStop(1, colorEnd);
+    return gradient;
+  };
+
   const chartData = {
     labels: fluxo.map(m => m.label),
     datasets: [
@@ -25,36 +33,42 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
         type: 'bar' as const,
         label: 'Receitas',
         data: fluxo.map(m => m.receita),
-        backgroundColor: 'rgba(16,185,129,0.7)',
-        borderColor: 'rgba(16,185,129,0.9)',
+        backgroundColor: (context: any) => getGradient(context.chart.ctx, context.chart.chartArea, 'rgba(16,185,129,0.9)', 'rgba(16,185,129,0.1)'),
+        borderColor: 'rgba(16,185,129,1)',
         borderWidth: 1,
-        borderRadius: 6,
+        borderRadius: { topLeft: 12, topRight: 12, bottomLeft: 0, bottomRight: 0 },
         borderSkipped: false,
+        barPercentage: 0.6,
+        categoryPercentage: 0.8,
         order: 2,
       },
       {
         type: 'bar' as const,
         label: 'Despesas',
         data: fluxo.map(m => m.despesa),
-        backgroundColor: 'rgba(251,113,133,0.5)',
-        borderColor: 'rgba(251,113,133,0.8)',
+        backgroundColor: (context: any) => getGradient(context.chart.ctx, context.chart.chartArea, 'rgba(251,113,133,0.9)', 'rgba(251,113,133,0.1)'),
+        borderColor: 'rgba(251,113,133,1)',
         borderWidth: 1,
-        borderRadius: 6,
+        borderRadius: { topLeft: 12, topRight: 12, bottomLeft: 0, bottomRight: 0 },
         borderSkipped: false,
+        barPercentage: 0.6,
+        categoryPercentage: 0.8,
         order: 2,
       },
       {
         type: 'line' as const,
         label: 'Resultado',
         data: fluxo.map(m => m.resultado),
-        borderColor: 'rgba(250,204,21,0.8)',
-        backgroundColor: 'rgba(250,204,21,0.1)',
+        borderColor: 'rgba(250,204,21,1)',
+        backgroundColor: (context: any) => getGradient(context.chart.ctx, context.chart.chartArea, 'rgba(250,204,21,0.3)', 'rgba(250,204,21,0.0)'),
         pointBackgroundColor: 'rgba(250,204,21,1)',
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        borderWidth: 2,
+        pointBorderColor: '#000',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        borderWidth: 3,
         tension: 0.4,
-        fill: false,
+        fill: true,
         order: 1,
       }
     ]

@@ -29,6 +29,14 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
   const despesaData = projecaoAnual.map(m => m.despesas)
   const resultadoData = projecaoAnual.map(m => m.resultado)
 
+  const getGradient = (ctx: any, chartArea: any, colorStart: string, colorEnd: string) => {
+    if (!chartArea) return colorStart;
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+    gradient.addColorStop(0, colorStart);
+    gradient.addColorStop(1, colorEnd);
+    return gradient;
+  };
+
   const chartData = {
     labels,
     datasets: [
@@ -36,25 +44,31 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
         label: 'Receita Projetada',
         data: receitaData,
         borderColor: 'rgba(16,185,129,1)',
-        backgroundColor: 'rgba(16,185,129,0.02)',
+        backgroundColor: (context: any) => getGradient(context.chart.ctx, context.chart.chartArea, 'rgba(16,185,129,0.3)', 'rgba(16,185,129,0.0)'),
         pointBackgroundColor: projecaoAnual.map(m => m.mes <= mesRef ? 'rgba(16,185,129,1)' : 'rgba(16,185,129,0.4)'),
+        pointBorderColor: '#000',
+        pointBorderWidth: 2,
         pointRadius: 6,
+        pointHoverRadius: 8,
         borderWidth: 4,
         borderDash: [],
         tension: 0.4,
-        fill: false,
+        fill: true,
       },
       {
         label: 'Despesa Projetada',
         data: despesaData,
         borderColor: 'rgba(251,113,133,1)',
-        backgroundColor: 'rgba(251,113,133,0.02)',
+        backgroundColor: (context: any) => getGradient(context.chart.ctx, context.chart.chartArea, 'rgba(251,113,133,0.3)', 'rgba(251,113,133,0.0)'),
         pointBackgroundColor: projecaoAnual.map(m => m.mes <= mesRef ? 'rgba(251,113,133,1)' : 'rgba(251,113,133,0.4)'),
+        pointBorderColor: '#000',
+        pointBorderWidth: 2,
         pointRadius: 6,
+        pointHoverRadius: 8,
         borderWidth: 4,
         borderDash: [],
         tension: 0.4,
-        fill: false,
+        fill: true,
       }
     ]
   }
