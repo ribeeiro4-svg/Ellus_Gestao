@@ -64,7 +64,7 @@ const MENU = [
       { href: '/estrategia', icon: Target, label: 'Metas & Projetos' },
       { href: '/gestao-tarefas', icon: ClipboardList, label: 'Painel de Tarefas' },
       { href: '/bens-duraveis', icon: Briefcase, label: 'Gestão de Ativos' },
-      { href: '/pop', icon: BookMarked, label: 'Manuais de Processos' },
+      { href: '/pop', icon: BookMarked, label: 'Processos Operacionais' },
       { href: '/diretoria', icon: Monitor, label: 'Apresentar Resultados' },
     ]
   },
@@ -74,6 +74,12 @@ const MENU = [
       { href: '/fiscal', icon: FileText, label: 'Rotinas Fiscais' },
       { href: '/contabil', icon: BookOpen, label: 'Contabilidade Geral' },
       { href: '/auditoria-financeira', icon: ShieldCheck, label: 'Auditoria Financeira' },
+    ]
+  },
+  { 
+    section: 'Inteligência Executiva (EIP)', 
+    items: [
+      { href: '/relatorios', icon: BarChart3, label: 'Central de Relatórios' },
     ]
   },
 ]

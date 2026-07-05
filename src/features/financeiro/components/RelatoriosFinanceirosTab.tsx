@@ -53,6 +53,8 @@ export default function RelatoriosFinanceirosTab({
   const [filterLink, setFilterLink] = useState<'all' | 'linked' | 'unlinked'>('all')
   const [timeRange, setTimeRange] = useState<'month' | 'today' | '7d' | '14d' | '30d'>('month')
   const [provisionType, setProvisionType] = useState<'all' | 'receita' | 'despesa'>('all')
+  const [reserveType, setReserveType] = useState<'percentage' | 'fixed'>('percentage')
+  const [reserveValue, setReserveValue] = useState<number>(cashReservePercentage)
 
   const [cobrancaLogs, setCobrancaLogs] = useState<any[]>([])
   const [loadingCobranca, setLoadingCobranca] = useState(false)
@@ -451,8 +453,11 @@ export default function RelatoriosFinanceirosTab({
 
   const fundoCaixaProvisionado = useMemo(() => {
     if (selectedReport !== 'provisoes') return 0
-    return (tetoReal * cashReservePercentage) / 100
-  }, [tetoReal, selectedReport, cashReservePercentage])
+    if (reserveType === 'percentage') {
+      return (tetoReal * reserveValue) / 100
+    }
+    return reserveValue
+  }, [tetoReal, selectedReport, reserveType, reserveValue])
 
   const despesasProvisoesPorCategoria = useMemo(() => {
     const map: Record<string, number> = {}
@@ -759,6 +764,8 @@ export default function RelatoriosFinanceirosTab({
               .chart-box { background: white !important; border: 1px solid #e2e8f0; box-shadow: none; }
               .no-print, button, input, select { display: none !important; }
             }
+            .uppercase { text-transform: uppercase !important; }
+            .whitespace-nowrap { white-space: nowrap !important; }
           </style>
         </head>
         <body>
@@ -829,16 +836,96 @@ export default function RelatoriosFinanceirosTab({
           ` : ''}
           
           ${summaryElement ? `<div class="summary-title">Resumo por Agrupamento</div>${summaryElement.innerHTML}` : ''}
-          ${(tableElement && selectedReport !== 'contas' && selectedReport !== 'categorias') ? `<div class="summary-title">Detalhamento Analítico dos Lançamentos</div>${tableElement.innerHTML}` : ''}
+          ${(tableElement && selectedReport !== 'contas' && selectedReport !== 'categorias' && selectedReport !== 'provisoes') ? `<div class="summary-title">Detalhamento Analítico dos Lançamentos</div>${tableElement.innerHTML}` : ''}
           
           ${selectedReport === 'provisoes' ? `
-          <div style="margin-top: 40px; padding: 25px; border: 1px solid #e2e8f0; border-radius: 20px; background: #f8fafc; page-break-inside: avoid;">
-            <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #0f172a; margin-bottom: 12px; letter-spacing: 1px;">Considerações Importantes</div>
-            <div style="font-size: 10px; color: #475569; font-weight: 500; line-height: 1.6;">
-              As receitas projetadas levam em consideração: adesões em aberto, mensalidades projetadas e mensalidades atrasadas.<br/>
-              <strong>Quantidade de Associados Ativos:</strong> ${associados.filter(a => a.status === 'ativo').length}
+            <div style="margin-top: 30px;">
+              <div class="summary-title">Resumo Financeiro - Reserva Técnica</div>
+              <div style="display: flex; gap: 20px; margin-bottom: 30px; page-break-inside: avoid;">
+                <div style="flex: 1; padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                  <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Receita Projetada</div>
+                  <div style="font-size: 16px; font-weight: 900; color: #059669;">R$ ${fmtR(tetoReal)}</div>
+                </div>
+                <div style="flex: 1; padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                  <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Dispêndios</div>
+                  <div style="font-size: 16px; font-weight: 900; color: #e11d48;">R$ ${fmtR(totalProvisionsExpense)}</div>
+                </div>
+                <div style="flex: 1; padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                  <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase;">Reserva Técnica</div>
+                  <div style="font-size: 16px; font-weight: 900; color: #334155;">R$ ${fmtR(fundoCaixaProvisionado)}</div>
+                </div>
+              </div>
+
+              <div class="summary-title" style="margin-top: 40px;">Como a Receita se consome (Cascata)</div>
+              <div style="display: flex; align-items: flex-end; gap: 8px; height: 280px; margin-bottom: 50px; border-bottom: 1px solid #e2e8f0; padding-bottom: 40px; overflow: hidden; page-break-inside: avoid;">
+                
+                <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 90px;">
+                  <div style="width: 48px; background-color: #34d399; height: ${tetoReal > 0 ? '100%' : '2px'}; border-top-left-radius: 4px; border-top-right-radius: 4px;"></div>
+                  <div style="position: absolute; bottom: -35px; text-align: center; width: 100%;">
+                    <span style="display: block; font-size: 11px; font-weight: 900; color: #059669; margin-bottom: 2px;">R$ ${fmtR(tetoReal)}</span>
+                    <span style="display: block; font-size: 8px; font-weight: 900; color: #94a3b8; text-transform: uppercase;">Receita<br/>Projetada</span>
+                  </div>
+                </div>
+
+                ${(() => {
+                    let accumulatedOffset = 0;
+                    return despesasProvisoesPorCategoria.map(([cat, val]) => {
+                        const perc = tetoReal > 0 ? (val / tetoReal) * 100 : 0;
+                        const topOff = tetoReal > 0 ? (accumulatedOffset / tetoReal) * 100 : 0;
+                        const h = Math.max(Math.min(perc, 100 - topOff), 1);
+                        accumulatedOffset += val;
+                        
+                        return '<div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; min-width: 70px;">' +
+                          '<div style="width: 48px; background-color: #cbd5e1; height: ' + h + '%; margin-top: ' + topOff + '%; border-top-left-radius: 4px; border-top-right-radius: 4px;"></div>' +
+                          '<div style="position: absolute; top: ' + (topOff + h) + '%; text-align: center; width: 100%; margin-top: 8px;">' +
+                            '<span style="display: block; font-size: 9px; font-weight: 900; color: #64748b; margin-bottom: 2px;">- R$ ' + fmtR(val) + '</span>' +
+                            '<span style="display: block; font-size: 7px; font-weight: 900; color: #94a3b8; text-transform: uppercase; line-height: 1;">' + cat.substring(0, 15) + '</span>' +
+                          '</div>' +
+                        '</div>';
+                    }).join('');
+                })()}
+
+                ${fundoCaixaProvisionado > 0 ? (() => {
+                    const perc = tetoReal > 0 ? (fundoCaixaProvisionado / tetoReal) * 100 : 0;
+                    const topOff = tetoReal > 0 ? (totalProvisionsExpense / tetoReal) * 100 : 0;
+                    const h = Math.max(Math.min(perc, 100 - topOff), 1);
+                    return '<div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; min-width: 80px;">' +
+                      '<div style="width: 48px; background-color: #94a3b8; height: ' + h + '%; margin-top: ' + topOff + '%; border-top-left-radius: 4px; border-top-right-radius: 4px;"></div>' +
+                      '<div style="position: absolute; top: ' + (topOff + h) + '%; text-align: center; width: 100%; margin-top: 8px;">' +
+                        '<span style="display: block; font-size: 9px; font-weight: 900; color: #475569; margin-bottom: 2px;">- R$ ' + fmtR(fundoCaixaProvisionado) + '</span>' +
+                        '<span style="display: block; font-size: 7px; font-weight: 900; color: #94a3b8; text-transform: uppercase; line-height: 1;">Reserva Técnica</span>' +
+                      '</div>' +
+                    '</div>';
+                })() : ''}
+                
+                <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 100px; margin-left: 10px; border-left: 1px solid #e2e8f0; padding-left: 10px;">
+                  ${(() => {
+                      const saldo = tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado);
+                      const percSaldo = tetoReal > 0 ? (Math.abs(saldo) / tetoReal) * 100 : 0;
+                      const hSaldo = Math.max(Math.min(percSaldo, 100), 1);
+                      const color = saldo >= 0 ? '#34d399' : '#f43f5e';
+                      const textColor = saldo >= 0 ? '#059669' : '#e11d48';
+                      return '<div style="width: 48px; background-color: ' + color + '; height: ' + hSaldo + '%; border-top-left-radius: 4px; border-top-right-radius: 4px;"></div>' +
+                        '<div style="position: absolute; bottom: -35px; text-align: center; width: 100%;">' +
+                          '<span style="display: block; font-size: 11px; font-weight: 900; color: ' + textColor + '; margin-bottom: 2px;">' + (saldo < 0 ? '-' : '') + ' R$ ' + fmtR(Math.abs(saldo)) + '</span>' +
+                          '<span style="display: block; font-size: 8px; font-weight: 900; color: #94a3b8; text-transform: uppercase;">Resultado<br/>Final</span>' +
+                        '</div>';
+                  })()}
+                </div>
+              </div>
+              
+              <div class="summary-title">Detalhamento Analítico dos Lançamentos</div>
+              ${document.getElementById('report-table-provisoes')?.outerHTML || ''}
+              
+              <div style="margin-top: 40px; padding: 25px; border: 1px solid #e2e8f0; border-radius: 20px; background: #f8fafc; page-break-inside: avoid;">
+                <div style="font-size: 11px; font-weight: 900; text-transform: uppercase; color: #0f172a; margin-bottom: 12px; letter-spacing: 1px;">Considerações Importantes</div>
+                <div style="font-size: 10px; color: #475569; font-weight: 500; line-height: 1.6;">
+                  As receitas projetadas levam em consideração: adesões em aberto, mensalidades projetadas e mensalidades atrasadas.<br/>
+                  <strong>Quantidade de Associados Ativos:</strong> ${associados.filter(a => a.status === 'ativo').length}<br/>
+                  <strong>Observação de conciliação:</strong> somando a receita projetada com o total de dispêndios, o resultado projetado é de <strong>${tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado) < 0 ? '-' : ''} R$ ${fmtR(Math.abs(tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado)))}</strong>.
+                </div>
+              </div>
             </div>
-          </div>
           ` : ''}
 
           <div class="footer">
@@ -1313,194 +1400,271 @@ export default function RelatoriosFinanceirosTab({
             </div>
           </div>
         )}
-        
+
         {selectedReport === 'provisoes' && (
-          <div id="report-chart" className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8 mb-12">
-            <h4 className="text-xs font-black text-slate-900 uppercase tracking-[2px] mb-4 flex items-center gap-2 no-print">
-              <BarChart2 size={18} className="text-indigo-600" />
-              Análise Comparativa: Provisões vs Receita Projetada
-            </h4>
+          <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
             
-            <div className="column-container flex items-end gap-4 h-[300px] mt-12 pb-20 border-b-2 border-slate-50 overflow-x-auto no-scrollbar">
-              {/* Coluna de Receita Projetada (Com Atrasados) */}
-              <div className="column-item h-full flex-1 flex flex-col items-center justify-end relative min-w-[120px]">
-                <div className="column-bar w-14 bg-emerald-500 bg-emerald rounded-t-lg" style={{ height: tetoReal > 0 ? '100%' : '2px' }} />
-                <div className="column-label absolute -bottom-20 text-center w-full">
-                  <span className="column-val-base block text-[12px] font-black text-emerald-600 mb-1">
-                    {fmtR(tetoReal)}
-                  </span>
-                  <span className="block text-[10px] font-black text-slate-800 uppercase tracking-tighter leading-none mb-1">
-                    Receita Projetada
-                  </span>
-                  <span className="column-perc block text-[10px] font-black text-slate-500 uppercase leading-none">
-                    100% (Teto Real)
-                  </span>
-                </div>
-              </div>
-
-              {/* Colunas de Categorias */}
-              {despesasProvisoesPorCategoria.map(([cat, val]) => {
-                const perc = tetoReal > 0 ? (val / tetoReal) * 100 : 0
-                const columnHeight = `${Math.min(perc, 100)}%`
-                return (
-                  <div key={cat} className="column-item h-full flex-1 flex flex-col items-center justify-end relative min-w-[120px]">
-                    <div className="column-bar w-14 bg-rose-500 bg-rose rounded-t-lg" style={{ height: val > 0 ? columnHeight : '2px' }} />
-                    <div className="column-label absolute -bottom-20 text-center w-full">
-                      <span className="column-val-base block text-[12px] font-black text-rose-600 mb-1">
-                        -{fmtR(val)}
-                      </span>
-                      <span className="block text-[10px] font-black text-slate-600 uppercase tracking-tighter leading-none mb-1 line-clamp-1">
-                        {cat}
-                      </span>
-                      <span className="column-perc block text-[10px] font-black text-slate-500 uppercase leading-none">
-                        {perc.toFixed(1)}% do Teto
-                      </span>
-                    </div>
+            {/* HEADER CUSTOMIZADO */}
+            <div className="bg-emerald-950 rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 shadow-sm border border-emerald-900/50 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center p-1 shadow-inner flex-shrink-0 overflow-hidden">
+                {tenant?.logo_url ? (
+                  <img src={tenant.logo_url} alt={tenant.nome} className="w-full h-full object-contain rounded-full" />
+                ) : (
+                  <div className="w-full h-full bg-emerald-50 rounded-full flex items-center justify-center text-emerald-700 font-black text-xl">
+                    {tenant?.nome?.charAt(0) || 'A'}
                   </div>
-                )
-              })}
-
-              {/* Coluna de Fundo de Caixa (Posicionada por último) */}
-              <div className="column-item h-full flex-1 flex flex-col items-center justify-end relative min-w-[120px]">
-                {(() => {
-                   const percRes = tetoReal > 0 ? (fundoCaixaProvisionado / tetoReal) * 100 : 0
-                   const hRes = `${Math.min(percRes, 100)}%`
-                   return (
-                    <>
-                      <div id="bar-fundo-caixa" className="column-bar w-14 bg-amber-500 rounded-t-lg" style={{ height: fundoCaixaProvisionado > 0 ? hRes : '2px', backgroundColor: '#f59e0b !important', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }} />
-                      <div className="column-label absolute -bottom-20 text-center w-full">
-                        <span id="val-fundo-caixa" className="column-val-base block text-[12px] font-black mb-1" style={{ color: '#f59e0b !important', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                          -{fmtR(fundoCaixaProvisionado)}
-                        </span>
-                        <span className="block text-[10px] font-black text-slate-600 uppercase tracking-tighter leading-none mb-1">
-                          Fundo de Caixa
-                        </span>
-                        <span className="column-perc block text-[10px] font-black text-slate-500 uppercase leading-none">
-                          {percRes.toFixed(1)}% do Teto
-                        </span>
-                      </div>
-                    </>
-                   )
-                })()}
+                )}
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-white uppercase tracking-wider mb-1">{tenant?.nome || 'ACPROBEC'}</h2>
+                <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+                  Relatório de Provisões 
+                  <span className="w-1 h-1 rounded-full bg-emerald-500/50" /> 
+                  Emissão {fmtData(new Date().toISOString())} 
+                  <span className="w-1 h-1 rounded-full bg-emerald-500/50" /> 
+                  Período {MESES[filterMonth !== -1 ? filterMonth : 0].substring(0,3).toUpperCase()}/{filterYear}
+                </h3>
               </div>
             </div>
+
+            {/* KPIS DE RESULTADO */}
+            <div>
+              <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-2">Resultado Projetado do Período</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="col-span-1 md:col-span-3 bg-white rounded-2xl border border-rose-100 shadow-sm p-6 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Provisões Menos Receita Projetada</p>
+                      <p className="text-4xl font-black text-rose-600 tracking-tighter">
+                        {tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado) < 0 ? '-' : ''} R$ {fmtR(Math.abs(tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado)))}
+                      </p>
+                    </div>
+                    <div className="px-3 py-1 bg-rose-50 rounded-full border border-rose-100 text-[10px] font-black text-rose-600 uppercase tracking-widest">
+                      • Provisão Negativa
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Receita Projetada</p>
+                  <p className="text-xl font-black text-emerald-600 tracking-tighter">R$ {fmtR(tetoReal)}</p>
+                </div>
+                
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Dispêndios (Sem Reserva)</p>
+                  <p className="text-xl font-black text-rose-600 tracking-tighter">R$ {fmtR(totalProvisionsExpense)}</p>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 relative overflow-hidden flex flex-col justify-between">
+                  <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000)', backgroundSize: '10px 10px' }} />
+                  <div className="relative z-10 flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reserva Técnica</p>
+                    <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-0.5">
+                      <button 
+                        onClick={() => setReserveType('percentage')} 
+                        className={`text-[9px] font-bold px-2 py-1 rounded-md transition-colors ${reserveType === 'percentage' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >%</button>
+                      <button 
+                        onClick={() => setReserveType('fixed')} 
+                        className={`text-[9px] font-bold px-2 py-1 rounded-md transition-colors ${reserveType === 'fixed' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >R$</button>
+                    </div>
+                  </div>
+                  <div className="relative z-10 flex items-center gap-2 mb-2">
+                    <input 
+                      type="number" 
+                      value={reserveValue} 
+                      onChange={(e) => setReserveValue(Number(e.target.value))}
+                      className="w-20 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold text-slate-700 outline-none focus:border-slate-300 transition-colors"
+                    />
+                    <span className="text-[9px] font-bold text-slate-400 uppercase">
+                      {reserveType === 'percentage' ? 'da Receita' : 'Valor Fixo'}
+                    </span>
+                  </div>
+                  <div className="relative z-10">
+                    <p className="text-xl font-black text-slate-700 tracking-tighter">R$ {fmtR(fundoCaixaProvisionado)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* GRÁFICO CASCATA */}
+            <div>
+              <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-2 mt-4">Como a Receita se consome (Cascata)</h4>
+              <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm p-8">
+                <div className="column-container flex items-end gap-2 h-[280px] mt-6 pb-20 border-b border-slate-100 overflow-x-auto no-scrollbar">
+                  {/* Receita Projetada */}
+                  <div className="column-item h-full flex flex-col items-center justify-end relative min-w-[120px]">
+                    <div className="w-12 bg-emerald-400 rounded-t-sm flex-shrink-0" style={{ height: tetoReal > 0 ? '100%' : '2px' }} />
+                    <div className="absolute -bottom-20 text-center w-full">
+                      <span className="block text-[11px] font-black text-emerald-600 mb-1 leading-none">R$ {fmtR(tetoReal)}</span>
+                      <span className="block text-[8px] font-black text-slate-400 uppercase leading-tight line-clamp-2 px-1">Receita<br/>Projetada</span>
+                    </div>
+                  </div>
+
+                  {/* Despesas em Cascata */}
+                  {despesasProvisoesPorCategoria.map(([cat, val], idx) => {
+                    const perc = tetoReal > 0 ? (val / tetoReal) * 100 : 0
+                    // Calcula a margem superior simulando cascata.
+                    let acumuladoAnterior = 0;
+                    for (let i = 0; i < idx; i++) {
+                      acumuladoAnterior += (despesasProvisoesPorCategoria[i][1] / tetoReal) * 100;
+                    }
+                    
+                    const topOffsetVal = Math.min(acumuladoAnterior, 100);
+                    const columnHeightVal = Math.max(Math.min(perc, 100 - topOffsetVal), 1);
+                    
+                    const columnHeight = `${columnHeightVal}%`
+                    const topOffset = `${topOffsetVal}%`
+                    
+                    return (
+                      <div key={cat} className="column-item h-full flex flex-col items-center justify-start relative min-w-[120px]">
+                        <div style={{ height: topOffset }} className="w-full flex-shrink-0" />
+                        <div className="w-12 bg-rose-400 rounded-sm flex-shrink-0" style={{ height: val > 0 ? columnHeight : '2px' }} />
+                        <div className="absolute -bottom-20 text-center w-full">
+                          <span className="block text-[11px] font-black text-rose-600 mb-1 leading-none">- R$ {fmtR(val)}</span>
+                          <span className="block text-[8px] font-black text-slate-400 uppercase leading-tight line-clamp-2 px-1">{cat}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* Fundo de Caixa */}
+                  <div className="column-item h-full flex flex-col items-center justify-start relative min-w-[120px]">
+                    {(() => {
+                        const percRes = tetoReal > 0 ? (fundoCaixaProvisionado / tetoReal) * 100 : 0
+                        let acPrev = despesasProvisoesPorCategoria.reduce((acc, curr) => acc + (curr[1]/tetoReal)*100, 0);
+                        
+                        const topOffVal = Math.min(acPrev, 100);
+                        const hResVal = Math.max(Math.min(percRes, 100 - topOffVal), 1);
+
+                        const topOff = `${topOffVal}%`
+                        const hRes = `${hResVal}%`
+                        
+                        return (
+                          <>
+                            <div style={{ height: topOff }} className="w-full flex-shrink-0" />
+                            <div className="w-12 bg-slate-300 rounded-sm relative overflow-hidden flex-shrink-0" style={{ height: fundoCaixaProvisionado > 0 ? hRes : '2px' }}>
+                              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000)', backgroundSize: '4px 4px' }} />
+                            </div>
+                            <div className="absolute -bottom-20 text-center w-full">
+                              <span className="block text-[11px] font-black text-slate-600 mb-1 leading-none">- R$ {fmtR(fundoCaixaProvisionado)}</span>
+                              <span className="block text-[8px] font-black text-slate-400 uppercase leading-tight line-clamp-2 px-1">Fundo de<br/>Caixa</span>
+                            </div>
+                          </>
+                        )
+                    })()}
+                  </div>
+                  
+                  {/* Resultado Final */}
+                  <div className="column-item h-full flex flex-col items-center justify-end relative min-w-[120px] ml-4 border-l border-slate-100 pl-4">
+                    {(() => {
+                        const saldo = tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado);
+                        const percSaldo = tetoReal > 0 ? (Math.abs(saldo) / tetoReal) * 100 : 0;
+                        const hSaldo = `${Math.max(Math.min(percSaldo, 100), 1)}%`;
+                        const color = saldo >= 0 ? 'bg-emerald-400' : 'bg-rose-500';
+                        const textColor = saldo >= 0 ? 'text-emerald-600' : 'text-rose-600';
+                        return (
+                          <>
+                            <div className={`w-12 ${color} rounded-t-sm flex-shrink-0`} style={{ height: hSaldo }} />
+                            <div className="absolute -bottom-20 text-center w-full">
+                              <span className={`block text-[11px] font-black ${textColor} mb-1 leading-none`}>
+                                {saldo < 0 ? '-' : ''} R$ {fmtR(Math.abs(saldo))}
+                              </span>
+                              <span className="block text-[8px] font-black text-slate-400 uppercase leading-tight line-clamp-2 px-1">Resultado<br/>Final</span>
+                            </div>
+                          </>
+                        )
+                    })()}
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            {/* TABELA ANALÍTICA */}
+            <div>
+              <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 pl-2 mt-4">Detalhamento Analítico dos Lançamentos</h4>
+              <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
+                <table id="report-table-provisoes" className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-[150px]">Valor</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-[120px]">% do Teto</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-[120px]">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {despesasProvisoesPorCategoria.map(([cat, val]) => (
+                      <tr key={cat} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-2 text-xs font-bold text-slate-700 uppercase">{cat}</td>
+                        <td className="px-6 py-2 text-right text-xs font-black text-rose-600 whitespace-nowrap">- {fmtR(val)}</td>
+                        <td className="px-6 py-2 text-right text-[11px] font-bold text-slate-500">{(tetoReal > 0 ? (val/tetoReal)*100 : 0).toFixed(1)}%</td>
+                        <td className="px-6 py-2 text-center">
+                          <span className="inline-flex px-3 py-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase tracking-widest rounded-full border border-amber-200/50">Aberto</span>
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Fundo de Caixa */}
+                    <tr className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-2 text-xs font-bold text-slate-500 uppercase">Fundo de Caixa - Reserva Técnica ({reserveType === 'percentage' ? reserveValue + '%' : 'Fixo'})</td>
+                      <td className="px-6 py-2 text-right text-xs font-black text-slate-600 whitespace-nowrap">- {fmtR(fundoCaixaProvisionado)}</td>
+                      <td className="px-6 py-2 text-right text-[11px] font-bold text-slate-500">{(tetoReal > 0 ? (fundoCaixaProvisionado/tetoReal)*100 : 0).toFixed(1)}%</td>
+                      <td className="px-6 py-2 text-center">
+                        <span className="inline-flex px-3 py-1 bg-slate-100 text-slate-500 text-[9px] font-black uppercase tracking-widest rounded-full border border-slate-200">Provisão</span>
+                      </td>
+                    </tr>
+                    {/* Totais */}
+                    <tr className="bg-slate-50/50 border-t-2 border-slate-100">
+                      <td className="px-6 py-3 text-xs font-black text-slate-900 uppercase tracking-widest">Total Geral de Dispêndios Projetados</td>
+                      <td className="px-6 py-3 text-right text-sm font-black text-rose-600 whitespace-nowrap">- {fmtR(totalProvisionsExpense + fundoCaixaProvisionado)}</td>
+                      <td className="px-6 py-3 text-right text-xs font-black text-slate-900">{(tetoReal > 0 ? ((totalProvisionsExpense + fundoCaixaProvisionado)/tetoReal)*100 : 0).toFixed(1)}%</td>
+                      <td className="px-6 py-3 text-center"></td>
+                    </tr>
+                    <tr className="bg-slate-50 border-t border-slate-200">
+                      <td className="px-6 py-3 text-xs font-black text-slate-900 uppercase tracking-widest">Resultado Projetado no Período</td>
+                      <td className="px-6 py-3 text-right text-sm font-black text-rose-600">
+                         {tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado) < 0 ? '-' : ''} {fmtR(Math.abs(tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado)))}
+                      </td>
+                      <td colSpan={2} className="px-6 py-3 text-center text-slate-400 font-bold tracking-widest text-[10px]">--</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* CONSIDERAÇÕES IMPORTANTES */}
+            <div>
+              <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 mt-4">
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Considerações Importantes</h4>
+                <div className="space-y-4">
+                  <p className="text-xs font-medium text-slate-600">
+                    <strong className="text-slate-800">Receita projetada</strong> considera adesões em aberto, mensalidades projetadas e mensalidades atrasadas.
+                  </p>
+                  <p className="text-xs font-medium text-slate-600">
+                    <strong className="text-slate-800">Associados ativos:</strong> {associados?.filter(a => a.status === 'ativo')?.length || 0}
+                  </p>
+                  <div className="p-4 bg-sky-50 border border-sky-100 rounded-xl mt-4">
+                    <p className="text-xs font-medium text-sky-800 leading-relaxed">
+                      <strong className="text-sky-900">Observação de conciliação:</strong> somando a receita projetada (R$ {fmtR(tetoReal)}) com o total de dispêndios projetados (- R$ {fmtR(totalProvisionsExpense + fundoCaixaProvisionado)}), o resultado do período é de <strong className="text-sky-900">{tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado) < 0 ? '-' : ''} R$ {fmtR(Math.abs(tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado)))}</strong>.
+                      Este relatório traça o <em>Resultado Projetado no Período</em> cruzando a visão categorizada. Acompanhe os alertas de conformidade para anomalias contábeis.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-center text-[9px] font-bold text-slate-400 mt-6 uppercase tracking-[3px]">
+                Documento gerado eletronicamente em {fmtData(new Date().toISOString())} pelo sistema Ellus Gestão - Versão Revisada
+              </p>
+            </div>
+
           </div>
         )}
 
-        <div id="report-table" className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-          {selectedReport === 'provisoes' ? (
-            <div className="flex flex-col gap-10">
-
-              {/* TABELA DE DISPÊNDIOS */}
-              {provisionsExpenseGroups.length > 0 && (
-                <div className="overflow-x-auto">
-                  <div className="px-6 py-4 bg-rose-50/50 border-b border-rose-100">
-                    <h3 className="text-xs font-black text-rose-700 uppercase tracking-widest flex items-center gap-2">
-                      <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-                      Detalhamento de Dispêndios (Provisões)
-                    </h3>
-                  </div>
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50/30">
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest min-w-[300px]">Descrição / Detalhes</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-[180px]">Valor</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-[120px]">Status</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-[120px]">Forma</th>
-                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-[150px]">Conta</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {provisionsExpenseGroups.map(group => (
-                        <React.Fragment key={group.date}>
-                          <tr className="bg-slate-50/80">
-                            <td colSpan={5} className="px-6 py-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-4 bg-rose-500 rounded-full" />
-                                <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
-                                  Dia {fmtData(group.date)}
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                          {group.items.map((l: any) => (
-                            <tr key={l.id} className="hover:bg-slate-50/30 transition-colors group">
-                              <td className="px-6 py-4">
-                                <div className="flex flex-col">
-                                  <span className="text-sm font-bold text-slate-800 leading-tight">{l.descricao}</span>
-                                  {getLinkedName(l) && (
-                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-1">
-                                      {getLinkedName(l)?.toUpperCase()}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <span className="text-sm font-extrabold text-rose-600">
-                                  -{fmtR(l.valor)}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="flex justify-center">
-                                  <StatusBadge status={(l.status === 'aberto' || l.status === 'atrasado') && l.status_cobranca === 'PROCESSANDO' ? 'Processando' : l.status} type="lancamento" />
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="flex justify-center">
-                                  <PaymentBadge method={l.forma_pagamento} />
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <span className="text-[10px] font-bold text-slate-500">
-                                  {contas.find(c => c.id === l.conta_id)?.nome || 'N/A'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                      <tr className="bg-amber-50/30 border-t border-amber-100/50">
-                        <td className="px-6 py-4 text-[10px] font-black text-amber-700 uppercase tracking-widest">Reserva Técnica: Fundo de Caixa ({cashReservePercentage}%)</td>
-                        <td className="px-6 py-4 text-right">
-                          <span className="text-sm font-black text-amber-600">
-                            -{fmtR(fundoCaixaProvisionado)}
-                          </span>
-                        </td>
-                        <td colSpan={3} className="px-6 py-4 text-right italic text-[9px] font-bold text-amber-600/40 uppercase tracking-widest">
-                          Provisão de {cashReservePercentage}% sobre o teto de receita
-                        </td>
-                      </tr>
-                      <tr className="bg-rose-50/30 border-t-2 border-rose-100">
-                        <td className="px-6 py-5 text-[11px] font-black text-rose-900 uppercase tracking-[2px]">Total Geral de Dispêndios Projetados</td>
-                        <td className="px-6 py-5 text-right">
-                          <span className="text-base font-black text-rose-600">
-                            -{fmtR(totalProvisionsExpense + fundoCaixaProvisionado)}
-                          </span>
-                        </td>
-                        <td colSpan={3} className="px-6 py-5 text-right italic text-[10px] font-bold text-rose-700/50 uppercase tracking-widest">
-                          Soma de pagamentos + reserva técnica
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {provisionsIncomeGroups.length === 0 && provisionsExpenseGroups.length === 0 && (
-                <div className="px-6 py-12 text-center text-slate-400 italic text-sm">Nenhuma provisão encontrada para o período.</div>
-              )}
-
-              {/* TOTAL CONSOLIDADO */}
-              {(provisionsIncomeGroups.length > 0 || provisionsExpenseGroups.length > 0) && (
-                <div className="bg-indigo-50/50 p-6 border-t border-indigo-100 flex justify-between items-center">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-900">Resultado Projetado no Período</span>
-                  <span className="text-lg font-black text-indigo-600">
-                    {fmtR(safeSum(filteredData.reduce((acc, l) => l.tipo === 'receita' ? acc + l.valor : acc - l.valor, 0), totalAtrasados) - fundoCaixaProvisionado)}
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : selectedReport === 'auditoria_cobrancas' ? (
+        <div id="report-table" className={selectedReport === 'provisoes' ? 'hidden' : "bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden"}>
+          {selectedReport === 'extrato' ? (
             <DataTable 
               columns={[
                 { 

@@ -31,7 +31,7 @@ export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
     excluirManutencao, 
     excluirBem 
   } = useBensDuraveis(tenantId)
-  const [activeTab, setActiveTab] = useState<'pendentes' | 'ativos'>('pendentes')
+  const [activeTab, setActiveTab] = useState<'pendentes' | 'ativos'>('ativos')
   const [syncing, setSyncing] = useState(false)
   const sb = createClient()
   const { fornecedores } = useFornecedores()
@@ -264,18 +264,6 @@ export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
           {/* Tab Switcher - Premium Interaction */}
           <div className="bg-slate-100/60 p-1.5 rounded-[22px] flex items-center gap-1 border border-slate-200/40 backdrop-blur-sm shadow-inner">
             <button
-              onClick={() => setActiveTab('pendentes')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-500 ${
-                activeTab === 'pendentes' ? 'bg-white text-amber-600 shadow-md border border-slate-200/50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
-              }`}
-            >
-              <AlertTriangle size={14} />
-              Pendentes
-              {pendentes.length > 0 && (
-                <span className="ml-1 bg-amber-100 text-amber-700 py-0.5 px-1.5 rounded-full text-[9px] font-black">{pendentes.length}</span>
-              )}
-            </button>
-            <button
               onClick={() => setActiveTab('ativos')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-500 ${
                 activeTab === 'ativos' ? 'bg-white text-emerald-600 shadow-md border border-slate-200/50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
@@ -285,6 +273,18 @@ export default function BensDuraveisHub({ tenantId: initialTenantId }: Props) {
               Ativos
               {ativos.length > 0 && (
                 <span className="ml-1 bg-emerald-100 text-emerald-700 py-0.5 px-1.5 rounded-full text-[9px] font-black">{ativos.length}</span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('pendentes')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-500 ${
+                activeTab === 'pendentes' ? 'bg-white text-amber-600 shadow-md border border-slate-200/50 scale-105' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+              }`}
+            >
+              <AlertTriangle size={14} />
+              Pendentes
+              {pendentes.length > 0 && (
+                <span className="ml-1 bg-amber-100 text-amber-700 py-0.5 px-1.5 rounded-full text-[9px] font-black">{pendentes.length}</span>
               )}
             </button>
           </div>

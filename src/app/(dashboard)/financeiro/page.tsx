@@ -44,7 +44,6 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { AssociadoLancamentos } from '@/components/ui/AssociadoLancamentos'
 import dynamic from 'next/dynamic'
 const InadimplenciaTab = dynamic(() => import('@/features/financeiro/components/InadimplenciaTab'), { ssr: false })
-const RelatoriosFinanceirosTab = dynamic(() => import('@/features/financeiro/components/RelatoriosFinanceirosTab'), { ssr: false })
 import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction, cleanupConciliacaoDuplicatesAction, cleanupWrongMensalidadePatternAction } from '@/app/actions/financeiro_cleanup'
 import { trackIrregularitiesAction, auditRecorrenciaFaltantesAction } from '@/app/actions/financeiro_irregularities'
@@ -1486,7 +1485,6 @@ function FinanceiroPageContent() {
           <button onClick={() => setActiveTab('despesas')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'despesas' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><ArrowDownRight size={12} /> Dispêndios</button>
           <button onClick={() => setActiveTab('inadimplencia')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'inadimplencia' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><AlertTriangle size={12} /> Inadimplência</button>
           <button onClick={() => setActiveTab('conciliacao')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'conciliacao' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><RefreshCw size={12} /> Conciliação</button>
-          <button onClick={() => setActiveTab('relatorios')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'relatorios' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><FileText size={12} /> Relatórios</button>
           <button onClick={() => setActiveTab('calendario')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'calendario' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><CalendarIcon size={12} /> Calendário</button>
         </div>
       </div>
@@ -1510,8 +1508,6 @@ function FinanceiroPageContent() {
 
       {activeTab === 'inadimplencia' ? (
         <InadimplenciaTab />
-      ) : activeTab === 'relatorios' ? (
-        <RelatoriosFinanceirosTab cashReservePercentage={cashReservePercentage} />
       ) : activeTab === 'calendario' ? (
         <CalendarioConciliacao contas={contas} />
       ) : activeTab === 'conciliacao' ? (

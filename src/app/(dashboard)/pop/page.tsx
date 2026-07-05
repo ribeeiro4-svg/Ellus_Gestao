@@ -7,9 +7,11 @@ import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 import RotinaGerenciavelTab from './components/RotinaGerenciavelTab'
 
 import { usePermissions } from '@/lib/hooks/usePermissions'
+import { useTenant } from '@/lib/hooks/useTenant'
 
 export default function POPPage() {
   const { currentUser } = useCurrentUser()
+  const { tenant } = useTenant()
   const { isAdmin } = usePermissions('pop')
   const [busca, setBusca] = useState('')
   const [moduloSelecionado, setModuloSelecionado] = useState<string>('Todos')
@@ -48,9 +50,13 @@ export default function POPPage() {
         @media print {
           body * { visibility: hidden; }
           #pop-print-area, #pop-print-area * { visibility: visible; }
-          #pop-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; }
+          #pop-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; }
           .no-print { display: none !important; }
-          @page { size: A4; margin: 20mm; }
+          @page { size: A4; margin: 15mm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print-green { color: #059669 !important; }
+          .print-bg-green { background-color: #059669 !important; color: white !important; }
+          .print-border-green { border-color: #059669 !important; }
         }
       `}} />
 
@@ -158,14 +164,14 @@ export default function POPPage() {
 
       {/* Drawer / Modal do POP */}
       {popAberto && (
-        <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/20 backdrop-blur-sm no-print animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
           <div 
-            className="absolute inset-0"
+            className="absolute inset-0 no-print"
             onClick={() => setPopAberto(null)}
           />
           <div className="relative w-full max-w-3xl bg-slate-50 h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right-full duration-300 flex flex-col">
             
-            <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
               <div>
                 <span className="px-3 py-1 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg mb-2 inline-block">
                   {popAberto.codigo}
@@ -193,13 +199,16 @@ export default function POPPage() {
               <div id="pop-print-area" className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
                 
                 {/* Header Impressão */}
-                <div className="flex justify-between items-start border-b-2 border-[#0e2d22] pb-6 mb-8">
+                <div className="flex justify-between items-start border-b-4 border-emerald-600 print-border-green pb-6 mb-8">
                   <div>
-                    <h1 className="text-2xl font-black text-[#0e2d22] mb-1">Procedimento Operacional Padrão</h1>
+                    <h1 className="text-2xl font-black text-emerald-700 print-green mb-1">Procedimento Operacional Padrão</h1>
                     <h2 className="text-lg font-bold text-slate-700">{popAberto.titulo}</h2>
                   </div>
-                  <div className="text-right">
-                    <div className="text-xl font-black text-amber-500">{popAberto.codigo}</div>
+                  <div className="text-right flex flex-col items-end">
+                    {tenant?.logo_url && (
+                      <img src={tenant.logo_url} alt="Associação" className="h-12 w-auto object-contain mb-3 rounded-lg" />
+                    )}
+                    <div className="text-xl font-black text-emerald-600 print-green">{popAberto.codigo}</div>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Revisão: Atual</div>
                   </div>
                 </div>
@@ -222,26 +231,26 @@ export default function POPPage() {
 
                 {/* Objetivo */}
                 <div className="mb-8">
-                  <h3 className="text-sm font-black text-[#0e2d22] uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <Target size={16} className="text-amber-500" /> Objetivo
+                  <h3 className="text-sm font-black text-emerald-700 print-green uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <Target size={16} className="text-emerald-600 print-green" /> Objetivo
                   </h3>
-                  <p className="text-slate-600 leading-relaxed bg-white border-l-4 border-emerald-500 pl-4 py-1">
+                  <p className="text-slate-700 leading-relaxed bg-emerald-50 print-bg-light-green border-l-4 border-emerald-500 print-border-green px-4 py-3 rounded-r-lg">
                     {popAberto.objetivo}
                   </p>
                 </div>
 
                 {/* Passos */}
                 <div className="mb-8">
-                  <h3 className="text-sm font-black text-[#0e2d22] uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-500" /> Passo a Passo
+                  <h3 className="text-sm font-black text-emerald-700 print-green uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-600 print-green" /> Passo a Passo
                   </h3>
                   <div className="space-y-4">
                     {popAberto.passos.map((passo, idx) => (
                       <div key={idx} className="flex gap-4">
-                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                        <div className="w-7 h-7 rounded-full bg-emerald-600 print-bg-green text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 shadow-sm">
                           {idx + 1}
                         </div>
-                        <p className="text-slate-700 leading-relaxed">{passo}</p>
+                        <p className="text-slate-700 leading-relaxed pt-0.5">{passo}</p>
                       </div>
                     ))}
                   </div>
@@ -276,8 +285,11 @@ export default function POPPage() {
                   </div>
                 )}
 
-                <div className="mt-16 pt-8 border-t border-slate-200 text-center text-[10px] text-slate-400 uppercase tracking-widest font-bold">
-                  Documento gerado pelo sistema Éllus Gestão Estratégica
+                <div className="mt-16 pt-8 border-t border-slate-200 flex flex-col items-center justify-center text-center">
+                  <img src="/ellus_logo_v2.svg" alt="Éllus Gestão" className="h-6 w-auto mb-2 opacity-80" onError={(e: any) => e.target.style.display = 'none'} />
+                  <div className="text-[9px] text-slate-400 uppercase tracking-widest font-bold">
+                    Documento gerado pelo sistema Éllus Gestão Estratégica
+                  </div>
                 </div>
 
               </div>
