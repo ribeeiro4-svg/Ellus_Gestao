@@ -204,6 +204,9 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
         numero_nfse: nfeSelecionada.numero_nf, // Adaptado para o modal reutilizado
         valor_liquido: nfeSelecionada.valor_total,
         data_emissao: nfeSelecionada.data_emissao,
+        data_entrada: nfeSelecionada.data_entrada,
+        data_escrituracao: nfeSelecionada.data_escrituracao,
+        status_escrituracao: nfeSelecionada.status_escrituracao,
         prestador_id: resFor.data.id,
         descricao_servico: `NF-e ${nfeSelecionada.numero_nf} - ${nfeSelecionada.nome_emitente}`
       },
@@ -222,8 +225,13 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
       const saveRes = await salvarClassificacao(selectedNfeId, itens)
       if (saveRes.error) throw new Error(saveRes.error)
 
-      // Depois integra com o financeiro selecionado e passa a data efetiva
-      const result = await integracaoHook.finalizarEscrituracao(selectedNfeId, payload.financeiroId, payload.dataEfetiva)
+      // Depois integra com o financeiro selecionado e passa a data efetiva e escrituração
+      const result = await integracaoHook.finalizarEscrituracao(
+        selectedNfeId, 
+        payload.financeiroId, 
+        payload.dataEfetiva, 
+        payload.dataEscrituracao
+      )
       
       if (result.error) alert(`Erro na integração: ${result.error}`)
       else {

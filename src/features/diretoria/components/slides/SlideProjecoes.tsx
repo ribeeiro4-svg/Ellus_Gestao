@@ -3,6 +3,7 @@ import React from 'react'
 import { Line } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, LineElement, PointElement, Filler, Tooltip, Legend } from 'chart.js'
 import { MESES } from '@/lib/utils/formatters'
+import CountUp from '../CountUp'
 
 ChartJS.register(CategoryScale, LinearScale, LineElement, PointElement, Filler, Tooltip, Legend)
 
@@ -128,11 +129,15 @@ export default function SlideProjecoes({ projecaoAnual, mesRef }: SlideProjecoes
           <div className="flex gap-4">
             <div className="p-5 rounded-[20px] bg-white/5 border border-emerald-500/20 text-right min-w-[180px]">
               <p className="text-[12px] font-black uppercase tracking-widest text-white/40 mb-2">Acumulado Realizado</p>
-              <p className="text-3xl font-black text-emerald-400">R$ {(saldoAcumulado / 1000).toFixed(0)}k</p>
+              <div className="text-3xl font-black text-emerald-400">
+                <CountUp value={saldoAcumulado} prefix="R$ " decimals={2} duration={900} />
+              </div>
             </div>
             <div className="p-5 rounded-[20px] bg-white/5 border border-blue-500/20 text-right min-w-[180px]">
               <p className="text-[12px] font-black uppercase tracking-widest text-white/40 mb-2">Receita Projetada</p>
-              <p className="text-3xl font-black text-blue-400">R$ {(projecaoReceitaResto / 1000).toFixed(0)}k</p>
+              <div className="text-3xl font-black text-blue-400">
+                <CountUp value={projecaoReceitaResto} prefix="R$ " decimals={2} duration={900} />
+              </div>
             </div>
           </div>
         </div>

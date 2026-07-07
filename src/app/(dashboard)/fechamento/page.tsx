@@ -283,7 +283,7 @@ export default function FechamentoPage() {
             <Lock className="text-emerald-900" size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">FECHAMENTO MENSAL</h1>
+            <h1 className="text-2xl font-bold text-slate-800 tracking-tight">FECHAMENTO FINANCEIRO</h1>
             <p className="text-xs text-slate-500 font-medium uppercase tracking-widest">Conciliação e Governança — ACPROBEC</p>
           </div>
         </div>

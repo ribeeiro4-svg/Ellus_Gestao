@@ -183,8 +183,14 @@ function useFinanceiroInternal() {
   const atualizar = async (id: string, input: Partial<LancamentoInput>) => {
     if (!id || String(id) === 'undefined') return { error: 'ID do lançamento não identificado para atualização.' }
     const item = lancamentos.find(l => l.id === id)
-    if (item && isPeriodoBloqueado(item.data)) return { error: 'Este período está fechado e não permite alterações.' }
-    if (input.data && isPeriodoBloqueado(input.data)) return { error: 'Não é possível mover lançamentos para períodos fechados.' }
+    if (item && isPeriodoBloqueado(item.data)) {
+      const pass = window.prompt('Este período está fechado.\nInsira a senha do tesoureiro para forçar a alteração:')
+      if (pass !== '19072425') return { error: 'Senha incorreta. Este período está fechado e não permite alterações.' }
+    }
+    if (input.data && isPeriodoBloqueado(input.data)) {
+      const pass = window.prompt('O novo período está fechado.\nInsira a senha do tesoureiro para forçar a alteração:')
+      if (pass !== '19072425') return { error: 'Senha incorreta. Não é possível mover lançamentos para períodos fechados.' }
+    }
     
     const { 
       data_caixa,
@@ -543,14 +549,15 @@ function useFinanceiroInternal() {
     if (!ids.length) return { error: null }
     const hasLocked = lancamentos.some(l => ids.includes(l.id) && isPeriodoBloqueado(l.data))
     if (hasLocked) {
-      const pass = window.prompt('Alguns itens selecionados pertencem a períodos fechados.\nInsira a senha master para forçar a operação:')
+      const pass = window.prompt('Alguns itens selecionados pertencem a períodos fechados.\nInsira a senha do tesoureiro para forçar a operação:')
       if (pass !== '19072425') {
-        return { error: 'Alguns itens selecionados pertencem a períodos fechados.' }
+        return { error: 'Senha incorreta. Operação cancelada.' }
       }
     }
     const { 
       data_caixa,
       fixo_variavel,
+      vencimento_dia_bulk,
       ...cleanInput 
     } = input as any;
 
@@ -588,7 +595,7 @@ function useFinanceiroInternal() {
       for (let i = 0; i < ids.length; i += 100) {
         const chunk = ids.slice(i, i + 100)
         
-        if (input.categoria || 'fixo_variavel' in input) {
+        if (input.categoria || 'fixo_variavel' in input || vencimento_dia_bulk !== undefined) {
           const updatePromises = chunk.map(id => {
             const l = lancamentos.find(x => x.id === id);
             let finalDescricao = input.descricao || l?.descricao || '';
@@ -628,7 +635,17 @@ function useFinanceiroInternal() {
               if (fixo_variavel === 'variavel') finalDescricao += ' [VARIÁVEL]';
             }
 
-            return sb.from('lancamentos').update({ ...cleanInput, descricao: finalDescricao }).eq('id', id);
+            let updateData = { ...cleanInput, descricao: finalDescricao };
+            
+            if (vencimento_dia_bulk !== undefined && l?.data) {
+              const parts = l.data.split('-');
+              if (parts.length === 3) {
+                 const newDay = String(vencimento_dia_bulk).padStart(2, '0');
+                 updateData.data = `${parts[0]}-${parts[1]}-${newDay}`;
+              }
+            }
+
+            return sb.from('lancamentos').update(updateData).eq('id', id);
           });
 
           const results = await Promise.all(updatePromises);

@@ -145,6 +145,27 @@ export async function processFinancialSubmit(
     if (!targetId || String(targetId) === 'undefined') {
       return { error: 'ID do lançamento não encontrado para atualização.' }
     }
+
+    if (dbData.categoria) {
+      const catUpper = dbData.categoria.toUpperCase()
+      const isAdesaoOuMensalidade = catUpper === 'ADESÃO' || catUpper === 'MENSALIDADE' || catUpper === 'MENSALIDADES'
+      const assoc = safeData.associado_id ? associados.find(a => a.id === safeData.associado_id) : null
+      
+      if (isAdesaoOuMensalidade && assoc) {
+        const prefix = catUpper === 'ADESÃO' ? 'RECEB. DE ADESÃO' : 'RECEB. DE MENSALIDADE'
+        let newDesc = `${prefix} - ${assoc.nome.toUpperCase()}`
+        
+        let fv = dbData.fixo_variavel || editingItem?.fixo_variavel
+        if (fv === 'Fixo') newDesc += ' [FIXO]'
+        else if (fv === 'Variável') newDesc += ' [VARIÁVEL]'
+        
+        const matchTaxa = (dbData.descricao || editingItem?.descricao || '').match(/\(Taxa:[^)]+\)/)
+        if (matchTaxa) newDesc += ` ${matchTaxa[0]}`
+        
+        dbData.descricao = newDesc
+      }
+    }
+
     return await atualizar(targetId, dbData)
   }
 

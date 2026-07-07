@@ -2,20 +2,16 @@
 import React, { useState } from 'react'
 import { Users, ShoppingCart, ShieldCheck, AlertTriangle } from 'lucide-react'
 import AssociadosTab from '@/features/associados/components/AssociadosTab'
-import FornecedoresTab from '@/features/associados/components/FornecedoresTab'
-import DiretoriaTab from '@/features/associados/components/DiretoriaTab'
 import HistoricoCancelamentosTab from '@/features/associados/components/HistoricoCancelamentosTab'
 
-type TabID = 'associados' | 'fornecedores' | 'diretoria' | 'cancelamentos'
+type TabID = 'associados' | 'cancelamentos'
 
 export default function AssociadosHubPage() {
   const [activeTab, setActiveTab] = useState<TabID>('associados')
 
   const tabs = [
     { id: 'associados' as TabID, label: 'Associados', icon: Users, color: 'emerald' },
-    { id: 'fornecedores' as TabID, label: 'Fornecedores', icon: ShoppingCart, color: 'orange' },
-    { id: 'diretoria' as TabID, label: 'Diretoria', icon: ShieldCheck, color: 'indigo' },
-    { id: 'cancelamentos' as TabID, label: 'Cancelamentos', icon: AlertTriangle, color: 'red' },
+    { id: 'cancelamentos' as TabID, label: 'Desligamentos', icon: AlertTriangle, color: 'red' },
   ]
 
   const getActiveIcon = () => {
@@ -66,8 +62,6 @@ export default function AssociadosHubPage() {
       {/* Tab Content */}
       <div className="min-h-[600px]">
         {activeTab === 'associados' && <AssociadosTab />}
-        {activeTab === 'fornecedores' && <FornecedoresTab />}
-        {activeTab === 'diretoria' && <DiretoriaTab />}
         {activeTab === 'cancelamentos' && <HistoricoCancelamentosTab />}
       </div>
     </div>

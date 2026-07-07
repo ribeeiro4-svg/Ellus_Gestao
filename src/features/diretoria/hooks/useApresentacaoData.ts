@@ -41,6 +41,7 @@ export interface ComposicaoItem {
 export interface EvolucaoAssociados {
   label: string
   ativos: number
+  novasAdesoes: number
 }
 
 export interface ApresentacaoData {
@@ -73,7 +74,7 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
 
     // Filtra lancamentos do mês/ano de referência pagos
     const doMes = lancamentos.filter(l => {
-      const d = new Date(l.data)
+      const d = new Date(l.data + 'T12:00:00')
       return d.getMonth() === mesRef && d.getFullYear() === anoRef && l.status === 'pago'
     })
 
@@ -87,7 +88,7 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
     if (prevMes < 0) { prevMes = 11; prevAno -= 1 }
     
     const prevMesLancamentos = lancamentos.filter(l => {
-      const d = new Date(l.data)
+      const d = new Date(l.data + 'T12:00:00')
       return d.getMonth() === prevMes && d.getFullYear() === prevAno && l.status === 'pago'
     })
     const prevReceita = prevMesLancamentos.filter(l => l.tipo === 'receita').reduce((s, l) => s + l.valor, 0)
@@ -112,14 +113,14 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
     const limitePrev = new Date(prevAno, prevMes + 1, 0) // ultimo dia do mes anterior
     const prevAtivosCount = associados.filter(assoc => {
       if (!assoc.data_ingresso) return false
-      return new Date(assoc.data_ingresso) <= limitePrev && assoc.status === 'ativo'
+      return new Date(assoc.data_ingresso + 'T12:00:00') <= limitePrev && assoc.status === 'ativo'
     }).length
     const variacaoAtivos = calcVar(totalAtivos, prevAtivosCount)
 
     // Novas adesões no mês
     const novasAdesoesCount = associados.filter(a => {
       if (!a.data_ingresso) return false
-      const d = new Date(a.data_ingresso)
+      const d = new Date(a.data_ingresso + 'T12:00:00')
       return d.getMonth() === mesRef && d.getFullYear() === anoRef
     }).length
 
@@ -134,7 +135,7 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
 
     // Inadimplencia do mes anterior (estimate based on vencimento)
     const atrasadosPrev = lancamentos.filter(l => {
-      const d = new Date(l.data)
+      const d = new Date(l.data + 'T12:00:00')
       return l.status === 'atrasado' && l.tipo === 'receita' && l.associado_id && ativosIds.has(l.associado_id) && 
              (d.getFullYear() < prevAno || (d.getFullYear() === prevAno && d.getMonth() <= prevMes))
     })
@@ -153,7 +154,7 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
     atrasados.forEach(l => {
       const assoc = associados.find(a => a.id === l.associado_id)
       if (!assoc) return
-      const diasAtraso = Math.floor((hoje.getTime() - new Date(l.data).getTime()) / (1000 * 60 * 60 * 24))
+      const diasAtraso = Math.floor((hoje.getTime() - new Date(l.data + 'T12:00:00').getTime()) / (1000 * 60 * 60 * 24))
       if (!devedoresMap[l.associado_id!]) {
         devedoresMap[l.associado_id!] = { nome: assoc.nome, valor: 0, diasAtraso: 0 }
       }
@@ -192,7 +193,7 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
       if (m < 0) { m += 12; a -= 1 }
 
       const doMes = lancamentos.filter(l => {
-        const d = new Date(l.data)
+        const d = new Date(l.data + 'T12:00:00')
         return d.getMonth() === m && d.getFullYear() === a && l.status === 'pago'
       })
 
@@ -206,7 +207,7 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
   // Composição: receitas por categoria do mês
   const composicaoReceitas = useMemo<ComposicaoItem[]>(() => {
     const doMes = lancamentos.filter(l => {
-      const d = new Date(l.data)
+      const d = new Date(l.data + 'T12:00:00')
       return d.getMonth() === mesRef && d.getFullYear() === anoRef && l.status === 'pago' && l.tipo === 'receita'
     })
     const total = doMes.reduce((s, l) => s + l.valor, 0)
@@ -223,7 +224,7 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
   // Composição: despesas por categoria do mês
   const composicaoDespesas = useMemo<ComposicaoItem[]>(() => {
     const doMes = lancamentos.filter(l => {
-      const d = new Date(l.data)
+      const d = new Date(l.data + 'T12:00:00')
       return d.getMonth() === mesRef && d.getFullYear() === anoRef && l.status === 'pago' && l.tipo === 'despesa'
     })
     const total = doMes.reduce((s, l) => s + l.valor, 0)
@@ -247,9 +248,16 @@ export function useApresentacaoData(mesRef: number, anoRef: number): Apresentaca
       const limite = new Date(a, m + 1, 0) // último dia do mês
       const ativos = associados.filter(assoc => {
         if (!assoc.data_ingresso) return false
-        return new Date(assoc.data_ingresso) <= limite && assoc.status === 'ativo'
+        return new Date(assoc.data_ingresso + 'T12:00:00') <= limite && assoc.status === 'ativo'
       }).length
-      meses.push({ label: MESES[m].substring(0, 3), ativos })
+      
+      const novasAdesoes = associados.filter(assoc => {
+        if (!assoc.data_ingresso) return false
+        const d = new Date(assoc.data_ingresso + 'T12:00:00')
+        return d.getMonth() === m && d.getFullYear() === a
+      }).length
+
+      meses.push({ label: MESES[m].substring(0, 3), ativos, novasAdesoes })
     }
     return meses
   }, [associados, mesRef, anoRef])

@@ -23,13 +23,17 @@ export default function NFSeEscrituracaoModal({
   const [periodo, setPeriodo] = useState('all')
   const [search, setSearch] = useState('')
   const [dataEfetiva, setDataEfetiva] = useState('')
+  const [dataEscrituracao, setDataEscrituracao] = useState(new Date().toISOString().split('T')[0])
   const [ignoreFornecedor, setIgnoreFornecedor] = useState(false)
 
   const { nota, prestador } = nfseData || {}
 
   useEffect(() => {
-    if (nota?.data_emissao && !dataEfetiva) {
-      setDataEfetiva(nota.data_emissao.split('T')[0])
+    if (nota) {
+      if (nota.data_entrada) setDataEfetiva(nota.data_entrada.split('T')[0])
+      else if (nota.data_emissao && !dataEfetiva) setDataEfetiva(nota.data_emissao.split('T')[0])
+
+      if (nota.data_escrituracao) setDataEscrituracao(nota.data_escrituracao.split('T')[0])
     }
   }, [nota])
 
@@ -61,7 +65,8 @@ export default function NFSeEscrituracaoModal({
       await onSubmit({
         nfseId: nota.id,
         financeiroId: selectedFinId,
-        dataEfetiva
+        dataEfetiva,
+        dataEscrituracao
       })
     } finally {
       setLoading(false)
@@ -155,11 +160,31 @@ export default function NFSeEscrituracaoModal({
                   type="date"
                   value={dataEfetiva}
                   onChange={(e) => setDataEfetiva(e.target.value)}
-                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  disabled={nota.status_escrituracao === 'escriturada' && !!nota.data_entrada}
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-50 disabled:bg-slate-50"
                   required
                 />
                 <p className="text-[9px] text-slate-400 mt-1 italic">
                   * Data real da prestação do serviço ou entrega da mercadoria. Padrão: Emissão.
+                  {nota.status_escrituracao === 'escriturada' && " (Imutável após escrituração)"}
+                </p>
+              </section>
+
+              <section>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                  Data de Escrituração
+                </h3>
+                <input
+                  type="date"
+                  value={dataEscrituracao}
+                  onChange={(e) => setDataEscrituracao(e.target.value)}
+                  disabled={nota.status_escrituracao === 'escriturada' && !!nota.data_escrituracao}
+                  className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all disabled:opacity-50 disabled:bg-slate-50"
+                  required
+                />
+                <p className="text-[9px] text-slate-400 mt-1 italic">
+                  * Data de registro fiscal. Padrão: Hoje.
+                  {nota.status_escrituracao === 'escriturada' && " (Imutável após escrituração)"}
                 </p>
               </section>
             </div>
@@ -326,10 +351,10 @@ export default function NFSeEscrituracaoModal({
                 </button>
                 <button
                   onClick={handleConfirm}
-                  disabled={loading || !selectedFinId}
+                  disabled={loading || !selectedFinId || !dataEfetiva || !dataEscrituracao}
                   className={`
                     flex-[2] sm:px-10 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95
-                    ${selectedFinId 
+                    ${selectedFinId && dataEfetiva && dataEscrituracao
                       ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20' 
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                     }

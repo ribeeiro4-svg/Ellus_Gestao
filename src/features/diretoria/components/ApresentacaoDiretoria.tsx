@@ -21,7 +21,7 @@ import SlideRiscos from './slides/SlideRiscos'
 import SlideOportunidades from './slides/SlideOportunidades'
 import SlideIndicadores from './slides/SlideIndicadores'
 import SlideProjecoes from './slides/SlideProjecoes'
-import SlidePlanoAcao from './slides/SlidePlanoAcao'
+import SlidePlanoAcao, { PlanoAcaoTask } from './slides/SlidePlanoAcao'
 import SlideMensagemFinal from './slides/SlideMensagemFinal'
 import { useProjecao } from '@/lib/hooks/useProjecao'
 
@@ -63,6 +63,26 @@ export default function ApresentacaoDiretoria() {
   const data = useApresentacaoData(mesRef, anoRef)
   const { projecaoAnual } = useProjecao()
 
+  // Estado das deliberações do Plano de Ação
+  const [deliberacoes, setDeliberacoes] = useState<PlanoAcaoTask[]>([
+    { id: 1, title: 'Campanha de Renegociação de Inadimplentes', owner: 'Diretoria Financeira', deadline: '15/Ago/2026', priority: 'high', status: 'pending' },
+    { id: 2, title: 'Auditoria nos contratos de fornecedores de TI', owner: 'Operações', deadline: '30/Ago/2026', priority: 'medium', status: 'in_progress' },
+    { id: 3, title: 'Aprovação do novo orçamento de Marketing', owner: 'Conselho Administrativo', deadline: '05/Set/2026', priority: 'low', status: 'completed' }
+  ])
+
+  const handleAddDeliberacao = (task: Omit<PlanoAcaoTask, 'id' | 'status'>) => {
+    const newId = deliberacoes.length > 0 ? Math.max(...deliberacoes.map(t => t.id)) + 1 : 1
+    setDeliberacoes([...deliberacoes, { ...task, id: newId, status: 'pending' }])
+  }
+
+  const handleRemoveDeliberacao = (id: number) => {
+    setDeliberacoes(deliberacoes.filter(t => t.id !== id))
+  }
+
+  const handleToggleDeliberacao = (id: number) => {
+    setDeliberacoes(deliberacoes.map(t => t.id === id ? { ...t, status: t.status === 'completed' ? 'pending' : 'completed' } : t))
+  }
+
   const totalSlides = SLIDE_TITLES.length
 
   const goTo = useCallback((index: number, dir: 'next' | 'prev') => {
@@ -79,6 +99,10 @@ export default function ApresentacaoDiretoria() {
   useEffect(() => {
     if (!isPresenting) return
     const handler = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
+        return; // Ignore shortcuts if typing
+      }
       if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next() }
       if (e.key === 'ArrowLeft') { e.preventDefault(); prev() }
       if (e.key === 'Escape') { setIsPresenting(false); setIsFullscreen(false); setIsConfiguring(true) }
@@ -125,9 +149,9 @@ export default function ApresentacaoDiretoria() {
       case 1: return <SlideDashboardSaude kpis={data.kpis} />
       case 2: return <SlideTimeline />
       case 3: return <SlideDiagnostico />
-      case 4: return <SlideReceitas kpis={data.kpis} fluxo={data.fluxo6Meses} />
+      case 4: return <SlideReceitas kpis={data.kpis} fluxo={data.fluxo6Meses} composicao={data.composicaoReceitas} />
       case 5: return <SlideDespesas kpis={data.kpis} fluxo={data.fluxo6Meses} />
-      case 6: return <SlideWaterfall />
+      case 6: return <SlideWaterfall kpis={data.kpis} composicaoDespesas={data.composicaoDespesas} composicaoReceitas={data.composicaoReceitas} />
       case 7: return <SlideFluxoCaixa fluxo={data.fluxo6Meses} />
       case 8: return <SlideInadimplencia kpis={data.kpis} />
       case 9: return <SlideAssociados kpis={data.kpis} evolucao={data.evolucaoAssociados} />
@@ -135,8 +159,8 @@ export default function ApresentacaoDiretoria() {
       case 11: return <SlideOportunidades />
       case 12: return <SlideIndicadores />
       case 13: return <SlideProjecoes projecaoAnual={projecaoAnual} mesRef={mesRef} />
-      case 14: return <SlidePlanoAcao />
-      case 15: return <SlideMensagemFinal />
+      case 14: return <SlidePlanoAcao tasks={deliberacoes} onToggleStatus={handleToggleDeliberacao} onAddTask={handleAddDeliberacao} onRemoveTask={handleRemoveDeliberacao} />
+      case 15: return <SlideMensagemFinal deliberacoes={deliberacoes} />
       default: return null
     }
   }
@@ -323,9 +347,9 @@ export default function ApresentacaoDiretoria() {
         </div>
       </div>
 
-      {/* Click zones */}
-      <div className="absolute inset-y-0 left-0 w-1/4 z-[199]" style={{ cursor: 'auto' }} onClick={prev} />
-      <div className="absolute inset-y-0 right-0 w-1/4 z-[199]" style={{ cursor: 'auto' }} onClick={next} />
+      {/* Click zones (Disabled for Slide 14 to allow interaction with the Action Plan table) */}
+      {currentSlide !== 14 && <div className="absolute inset-y-0 left-0 w-1/4 z-[199]" style={{ cursor: 'auto' }} onClick={prev} />}
+      {currentSlide !== 14 && <div className="absolute inset-y-0 right-0 w-1/4 z-[199]" style={{ cursor: 'auto' }} onClick={next} />}
     </div>
   )
 }

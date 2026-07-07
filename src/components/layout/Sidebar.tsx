@@ -32,7 +32,8 @@ import {
   Menu,
   ClipboardList,
   BookMarked,
-  Monitor
+  Monitor,
+  RefreshCw
 } from 'lucide-react'
 
 const MENU = [
@@ -54,6 +55,8 @@ const MENU = [
     section: 'Financeiro', 
     items: [
       { href: '/financeiro', icon: Wallet, label: 'Gestão Financeira' },
+      { href: '/conciliacao', icon: RefreshCw, label: 'Conciliador' },
+      { href: '/cobrancas', icon: AlertTriangle, label: 'Cobranças' },
       { href: '/planejamento', icon: Target, label: 'Planejamento Orçamentário' },
     ]
   },

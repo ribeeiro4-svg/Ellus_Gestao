@@ -75,8 +75,7 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
         const meta = chart.getDatasetMeta(i)
         meta.data.forEach((element: any, index: number) => {
           const val = dataset.data[index]
-          const prev = index > 0 ? dataset.data[index - 1] : val
-          const diff = val - prev
+          const novas = evolucao[index].novasAdesoes
 
           // Valor total (Associados)
           ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'
@@ -85,12 +84,11 @@ export default function SlideAssociados({ kpis, evolucao }: SlideAssociadosProps
           ctx.textBaseline = 'bottom'
           ctx.fillText(val.toString(), element.x, element.y - 12)
 
-          // Crescimento em relação ao mês anterior
-          if (index > 0) {
+          // Novas adesões (sempre mostra o número de entradas no mês)
+          if (novas > 0) {
             ctx.font = '800 13px system-ui, sans-serif'
-            ctx.fillStyle = diff > 0 ? '#34d399' : diff < 0 ? '#fb7185' : 'rgba(255,255,255,0.5)'
-            const diffText = diff > 0 ? `+${diff}` : diff.toString()
-            ctx.fillText(diffText, element.x, element.y - 32)
+            ctx.fillStyle = '#34d399'
+            ctx.fillText(`+${novas}`, element.x, element.y - 32)
           }
         })
       })

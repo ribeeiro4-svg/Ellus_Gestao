@@ -64,10 +64,14 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
 
   const [favorites, setFavorites] = useState<string[]>([])
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
+  const [launchDays, setLaunchDays] = useState<Record<string, number>>({})
 
   React.useEffect(() => {
-    const saved = localStorage.getItem('planejamento_favorites_acprobec')
-    if (saved) setFavorites(JSON.parse(saved))
+    const savedFavs = localStorage.getItem('planejamento_favorites_acprobec')
+    if (savedFavs) setFavorites(JSON.parse(savedFavs))
+    
+    const savedDays = localStorage.getItem('planejamento_dias_acprobec')
+    if (savedDays) setLaunchDays(JSON.parse(savedDays))
   }, [])
 
   const toggleFavorite = (categoria: string) => {
@@ -76,6 +80,13 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       : [...favorites, categoria]
     setFavorites(newFavs)
     localStorage.setItem('planejamento_favorites_acprobec', JSON.stringify(newFavs))
+  }
+
+  const handleLaunchDayChange = (categoria: string, day: number) => {
+    const validDay = Math.min(Math.max(day, 1), 31)
+    const newDays = { ...launchDays, [categoria]: validDay }
+    setLaunchDays(newDays)
+    localStorage.setItem('planejamento_dias_acprobec', JSON.stringify(newDays))
   }
 
   const totalProLabore = useMemo(() => {
@@ -137,13 +148,18 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       const numMonths = isRecurring ? Math.max(1, recurrenceMonths) : 1
       
       for (let i = 0; i < numMonths; i++) {
-        const targetDate = new Date(selectedAno, selectedMes + i, 10)
+        const targetDate = new Date(selectedAno, selectedMes + i, 1)
         const tMes = targetDate.getMonth()
         const tAno = targetDate.getFullYear()
         const mm = String(tMes + 1).padStart(2, '0')
-        const dateStr = `${tAno}-${mm}-10`
 
         itemsToLanch.forEach(item => {
+          const catDay = launchDays[item.categoria] || 10
+          const maxDayInMonth = new Date(tAno, tMes + 1, 0).getDate()
+          const safeDay = Math.min(catDay, maxDayInMonth)
+          const dd = String(safeDay).padStart(2, '0')
+          const dateStr = `${tAno}-${mm}-${dd}`
+
           batchFinanceiro.push({
             tipo: item.tipo,
             descricao: `PLANEJAMENTO - ${mm}/${tAno} - ${item.categoria}`,
@@ -163,12 +179,17 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
           })
         })
 
+        const reservaDay = launchDays['RESERVA DE EMERGÊNCIA'] || 10
+        const maxDayInMonth = new Date(tAno, tMes + 1, 0).getDate()
+        const safeReservaDay = Math.min(reservaDay, maxDayInMonth)
+        const reservaDateStr = `${tAno}-${mm}-${String(safeReservaDay).padStart(2, '0')}`
+
         const reservaIdeal = Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100
         batchFinanceiro.push({
           tipo: 'despesa',
           descricao: `PLANEJAMENTO - ${mm}/${tAno} - RESERVA DE EMERGÊNCIA`,
           valor: reservaIdeal,
-          data: dateStr,
+          data: reservaDateStr,
           status: 'aberto',
           categoria: 'RESERVA DE EMERGÊNCIA',
           competencia_mes: tMes,
@@ -215,6 +236,23 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       ) 
     },
     { 
+      header: 'Tipo', 
+      key: 'tipo', 
+      render: (i: any) => (
+        <div className="flex items-center gap-1.5">
+          {i.tipo === 'receita' ? (
+            <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg" title="Ingresso (Receita)">
+              <ArrowUpCircle size={12} /> Ingresso
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] font-black uppercase text-rose-600 bg-rose-50 px-2 py-1 rounded-lg" title="Dispêndio (Despesa)">
+              <ArrowDownCircle size={12} /> Dispêndio
+            </span>
+          )}
+        </div>
+      )
+    },
+    { 
       header: 'Planejado', 
       key: 'planejado', 
       render: (i: any) => (
@@ -229,6 +267,21 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
         </div>
       )
     },
+    { 
+      header: 'Dia Lanç.', 
+      key: 'dia_lanc', 
+      render: (i: any) => (
+        <input 
+          type="number" 
+          min={1} 
+          max={31} 
+          value={launchDays[i.categoria] || 10} 
+          onChange={(e) => handleLaunchDayChange(i.categoria, Number(e.target.value))}
+          className="w-16 px-2 py-1.5 rounded-xl text-xs font-black outline-none bg-slate-50 text-slate-700 focus:bg-white focus:ring-2 ring-emerald-100 text-center"
+          title="Dia do mês para o lançamento"
+        />
+      )
+    },
     { header: 'Lançamentos', key: 'provisionado', render: (i: any) => <span className={`text-xs font-black ${i.provisionado > 0 ? 'text-amber-500' : 'text-slate-400'}`}>{fmtR(i.provisionado)}</span> },
     { header: 'Realizado', key: 'realizado', render: (i: any) => <span className={`text-xs font-black ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-slate-600'}`}>{fmtR(i.realizado)}</span> },
     { 
@@ -239,7 +292,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
         return <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{diff > 0 ? '+' : ''}{fmtR(Math.round(diff * 100) / 100)}</span>
       }
     }
-  ], [editValues, selectedCategories, favorites])
+  ], [editValues, selectedCategories, favorites, launchDays])
 
   const filteredComparativo = useMemo(() => {
     return showOnlyFavorites 

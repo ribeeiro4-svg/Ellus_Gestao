@@ -21,16 +21,32 @@ ChartJS.register(
   Legend
 );
 
-export default function SlideWaterfall() {
-  // Mock data para o Waterfall. Isso vira do Context/Backend futuramente.
+interface SlideWaterfallProps {
+  kpis: {
+    receitaMes: number;
+    despesaMes: number;
+    resultadoMes: number;
+    inadimplenciaValor: number;
+    [key: string]: any;
+  };
+  composicaoDespesas: { categoria: string; valor: number }[];
+  composicaoReceitas: { categoria: string; valor: number }[];
+}
+
+export default function SlideWaterfall({ kpis, composicaoDespesas, composicaoReceitas }: SlideWaterfallProps) {
+  const rendimentos = composicaoReceitas.filter(c => c.categoria.toLowerCase().includes('rendimento') || c.categoria.toLowerCase().includes('juros') || c.categoria.toLowerCase().includes('aplica')).reduce((s, c) => s + c.valor, 0);
+  const receitasOperacionaisPagas = kpis.receitaMes - rendimentos;
+  
+  const folhaImpostos = composicaoDespesas.filter(c => c.categoria.toLowerCase().includes('folha') || c.categoria.toLowerCase().includes('imposto')).reduce((s, c) => s + c.valor, 0);
+  const outrasDespesas = kpis.despesaMes - folhaImpostos;
+
   const waterfallData = [
-    { label: 'Receitas (Bruto)', value: 125000, type: 'start' },
-    { label: '(-) Inadimplência', value: -15000, type: 'loss' },
-    { label: '(-) Despesas Operac.', value: -45000, type: 'loss' },
-    { label: '(-) Folha/Impostos', value: -35000, type: 'loss' },
-    { label: '(+) Rendimentos', value: 5000, type: 'gain' },
-    { label: 'Resultado Final', value: 35000, type: 'total' },
-  ];
+    { label: 'Receitas (Operacional)', value: receitasOperacionaisPagas, type: 'start' },
+    { label: '(-) Folha/Impostos', value: -folhaImpostos, type: 'loss' },
+    { label: '(-) Despesas Operac.', value: -outrasDespesas, type: 'loss' },
+    { label: '(+) Rendimentos', value: rendimentos, type: 'gain' },
+    { label: 'Resultado Final', value: kpis.resultadoMes, type: 'total' },
+  ].filter(i => i.value !== 0 || i.type === 'start' || i.type === 'total');
 
   // Calcular arrays [start, end] para o ChartJS (Floating Bars)
   const labels = waterfallData.map(d => d.label);
@@ -44,21 +60,21 @@ export default function SlideWaterfall() {
     if (item.type === 'start') {
       dataPairs.push([0, item.value]);
       currentTotal = item.value;
-      backgroundColors.push('rgba(52, 211, 153, 0.2)'); // Emerald
+      backgroundColors.push('rgba(52, 211, 153, 0.8)'); // Emerald
       borderColors.push('rgba(52, 211, 153, 1)');
     } else if (item.type === 'total') {
       dataPairs.push([0, item.value]);
-      backgroundColors.push('rgba(96, 165, 250, 0.2)'); // Blue
+      backgroundColors.push('rgba(96, 165, 250, 0.8)'); // Blue
       borderColors.push('rgba(96, 165, 250, 1)');
     } else {
       const nextTotal = currentTotal + item.value;
       dataPairs.push([currentTotal, nextTotal]);
       currentTotal = nextTotal;
       if (item.value >= 0) {
-        backgroundColors.push('rgba(52, 211, 153, 0.2)'); // Emerald
+        backgroundColors.push('rgba(52, 211, 153, 0.8)'); // Emerald
         borderColors.push('rgba(52, 211, 153, 1)');
       } else {
-        backgroundColors.push('rgba(244, 63, 94, 0.2)'); // Rose
+        backgroundColors.push('rgba(244, 63, 94, 0.8)'); // Rose
         borderColors.push('rgba(244, 63, 94, 1)');
       }
     }
@@ -72,7 +88,7 @@ export default function SlideWaterfall() {
         data: dataPairs,
         backgroundColor: backgroundColors,
         borderColor: borderColors,
-        borderWidth: 2,
+        borderWidth: 3,
         borderRadius: 4,
         borderSkipped: false, // Arredondar todas as bordas
       },
@@ -102,15 +118,19 @@ export default function SlideWaterfall() {
     scales: {
       y: {
         beginAtZero: true,
-        grid: { color: 'rgba(255,255,255,0.05)' },
+        grid: { color: 'rgba(255,255,255,0.15)' },
         ticks: { 
-          color: 'rgba(255,255,255,0.5)',
+          color: 'rgba(255,255,255,1)',
+          font: { weight: 'bold' as const, size: 13 },
           callback: (value: any) => fmtR(value)
         }
       },
       x: {
         grid: { display: false },
-        ticks: { color: 'rgba(255,255,255,0.5)' }
+        ticks: { 
+          color: 'rgba(255,255,255,1)',
+          font: { weight: 'bold' as const, size: 14 }
+        }
       }
     }
   };
@@ -136,18 +156,18 @@ export default function SlideWaterfall() {
         <div className="flex-1 flex flex-col gap-4">
           <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6">
             <h3 className="text-emerald-400/80 text-sm font-bold uppercase tracking-wider mb-2">Entradas Brutas</h3>
-            <p className="text-3xl font-black text-emerald-400">{fmtR(130000)}</p>
+            <p className="text-3xl font-black text-emerald-400">{fmtR(kpis.receitaMes)}</p>
           </div>
           
           <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-6">
             <h3 className="text-rose-400/80 text-sm font-bold uppercase tracking-wider mb-2">Saídas Totais</h3>
-            <p className="text-3xl font-black text-rose-400">{fmtR(95000)}</p>
+            <p className="text-3xl font-black text-rose-400">{fmtR(kpis.despesaMes)}</p>
           </div>
 
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6 mt-auto">
             <h3 className="text-blue-400/80 text-sm font-bold uppercase tracking-wider mb-2">Resultado Final</h3>
-            <p className="text-4xl font-black text-blue-400">{fmtR(35000)}</p>
-            <p className="text-xs text-white/40 mt-2">Margem Líquida de 26.9%</p>
+            <p className="text-4xl font-black text-blue-400">{fmtR(kpis.resultadoMes)}</p>
+            <p className="text-xs text-white/40 mt-2">Margem Líquida de {kpis.receitaMes > 0 ? ((kpis.resultadoMes / kpis.receitaMes) * 100).toFixed(1) : '0'}%</p>
           </div>
         </div>
       </div>

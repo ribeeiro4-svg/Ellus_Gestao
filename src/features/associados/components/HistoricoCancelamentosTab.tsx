@@ -105,7 +105,7 @@ export default function HistoricoCancelamentosTab() {
       <html>
       <head>
         <meta charset="utf-8" />
-        <title>Histórico de Cancelamentos</title>
+        <title>Histórico de Desligamentos</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; padding: 32px; color: #1e293b; }
@@ -127,8 +127,8 @@ export default function HistoricoCancelamentosTab() {
       </head>
       <body>
         <div class="header">
-          <h1>Histórico de Cancelamentos</h1>
-          <p>ACPROBEC — Registros de Solicitações de Cancelamento de Vínculo</p>
+          <h1>Histórico de Desligamentos</h1>
+          <p>ACPROBEC — Registros de Solicitações de Desligamento de Vínculo</p>
         </div>
         <div class="meta">
           <div class="meta-item">Período: <strong>${periodoLabel}</strong></div>
@@ -171,7 +171,7 @@ export default function HistoricoCancelamentosTab() {
         <div>
           <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
             <AlertTriangle className="text-red-500" size={24} />
-            Histórico de Cancelamentos
+            Histórico de Desligamentos
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             {filtrados.length} registro{filtrados.length !== 1 ? 's' : ''} encontrado{filtrados.length !== 1 ? 's' : ''}
@@ -247,8 +247,8 @@ export default function HistoricoCancelamentosTab() {
       {historico.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-400 border border-dashed border-slate-200 rounded-3xl bg-slate-50">
           <AlertTriangle size={48} className="mb-4 text-slate-300 opacity-50" />
-          <p className="text-sm font-bold uppercase tracking-widest">Nenhum registro de cancelamento</p>
-          <p className="text-xs mt-2">Os cancelamentos solicitados aparecerão aqui.</p>
+          <p className="text-sm font-bold uppercase tracking-widest">Nenhum registro de desligamento</p>
+          <p className="text-xs mt-2">Os desligamentos solicitados aparecerão aqui.</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-100">
@@ -305,7 +305,7 @@ export default function HistoricoCancelamentosTab() {
                           target="_blank" 
                           rel="noreferrer"
                           className="flex items-center gap-1 text-[10px] font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 px-2 py-1.5 rounded-lg transition-colors w-max"
-                          title="Baixar Termo de Cancelamento"
+                          title="Baixar Termo de Desligamento"
                         >
                           <FileText size={12} /> VER TERMO
                         </a>

@@ -53,6 +53,7 @@ export default function RelatoriosFinanceirosTab({
   const [filterLink, setFilterLink] = useState<'all' | 'linked' | 'unlinked'>('all')
   const [timeRange, setTimeRange] = useState<'month' | 'today' | '7d' | '14d' | '30d'>('month')
   const [provisionType, setProvisionType] = useState<'all' | 'receita' | 'despesa'>('all')
+  const [reportMode, setReportMode] = useState<'analitico' | 'sintetico'>('analitico')
   const [reserveType, setReserveType] = useState<'percentage' | 'fixed'>('percentage')
   const [reserveValue, setReserveValue] = useState<number>(cashReservePercentage)
 
@@ -145,8 +146,15 @@ export default function RelatoriosFinanceirosTab({
     { 
       header: 'Data', 
       key: 'data', 
-      filterValue: (i: any) => fmtData(i.data), 
-      render: (i: any) => <span className="text-xs font-semibold text-slate-600">{fmtData(i.data)}</span> 
+      filterValue: (i: any) => {
+        const d = fmtData(i.data)
+        return i.isSintetico && d.includes('/') ? d.split('/').slice(1).join('/') : d
+      }, 
+      render: (i: any) => {
+        const d = fmtData(i.data)
+        const display = i.isSintetico && d.includes('/') ? d.split('/').slice(1).join('/') : d
+        return <span className="text-xs font-semibold text-slate-600">{display}</span> 
+      }
     },
     { 
       header: 'Descrição', 
@@ -177,17 +185,17 @@ export default function RelatoriosFinanceirosTab({
       filterValue: (i: any) => fmtR(getBruto(i)), 
       render: (i: any) => <span className={`text-sm font-extrabold ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-rose-600'}`}>{i.tipo === 'receita' ? '+' : '-'}{fmtR(getBruto(i))}</span> 
     },
-    { header: 'Status', key: 'status', render: (i: any) => <StatusBadge status={(i.status === 'aberto' || i.status === 'atrasado') && i.status_cobranca === 'PROCESSANDO' ? 'Processando' : i.status} type="lancamento" /> },
-    { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => <PaymentBadge method={i.forma_pagamento} /> },
+    { header: 'Status', key: 'status', render: (i: any) => i.isSintetico ? <StatusBadge status={'consolidado' as any} type="lancamento" /> : <StatusBadge status={(i.status === 'aberto' || i.status === 'atrasado') && i.status_cobranca === 'PROCESSANDO' ? 'Processando' : i.status} type="lancamento" /> },
+    { header: 'Pagamento', key: 'forma_pagamento', render: (i: any) => i.isSintetico ? <span className="text-[10px] font-bold text-slate-500 uppercase">Várias</span> : <PaymentBadge method={i.forma_pagamento} /> },
     { 
       header: 'Conta', 
       key: 'conta_id', 
-      render: (i: any) => <span className="text-[10px] font-bold text-slate-500">{contas.find(c => c.id === i.conta_id)?.nome || 'N/A'}</span> 
+      render: (i: any) => <span className="text-[10px] font-bold text-slate-500">{i.isSintetico ? 'Múltiplas' : (contas.find(c => c.id === i.conta_id)?.nome || 'N/A')}</span> 
     },
   ], [associados, fornecedores, diretoria, contas])
 
   const filteredData = useMemo(() => {
-    return lancamentos.filter(item => {
+    let filtered = lancamentos.filter(item => {
       const isMatrixReport = selectedReport === 'receitas_mensal' || selectedReport === 'despesas_mensal'
       const statusLower = (item.status || '').toLowerCase()
       const isPaidStatus = ['pago', 'efetivado', 'concluido', 'recebido', 'sucesso'].includes(statusLower)
@@ -305,7 +313,63 @@ export default function RelatoriosFinanceirosTab({
 
       return matchPeriod && matchSearch && matchType && matchLink
     })
-  }, [lancamentos, filterYear, filterMonth, searchTerm, selectedReport, associados, fornecedores, diretoria, selectedCategories, selectedAccounts, selectedStatus, selectedPayments, filterLink, timeRange, selectedMonths, provisionType])
+
+    if (reportMode === 'sintetico' && (selectedReport === 'receitas' || selectedReport === 'despesas')) {
+      const grouped: Record<string, any> = {}
+      filtered.forEach(item => {
+        const cat = (item.categoria || 'Sem Categoria').toUpperCase()
+        let desc = (item.descricao || '').toUpperCase()
+        
+        // Normalize dynamic descriptions
+        if (desc.startsWith('RECEB. DE ADESÃO') || desc.startsWith('RECEB. DE ADESAO')) {
+          desc = 'RECEBIMENTO DE ADESÕES'
+        } else if (desc.startsWith('RECEB. DE MENSALIDADE')) {
+          desc = 'RECEBIMENTO DE MENSALIDADES'
+        }
+        
+        const key = `${cat}:::${desc}`
+        
+        if (!grouped[key]) {
+          grouped[key] = {
+            id: `sintetico-${key}`,
+            isSintetico: true,
+            data: item.data,
+            descricao: desc, // Normalized description
+            categoria: item.categoria,
+            tipo: item.tipo,
+            valor: 0,
+            valor_bruto: 0,
+            status: 'consolidado',
+            forma_pagamento: 'Várias',
+            conta_id: 'Várias'
+          }
+        }
+        grouped[key].valor += getBruto(item)
+      })
+      filtered = Object.values(grouped)
+    }
+
+    if (selectedReport === 'receitas') {
+      filtered.sort((a, b) => {
+        const catA = (a.categoria || '').toUpperCase()
+        const catB = (b.categoria || '').toUpperCase()
+        const isAdesaoA = catA.includes('ADESÃO') || catA.includes('ADESAO') ? 1 : 0
+        const isAdesaoB = catB.includes('ADESÃO') || catB.includes('ADESAO') ? 1 : 0
+        const isMensalidadeA = catA.includes('MENSALIDADE') ? 1 : 0
+        const isMensalidadeB = catB.includes('MENSALIDADE') ? 1 : 0
+        
+        if (isAdesaoA && !isAdesaoB) return -1
+        if (!isAdesaoA && isAdesaoB) return 1
+        
+        if (isMensalidadeA && !isMensalidadeB) return -1
+        if (!isMensalidadeA && isMensalidadeB) return 1
+        
+        return new Date(a.data).getTime() - new Date(b.data).getTime()
+      })
+    }
+
+    return filtered
+  }, [lancamentos, filterYear, filterMonth, searchTerm, selectedReport, associados, fornecedores, diretoria, selectedCategories, selectedAccounts, selectedStatus, selectedPayments, filterLink, timeRange, selectedMonths, provisionType, reportMode])
 
 
   const summaryData = useMemo(() => {
@@ -480,6 +544,33 @@ export default function RelatoriosFinanceirosTab({
       }
     })
     return Object.entries(map).sort((a, b) => b[1] - a[1])
+  }, [lancamentos, filterMonth, filterYear])
+
+  const despesasProvisoesDetalhadas = useMemo(() => {
+    const list: any[] = []
+    lancamentos.forEach(l => {
+      const isInternalTransfer = l.categoria === 'Reserva de Caixa' || l.categoria === 'RESERVA ESTRATÉGICA'
+      const statusLower = (l.status || '').toLowerCase()
+      const isRealized = ['pago', 'efetivado', 'concluido', 'recebido', 'sucesso', 'parcial'].includes(statusLower) || !!l.data_conciliacao
+      
+      let match = false
+      if (isRealized) {
+        const payDate = l.data_conciliacao || l.data
+        match = getMesIdx(payDate) === filterMonth && getAnoIdx(payDate) === filterYear
+      } else {
+        match = getMesIdx(l.data) === filterMonth && getAnoIdx(l.data) === filterYear
+      }
+
+      if (l.tipo === 'despesa' && !isInternalTransfer && match) {
+        list.push(l)
+      }
+    })
+    return list.sort((a, b) => {
+      const dateA = a.data ? new Date(a.data).getTime() : 0;
+      const dateB = b.data ? new Date(b.data).getTime() : 0;
+      if (dateA !== dateB) return dateA - dateB;
+      return (a.descricao || '').localeCompare(b.descricao || '');
+    })
   }, [lancamentos, filterMonth, filterYear])
 
   const provisionsExpenseGroups = useMemo(() => {
@@ -777,7 +868,26 @@ export default function RelatoriosFinanceirosTab({
             </div>
           </div>
 
-          ${selectedReport !== 'provisoes' ? `
+          ${selectedReport === 'receitas' ? `
+            <div class="report-summary-cards" style="max-width: 400px; margin: 0 auto 15px auto;">
+              <div class="report-card">
+                <span class="report-card-label">Ingressos Totais</span>
+                <div class="report-card-value text-emerald-600">${fmtR(reportSummaryMetrics.income)}</div>
+              </div>
+            </div>
+            <div class="report-sub-summary" style="max-width: 600px; margin: 0 auto 25px auto;">
+              <span><strong>Somatório de Adesões:</strong> ${fmtR(reportSummaryMetrics.adesao)}</span>
+              <div style="width: 1px; background: #e2e8f0;"></div>
+              <span><strong>Somatório de Mensalidades:</strong> ${fmtR(reportSummaryMetrics.mensalidade)}</span>
+            </div>
+          ` : selectedReport === 'despesas' ? `
+            <div class="report-summary-cards" style="max-width: 400px; margin: 0 auto 15px auto;">
+              <div class="report-card">
+                <span class="report-card-label">Dispêndios Totais</span>
+                <div class="report-card-value text-rose-600">${fmtR(reportSummaryMetrics.expense)}</div>
+              </div>
+            </div>
+          ` : selectedReport !== 'provisoes' ? `
             <div class="report-summary-cards">
               <div class="report-card">
                 <span class="report-card-label">Ingressos Totais</span>
@@ -1132,6 +1242,21 @@ export default function RelatoriosFinanceirosTab({
 
         {(selectedReport === 'receitas' || selectedReport === 'despesas') && (
           <div className="flex flex-col gap-4 p-5 bg-white rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex flex-wrap gap-2 pb-4 border-b border-slate-100">
+              <p className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Modo de Exibição:</p>
+              <button 
+                onClick={() => setReportMode('analitico')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${reportMode === 'analitico' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'}`}
+              >
+                ANALÍTICO (DETALHADO)
+              </button>
+              <button 
+                onClick={() => setReportMode('sintetico')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-bold transition-all border ${reportMode === 'sintetico' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'}`}
+              >
+                SINTÉTICO (AGRUPADO)
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
               <p className="w-full text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status:</p>
               {['aberto', 'pago', 'atrasado'].map(s => {
@@ -1592,25 +1717,33 @@ export default function RelatoriosFinanceirosTab({
                   <thead>
                     <tr className="border-b border-slate-100">
                       <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descrição</th>
+                      <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-[120px]">Vencimento</th>
                       <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-[150px]">Valor</th>
                       <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right w-[120px]">% do Teto</th>
                       <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center w-[120px]">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {despesasProvisoesPorCategoria.map(([cat, val]) => (
-                      <tr key={cat} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-2 text-xs font-bold text-slate-700 uppercase">{cat}</td>
-                        <td className="px-6 py-2 text-right text-xs font-black text-rose-600 whitespace-nowrap">- {fmtR(val)}</td>
-                        <td className="px-6 py-2 text-right text-[11px] font-bold text-slate-500">{(tetoReal > 0 ? (val/tetoReal)*100 : 0).toFixed(1)}%</td>
+                    {despesasProvisoesDetalhadas.map((item, idx) => (
+                      <tr key={item.id || idx} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-2">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-slate-700 uppercase">{item.descricao}</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{item.categoria || 'Sem Categoria'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-2 text-center text-xs font-semibold text-slate-600">{fmtData(item.data)}</td>
+                        <td className="px-6 py-2 text-right text-xs font-black text-rose-600 whitespace-nowrap">- {fmtR(getBruto(item))}</td>
+                        <td className="px-6 py-2 text-right text-[11px] font-bold text-slate-500">{(tetoReal > 0 ? (getBruto(item)/tetoReal)*100 : 0).toFixed(1)}%</td>
                         <td className="px-6 py-2 text-center">
-                          <span className="inline-flex px-3 py-1 bg-amber-50 text-amber-700 text-[9px] font-black uppercase tracking-widest rounded-full border border-amber-200/50">Aberto</span>
+                          <StatusBadge status={(item.status === 'aberto' || item.status === 'atrasado') && item.status_cobranca === 'PROCESSANDO' ? 'Processando' : item.status} type="lancamento" />
                         </td>
                       </tr>
                     ))}
                     {/* Fundo de Caixa */}
                     <tr className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-2 text-xs font-bold text-slate-500 uppercase">Fundo de Caixa - Reserva Técnica ({reserveType === 'percentage' ? reserveValue + '%' : 'Fixo'})</td>
+                      <td className="px-6 py-2 text-center text-xs font-semibold text-slate-600">--</td>
                       <td className="px-6 py-2 text-right text-xs font-black text-slate-600 whitespace-nowrap">- {fmtR(fundoCaixaProvisionado)}</td>
                       <td className="px-6 py-2 text-right text-[11px] font-bold text-slate-500">{(tetoReal > 0 ? (fundoCaixaProvisionado/tetoReal)*100 : 0).toFixed(1)}%</td>
                       <td className="px-6 py-2 text-center">
@@ -1620,12 +1753,14 @@ export default function RelatoriosFinanceirosTab({
                     {/* Totais */}
                     <tr className="bg-slate-50/50 border-t-2 border-slate-100">
                       <td className="px-6 py-3 text-xs font-black text-slate-900 uppercase tracking-widest">Total Geral de Dispêndios Projetados</td>
+                      <td className="px-6 py-3"></td>
                       <td className="px-6 py-3 text-right text-sm font-black text-rose-600 whitespace-nowrap">- {fmtR(totalProvisionsExpense + fundoCaixaProvisionado)}</td>
                       <td className="px-6 py-3 text-right text-xs font-black text-slate-900">{(tetoReal > 0 ? ((totalProvisionsExpense + fundoCaixaProvisionado)/tetoReal)*100 : 0).toFixed(1)}%</td>
                       <td className="px-6 py-3 text-center"></td>
                     </tr>
                     <tr className="bg-slate-50 border-t border-slate-200">
                       <td className="px-6 py-3 text-xs font-black text-slate-900 uppercase tracking-widest">Resultado Projetado no Período</td>
+                      <td className="px-6 py-3"></td>
                       <td className="px-6 py-3 text-right text-sm font-black text-rose-600">
                          {tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado) < 0 ? '-' : ''} {fmtR(Math.abs(tetoReal - (totalProvisionsExpense + fundoCaixaProvisionado)))}
                       </td>

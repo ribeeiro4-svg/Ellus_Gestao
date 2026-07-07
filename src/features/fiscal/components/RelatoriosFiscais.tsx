@@ -395,7 +395,7 @@ export default function RelatoriosFiscais({ nfeHook, nfseHook, estoqueHook }: { 
           { id: 'rep-prestadores', title: 'Resumo de Prestadores', desc: 'Serviços Tomados (NFS-e) agrupados por Prestador', icon: Users, color: 'text-rose-500', bg: 'bg-rose-50' },
           { id: 'rep-estoque', title: 'Inventário de Estoque', desc: 'Posição física e financeira do almoxarifado/consumo', icon: Package, color: 'text-teal-500', bg: 'bg-teal-50' },
         ].map((rel, i) => (
-          <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-blue-200 transition-all group flex flex-col justify-between">
+          <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-700/30 transition-all group flex flex-col justify-between">
             <div>
               <div className={`w-10 h-10 rounded-xl ${rel.bg} flex items-center justify-center ${rel.color} transition-all mb-4`}>
                 <rel.icon size={20} />
@@ -406,7 +406,7 @@ export default function RelatoriosFiscais({ nfeHook, nfseHook, estoqueHook }: { 
             
             <button 
               onClick={() => handleImprimir(rel.id, rel.title)}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black hover:bg-blue-700 transition-all shadow-md flex items-center justify-center gap-2 uppercase tracking-widest"
+              className="w-full py-2.5 bg-emerald-700 text-white rounded-xl text-[10px] font-black hover:bg-emerald-800 transition-all shadow-md flex items-center justify-center gap-2 uppercase tracking-widest"
             >
               <Printer size={12} />
               Emitir Relatório

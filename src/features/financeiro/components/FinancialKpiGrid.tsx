@@ -72,19 +72,11 @@ export default function FinancialKpiGrid({
       icon: <Wallet size={14} />,
       detail: `${fmtR(kpis.saldoCaixa)} Espécie / ${fmtR(kpis.saldoBanco)} Banco`
     },
-    { 
-      label: 'Fundo de Caixa', 
-      value: fmtR(fundoCaixaReal), 
-      color: 'text-amber-600',
-      icon: <Banknote size={14} />,
-      detail: `Meta de Reserva: ${fmtR(fundoCaixaMeta)} (${cashReservePercentage}%)`,
-      isReserve: true
-    },
   ]
 
   return (
     <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-8 w-full">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 flex-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-1">
         {cards.map(k => (
           <div 
             key={k.label} 
@@ -99,28 +91,7 @@ export default function FinancialKpiGrid({
                 {k.progress !== undefined && (
                    <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">{Math.round(k.progress)}%</span>
                 )}
-                {k.isReserve && (
-                  <div className="flex items-center gap-2">
-                    {!hasReserveAccount && (
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); onFixAccount(); }}
-                        className="flex items-center gap-1.5 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-amber-200 transition-all border border-amber-200 animate-pulse"
-                        title="Conta Bancária 'Fundo de Caixa' não encontrada. Clique para criar."
-                      >
-                        <Plus size={12} strokeWidth={3} /> Criar Conta
-                      </button>
-                    )}
-                    <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100/50">
-                      <input 
-                        type="number" 
-                        value={cashReservePercentage}
-                        onChange={(e) => onCashReservePercentageChange(Number(e.target.value))}
-                        className="w-8 bg-transparent text-[10px] font-black text-amber-700 outline-none text-center"
-                      />
-                      <span className="text-[10px] font-black text-amber-700 opacity-40">%</span>
-                    </div>
-                  </div>
-                )}
+
               </div>
               <div className={`text-xl font-black tracking-tight ${k.color}`}>{k.value}</div>
             </div>
@@ -141,27 +112,6 @@ export default function FinancialKpiGrid({
           </div>
         ))}
       </div>
-      
-      {(onNewIngresso || onNewDespesa) && (
-        <div className="flex flex-col gap-2 min-w-[160px]">
-          {onNewIngresso && (
-            <button 
-              onClick={onNewIngresso} 
-              className="flex-1 px-6 py-4 bg-emerald-600 text-white rounded-[20px] font-black text-[11px] uppercase tracking-[2px] hover:bg-emerald-500 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-emerald-900/10 flex items-center justify-center gap-2 border border-white/10"
-            >
-              <Plus size={18} strokeWidth={3} /> Ingresso
-            </button>
-          )}
-          {onNewDespesa && (
-            <button 
-              onClick={onNewDespesa} 
-              className="flex-1 px-6 py-4 bg-rose-600 text-white rounded-[20px] font-black text-[11px] uppercase tracking-[2px] hover:bg-rose-500 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-rose-900/10 flex items-center justify-center gap-2 border border-white/10"
-            >
-              <Plus size={18} strokeWidth={3} /> Dispêndio
-            </button>
-          )}
-        </div>
-      )}
     </div>
   )
 }

@@ -1,6 +1,8 @@
 'use server'
 import { createServerSupabase } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
+import { cookies } from 'next/headers'
+import { verifyToken } from '@/lib/auth/rbac'
 
 function createAdminSupabase() {
   return createClient(
@@ -46,7 +48,19 @@ export async function getLogsAction(params: {
        console.warn(`Erro ao buscar logs (${module}):`, error.message)
        // Fallback caso a tabela fiscal_logs não exista ainda
        if (module === 'fiscal' && error.message.includes('relation "fiscal_logs" does not exist')) {
-         return { success: true, data: [], info: 'Tabela de logs fiscais ainda não criada.' }
+         let fallbackQuery = sbAdmin.from('contabil_logs').select('*').like('acao', 'FISCAL:%')
+         if (tenantId) fallbackQuery = fallbackQuery.eq('tenant_id', tenantId)
+         if (startDate) fallbackQuery = fallbackQuery.gte('created_at', `${startDate}T00:00:00`)
+         if (endDate) fallbackQuery = fallbackQuery.lte('created_at', `${endDate}T23:59:59`)
+         
+         const { data: fallbackData } = await fallbackQuery.order('created_at', { ascending: false }).limit(200)
+         
+         const formattedData = fallbackData ? fallbackData.map(log => ({
+            ...log,
+            acao: log.acao.replace('FISCAL: ', '')
+         })) : []
+
+         return { success: true, data: formattedData, info: 'Usando fallback contabil_logs' }
        }
        return { success: false, data: [], error: 'Falha ao recuperar logs.' }
     }
@@ -68,13 +82,26 @@ export async function registrarLogFiscalAction(acao: string, detalhes: string) {
   const tenantId = user.app_metadata?.tenant_id || user.user_metadata?.tenant_id
   if (!tenantId) return { error: 'Tenant ID não identificado' }
 
+  // Identificação via RBAC
+  let autor = 'Usuário do Sistema'
+  const token = cookies().get('rbac_token')?.value
+  if (token) {
+    const payload = await verifyToken(token)
+    if (payload && payload.colaborador) {
+       const perfilNome = payload.colaborador.perfil_id === 1 ? 'Administrador' : (payload.colaborador.perfil_nome || 'Colaborador')
+       autor = `${payload.colaborador.nome} (${perfilNome})`
+    }
+  }
+
+  const detalhesComAutor = `Autor da Ação: ${autor} | ${detalhes}`
+
   const sbAdmin = createAdminSupabase()
   
   // Tenta inserir na fiscal_logs, se falhar cai na contabil_logs com prefixo FISCAL
   const { error } = await sbAdmin.from('fiscal_logs').insert({
     tenant_id: tenantId,
     acao,
-    detalhes
+    detalhes: detalhesComAutor
   })
 
   if (error) {
@@ -82,7 +109,7 @@ export async function registrarLogFiscalAction(acao: string, detalhes: string) {
     await sbAdmin.from('contabil_logs').insert({
       tenant_id: tenantId,
       acao: `FISCAL: ${acao}`,
-      detalhes
+      detalhes: detalhesComAutor
     })
   }
 

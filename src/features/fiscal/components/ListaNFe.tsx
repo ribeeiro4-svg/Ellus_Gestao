@@ -1,9 +1,18 @@
 'use client'
 import React, { useState, useMemo } from 'react'
 import { Search, FileText, CheckCircle, Clock, AlertTriangle, Eye, Trash2, PenLine, RefreshCw, Printer, ArrowRight } from 'lucide-react'
+import { getPeriodoStatusAction } from '@/features/fiscal/actions/periodoFiscalActions'
+import { useTenantId } from '@/lib/hooks/useTenantId'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtData = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
+const formatDateSafe = (dateStr: string) => {
+  if (!dateStr) return '--'
+  try {
+    const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00')
+    return isNaN(d.getTime()) ? '--' : d.toLocaleDateString('pt-BR')
+  } catch { return '--' }
+}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   pendente: { label: 'Pendente', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100', icon: Clock },
@@ -13,10 +22,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 }
 
 export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEscriturar: (id: string) => void }) {
+  const tenantId = useTenantId()
   const { nfes, loading, remover, removerLote, filterPeriodo, setFilterPeriodo } = nfeHook
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const visualizarDanfe = async (nfe: any) => {
     let itens = nfe.itens
@@ -55,12 +66,48 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
     )
   }
 
+  const verificarPeriodo = async (dataEmissao: string) => {
+    if (!tenantId) return false
+    const competencia = dataEmissao.slice(0, 7) + '-01'
+    const res = await getPeriodoStatusAction(competencia, tenantId)
+    if (res.status === 'fechado' || res.status === 'bloqueado') {
+      alert(`Não é possível excluir: O período fiscal (${competencia.slice(0, 7)}) está FECHADO. Solicite a reabertura ao Tesoureiro.`)
+      return false
+    }
+    return true
+  }
+
   const handleExcluirLote = async () => {
     if (!selectedIds.length) return
-    if (confirm(`Tem certeza que deseja excluir ${selectedIds.length} nota(s) permanentemente?`)) {
+    
+    // Pegar a primeira nota para checar o periodo
+    const nfeRef = nfes.find((n: any) => n.id === selectedIds[0])
+    if (nfeRef) {
+      setIsDeleting(true)
+      const podeExcluir = await verificarPeriodo(nfeRef.data_emissao)
+      if (!podeExcluir) { setIsDeleting(false); return }
+      setIsDeleting(false)
+    }
+
+    if (confirm(`Tem certeza que deseja mover ${selectedIds.length} nota(s) para a lixeira (Soft Delete)?`)) {
+      setIsDeleting(true)
       const { error } = await removerLote(selectedIds)
+      setIsDeleting(false)
       if (error) alert('Erro ao excluir: ' + error)
       else setSelectedIds([])
+    }
+  }
+
+  const handleExcluir = async (nfe: any) => {
+    setIsDeleting(true)
+    const podeExcluir = await verificarPeriodo(nfe.data_emissao)
+    setIsDeleting(false)
+    if (!podeExcluir) return
+
+    if (confirm('Deseja mover esta nota para a lixeira (Soft Delete)?')) {
+      setIsDeleting(true)
+      await remover(nfe.id)
+      setIsDeleting(false)
     }
   }
 
@@ -94,7 +141,8 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
         {selectedIds.length > 0 ? (
           <button
             onClick={handleExcluirLote}
-            className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-black border border-rose-100 hover:bg-rose-100 transition-all"
+            disabled={isDeleting}
+            className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 rounded-xl text-xs font-black border border-rose-100 hover:bg-rose-100 transition-all disabled:opacity-50"
           >
             <Trash2 size={14} /> EXCLUIR SELECIONADAS ({selectedIds.length})
           </button>
@@ -163,7 +211,23 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-5 px-6 border-x border-slate-100/50 hidden xl:flex">
+                  {/* Datas */}
+                  <div className="flex items-center gap-6 px-6 border-l border-slate-100/50 hidden lg:flex">
+                    <div className="text-left min-w-[70px]">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase">Emissão</span>
+                      <span className="text-[10px] font-bold text-slate-600">{formatDateSafe(nfe.data_emissao)}</span>
+                    </div>
+                    <div className="text-left min-w-[70px]">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase">Entrada</span>
+                      <span className="text-[10px] font-bold text-slate-600">{formatDateSafe(nfe.data_entrada || nfe.created_at)}</span>
+                    </div>
+                    <div className="text-left min-w-[70px]">
+                      <span className="block text-[8px] font-black text-slate-400 uppercase">Escrituração</span>
+                      <span className="text-[10px] font-bold text-slate-600">{formatDateSafe(nfe.data_classificacao)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-5 px-6 border-l border-slate-100/50 hidden xl:flex">
                     <div className="text-center min-w-[80px]">
                       <span className="block text-[8px] font-black text-slate-400 uppercase">Total</span>
                       <span className="text-sm font-black text-slate-800">{fmtR(nfe.valor_total)}</span>
@@ -195,7 +259,7 @@ export default function ListaNFe({ nfeHook, onEscriturar }: { nfeHook: any; onEs
                         <Eye size={11} /> REVISAR
                       </button>
                     )}
-                    <button onClick={() => confirm('Excluir esta nota?') && remover(nfe.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all" title="Excluir">
+                    <button onClick={() => handleExcluir(nfe)} disabled={isDeleting} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-50" title="Mover para lixeira">
                       <Trash2 size={16} />
                     </button>
                   </div>

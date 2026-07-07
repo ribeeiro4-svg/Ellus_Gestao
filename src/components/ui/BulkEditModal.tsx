@@ -65,6 +65,7 @@ export default function BulkEditModal({
       categoria: 'Categoria',
       forma_pagamento: 'Forma de Pagamento',
       status_cobranca: 'Status de Cobrança',
+      valor: 'Valor (R$)',
       vencimento_dia_bulk: 'Dia de Vencimento',
       competencia_mes: 'Mês de Competência',
       competencia_ano: 'Ano de Competência',
@@ -96,6 +97,9 @@ export default function BulkEditModal({
     if (k === 'fixo_variavel') {
       if (v === 'fixo') return 'Fixo'
       if (v === 'variavel') return 'Variável'
+    }
+    if (k === 'valor') {
+      return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     }
     return v
   }
@@ -150,6 +154,22 @@ export default function BulkEditModal({
                     <option value="pago">Efetivado (Pago)</option>
                     <option value="aberto">Provisionado (Aberto)</option>
                   </select>
+                </div>
+
+                {/* Valor */}
+                <div>
+                  <label className="flex items-center gap-2 text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+                    <CreditCard size={14} className="text-emerald-500" /> Valor (R$)
+                  </label>
+                  <input 
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Manter original"
+                    value={formData.valor !== undefined ? formData.valor : ''}
+                    onChange={(e) => handleChange('valor', e.target.value ? parseFloat(e.target.value) : undefined)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                  />
                 </div>
 
                 {/* Natureza */}

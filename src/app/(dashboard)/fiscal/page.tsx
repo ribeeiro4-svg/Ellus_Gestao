@@ -136,6 +136,51 @@ export default function FiscalPage() {
 
   return (
     <div className="flex flex-col gap-3 animate-in fade-in duration-700">
+      <style>{`
+        .period-chip {
+          font-size: 11.5px;
+          background: #fff;
+          border: 1px solid #e4e9e7;
+          padding: 6px 12px;
+          border-radius: 20px;
+          color: #5b6b67;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 6px;
+          width: fit-content;
+        }
+        .period-chip b { color: #16221f; }
+        
+        .kpi-neutral { opacity: 0.75; }
+        .kpi-neutral .kpi-value { color: #5b6b67; }
+        .kpi-alert { border-color: #f3c9c2; background: #fff5f3; }
+        .kpi-alert .kpi-value { color: #c94a3b; }
+        
+        .empty-state {
+          display: flex; flex-direction: column; align-items: center;
+          text-align: center; padding: 26px 10px 8px; color: #5b6b67;
+        }
+        .empty-state .ic-big { font-size: 26px; opacity: 0.5; margin-bottom: 10px; }
+        .empty-state .msg { font-size: 13px; max-width: 260px; margin-bottom: 14px; }
+        
+        .mini-tax { display: flex; gap: 12px; width: 100%; }
+        .mini-tax-item { flex: 1; background: #f4f6f8; border-radius: 10px; padding: 10px 14px; }
+        .mini-tax-item .l { font-size: 10px; text-transform: uppercase; color: #5b6b67; font-weight: 800; margin-bottom: 4px; }
+        .mini-tax-item .v { font-size: 15px; font-weight: 700; color: #16221f; }
+        
+        .stock-summary {
+          background: #fff; border-radius: 14px; border: 1px solid #e4e9e7;
+          padding: 18px 20px; display: flex; align-items: center; justify-content: space-between;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .stock-summary:hover { border-color: #12a793; box-shadow: 0 4px 12px rgba(18, 167, 147, 0.1); }
+        .stock-mini-stats { display: flex; gap: 22px; font-size: 12.5px; color: #5b6b67; }
+        .stock-mini-stats b { display: block; font-size: 14px; color: #16221f; margin-bottom: 2px; }
+        .link-arrow { color: #12a793; font-weight: 700; font-size: 12.5px; }
+      `}</style>
+      
       {/* Header Centralizado - Estilo Hub Premium */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white/40 backdrop-blur-md py-3.5 px-6 rounded-2xl border border-white/60 shadow-sm">
         <div className="flex items-center gap-4">
@@ -143,13 +188,7 @@ export default function FiscalPage() {
             {getActiveIcon()}
           </div>
           <div>
-            <div className="flex flex-col gap-2">
-              <button onClick={fetchLogs}
-                className="w-fit flex items-center gap-2 px-4 py-1.5 text-[9px] font-black text-emerald-700 bg-white/80 border border-emerald-100 hover:bg-emerald-50 rounded-full transition-all shadow-sm uppercase tracking-widest">
-                {loadingLogs ? <Loader2 size={12} className="animate-spin text-emerald-600" /> : <History size={12} className="text-emerald-600" />}
-                Auditoria & Histórico
-              </button>
-
+            <div className="flex flex-col gap-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-xl font-black text-slate-800 tracking-tight leading-tight">Escrituração Fiscal</h1>
                 {nfeHook.stats.pendentes > 0 && (
@@ -161,28 +200,45 @@ export default function FiscalPage() {
               </div>
             </div>
             <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest opacity-70 mt-1">EFD-ICMS/IPI • Modelo 55 • SPED — ACPROBEC</p>
+            <div className="period-chip">
+              📅 Visão Geral · <b>{currentPeriod === 'all' ? 'Todos os Períodos' : periodosOpcoes.find(p => p.value === currentPeriod)?.label}</b>
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center bg-white/60 rounded-[22px] border border-white p-1.5 shadow-inner backdrop-blur-sm">
-            <div className="flex items-center bg-white/80 rounded-xl px-4 py-2 border border-slate-100/50">
-              <Calendar size={14} className="text-slate-400 mr-3" />
-              <select 
-                value={currentPeriod} 
-                onChange={(e) => handlePeriodoChange(e.target.value)}
-                className="bg-transparent border-none text-[11px] font-black text-slate-700 focus:ring-0 p-0 pr-6 cursor-pointer uppercase tracking-widest"
-              >
-                <option value="all">Visão Geral</option>
-                {periodosOpcoes.map(p => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
+        <div className="flex flex-col xl:items-end gap-3 mt-2 xl:mt-0">
+          {/* Ações Rápidas (Topo) */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button onClick={fetchLogs}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-full transition-all uppercase tracking-widest">
+              {loadingLogs ? <Loader2 size={12} className="animate-spin text-slate-400" /> : <History size={12} />}
+              Auditoria & Histórico
+            </button>
+            
+            <button onClick={() => setActiveTab('importar')} className="flex items-center gap-2 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all bg-[#12a793] text-white hover:bg-[#0f8e7d] shadow-sm">
+              ↑ Importar NF-e
+            </button>
+
+            {/* Seleção de período */}
+            <div className="flex items-center bg-white/60 rounded-[22px] border border-white p-1.5 shadow-inner backdrop-blur-sm">
+              <div className="flex items-center bg-white/80 rounded-xl px-4 py-2 border border-slate-100/50">
+                <Calendar size={14} className="text-slate-400 mr-2" />
+                <select 
+                  value={currentPeriod} 
+                  onChange={(e) => handlePeriodoChange(e.target.value)}
+                  className="bg-transparent border-none text-[11px] font-black text-slate-700 focus:ring-0 p-0 pr-6 cursor-pointer uppercase tracking-widest"
+                >
+                  <option value="all">Todos</option>
+                  {periodosOpcoes.map(p => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
-
-          {/* Tab Switcher - Premium Interaction */}
-          <div className="bg-slate-100/60 p-1.5 rounded-[22px] flex flex-wrap items-center gap-1 border border-slate-200/40 backdrop-blur-sm shadow-inner">
+          
+          {/* Tab Switcher - Premium Interaction (Abaixo) */}
+          <div className="bg-slate-100/60 p-1.5 rounded-[22px] flex items-center gap-1 border border-slate-200/40 backdrop-blur-sm shadow-inner w-full xl:w-auto overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id
               const Icon = tab.icon
@@ -192,7 +248,7 @@ export default function FiscalPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`
-                    relative flex items-center gap-2 px-3 py-2 rounded-[14px] text-[9px] font-black uppercase tracking-wider transition-all duration-500
+                    relative flex items-center gap-2 px-3 py-2 rounded-[14px] text-[9px] font-black uppercase tracking-wider transition-all duration-500 whitespace-nowrap
                     ${isActive 
                       ? 'bg-white text-[#0e2d22] shadow-md border border-slate-200/50 scale-105' 
                       : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'}
@@ -228,15 +284,15 @@ export default function FiscalPage() {
         <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl z-[110] p-6 animate-in slide-in-from-right duration-300 border-l border-slate-100">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-sm font-black text-slate-800 uppercase flex items-center gap-2">
-              <Activity size={16} className="text-blue-600" /> Auditoria Fiscal
+              <Activity size={16} className="text-emerald-600" /> Auditoria Fiscal
             </h3>
             <button onClick={() => setShowLogs(false)} className="p-1.5 hover:bg-slate-100 rounded-full">
               <X size={18} className="text-slate-400" />
             </button>
           </div>
 
-          <div className="bg-blue-50/50 p-4 rounded-2xl mb-6 border border-blue-100/50">
-            <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-3">Filtrar Período</p>
+          <div className="bg-emerald-50/50 p-4 rounded-2xl mb-6 border border-emerald-100/50">
+            <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-3">Filtrar Período</p>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="text-[8px] font-black text-slate-400 uppercase ml-1">Início</label>
@@ -244,7 +300,7 @@ export default function FiscalPage() {
                   type="date" 
                   value={logFilters.startDate}
                   onChange={(e) => setLogFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                  className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-[10px] font-bold outline-none focus:ring-2 ring-blue-500/10 focus:border-blue-600"
+                  className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-[10px] font-bold outline-none focus:ring-2 ring-emerald-500/10 focus:border-emerald-600"
                 />
               </div>
               <div className="space-y-1">
@@ -253,13 +309,13 @@ export default function FiscalPage() {
                   type="date" 
                   value={logFilters.endDate}
                   onChange={(e) => setLogFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                  className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-[10px] font-bold outline-none focus:ring-2 ring-blue-500/10 focus:border-blue-600"
+                  className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-[10px] font-bold outline-none focus:ring-2 ring-emerald-500/10 focus:border-emerald-600"
                 />
               </div>
             </div>
             <button 
               onClick={fetchLogs}
-              className="w-full mt-3 py-2 bg-white border border-blue-100 text-blue-600 rounded-xl text-[9px] font-black hover:bg-blue-50 transition-all uppercase tracking-widest"
+              className="w-full mt-3 py-2 bg-white border border-emerald-100 text-emerald-600 rounded-xl text-[9px] font-black hover:bg-emerald-50 transition-all uppercase tracking-widest"
             >
               Aplicar Filtro
             </button>
@@ -272,7 +328,7 @@ export default function FiscalPage() {
               logs.map((log: any) => (
                 <div key={log.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
                   <div className="flex justify-between items-start mb-1">
-                    <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter bg-blue-50 px-2 py-0.5 rounded-lg">
+                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter bg-emerald-50 px-2 py-0.5 rounded-lg">
                       {log.acao}
                     </span>
                     <span className="text-[9px] text-slate-400 font-bold">
@@ -288,7 +344,7 @@ export default function FiscalPage() {
           <div className="absolute bottom-6 left-6 right-6">
             <button 
               onClick={imprimirLogsPDF}
-              className="w-full py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2 uppercase tracking-widest"
+              className="w-full py-3 bg-emerald-700 text-white rounded-2xl text-[10px] font-black hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-700/20 flex items-center justify-center gap-2 uppercase tracking-widest"
             >
               <Printer size={14} /> Imprimir Relatório Fiscal
             </button>

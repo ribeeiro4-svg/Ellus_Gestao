@@ -1,7 +1,9 @@
 'use client'
 import React, { useState, useRef, useCallback } from 'react'
-import { Upload, FileText, CheckCircle, XCircle, AlertTriangle, Eye, Loader2 } from 'lucide-react'
+import { Upload, FileText, CheckCircle, XCircle, AlertTriangle, Eye, Loader2, Ban } from 'lucide-react'
 import { parseNFeFile, NFeParsed } from '@/features/fiscal/utils/nfeParser'
+import { verificarDuplicidadeNFeAction } from '@/features/fiscal/actions/importarNFeAction'
+import { useTenantId } from '@/lib/hooks/useTenantId'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtData = (d: string) => {
@@ -10,10 +12,12 @@ const fmtData = (d: string) => {
 }
 
 export default function ImportarNFe({ nfeHook, onImported }: { nfeHook: any; onImported?: () => void }) {
+  const tenantId = useTenantId()
   const [dragging, setDragging] = useState(false)
   const [previews, setPreviews] = useState<NFeParsed[]>([])
   const [importing, setImporting] = useState(false)
   const [results, setResults] = useState<{ file: string; ok: boolean; msg: string }[]>([])
+  const [duplicatas, setDuplicatas] = useState<Record<string, any>>({})
   const inputRef = useRef<HTMLInputElement>(null)
 
   const processFiles = async (files: FileList | File[]) => {
@@ -22,6 +26,18 @@ export default function ImportarNFe({ nfeHook, onImported }: { nfeHook: any; onI
     const parsed = await Promise.all(arr.map(f => parseNFeFile(f)))
     setPreviews(parsed)
     setResults([])
+    setDuplicatas({})
+    // Verificar duplicidades no servidor
+    if (tenantId) {
+      const dups: Record<string, any> = {}
+      await Promise.all(parsed.map(async nfe => {
+        if (nfe.chaveAcesso && nfe.valido) {
+          const result = await verificarDuplicidadeNFeAction(nfe.chaveAcesso, tenantId)
+          if (result.duplicada) dups[nfe.chaveAcesso] = result
+        }
+      }))
+      if (Object.keys(dups).length > 0) setDuplicatas(dups)
+    }
   }
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -140,11 +156,11 @@ export default function ImportarNFe({ nfeHook, onImported }: { nfeHook: any; onI
               </button>
               <button
                 onClick={confirmarImportacao}
-                disabled={importing || previews.every(p => !p.valido)}
+                disabled={importing || previews.every(p => !p.valido) || Object.keys(duplicatas).length > 0}
                 className="px-6 py-2 text-xs font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all disabled:opacity-50 flex items-center gap-2"
               >
                 {importing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                {importing ? 'Importando...' : `Confirmar ${previews.filter(p => p.valido).length} NF-e(s)`}
+                {importing ? 'Importando...' : `Confirmar ${previews.filter(p => p.valido && !duplicatas[p.chaveAcesso]).length} NF-e(s)`}
               </button>
             </div>
           </div>
@@ -187,6 +203,17 @@ export default function ImportarNFe({ nfeHook, onImported }: { nfeHook: any; onI
                 {nfe.crtEmitente === '1' && (
                   <div className="mt-2 flex items-center gap-2 text-[10px] text-orange-600 font-bold bg-orange-50 px-3 py-1.5 rounded-lg">
                     <AlertTriangle size={11} /> Emitente Simples Nacional (CRT=1) — usar CSOSN ao invés de CST ICMS regular
+                  </div>
+                )}
+                {/* Badge de duplicata — mostra informações da nota já existente */}
+                {duplicatas[nfe.chaveAcesso] && (
+                  <div className="mt-2 flex items-start gap-2 text-[10px] text-red-700 font-bold bg-red-50 border border-red-200 px-3 py-2 rounded-lg">
+                    <Ban size={12} className="shrink-0 mt-0.5" />
+                    <span>
+                      ❌ JÁ IMPORTADA — Status: <strong>{duplicatas[nfe.chaveAcesso].status?.toUpperCase()}</strong>
+                      {duplicatas[nfe.chaveAcesso].data_escrituracao && ` | Escriturada em: ${new Date(duplicatas[nfe.chaveAcesso].data_escrituracao).toLocaleDateString('pt-BR')}`}
+                      <br/>Esta NF-e já existe no banco. Não é possível importar novamente.
+                    </span>
                   </div>
                 )}
                 {!nfe.valido && (

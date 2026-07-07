@@ -3,7 +3,13 @@ import { CheckCircle, Download, FileText, Loader2 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
-export default function SlideMensagemFinal() {
+import { PlanoAcaoTask } from './SlidePlanoAcao';
+
+interface SlideMensagemFinalProps {
+  deliberacoes: PlanoAcaoTask[];
+}
+
+export default function SlideMensagemFinal({ deliberacoes = [] }: SlideMensagemFinalProps) {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleDownloadAta = () => {
@@ -64,11 +70,11 @@ export default function SlideMensagemFinal() {
           "• Operações: O volume de atendimentos aumentou 12% no último trimestre, mas o SLA de resposta permaneceu estável em 98%."
         ]);
         
-        addSection("3. DELIBERAÇÕES E TAREFAS (MODO CONSELHO)", [
-          "• [Aprovado] Plano de redução de despesas operacionais em 5% no próximo semestre.",
-          "• [Ação Pendente] Assinatura das 3 atas do conselho ainda pendentes de formalização digital pela diretoria jurídica.",
-          "• [Campanha] Focar esforço comercial na aquisição de novos associados Pessoa Jurídica no próximo mês."
-        ]);
+        const planoAcaoStrings = deliberacoes.length > 0 
+          ? deliberacoes.map(t => `• [${t.status === 'completed' ? 'Concluído' : 'Pendente'}] ${t.title} (Resp: ${t.owner} | Prazo: ${t.deadline})`)
+          : ["• Nenhuma deliberação registrada nesta reunião."];
+          
+        addSection("3. PLANO DE AÇÃO EXECUTÁVEL", planoAcaoStrings);
         
         // Assinaturas
         cursorY += 20;

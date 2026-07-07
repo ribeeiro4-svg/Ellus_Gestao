@@ -1,6 +1,7 @@
 'use client'
 import React from 'react'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler } from 'chart.js'
+import ChartDataLabels from 'chartjs-plugin-datalabels'
 import { Chart } from 'react-chartjs-2'
 import type { FluxoMensal } from '../../hooks/useApresentacaoData'
 import CountUp from '../CountUp'
@@ -41,6 +42,16 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
         barPercentage: 0.6,
         categoryPercentage: 0.8,
         order: 2,
+        datalabels: {
+          color: 'rgba(16,185,129,1)',
+          textStrokeColor: 'rgba(0,0,0,0.8)',
+          textStrokeWidth: 2,
+          anchor: 'end' as const,
+          align: 'top' as const,
+          offset: 4,
+          font: { family: 'system-ui, sans-serif', weight: 'bold' as const, size: 12 },
+          formatter: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        }
       },
       {
         type: 'bar' as const,
@@ -54,6 +65,16 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
         barPercentage: 0.6,
         categoryPercentage: 0.8,
         order: 2,
+        datalabels: {
+          color: 'rgba(251,113,133,1)',
+          textStrokeColor: 'rgba(0,0,0,0.8)',
+          textStrokeWidth: 2,
+          anchor: 'end' as const,
+          align: 'top' as const,
+          offset: 4,
+          font: { family: 'system-ui, sans-serif', weight: 'bold' as const, size: 12 },
+          formatter: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        }
       },
       {
         type: 'line' as const,
@@ -70,6 +91,16 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
         tension: 0.4,
         fill: true,
         order: 1,
+        datalabels: {
+          color: 'rgba(250,204,21,1)',
+          textStrokeColor: 'rgba(0,0,0,0.8)',
+          textStrokeWidth: 2,
+          anchor: 'start' as const,
+          align: 'bottom' as const,
+          offset: 12,
+          font: { family: 'system-ui, sans-serif', weight: 'bold' as const, size: 14 },
+          formatter: (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        }
       }
     ]
   }
@@ -86,18 +117,7 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
         labels: { color: 'rgba(255,255,255,0.9)', font: { size: 20, family: 'system-ui, sans-serif', weight: 'normal' as const }, boxWidth: 24, padding: 30 }
       },
       tooltip: {
-        backgroundColor: 'rgba(4,13,10,0.95)',
-        borderColor: 'rgba(255,255,255,0.2)',
-        borderWidth: 1,
-        titleColor: '#fff',
-        titleFont: { size: 22, family: 'system-ui, sans-serif', weight: 'normal' as const },
-        bodyColor: 'rgba(255,255,255,0.95)',
-        bodyFont: { size: 20, family: 'system-ui, sans-serif', weight: 'normal' as const },
-        padding: 16,
-        boxPadding: 8,
-        callbacks: {
-          label: (ctx: any) => ` ${ctx.dataset.label}: R$ ${ctx.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-        }
+        enabled: false
       }
     },
     scales: {
@@ -131,14 +151,14 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
             <div className="text-right">
               <p className="text-[12px] font-black uppercase tracking-widest text-white/50">Total Entradas</p>
               <div className="text-3xl font-black text-emerald-400 mt-1">
-                <CountUp value={totalReceita} prefix="R$ " decimals={0} duration={900} />
+                <CountUp value={totalReceita} prefix="R$ " decimals={2} duration={900} />
               </div>
             </div>
             <div className="w-px h-12 bg-white/10 self-center" />
             <div className="text-right">
               <p className="text-[12px] font-black uppercase tracking-widest text-white/50">Total Saídas</p>
               <div className="text-3xl font-black text-rose-400 mt-1">
-                <CountUp value={totalDespesa} prefix="R$ " decimals={0} duration={900} />
+                <CountUp value={totalDespesa} prefix="R$ " decimals={2} duration={900} />
               </div>
             </div>
             <div className="w-px h-12 bg-white/10 self-center" />
@@ -153,7 +173,7 @@ export default function SlideFluxoCaixa({ fluxo }: SlideFluxoCaixaProps) {
 
         {/* Chart */}
         <div className="flex-1 min-h-0">
-          <Chart type="bar" data={chartData} options={options} />
+          <Chart type="bar" data={chartData} options={options} plugins={[ChartDataLabels]} />
         </div>
       </div>
     </div>

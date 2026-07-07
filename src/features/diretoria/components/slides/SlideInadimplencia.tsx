@@ -28,7 +28,7 @@ function InadimplenciaGauge({ rate }: { rate: number }) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <svg width="200" height="110" viewBox="0 0 200 110">
+      <svg width="200" height="130" viewBox="0 0 200 130" className="overflow-visible">
         {/* Track */}
         <path
           d={`M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`}

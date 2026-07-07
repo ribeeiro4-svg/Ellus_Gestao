@@ -52,6 +52,7 @@ import RemanejarModal from '@/components/ui/RemanejarModal'
 import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
 import ConciliacaoHistoryModal from '@/components/conciliacao/ConciliacaoHistoryModal'
 import AbonoLancamentoModal from '@/components/financeiro/AbonoLancamentoModal'
+import ResumoGeralBlocks from '@/components/financeiro/ResumoGeralBlocks'
 import { gerarPdfAbonoLote } from '@/features/financeiro/utils/gerarPdfAbonoLote'
 import { useConciliacaoLogs } from '@/lib/hooks/useConciliacaoLogs'
 import { useConciliacaoCalendario } from '@/lib/hooks/useConciliacaoCalendario'
@@ -67,7 +68,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointEleme
 
 const ActionMenu = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, right: 0 });
+  const [coords, setCoords] = useState<{ top?: number, bottom?: number, right: number }>({ top: 0, right: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   
@@ -96,10 +97,19 @@ const ActionMenu = ({ children }: { children: React.ReactNode }) => {
   const handleOpen = () => {
     if (buttonRef.current && !isOpen) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.bottom + 8,
-        right: window.innerWidth - rect.right,
-      });
+      const spaceBelow = window.innerHeight - rect.bottom;
+      
+      if (spaceBelow < 250) {
+        setCoords({
+          bottom: window.innerHeight - rect.top + 8,
+          right: window.innerWidth - rect.right,
+        });
+      } else {
+        setCoords({
+          top: rect.bottom + 8,
+          right: window.innerWidth - rect.right,
+        });
+      }
     }
     setIsOpen(!isOpen);
   };
@@ -113,8 +123,13 @@ const ActionMenu = ({ children }: { children: React.ReactNode }) => {
         <div className="fixed inset-0 z-[9998]" style={{ pointerEvents: 'none' }}>
           <div 
             ref={menuRef} 
-            className="fixed min-w-[200px] origin-top-right rounded-2xl bg-white shadow-xl ring-1 ring-slate-100 focus:outline-none z-[9999] p-2 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100"
-            style={{ top: coords.top, right: coords.right, pointerEvents: 'auto' }}
+            className={`fixed min-w-[200px] rounded-2xl bg-white shadow-xl ring-1 ring-slate-100 focus:outline-none z-[9999] p-2 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-100 ${coords.bottom ? 'origin-bottom-right' : 'origin-top-right'}`}
+            style={{ 
+              ...(coords.top !== undefined ? { top: coords.top } : {}), 
+              ...(coords.bottom !== undefined ? { bottom: coords.bottom } : {}), 
+              right: coords.right, 
+              pointerEvents: 'auto' 
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             {children}
@@ -184,13 +199,13 @@ function FinanceiroPageContent() {
   )
 
   // Estados Base
-  const [activeTab, setActiveTab] = useState<'geral' | 'receitas' | 'despesas' | 'inadimplencia' | 'conciliacao' | 'relatorios' | 'calendario'>('geral')
+  const [activeTab, setActiveTab] = useState<'geral' | 'receitas' | 'despesas'>('geral')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDay, setFilterDay] = useState<number>(-1)
-  const [filterMonths, setFilterMonths] = useState<number[]>([-1])
+  const [filterMonths, setFilterMonths] = useState<number[]>([new Date().getMonth()])
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false)
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear())
   const [filterDateType, setFilterDateType] = useState<'caixa'|'competencia'|'conciliacao'>('caixa')
@@ -832,6 +847,26 @@ function FinanceiroPageContent() {
     })
   }, [lancamentos, filterDay, filterYear, filterMonths, activeTab, searchTerm, filterUnlinked, filterCategory, filterDateType, filterConta, filterPagamento, filterLancamentoStatus, filterStatusCobranca])
 
+  const contasComSaldo = useMemo(() => {
+    return contas.map(c => {
+      let saldo = Number(c.saldo_inicial || 0)
+      lancamentos.forEach(l => {
+        if (l.conta_id === c.id) {
+          const statusLower = (l.status || '').toLowerCase()
+          const isPago = ['pago', 'efetivado', 'concluido', 'recebido', 'sucesso'].includes(statusLower) || statusLower === 'parcial' || !!l.data_conciliacao
+          if (isPago) {
+            if (l.tipo === 'receita') {
+              saldo += Number(l.valor || 0)
+            } else {
+              saldo -= Number(l.valor || 0)
+            }
+          }
+        }
+      })
+      return { ...c, saldo }
+    })
+  }, [contas, lancamentos])
+
   // KPIs Inteligentes
   const kpiData = useMemo(() => {
     let pInc = 0, pExp = 0, oInc = 0, oExp = 0, fCash = 0, fBank = 0
@@ -884,16 +919,43 @@ function FinanceiroPageContent() {
   const chartData = useMemo(() => {
     const rR = Array(12).fill(0), rP = Array(12).fill(0), dR = Array(12).fill(0), dP = Array(12).fill(0)
     lancamentos.forEach(l => {
-      const y = getAnoIdx(l.data); if (y !== filterYear) return
-      const m = getMesIdx(l.data); if (m === -1) return
+      let dStr = l.data;
+      if (filterDateType === 'competencia') {
+        dStr = (l as any).data_vencimento || l.data;
+      } else if (filterDateType === 'conciliacao') {
+        if (!l.data_conciliacao) return;
+        dStr = l.data_conciliacao;
+      }
+
+      let y = getAnoIdx(dStr);
+      let m = getMesIdx(dStr);
+
+      if (filterDateType === 'competencia') {
+        if (l.competencia_mes !== undefined && l.competencia_mes !== null) m = Number(l.competencia_mes);
+        if (l.competencia_ano !== undefined && l.competencia_ano !== null) y = Number(l.competencia_ano);
+      }
+
+      if (y !== filterYear) return
+      if (m === -1) return
+      if (!filterMonths.includes(-1) && !filterMonths.includes(m)) return
+
       const match = (l.descricao || '').match(/\(Taxa: R\$\s*([^)]+)\)/);
       const taxaVal = match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
       const valorComTaxa = safeSum(l.valor || 0, taxaVal);
-      if (l.tipo === 'receita') { l.status === 'pago' ? rR[m] = safeSum(rR[m], valorComTaxa) : rP[m] = safeSum(rP[m], valorComTaxa) }
-      else { l.status === 'pago' ? dR[m] = safeSum(dR[m], l.valor) : dP[m] = safeSum(dP[m], l.valor) }
+
+      const statusLower = (l.status || '').toLowerCase()
+      const isPago = ['pago', 'efetivado', 'concluido', 'recebido', 'sucesso'].includes(statusLower) || statusLower === 'parcial' || !!l.data_conciliacao
+
+      if (l.tipo === 'receita') { 
+        if (isPago) rR[m] = safeSum(rR[m], valorComTaxa);
+        else if (filterDateType === 'competencia') rP[m] = safeSum(rP[m], valorComTaxa);
+      } else { 
+        if (isPago) dR[m] = safeSum(dR[m], l.valor);
+        else if (filterDateType === 'competencia') dP[m] = safeSum(dP[m], l.valor);
+      }
     })
     return { recReal: rR, recProv: rP, despReal: dR, despProv: dP }
-  }, [lancamentos, filterYear])
+  }, [lancamentos, filterYear, filterDateType, filterMonths])
 
   const fetchContabilMap = useCallback(async () => {
     if (!tenantId) return
@@ -1479,38 +1541,120 @@ function FinanceiroPageContent() {
           </div>
         </div>
 
-        <div className="flex gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl w-full xl:w-auto overflow-x-auto no-scrollbar">
-          <button onClick={() => setActiveTab('geral')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'geral' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><BarChart2 size={12} /> Geral</button>
-          <button onClick={() => setActiveTab('receitas')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'receitas' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><ArrowUpRight size={12} /> Ingressos</button>
-          <button onClick={() => setActiveTab('despesas')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'despesas' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><ArrowDownRight size={12} /> Dispêndios</button>
-          <button onClick={() => setActiveTab('inadimplencia')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'inadimplencia' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><AlertTriangle size={12} /> Inadimplência</button>
-          <button onClick={() => setActiveTab('conciliacao')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'conciliacao' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><RefreshCw size={12} /> Conciliação</button>
-          <button onClick={() => setActiveTab('calendario')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'calendario' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><CalendarIcon size={12} /> Calendário</button>
+        <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto no-scrollbar">
+          {(criar || isAdmin) && (
+            <div className="flex gap-2">
+              <button 
+                onClick={() => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) }} 
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm"
+              >
+                <Plus size={12} /> Ingresso
+              </button>
+              <button 
+                onClick={() => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) }} 
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap bg-rose-500 text-white hover:bg-rose-600 shadow-sm"
+              >
+                <Plus size={12} /> Dispêndio
+              </button>
+            </div>
+          )}
+          <div className="flex gap-1 p-1 bg-slate-50 border border-slate-100 rounded-2xl w-full xl:w-auto">
+            <button onClick={() => setActiveTab('geral')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'geral' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><BarChart2 size={12} /> Geral</button>
+            <button onClick={() => setActiveTab('receitas')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'receitas' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><ArrowUpRight size={12} /> Ingressos</button>
+            <button onClick={() => setActiveTab('despesas')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'despesas' ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-slate-100/50' : 'text-slate-400 hover:text-slate-600'}`}><ArrowDownRight size={12} /> Dispêndios</button>
+          </div>
         </div>
       </div>
 
-      <FinancialKpiGrid 
-        kpis={kpiData} 
-        cashReservePercentage={cashReservePercentage}
-        onCashReservePercentageChange={handleCashReserveChange}
-        hasReserveAccount={contas?.some(c => c.nome.toLowerCase().includes('fundo')) || false}
-        onFixAccount={() => alert('Para criar a conta de Fundo de Caixa, vá nas Configurações > Contas Bancárias.')}
-        onNewIngresso={(criar || isAdmin) ? () => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) } : undefined} 
-        onNewDespesa={(criar || isAdmin) ? () => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) } : undefined} 
-      />
+      <div className="flex justify-end items-center gap-2 mb-4 px-1 flex-wrap">
+        <select value={filterDateType} onChange={(e) => setFilterDateType(e.target.value as any)} className="bg-slate-50 px-4 py-2.5 rounded-2xl text-xs font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10 cursor-pointer">
+          <option value="caixa">Visão Caixa</option>
+          <option value="competencia">Visão Competência</option>
+          <option value="conciliacao">Data Conciliação</option>
+        </select>
+        
+        {activeTab !== 'geral' && (
+          <select value={filterDay} onChange={(e) => setFilterDay(Number(e.target.value))} className="bg-slate-50 px-4 py-2.5 rounded-2xl text-xs font-bold border-none outline-none text-slate-600 cursor-pointer transition-all hover:ring-2 hover:ring-emerald-500/10">
+            <option value={-1}>Todos Dias</option>
+            {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        )}
+
+        <div className="relative">
+          <div 
+            onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+            className="bg-slate-50 px-4 py-2.5 rounded-2xl text-xs font-bold cursor-pointer flex items-center gap-2 text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10 h-full"
+            title="Selecionar Meses"
+          >
+            {filterMonths.includes(-1) ? 'Todos Meses' : filterMonths.map(m => MESES[m]).join(', ')}
+          </div>
+          {isMonthDropdownOpen && (
+            <div className="absolute top-full right-0 lg:left-0 lg:right-auto mt-2 w-48 bg-white shadow-xl rounded-xl border border-slate-100 z-[100] py-2 max-h-64 overflow-y-auto">
+               <div className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-slate-700" onClick={() => { setFilterMonths([-1]); setIsMonthDropdownOpen(false); }}>
+                 <input type="checkbox" checked={filterMonths.includes(-1)} readOnly className="rounded text-emerald-600" /> Todos Meses
+               </div>
+               {MESES.map((m, idx) => (
+                 <div key={m} className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-slate-600" onClick={() => {
+                   if (filterMonths.includes(-1)) {
+                     setFilterMonths([idx]);
+                   } else {
+                     if (filterMonths.includes(idx)) {
+                       const newM = filterMonths.filter(x => x !== idx);
+                       setFilterMonths(newM.length === 0 ? [-1] : newM);
+                     } else {
+                       setFilterMonths([...filterMonths, idx].sort((a,b) => a-b));
+                     }
+                   }
+                 }}>
+                   <input type="checkbox" checked={!filterMonths.includes(-1) && filterMonths.includes(idx)} readOnly className="rounded text-emerald-600" /> {m}
+                 </div>
+               ))}
+            </div>
+          )}
+          {isMonthDropdownOpen && (
+            <div className="fixed inset-0 z-[90]" onClick={() => setIsMonthDropdownOpen(false)}></div>
+          )}
+        </div>
+
+        <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-2.5 rounded-2xl text-xs font-bold border-none outline-none text-slate-600 cursor-pointer transition-all hover:ring-2 hover:ring-emerald-500/10">
+          {[2024, 2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+
+      {activeTab !== 'geral' && (
+        <FinancialKpiGrid 
+          kpis={kpiData} 
+          cashReservePercentage={cashReservePercentage}
+          onCashReservePercentageChange={handleCashReserveChange}
+          hasReserveAccount={contas?.some(c => c.nome.toLowerCase().includes('fundo')) || false}
+          onFixAccount={() => alert('Para criar a conta de Fundo de Caixa, vá nas Configurações > Contas Bancárias.')}
+          onNewIngresso={(criar || isAdmin) ? () => { setEditingItem({ tipo: 'receita' }); setIsModalOpen(true) } : undefined} 
+          onNewDespesa={(criar || isAdmin) ? () => { setEditingItem({ tipo: 'despesa' }); setIsModalOpen(true) } : undefined} 
+        />
+      )}
 
       {activeTab === 'geral' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Ingresso Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Ingresso Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Disp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Disp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
-          <ChartCard title="📈 Saldo Acumulado" subtitle="Evolução do caixa"><Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+        <div className="flex flex-col gap-4">
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Ingresso Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Ingresso Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Disp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Disp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+            <ChartCard title="📈 Saldo Acumulado" subtitle="Evolução do caixa"><Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+          </div>
+          <ResumoGeralBlocks 
+             lancamentos={lancamentos} 
+             filterMonths={filterMonths} 
+             filterYear={filterYear} 
+             filterDateType={filterDateType} 
+             contas={contasComSaldo}
+          />
         </div>
       )}
 
-      {activeTab === 'inadimplencia' ? (
+      {false ? (
         <InadimplenciaTab />
-      ) : activeTab === 'calendario' ? (
+      ) : false ? (
         <CalendarioConciliacao contas={contas} />
-      ) : activeTab === 'conciliacao' ? (
+      ) : false ? (
         <div className="flex flex-col gap-6 animate-in slide-in-from-bottom-2 duration-500">
            {(extrato.length > 0 || (conciliacaoSubTab === 'cora' && (coraItems || []).length > 0)) && (
               <ConciliacaoToolbar 
@@ -1637,50 +1781,13 @@ function FinanceiroPageContent() {
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-            <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no fluxo..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-            <select value={filterDateType} onChange={(e) => setFilterDateType(e.target.value as any)} className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold border-none outline-none text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10">
-              <option value="caixa">Visão Caixa</option>
-              <option value="competencia">Visão Competência</option>
-              <option value="conciliacao">Data de Conciliação</option>
-            </select>
-            <select value={filterDay} onChange={(e) => setFilterDay(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none"><option value={-1}>Todos Dias</option>{Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}</select>
-            <div className="relative">
-              <div 
-                onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-                className="bg-slate-50 px-4 py-3 rounded-2xl text-[11px] font-bold cursor-pointer flex items-center gap-2 text-slate-600 transition-all hover:ring-2 hover:ring-emerald-500/10 h-full"
-                title="Selecionar Meses"
-              >
-                {filterMonths.includes(-1) ? 'Todos Meses' : filterMonths.map(m => MESES[m]).join(', ')}
-              </div>
-              {isMonthDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white shadow-xl rounded-xl border border-slate-100 z-[100] py-2 max-h-64 overflow-y-auto">
-                   <div className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-slate-700" onClick={() => { setFilterMonths([-1]); setIsMonthDropdownOpen(false); }}>
-                     <input type="checkbox" checked={filterMonths.includes(-1)} readOnly className="rounded text-emerald-600" /> Todos Meses
-                   </div>
-                   {MESES.map((m, idx) => (
-                     <div key={m} className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center gap-3 text-xs font-bold text-slate-600" onClick={() => {
-                       if (filterMonths.includes(-1)) {
-                         setFilterMonths([idx]);
-                       } else {
-                         if (filterMonths.includes(idx)) {
-                           const newM = filterMonths.filter(x => x !== idx);
-                           setFilterMonths(newM.length === 0 ? [-1] : newM);
-                         } else {
-                           setFilterMonths([...filterMonths, idx].sort((a,b) => a-b));
-                         }
-                       }
-                     }}>
-                       <input type="checkbox" checked={!filterMonths.includes(-1) && filterMonths.includes(idx)} readOnly className="rounded text-emerald-600" /> {m}
-                     </div>
-                   ))}
-                </div>
-              )}
-              {isMonthDropdownOpen && (
-                <div className="fixed inset-0 z-[90]" onClick={() => setIsMonthDropdownOpen(false)}></div>
-              )}
-            </div>
-            <select value={filterYear} onChange={(e) => setFilterYear(Number(e.target.value))} className="bg-slate-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">{[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}</select>
+          {activeTab === 'geral' ? (
+             null
+          ) : (
+             <>
+               <div className="flex flex-wrap items-center gap-3 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+                 <div className="relative flex-1 min-w-[250px]"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input type="text" placeholder="Buscar no fluxo..." className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm outline-none font-medium" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
+
             <div className="relative">
               <div 
                 onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
@@ -1764,6 +1871,8 @@ function FinanceiroPageContent() {
           </div>
         </>
       )}
+    </>
+  )}
 
       <CrudModal 
         isOpen={isModalOpen} 

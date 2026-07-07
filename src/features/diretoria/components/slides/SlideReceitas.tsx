@@ -8,20 +8,24 @@ interface SlideReceitasProps {
     [key: string]: any;
   };
   fluxo: any[];
+  composicao: { categoria: string; valor: number }[];
 }
 
-export default function SlideReceitas({ kpis, fluxo }: SlideReceitasProps) {
+export default function SlideReceitas({ kpis, fluxo, composicao }: SlideReceitasProps) {
   const receitaBruta = kpis.receitaMes;
   const metaReceita = kpis.receitaMes * 0.95; // meta sugerida (se bater 100% eh pq alcancou a meta q era menor)
   const percentualMeta = metaReceita > 0 ? (receitaBruta / metaReceita) : 1;
   const isAboveMeta = percentualMeta >= 1;
 
-  // Mock breakdown of revenues for presentation depth
+  const valMensalidades = composicao.filter(c => c.categoria.toLowerCase().includes('mensalidad')).reduce((s, c) => s + c.valor, 0);
+  const valAdesoes = composicao.filter(c => c.categoria.toLowerCase().includes('ades')).reduce((s, c) => s + c.valor, 0);
+  const valOutras = composicao.filter(c => !c.categoria.toLowerCase().includes('mensalidad') && !c.categoria.toLowerCase().includes('ades')).reduce((s, c) => s + c.valor, 0);
+
   const breakdown = [
-    { label: 'Mensalidades Recorrentes (Ativos)', value: receitaBruta * 0.75 },
-    { label: 'Adesões e Novas Vendas', value: receitaBruta * 0.15 },
-    { label: 'Taxas Administrativas e Serviços', value: receitaBruta * 0.10 },
-  ];
+    { label: 'Mensalidades Recorrentes', value: valMensalidades },
+    { label: 'Novas Adesões', value: valAdesoes },
+    { label: 'Outras Receitas', value: valOutras },
+  ].filter(i => i.value > 0).sort((a, b) => b.value - a.value);
 
   return (
     <div className="flex flex-col h-full bg-[#020806] text-white p-12 relative overflow-hidden">

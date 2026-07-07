@@ -1,33 +1,34 @@
 import React, { useState } from 'react';
 import { ListChecks, Plus, CheckCircle2, Circle, AlertCircle, Clock, User } from 'lucide-react';
 
-export default function SlidePlanoAcao() {
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      title: 'Campanha de Renegociação de Inadimplentes',
-      owner: 'Diretoria Financeira',
-      deadline: '15/Ago/2026',
-      priority: 'high',
-      status: 'pending',
-    },
-    {
-      id: 2,
-      title: 'Auditoria nos contratos de fornecedores de TI',
-      owner: 'Operações',
-      deadline: '30/Ago/2026',
-      priority: 'medium',
-      status: 'in_progress',
-    },
-    {
-      id: 3,
-      title: 'Aprovação do novo orçamento de Marketing',
-      owner: 'Conselho Administrativo',
-      deadline: '05/Set/2026',
-      priority: 'low',
-      status: 'completed',
-    }
-  ]);
+import { Trash2 } from 'lucide-react';
+
+export interface PlanoAcaoTask {
+  id: number;
+  title: string;
+  owner: string;
+  deadline: string;
+  priority: 'high' | 'medium' | 'low';
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+interface SlidePlanoAcaoProps {
+  tasks: PlanoAcaoTask[];
+  onToggleStatus: (id: number) => void;
+  onAddTask: (task: Omit<PlanoAcaoTask, 'id' | 'status'>) => void;
+  onRemoveTask: (id: number) => void;
+}
+
+export default function SlidePlanoAcao({ tasks, onToggleStatus, onAddTask, onRemoveTask }: SlidePlanoAcaoProps) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [newTask, setNewTask] = useState<Omit<PlanoAcaoTask, 'id' | 'status'>>({ title: '', owner: '', deadline: '', priority: 'medium' });
+
+  const handleSave = () => {
+    if (!newTask.title || !newTask.owner || !newTask.deadline) return;
+    onAddTask(newTask);
+    setNewTask({ title: '', owner: '', deadline: '', priority: 'medium' });
+    setIsAdding(false);
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -47,17 +48,9 @@ export default function SlidePlanoAcao() {
     }
   };
 
-  const toggleTaskStatus = (id: number) => {
-    setTasks(tasks.map(t => {
-      if (t.id === id) {
-        return { ...t, status: t.status === 'completed' ? 'pending' : 'completed' };
-      }
-      return t;
-    }));
-  };
 
   return (
-    <div className="flex flex-col h-full bg-[#020806] text-white p-12 relative">
+    <div className="flex flex-col h-full bg-[#020806] text-white p-12 relative z-[201]">
       <div className="flex justify-between items-center mb-10">
         <div>
           <h1 className="text-4xl font-black mb-2 flex items-center gap-3">
@@ -68,7 +61,10 @@ export default function SlidePlanoAcao() {
           </p>
         </div>
         
-        <button className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-5 py-3 rounded-xl font-bold transition-all">
+        <button 
+          onClick={() => setIsAdding(true)}
+          className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-5 py-3 rounded-xl font-bold transition-all"
+        >
           <Plus size={18} />
           Nova Deliberação
         </button>
@@ -86,6 +82,24 @@ export default function SlidePlanoAcao() {
 
         {/* Lista de Tarefas */}
         <div className="flex-1 overflow-y-auto p-2 space-y-2">
+          {isAdding && (
+            <div className="grid grid-cols-12 gap-4 p-4 items-center rounded-xl border bg-[#06140f] border-emerald-500/30">
+              <div className="col-span-1 flex justify-center text-emerald-500"><AlertCircle size={20} /></div>
+              <div className="col-span-5"><input autoFocus type="text" value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} placeholder="Título da deliberação..." className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500/50" /></div>
+              <div className="col-span-3"><input type="text" value={newTask.owner} onChange={e => setNewTask({...newTask, owner: e.target.value})} placeholder="Ex: Diretoria..." className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500/50" /></div>
+              <div className="col-span-2"><input type="text" value={newTask.deadline} onChange={e => setNewTask({...newTask, deadline: e.target.value})} placeholder="DD/Mmm/AAAA" className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-500/50" /></div>
+              <div className="col-span-1 flex flex-col gap-2">
+                <select value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value as 'high'|'medium'|'low'})} className="bg-black/50 border border-white/10 rounded text-xs p-1 outline-none">
+                  <option value="high">Alta</option><option value="medium">Média</option><option value="low">Baixa</option>
+                </select>
+                <div className="flex justify-between gap-1 mt-1">
+                  <button onClick={() => setIsAdding(false)} className="text-[10px] uppercase font-bold text-white/50 hover:text-white px-2 py-1 bg-white/5 rounded">Cancelar</button>
+                  <button onClick={handleSave} className="text-[10px] uppercase font-bold text-emerald-900 bg-emerald-500 hover:bg-emerald-400 px-2 py-1 rounded">Salvar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {tasks.map((task) => {
             const isCompleted = task.status === 'completed';
             return (
@@ -98,15 +112,8 @@ export default function SlidePlanoAcao() {
                 }`}
               >
                 <div className="col-span-1 flex justify-center">
-                  <button 
-                    onClick={() => toggleTaskStatus(task.id)}
-                    className="hover:scale-110 transition-transform"
-                  >
-                    {isCompleted ? (
-                      <CheckCircle2 size={24} className="text-emerald-400" />
-                    ) : (
-                      <Circle size={24} className="text-white/20 hover:text-emerald-400/50" />
-                    )}
+                  <button onClick={() => onToggleStatus(task.id)} className={`transition-all ${isCompleted ? 'text-emerald-400 hover:text-emerald-300' : 'text-white/20 hover:text-emerald-400'}`}>
+                    {isCompleted ? <CheckCircle2 size={24} /> : <Circle size={24} />}
                   </button>
                 </div>
                 
@@ -126,10 +133,13 @@ export default function SlidePlanoAcao() {
                   <span className="text-sm font-semibold">{task.deadline}</span>
                 </div>
                 
-                <div className="col-span-1 flex justify-center">
-                  <div className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider border ${getPriorityColor(task.priority)}`} title={getPriorityLabel(task.priority)}>
-                    {task.priority === 'high' ? 'ALTA' : task.priority === 'medium' ? 'MED' : 'BAIXA'}
-                  </div>
+                <div className="col-span-1 text-center flex items-center justify-between">
+                  <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded border ${getPriorityColor(task.priority)}`}>
+                    {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Med' : 'Baixa'}
+                  </span>
+                  <button onClick={() => onRemoveTask(task.id)} className="text-white/10 hover:text-rose-500 transition-colors" title="Remover tarefa">
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             )

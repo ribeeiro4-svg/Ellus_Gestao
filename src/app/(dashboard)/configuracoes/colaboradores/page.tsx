@@ -114,37 +114,18 @@ function ColaboradoresContent() {
   const selectedPerfil = perfis.find((p: any) => p.id.toString() === perfilId)
 
   return (
-    <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500 pb-20 p-8">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white/40 backdrop-blur-md p-6 rounded-[32px] border border-white/60 shadow-sm">
+    <div className="flex flex-col flex-1 gap-8 animate-in fade-in duration-500">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
         <div className="flex items-center gap-5">
           <div className="w-14 h-14 rounded-2xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
             <Shield size={28} />
           </div>
           <div className="flex flex-col items-start">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 mb-2 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100/50">
-              <Shield size={10} />
-              <span>SEGURANÇA DE DADOS</span>
-              <ChevronDown size={10} className="opacity-50 ml-1" />
-            </div>
             <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">Colaboradores (RBAC)</h1>
             <p className="text-sm text-slate-500 font-bold uppercase tracking-widest opacity-70 mt-1">Controle de Acesso Interno</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="hidden lg:flex bg-slate-100/60 p-1.5 rounded-[22px] items-center gap-1 border border-slate-200/40 backdrop-blur-sm shadow-inner">
-            <a href="/configuracoes/colaboradores" className="flex items-center gap-2 px-4 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-500 bg-white text-emerald-700 shadow-md shadow-slate-200/50 scale-100">
-              <Users size={14} className="text-emerald-500" />
-              Colaboradores
-            </a>
-            <a href="/configuracoes/perfis" className="flex items-center gap-2 px-4 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-500 text-slate-500 hover:bg-white/50 hover:text-slate-700 scale-95 hover:scale-100">
-              <Shield size={14} className="opacity-70" />
-              Perfis
-            </a>
-            <a href="/auditoria" className="flex items-center gap-2 px-4 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-500 text-slate-500 hover:bg-white/50 hover:text-slate-700 scale-95 hover:scale-100">
-              <Activity size={14} className="opacity-70" />
-              Auditoria
-            </a>
-          </div>
           <button onClick={() => openModal()} className="btn-primary text-xs uppercase font-black px-6 py-3 flex items-center gap-2 bg-[#0e2d22] hover:bg-[#1a4a38] text-white rounded-xl shadow-lg shadow-emerald-900/30">
             <Plus size={16} /> Novo Colaborador
           </button>

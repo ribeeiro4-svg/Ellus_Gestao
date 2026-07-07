@@ -48,12 +48,28 @@ export default function POPPage() {
       {/* Estilos para Impressão */}
       <style dangerouslySetInnerHTML={{__html: `
         @media print {
-          body * { visibility: hidden; }
+          /* Remove constraints that break pagination */
+          html, body, #main-scroll-container, .dashboard-layout, main { 
+            height: auto !important; 
+            overflow: visible !important; 
+            position: static !important;
+          }
+          
+          /* Hide known layout elements */
+          aside, header, nav, .sidebar, .topbar, .no-print { display: none !important; }
+          
+          /* The print area */
           #pop-print-area, #pop-print-area * { visibility: visible; }
-          #pop-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; }
-          .no-print { display: none !important; }
+          
           @page { size: A4; margin: 15mm; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          
+          /* Force all background colors and styles to print exactly as on screen */
+          * { 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            color-adjust: exact !important; 
+          }
+          
           .print-green { color: #059669 !important; }
           .print-bg-green { background-color: #059669 !important; color: white !important; }
           .print-border-green { border-color: #059669 !important; }
@@ -164,12 +180,12 @@ export default function POPPage() {
 
       {/* Drawer / Modal do POP */}
       {popAberto && (
-        <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/20 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex justify-end bg-slate-900/20 backdrop-blur-sm animate-in fade-in print:block print:inset-auto print:bg-transparent">
           <div 
             className="absolute inset-0 no-print"
             onClick={() => setPopAberto(null)}
           />
-          <div className="relative w-full max-w-3xl bg-slate-50 h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right-full duration-300 flex flex-col">
+          <div className="relative w-full max-w-3xl bg-slate-50 h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right-full duration-300 flex flex-col print:h-auto print:overflow-visible print:shadow-none print:max-w-none print:bg-white">
             
             <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
               <div>
@@ -194,7 +210,7 @@ export default function POPPage() {
               </div>
             </div>
 
-            <div className="p-8 pb-20">
+            <div className="p-8 pb-20 print:p-0">
               {/* Área invisível na tela que só aparece na impressão */}
               <div id="pop-print-area" className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
                 
@@ -230,7 +246,7 @@ export default function POPPage() {
                 </div>
 
                 {/* Objetivo */}
-                <div className="mb-8">
+                <div className="mb-8 print:break-inside-avoid">
                   <h3 className="text-sm font-black text-emerald-700 print-green uppercase tracking-widest mb-3 flex items-center gap-2">
                     <Target size={16} className="text-emerald-600 print-green" /> Objetivo
                   </h3>
@@ -240,13 +256,13 @@ export default function POPPage() {
                 </div>
 
                 {/* Passos */}
-                <div className="mb-8">
+                <div className="mb-8 print:break-inside-avoid">
                   <h3 className="text-sm font-black text-emerald-700 print-green uppercase tracking-widest mb-4 flex items-center gap-2">
                     <CheckCircle2 size={16} className="text-emerald-600 print-green" /> Passo a Passo
                   </h3>
                   <div className="space-y-4">
                     {popAberto.passos.map((passo, idx) => (
-                      <div key={idx} className="flex gap-4">
+                      <div key={idx} className="flex gap-4 print:break-inside-avoid mb-2">
                         <div className="w-7 h-7 rounded-full bg-emerald-600 print-bg-green text-white flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 shadow-sm">
                           {idx + 1}
                         </div>
@@ -258,7 +274,7 @@ export default function POPPage() {
 
                 {/* Alertas */}
                 {popAberto.alertas.length > 0 && (
-                  <div className="mb-8">
+                  <div className="mb-8 print:break-inside-avoid">
                     <h3 className="text-sm font-black text-amber-600 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <AlertTriangle size={16} /> Alertas e Cuidados
                     </h3>
@@ -275,7 +291,7 @@ export default function POPPage() {
 
                 {/* Referências */}
                 {popAberto.referencias.length > 0 && (
-                  <div>
+                  <div className="print:break-inside-avoid">
                     <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-3">Referências</h3>
                     <ul className="list-disc list-inside text-sm text-slate-500 space-y-1">
                       {popAberto.referencias.map((ref, idx) => (
@@ -285,7 +301,7 @@ export default function POPPage() {
                   </div>
                 )}
 
-                <div className="mt-16 pt-8 border-t border-slate-200 flex flex-col items-center justify-center text-center">
+                <div className="mt-16 pt-8 border-t border-slate-200 flex flex-col items-center justify-center text-center print:break-inside-avoid">
                   <img src="/ellus_logo_v2.svg" alt="Éllus Gestão" className="h-6 w-auto mb-2 opacity-80" onError={(e: any) => e.target.style.display = 'none'} />
                   <div className="text-[9px] text-slate-400 uppercase tracking-widest font-bold">
                     Documento gerado pelo sistema Éllus Gestão Estratégica
