@@ -705,10 +705,10 @@ Diretoria / Secretaria ACPROBEC`
     }
     
     return res
-  }, [associados, lancamentos, searchQ, filterStatus, filterCategoria, filterRecorrencia, filterPlanoSaude, filterTermo, filterCpfInvalido, filterAdesao, filterCpfPresence, filterDependentes, filterAnaliseInteligente, filterMesesIngresso, filterAnoIngresso])
+  }, [associados, lancamentos, searchQ, filterStatus, filterCategoria, filterRecorrencia, filterPlanoSaude, filterTermo, filterCpfInvalido, filterCpfPresence, filterDependentes, filterAnaliseInteligente, filterMesesIngresso, filterAnoIngresso])
 
-  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterRecorrencia !== 'todos' || filterPlanoSaude !== 'todos' || filterTermo !== 'todos' || filterAdesao !== 'todos' || filterAnaliseInteligente !== 'todos' || filterCpfInvalido || filterCpfPresence !== 'todos' || filterDependentes !== 'todos' || searchQ !== '' || filterMesesIngresso.length > 0 || filterAnoIngresso !== 'todos'
-  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterRecorrencia('todos'); setFilterPlanoSaude('todos'); setFilterTermo('todos'); setFilterAdesao('todos'); setFilterAnaliseInteligente('todos'); setFilterCpfInvalido(false); setFilterCpfPresence('todos'); setFilterDependentes('todos'); setSearchQ(''); setFilterMesesIngresso([]); setFilterAnoIngresso('todos') }
+  const hasActiveFilters = filterStatus !== 'todos' || filterCategoria !== 'todas' || filterRecorrencia !== 'todos' || filterPlanoSaude !== 'todos' || filterTermo !== 'todos' || filterAnaliseInteligente !== 'todos' || filterCpfInvalido || filterCpfPresence !== 'todos' || filterDependentes !== 'todos' || searchQ !== '' || filterMesesIngresso.length > 0 || filterAnoIngresso !== 'todos'
+  const clearFilters = () => { setFilterStatus('todos'); setFilterCategoria('todas'); setFilterRecorrencia('todos'); setFilterPlanoSaude('todos'); setFilterTermo('todos'); setFilterAnaliseInteligente('todos'); setFilterCpfInvalido(false); setFilterCpfPresence('todos'); setFilterDependentes('todos'); setSearchQ(''); setFilterMesesIngresso([]); setFilterAnoIngresso('todos') }
 
   const handleSalvar = async (data: any) => {
     if (editingItem) {
@@ -1614,11 +1614,6 @@ Diretoria / Secretaria ACPROBEC`
             <option value="Não Possui">NÃO POSSUI</option>
           </select>
 
-          <select value={filterAdesao} onChange={e => setFilterAdesao(e.target.value)} className="bg-gray-50 px-4 py-3 rounded-2xl text-xs font-bold border-none outline-none">
-            <option value="todos">ADESÃO (TODOS)</option>
-            <option value="identificada">ADESÃO IDENTIFICADA</option>
-            <option value="pendente">ADESÃO PENDENTE</option>
-          </select>
           <select value={filterAnaliseInteligente} onChange={e => setFilterAnaliseInteligente(e.target.value)} className="bg-emerald-50 text-emerald-700 px-4 py-3 rounded-2xl text-xs font-black border-none outline-none shadow-sm hover:bg-emerald-100 transition-colors">
             <option value="todos">ANÁLISE INTELIGENTE</option>
             <option value="so_adesao">SÓ ADESÃO (SEM MENSALIDADE)</option>
