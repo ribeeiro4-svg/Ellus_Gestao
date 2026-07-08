@@ -472,9 +472,23 @@ Diretoria / Secretaria ACPROBEC`
     }
 
     const hoje = new Date();
-    const dataAtual = hoje.toISOString().split('T')[0];
     const preview = associadosAlvo.map((a: any) => {
       const contaPadrao = contas?.find((c: any) => c.padrao) || contas?.[0];
+      
+      const diaVencimento = Number(a.vencimento_dia || 10);
+      let mes = hoje.getMonth() + 1;
+      let ano = hoje.getFullYear();
+      
+      // Se o dia de vencimento já passou neste mês, joga para o próximo mês
+      if (hoje.getDate() >= diaVencimento) {
+        mes++;
+        if (mes > 12) {
+          mes = 1;
+          ano++;
+        }
+      }
+      const dataFormatada = `${ano}-${String(mes).padStart(2, '0')}-${String(diaVencimento).padStart(2, '0')}`;
+
       return {
         tenant_id: a.tenant_id,
         associado_id: a.id,
@@ -482,7 +496,7 @@ Diretoria / Secretaria ACPROBEC`
         categoria: 'MENSALIDADE',
         descricao: `RECEB. DE MENSALIDADE - ${a.nome.toUpperCase()} [FIXO]`,
         valor: a.plano_valor || 35.0,
-        data: dataAtual,
+        data: dataFormatada,
         status: 'aberto',
         conta_id: contaPadrao?.id || null,
         forma_pagamento: 'Boleto'
