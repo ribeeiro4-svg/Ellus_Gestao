@@ -1703,7 +1703,25 @@ function FinanceiroPageContent() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ChartCard title="📊 Fluxo Mensal" subtitle="Realizado vs Projetado"><Chart type="bar" data={{ labels: MESES, datasets: [{ label: 'Ingresso Real', data: chartData.recReal, backgroundColor: '#10b981', borderRadius: 4, stack: '0' }, { label: 'Ingresso Prov.', data: chartData.recProv, backgroundColor: 'rgba(16,185,129,0.25)', borderRadius: 4, stack: '0' }, { label: 'Disp. Real', data: chartData.despReal, backgroundColor: '#f43f5e', borderRadius: 4, stack: '1' }, { label: 'Disp. Prov.', data: chartData.despProv, backgroundColor: 'rgba(244,63,94,0.25)', borderRadius: 4, stack: '1' }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, legend: { position: 'bottom', labels: { boxWidth: 8, font: { size: 10, weight: 'bold' } } } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
-            <ChartCard title="📈 Saldo Acumulado" subtitle="Evolução do caixa"><Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} /></ChartCard>
+            <ChartCard 
+              title="📈 Saldo Acumulado" 
+              subtitle="Evolução do caixa"
+              actions={
+                <div className="flex items-center gap-3 bg-slate-50/80 border border-slate-100 rounded-lg px-3 py-1.5 shadow-sm">
+                  <div className="flex flex-col text-right">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">Cora PJ</span>
+                    <span className="text-xs text-slate-700 font-black tracking-tight">{fmtR(contasComSaldo.find(c => c.nome.toLowerCase().includes('cora'))?.saldo || 0)}</span>
+                  </div>
+                  <div className="h-6 w-[1px] bg-slate-200"></div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">Caixa Espécie</span>
+                    <span className="text-xs text-slate-700 font-black tracking-tight">{fmtR(contasComSaldo.find(c => c.nome.toLowerCase().includes('caixa') && c.nome.toLowerCase().includes('espécie'))?.saldo || contasComSaldo.find(c => c.nome.toLowerCase().includes('caixa'))?.saldo || 0)}</span>
+                  </div>
+                </div>
+              }
+            >
+              <Line data={{ labels: MESES, datasets: [{ label: 'Saldo (R$)', data: chartData.recReal.map((v, i) => safeDiff(v, chartData.despReal[i])), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.05)', fill: true, tension: 0.4 }] }} options={{ responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false } } } }} />
+            </ChartCard>
           </div>
           <ResumoGeralBlocks 
              lancamentos={lancamentos} 
