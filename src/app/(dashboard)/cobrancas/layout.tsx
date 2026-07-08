@@ -13,6 +13,7 @@ const tabs = [
   { id: 'inadimplencia', label: 'Inadimplência', icon: AlertTriangle, href: '/cobrancas' },
   { id: 'regua', label: 'Régua de Cobrança', icon: Settings, href: '/cobrancas/regua' },
   { id: 'mensagens', label: 'Mensagens WhatsApp', icon: MessageCircle, href: '/cobrancas/mensagens' },
+  { id: 'comunicados', label: 'Comunicados em Massa', icon: Megaphone, href: '/cobrancas/comunicados' },
 ]
 
 export default function CobrancasLayout({ children }: { children: React.ReactNode }) {

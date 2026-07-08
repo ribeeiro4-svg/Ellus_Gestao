@@ -1,5 +1,6 @@
 'use client'
 import React, { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useAssociados } from '@/lib/hooks/useAssociados'
 import { useFinanceiro } from '@/lib/hooks/useFinanceiro'
 import DataTable from '@/components/ui/DataTable'
@@ -242,7 +243,7 @@ export default function InadimplenciaTab({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            etapa: 'Pagamento Realizado',
+            etapa: 'Pagamento', // Reduzido para caber no VARCHAR(10)
             canal: 'sistema',
             textoEnviado: `Liquidado em Inadimplência: ${item.descricao || 'Mensalidade'}`,
             observacao: `Pagamento confirmado e liquidado (R$ ${item.valor.toFixed(2)})`
@@ -344,6 +345,27 @@ export default function InadimplenciaTab({
       if (data.status_cobranca) detalhes += ` Status de cobrança alterado para: ${data.status_cobranca}.`
       if (data.status === 'pago') detalhes += ` Marcados como PAGO.`
       logAction('AÇÃO EM LOTE', detalhes)
+
+      // Registrar no histórico de cobrança as ações em lote
+      if (data.status_cobranca === 'EM COBRANÇA') {
+        const todayStr = new Date().toLocaleDateString('pt-BR')
+        for (const id of allLancamentoIds) {
+          const lanc = lancamentos.find(l => l.id === id)
+          if (lanc?.associado_id) {
+            fetch(`/api/cobranca/associado/${lanc.associado_id}/acao`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                etapa: 'EmCobrança', // Exato 10 chars
+                canal: 'sistema',
+                textoEnviado: `Cobrança registrada em lote em ${todayStr}`,
+                observacao: `Status alterado para EM COBRANÇA (Lanc: ${lanc.descricao || 'Mensalidade'})`
+              })
+            }).catch(console.error)
+          }
+        }
+      }
+
       setSelectedIds([])
     } else {
       alert(res.error)
@@ -1114,7 +1136,7 @@ export default function InadimplenciaTab({
         onClose={() => setCobrancaDrawerOpen(false)}
       />
 
-      {isSeletorMesesOpen && (
+      {isSeletorMesesOpen && typeof document !== 'undefined' && createPortal(
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-xl flex flex-col gap-4 animate-in zoom-in-95 duration-200">
             <div>
@@ -1166,7 +1188,8 @@ export default function InadimplenciaTab({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -569,7 +569,7 @@ function FinanceiroPageContent() {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
                body: JSON.stringify({
-                 etapa: 'Pagamento Realizado',
+                 etapa: 'Pagamento',
                  canal: 'sistema',
                  textoEnviado: `Conciliação Automática (Cora): ${getMemoForItem(t)}`,
                  observacao: `Pagamento conciliado via Cora (R$ ${Math.abs(t.bank.amount).toFixed(2)})`
@@ -1200,7 +1200,7 @@ function FinanceiroPageContent() {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({
-                            etapa: 'EmCobrança'.substring(0, 10),
+                            etapa: 'Pagamento',
                             canal: 'sistema',
                             textoEnviado: `Liquidado individualmente: ${i.descricao || 'Mensalidade'}`,
                             observacao: `Pagamento confirmado e conciliado individual (R$ ${i.valor.toFixed(2)})`
@@ -1940,13 +1940,13 @@ function FinanceiroPageContent() {
         isOpen={isManualLinkModalOpen} 
         onClose={() => setIsManualLinkModalOpen(false)} 
         extrato={selectedExtrato} 
-        onSelect={(assoc: any) => { 
+        onSelect={(assoc: any, existingMatch?: any) => { 
           const tf = selectedExtrato.bank.fitid; 
           setEditedMemos(prev => ({ ...prev, [tf]: enhanceMemo(assoc.nome, selectedExtrato.bank.memo) })); 
           if (conciliacaoSubTab === 'ofx') {
-            setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades' } : item)); 
+            setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades', existingMatch: existingMatch !== undefined ? existingMatch : item.existingMatch } : item)); 
           } else {
-            setCoraItems?.(prev => prev.map((item: any) => (item.cora_id || item.id) === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades' } : item));
+            setCoraItems?.(prev => prev.map((item: any) => (item.cora_id || item.id) === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades', existingMatch: existingMatch !== undefined ? existingMatch : item.existingMatch } : item));
           }
           setClearedMatches(prev => { const n = new Set(prev); n.delete(tf); return n; });
           setIsManualLinkModalOpen(false); 
@@ -1959,13 +1959,13 @@ function FinanceiroPageContent() {
         extrato={selectedExtrato} 
         fornecedores={fornecedores}
         inserir={inserirFornecedor}
-        onSelect={(sup: any) => { 
+        onSelect={(sup: any, existingMatch?: any) => { 
           const tf = selectedExtrato.bank.fitid; 
           setEditedMemos(prevEdit => ({ ...prevEdit, [tf]: enhanceMemo(sup.nome, selectedExtrato.bank.memo) })); 
           if (conciliacaoSubTab === 'ofx') {
-            setExtrato(prev => prev.map((tx: any) => tx.fitid === tf ? { ...tx, forMatch: sup, assocMatch: null, suggestedCategory: sup.categoria_padrao || 'Outros' } : tx)); 
+            setExtrato(prev => prev.map((tx: any) => tx.fitid === tf ? { ...tx, forMatch: sup, assocMatch: null, suggestedCategory: sup.categoria_padrao || 'Outros', existingMatch: existingMatch !== undefined ? existingMatch : tx.existingMatch } : tx)); 
           } else {
-            setCoraItems?.(prev => prev.map((item: any) => (item.cora_id || item.id) === tf ? { ...item, forMatch: sup, assocMatch: null, suggestedCategory: sup.categoria_padrao || 'Outros' } : item));
+            setCoraItems?.(prev => prev.map((item: any) => (item.cora_id || item.id) === tf ? { ...item, forMatch: sup, assocMatch: null, suggestedCategory: sup.categoria_padrao || 'Outros', existingMatch: existingMatch !== undefined ? existingMatch : item.existingMatch } : item));
           }
           setClearedMatches(prev => { const n = new Set(prev); n.delete(tf); return n; });
           setIsSupplierLinkModalOpen(false); 

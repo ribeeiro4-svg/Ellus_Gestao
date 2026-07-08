@@ -215,25 +215,27 @@ export function useConciliacaoAudit(
     return extrato.map((bank: any) => {
       // Priorizar vínculo manual se ele já existir no objeto do extrato (OFX)
       if (bank.assocMatch !== undefined || bank.forMatch !== undefined) {
-        let existingMatch = undefined;
-        const bankDate = new Date(bank.date);
-        const m = bankDate.getMonth();
-        const y = bankDate.getFullYear();
+        let existingMatch = bank.existingMatch;
+        if (existingMatch === undefined) {
+          const bankDate = new Date(bank.date);
+          const m = bankDate.getMonth();
+          const y = bankDate.getFullYear();
 
-        if (bank.forMatch) {
-            existingMatch = lancamentos.find(l => 
-                l.fornecedor_id === bank.forMatch.id && 
-                l.tipo === (bank.type === 'CREDIT' ? 'receita' : 'despesa') &&
-                (l.status === 'aberto' || l.status === 'atrasado') && 
-                ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
-            )
-        } else if (bank.assocMatch) {
-            existingMatch = lancamentos.find(l => 
-                (l.associado_id === bank.assocMatch.id || (bank.assocMatch.isDirector && l.diretor_id === bank.assocMatch.id)) && 
-                l.tipo === (bank.type === 'CREDIT' ? 'receita' : 'despesa') &&
-                (l.status === 'aberto' || l.status === 'atrasado') && 
-                ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
-            )
+          if (bank.forMatch) {
+              existingMatch = lancamentos.find(l => 
+                  l.fornecedor_id === bank.forMatch.id && 
+                  l.tipo === (bank.type === 'CREDIT' ? 'receita' : 'despesa') &&
+                  (l.status === 'aberto' || l.status === 'atrasado') && 
+                  ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+              )
+          } else if (bank.assocMatch) {
+              existingMatch = lancamentos.find(l => 
+                  (l.associado_id === bank.assocMatch.id || (bank.assocMatch.isDirector && l.diretor_id === bank.assocMatch.id)) && 
+                  l.tipo === (bank.type === 'CREDIT' ? 'receita' : 'despesa') &&
+                  (l.status === 'aberto' || l.status === 'atrasado') && 
+                  ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+              )
+          }
         }
 
         return { 
@@ -266,25 +268,27 @@ export function useConciliacaoAudit(
 
       // Priorizar vínculo manual se ele já existir no objeto (Cora)
       if (bank.assocMatch !== undefined || bank.forMatch !== undefined) {
-        let existingMatch = undefined;
-        const bankDate = new Date(bank.data);
-        const m = bankDate.getMonth();
-        const y = bankDate.getFullYear();
+        let existingMatch = bank.existingMatch;
+        if (existingMatch === undefined) {
+          const bankDate = new Date(bank.data);
+          const m = bankDate.getMonth();
+          const y = bankDate.getFullYear();
 
-        if (bank.forMatch) {
-            existingMatch = lancamentos.find(l => 
-                l.fornecedor_id === bank.forMatch.id && 
-                l.tipo === (bank.tipo === 'CREDIT' ? 'receita' : 'despesa') &&
-                (l.status === 'aberto' || l.status === 'atrasado') && 
-                ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
-            )
-        } else if (bank.assocMatch) {
-            existingMatch = lancamentos.find(l => 
-                (l.associado_id === bank.assocMatch.id || (bank.assocMatch.isDirector && l.diretor_id === bank.assocMatch.id)) && 
-                l.tipo === (bank.tipo === 'CREDIT' ? 'receita' : 'despesa') &&
-                (l.status === 'aberto' || l.status === 'atrasado') && 
-                ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
-            )
+          if (bank.forMatch) {
+              existingMatch = lancamentos.find(l => 
+                  l.fornecedor_id === bank.forMatch.id && 
+                  l.tipo === (bank.tipo === 'CREDIT' ? 'receita' : 'despesa') &&
+                  (l.status === 'aberto' || l.status === 'atrasado') && 
+                  ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+              )
+          } else if (bank.assocMatch) {
+              existingMatch = lancamentos.find(l => 
+                  (l.associado_id === bank.assocMatch.id || (bank.assocMatch.isDirector && l.diretor_id === bank.assocMatch.id)) && 
+                  l.tipo === (bank.tipo === 'CREDIT' ? 'receita' : 'despesa') &&
+                  (l.status === 'aberto' || l.status === 'atrasado') && 
+                  ((l.competencia_mes === m && l.competencia_ano === y) || (new Date(l.data).getMonth() === m && new Date(l.data).getFullYear() === y))
+              )
+          }
         }
 
         return { 

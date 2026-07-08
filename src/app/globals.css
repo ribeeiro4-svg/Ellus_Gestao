@@ -99,6 +99,29 @@ body {
   position: relative;
 }
 
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(45, 140, 111, 0.3);
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 140, 111, 0.7);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
 code, .font-mono {
   font-family: var(--font-dm-mono), monospace;
 }

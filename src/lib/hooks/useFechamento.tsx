@@ -47,11 +47,24 @@ function useFechamentoInternal() {
    * Regra: Se existe um fechamento em Jan/2024, tudo de Janeiro para trás está bloqueado.
    */
   const isPeriodoBloqueado = useCallback((dataStr: string) => {
-    if (fechamentos.length === 0) return false
+    if (fechamentos.length === 0 || !dataStr) return false
     
-    const data = new Date(dataStr)
-    const mes = data.getMonth()
-    const ano = data.getFullYear()
+    const [datePart] = dataStr.split('T')
+    let ano: number, mes: number
+    
+    if (datePart.includes('-')) {
+        const parts = datePart.split('-')
+        ano = parseInt(parts[0], 10)
+        mes = parseInt(parts[1], 10) - 1
+    } else if (datePart.includes('/')) {
+        const parts = datePart.split('/')
+        ano = parseInt(parts[2], 10)
+        mes = parseInt(parts[1], 10) - 1
+    } else {
+        const d = new Date(dataStr)
+        ano = d.getFullYear()
+        mes = d.getMonth()
+    }
 
     return fechamentos.some(f => {
       if (ano < f.ano) return true

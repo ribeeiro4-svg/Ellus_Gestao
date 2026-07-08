@@ -24,8 +24,28 @@ export function useCurrentUser() {
     setLoading(true)
     try {
       const { data: { user } } = await sb.auth.getUser()
+      
+      const localRaw = localStorage.getItem('user_profile')
+      let localProfile = null
+      if (localRaw) {
+        try {
+          localProfile = JSON.parse(localRaw)
+        } catch(e) {}
+      }
+
       if (!user) {
-        setCurrentUser(null)
+        // Se não tem usuário Supabase mas tem no localStorage (login customizado)
+        if (localProfile) {
+          setCurrentUser({
+            authId: localProfile.id || '',
+            email: localProfile.email || '',
+            nome: localProfile.nome || 'Usuário',
+            role: (localProfile.perfil as UserRole) || ('admin' as UserRole),
+            tenantId: tenantId,
+          })
+        } else {
+          setCurrentUser(null)
+        }
         setLoading(false)
         return
       }
@@ -39,6 +59,20 @@ export function useCurrentUser() {
         .single()
 
       if (error || !profile) {
+        // Tentar fallback via localStorage (setado no login)
+        if (localProfile) {
+          setCurrentUser({
+            authId: user.id,
+            email: localProfile.email || user.email || '',
+            nome: localProfile.nome || user.email || 'Usuário',
+            role: (localProfile.perfil as UserRole) || ('admin' as UserRole),
+            tenantId: tenantId,
+          })
+          setProfileMissing(false)
+          setLoading(false)
+          return
+        }
+        
         // Perfil não cadastrado ainda — admin precisa configurar
         setProfileMissing(true)
         setCurrentUser(null)

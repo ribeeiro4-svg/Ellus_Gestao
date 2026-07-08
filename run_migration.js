@@ -1,11 +1,15 @@
 // Migration via Supabase Management API
+const fs = require('fs');
 const https = require('https');
+const path = require('path');
 
 const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrZmdyamNmbGhsZ2V1YXJ4dG10Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjI4MDY4MiwiZXhwIjoyMDkxODU2NjgyfQ.1CeLLRhn1vrqzE3GlNZg4sfz2lL4AeAjctfBw69HCWc';
 const PROJECT_REF = 'ukfgrjcflhlgeuarxtmt';
 
-// Use Management API for running SQL
-const sql = `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS msg_whatsapp_cobranca TEXT; ALTER TABLE tenants ADD COLUMN IF NOT EXISTS msg_whatsapp_hgu TEXT;`;
+// Lê o arquivo SQL de migração da EIP
+const sqlPath = path.join(__dirname, 'supabase', 'migrations', 'eip_financeiro.sql');
+const sql = fs.readFileSync(sqlPath, 'utf8');
+
 const body = JSON.stringify({ query: sql });
 
 const options = {
@@ -19,6 +23,8 @@ const options = {
     'Content-Length': Buffer.byteLength(body)
   }
 };
+
+console.log('Running migration from:', sqlPath);
 
 const req = https.request(options, (res) => {
   let data = '';

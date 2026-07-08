@@ -61,7 +61,7 @@ export async function processFinancialSubmit(
     competencia_ano: data.competencia_ano !== undefined && data.competencia_ano !== '' ? Number(data.competencia_ano) : undefined,
   }
 
-  const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, nfse_vinculo, lancamentos_contabeis, ...dbData } = safeData
+  const { is_lote, selected_associados, recorrencia_ativa, recorrencia_meses, nfse_vinculo, lancamentos_contabeis, data_ultima_cobranca, ...dbData } = safeData
   
   const getComp = (dtStr: string) => {
     const p = dtStr.includes('-') ? dtStr.split('-').map(Number) : dtStr.split('/').reverse().map(Number)

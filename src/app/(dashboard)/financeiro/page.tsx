@@ -15,6 +15,7 @@ import { useCoraStaged } from '@/lib/hooks/useCoraStaged'
 import { useOFXParser } from '@/lib/hooks/useOFXParser'
 import { useConciliacaoAudit } from '@/features/conciliacao/hooks/useConciliacaoAudit'
 import { useTenantId } from '@/lib/hooks/useTenantId'
+import { useTenant } from '@/lib/hooks/useTenant'
 import { useWhatsAppTemplates } from '@/lib/hooks/useWhatsAppTemplates'
 import { DEFAULT_MSG_COBRANCA, DEFAULT_MSG_ADESAO } from '@/features/configuracoes/components/MensagensWhatsappTab'
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
@@ -35,7 +36,7 @@ import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToo
 import { useFechamento } from '@/lib/hooks/useFechamento'
 import { useSearchParams } from 'next/navigation'
 import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getDiaIdx, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
-import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, FileText, CloudLightning, Trash2, Target, ArrowRightLeft, ArrowUpRight, ArrowDownRight, AlertTriangle, MoreVertical, CheckCircle2, MessageCircle, Calendar as CalendarIcon, ClipboardList } from 'lucide-react'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, FileText, CloudLightning, Trash2, Target, ArrowRightLeft, ArrowUpRight, ArrowDownRight, AlertTriangle, MoreVertical, CheckCircle2, MessageCircle, Calendar as CalendarIcon, ClipboardList, HandCoins } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
@@ -63,6 +64,8 @@ import { gerarPdfAbono } from '@/features/financeiro/utils/gerarPdfAbono'
 import ManualLinkLancamentoModal from '@/components/conciliacao/ManualLinkLancamentoModal'
 import { usePermissions } from '@/lib/hooks/usePermissions'
 import AuditRecorrenciaModal from '@/components/ui/AuditRecorrenciaModal'
+import RecebimentoManualModal from '@/components/financeiro/RecebimentoManualModal'
+import { gerarPdfRecibo } from '@/features/financeiro/utils/gerarPdfRecibo'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
 
@@ -144,6 +147,7 @@ const ActionMenu = ({ children }: { children: React.ReactNode }) => {
 function FinanceiroPageContent() {
   const { criar, editar, excluir, isAdmin } = usePermissions('financeiro')
   const tenantId = useTenantId()
+  const { tenant } = useTenant()
   const { currentUser } = useCurrentUser()
   const { templates } = useWhatsAppTemplates()
   const searchParams = useSearchParams()
@@ -245,6 +249,12 @@ function FinanceiroPageContent() {
   const [isCobrancaDateModalOpen, setIsCobrancaDateModalOpen] = useState(false)
   const [cobrancaDateTarget, setCobrancaDateTarget] = useState<string[]>([])
   const [isAuditRecorrenciaModalOpen, setIsAuditRecorrenciaModalOpen] = useState(false)
+  const [isRecebimentoManualModalOpen, setIsRecebimentoManualModalOpen] = useState(false)
+  const [recebimentoManualTarget, setRecebimentoManualTarget] = useState<any>(null)
+  
+  const [isObsModalOpen, setIsObsModalOpen] = useState(false)
+  const [obsTarget, setObsTarget] = useState<any>(null)
+  const [obsText, setObsText] = useState('')
   const [cashReservePercentage, setCashReservePercentage] = useState(20)
 
   useEffect(() => {
@@ -570,7 +580,7 @@ function FinanceiroPageContent() {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
                body: JSON.stringify({
-                 etapa: 'Pagamento Realizado',
+                 etapa: 'Pagamento',
                  canal: 'sistema',
                  textoEnviado: `Conciliação Automática (Cora): ${getMemoForItem(t)}`,
                  observacao: `Pagamento conciliado via Cora (R$ ${Math.abs(t.bank.amount).toFixed(2)})`
@@ -758,6 +768,38 @@ function FinanceiroPageContent() {
     } else {
       alert(res.error)
     }
+  }
+
+  const handleRecebimentoManual = async (data: any) => {
+    if (!recebimentoManualTarget) return
+
+    const { data_recebimento, forma_pagamento, conta_id, diretor_id } = data
+    
+    const res = await atualizar(recebimentoManualTarget.id, {
+      status: 'pago',
+      data_caixa: data_recebimento,
+      forma_pagamento: forma_pagamento,
+      conta_id: conta_id,
+      diretor_id: diretor_id
+    })
+
+    if (res?.error) {
+      alert('Erro ao confirmar recebimento: ' + res.error)
+      return
+    }
+
+    if (forma_pagamento === 'DINHEIRO' && recebimentoManualTarget.associado_id) {
+      const assoc = associados.find(a => a.id === recebimentoManualTarget.associado_id)
+      const recebedor = diretoria.find(d => d.id === diretor_id)
+      if (assoc) {
+        const updatedLancamento = { ...recebimentoManualTarget, data_caixa: data_recebimento, forma_pagamento }
+        gerarPdfRecibo(assoc, updatedLancamento, recebedor?.nome || '', 'download', tenant?.logo_url)
+      }
+    }
+
+    alert('Recebimento registrado com sucesso.')
+    setIsRecebimentoManualModalOpen(false)
+    setRecebimentoManualTarget(null)
   }
 
   const filteredItemsConciliacao = useMemo(() => {
@@ -1040,7 +1082,9 @@ function FinanceiroPageContent() {
       render: (i: any) => {
         const linkedName = getLinkedName(i)
         const isParcial = (i.descricao || '').includes('[PARCIAL]')
-        const cleanDesc = (i.descricao || '').replace(/ \[FIXO\]| \[VARIÁVEL\]| \[PARCIAL\]/g, '')
+        const cleanDesc = (i.descricao || '').replace(/ \[FIXO\]| \[VARIÁVEL\]| \[PARCIAL\]| \[OBS:.*?\]/g, '')
+        const obsMatch = (i.descricao || '').match(/\[OBS: (.*?)\]/)
+        const hasObs = !!obsMatch
         const hasTarefaEmCurso = !!(i.descricao && tarefas?.some(t => {
           if (t.status === 'Concluído' || !t.descricao) return false;
           if (t.descricao.includes(`[Lançamento ID: ${i.id}]`)) return true;
@@ -1050,7 +1094,6 @@ function FinanceiroPageContent() {
         return (
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-800">{cleanDesc}</span>
               {i.banco_transacao_id && (
                 <span className="text-[9px] font-black bg-blue-50 text-blue-500 px-1.5 py-0.5 rounded border border-blue-100 flex items-center gap-1">
                   <RefreshCw size={8} /> OFX
@@ -1071,6 +1114,15 @@ function FinanceiroPageContent() {
                   Tarefa em curso
                 </span>
               )}
+              {hasObs && (
+                <span 
+                  className="text-[9px] font-black bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-200 cursor-help flex items-center gap-1"
+                  title={obsMatch[1]}
+                >
+                  OBS
+                </span>
+              )}
+              <span className="text-sm font-bold text-slate-800">{cleanDesc}</span>
             </div>
             <div className="flex gap-2">
               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tight flex items-center">
@@ -1168,6 +1220,19 @@ function FinanceiroPageContent() {
                 className="flex items-center gap-3 w-full px-3 py-2 text-left text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
               >
                 <MessageCircle size={14} /> WhatsApp Cobrança
+              </button>
+            )}
+            {i.tipo === 'receita' && i.status !== 'pago' && i.status !== 'cancelado' && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRecebimentoManualTarget(i);
+                  setIsRecebimentoManualModalOpen(true);
+                  document.body.click();
+                }} 
+                className="flex items-center gap-3 w-full px-3 py-2 text-left text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+              >
+                <HandCoins size={14} /> Receber Manualmente
               </button>
             )}
             {i.tipo === 'receita' && i.associado_id && (
@@ -1867,12 +1932,75 @@ function FinanceiroPageContent() {
               onSelectChange={setSelectedIds}
               exportable={true}
               exportFilename="Lancamentos_Financeiros"
+              onRowClick={(item: any) => {
+                setObsTarget(item)
+                const match = (item.descricao || '').match(/\[OBS: (.*?)\]/)
+                setObsText(match ? match[1] : '')
+                setIsObsModalOpen(true)
+              }}
             />
           </div>
         </>
       )}
     </>
   )}
+
+      <CrudModal 
+        isOpen={isObsModalOpen}
+        onClose={() => {
+          setIsObsModalOpen(false)
+          setObsTarget(null)
+          setObsText('')
+        }}
+        title="Observação do Lançamento"
+        onSubmit={async () => {
+          if (!obsTarget) return
+          setSaving(true)
+          try {
+            const baseDesc = (obsTarget.descricao || '').replace(/ \[OBS:.*?\]/g, '')
+            const newDesc = obsText.trim() ? `${baseDesc} [OBS: ${obsText.trim()}]` : baseDesc
+            await atualizar(obsTarget.id, { descricao: newDesc })
+            setIsObsModalOpen(false)
+            setObsTarget(null)
+            setObsText('')
+          } catch (err: any) {
+            alert(`Erro ao salvar observação: ${err.message}`)
+          } finally {
+            setSaving(false)
+          }
+        }}
+        initialData={{ observacao: obsText }}
+        onChange={(name, val) => {
+          if (name === 'observacao') setObsText(val)
+        }}
+        fields={[
+          { name: 'observacao', label: 'Texto Livre (Observação)', type: 'textarea' },
+          {
+            name: 'recibo_pdf',
+            label: '',
+            type: 'info',
+            showIf: () => !!(obsTarget?.diretor_id),
+            render: () => {
+              const associado = associados.find((a: any) => a.id === obsTarget?.associado_id)
+              const diretor = diretoria.find((d: any) => d.id === obsTarget?.diretor_id)
+              return (
+                <div className="pt-2">
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      gerarPdfRecibo(associado, obsTarget, diretor?.nome || '--', 'download', tenant?.logo_url)
+                    }}
+                    className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-4 py-3 rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-colors w-full justify-center text-xs font-black uppercase tracking-wider shadow-sm active:scale-[0.98]"
+                  >
+                    <FileText size={16} />
+                    Download Recibo PDF
+                  </button>
+                </div>
+              )
+            }
+          }
+        ]}
+      />
 
       <CrudModal 
         isOpen={isModalOpen} 
@@ -2203,6 +2331,14 @@ function FinanceiroPageContent() {
           } catch (e: any) { alert(`Erro: ${e.message}`) }
           finally { setIsProcessingBatch(false) }
         }}
+      />
+      <RecebimentoManualModal 
+        isOpen={isRecebimentoManualModalOpen}
+        onClose={() => { setIsRecebimentoManualModalOpen(false); setRecebimentoManualTarget(null); }}
+        lancamento={recebimentoManualTarget}
+        contas={contas}
+        diretores={diretoria}
+        onConfirm={handleRecebimentoManual}
       />
     </div>
   )

@@ -31,7 +31,13 @@ function LoginContent() {
           localStorage.setItem('user_permissions', JSON.stringify(data.permissoes))
         }
         if (data.colaborador) {
-          localStorage.setItem('user_profile', JSON.stringify({ id: data.colaborador.id, perfil_id: data.colaborador.perfil_id }))
+          localStorage.setItem('user_profile', JSON.stringify({ 
+            id: data.colaborador.id, 
+            perfil_id: data.colaborador.perfil_id,
+            nome: data.colaborador.nome,
+            email: data.colaborador.email,
+            perfil: data.colaborador.perfil
+          }))
         }
         if (data.token) {
           localStorage.setItem('rbac_token_raw', data.token)

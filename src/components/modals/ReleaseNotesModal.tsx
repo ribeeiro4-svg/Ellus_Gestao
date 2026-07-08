@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { X, Sparkles, ChevronRight, ChevronLeft, ClipboardList, DollarSign, UserSearch, ShieldCheck, Activity, CheckCircle2, BookMarked, Smartphone, Mail } from 'lucide-react'
+import { X, Sparkles, ChevronRight, ChevronLeft, ClipboardList, DollarSign, UserSearch, ShieldCheck, Activity, CheckCircle2, BookMarked, Smartphone, Mail, BarChart2 } from 'lucide-react'
 import Image from 'next/image'
 import LogoV2 from '@/components/ui/LogoV2'
 
@@ -29,6 +29,12 @@ const TOUR_STEPS = [
     description: 'Além do WhatsApp, agora você envia as notificações de cobrança direto por e-mail. O sistema gera o texto personalizado, monta o layout profissional e registra no histórico automaticamente.',
     icon: Mail,
     color: 'amber'
+  },
+  {
+    title: 'Melhorias nos Relatórios e Filtros.',
+    description: 'Os gráficos de disparos agora estão mais legíveis e ganharam o filtro "Hoje". Além disso, seus filtros de segmentação de associados agora ficam salvos mesmo ao sair da tela!',
+    icon: BarChart2,
+    color: 'violet'
   },
   {
     title: 'Organize o trabalho da equipe sem sair do sistema.',

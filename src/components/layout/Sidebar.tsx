@@ -97,6 +97,8 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [permissoes, setPermissoes] = useState<Record<string, any>>({})
   const [isAdmin, setIsAdmin] = useState(false)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
     const initialState: Record<string, boolean> = {}
@@ -140,6 +142,8 @@ export default function Sidebar() {
         if (profileRaw) {
           const profile = JSON.parse(profileRaw)
           if (profile.perfil_id === 1) setIsAdmin(true)
+          if (profile.nome) setUserName(profile.nome)
+          if (profile.perfil) setUserRole(profile.perfil)
         }
         if (permsRaw) {
           setPermissoes(JSON.parse(permsRaw))
@@ -324,7 +328,7 @@ export default function Sidebar() {
           {!isCollapsed && (
             <div className="flex-1 overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300">
                <p className="text-[11px] font-bold text-white/80 truncate">{customName}</p>
-               <p className="text-[9px] text-white/20 uppercase tracking-tighter">Administrador</p>
+               <p className="text-[9px] text-white/20 uppercase tracking-tighter">{userName || 'Administrador'}</p>
             </div>
           )}
           <div className={`flex items-center gap-2 ${isCollapsed ? 'flex-col' : ''}`}>
