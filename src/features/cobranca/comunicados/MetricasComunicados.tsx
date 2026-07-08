@@ -221,7 +221,7 @@ export default function MetricasComunicados({ historico }: MetricasComunicadosPr
         stacked: true,
         grid: { display: false },
         ticks: { 
-          font: { size: 11, weight: 'bold' },
+          font: { size: 11, weight: 'bold' as const },
           color: '#64748b'
         },
       },
@@ -266,7 +266,7 @@ export default function MetricasComunicados({ historico }: MetricasComunicadosPr
       x: {
         grid: { display: false },
         ticks: {
-          font: { size: 11, weight: 'bold' },
+          font: { size: 11, weight: 'bold' as const },
           color: '#64748b',
           maxTicksLimit: 8,
           maxRotation: 0,
