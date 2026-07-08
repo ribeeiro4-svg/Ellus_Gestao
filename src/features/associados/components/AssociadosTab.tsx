@@ -34,6 +34,7 @@ import AssociadosLogModal, { AssociadoLogEntry } from './AssociadosLogModal'
 import FichaAssociadoModal from './ficha-associado/FichaAssociadoModal'
 import CancelamentoModal from './CancelamentoModal'
 import PreviewAdesoesModal from './PreviewAdesoesModal'
+import PreviewMensalidadesModal from './PreviewMensalidadesModal'
 import { insertLoteLancamentosAction } from '@/app/actions/zapsign'
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend, LineElement, PointElement)
 
@@ -97,6 +98,9 @@ function AssociadosContent() {
   // Preview Adesões Modal
   const [isPreviewAdesoesOpen, setIsPreviewAdesoesOpen] = useState(false)
   const [previewAdesoesData, setPreviewAdesoesData] = useState<any[]>([])
+
+  const [isPreviewMensalidadesOpen, setIsPreviewMensalidadesOpen] = useState(false)
+  const [previewMensalidadesData, setPreviewMensalidadesData] = useState<any[]>([])
 
   const [showFilters, setShowFilters] = useState(false)
 
@@ -448,6 +452,55 @@ Diretoria / Secretaria ACPROBEC`
       } else {
         alert(res.message || `Sucesso! ${res.count || 0} registros processados.`)
       }
+    }
+  }
+
+  
+  const handleGerarMensalidades = async () => {
+    const associadosAlvo = associados.filter((a: any) => {
+      if (a.status === 'inativo') return false;
+      const assocLancs = lancamentos.filter(l => l.associado_id === a.id);
+      const temAdesao = assocLancs.some(l => (l.categoria || '').toUpperCase().includes('ADESÃO') || (l.descricao || '').toUpperCase().includes('ADESÃO'));
+      const temMensalidade = assocLancs.some(l => (l.categoria || '').toUpperCase().includes('MENSALIDADE') || (l.descricao || '').toUpperCase().includes('MENSALIDADE'));
+      return temAdesao && !temMensalidade;
+    });
+
+    if (associadosAlvo.length === 0) {
+      setPreviewMensalidadesData([]);
+      setIsPreviewMensalidadesOpen(true);
+      return;
+    }
+
+    const hoje = new Date();
+    const dataAtual = hoje.toISOString().split('T')[0];
+    const preview = associadosAlvo.map((a: any) => {
+      const contaPadrao = contas?.find((c: any) => c.padrao) || contas?.[0];
+      return {
+        tenant_id: a.tenant_id,
+        associado_id: a.id,
+        tipo: 'receita',
+        categoria: 'MENSALIDADE',
+        descricao: `RECEB. DE MENSALIDADE - ${a.nome.toUpperCase()} [FIXO]`,
+        valor: a.plano_valor || 35.0,
+        data: dataAtual,
+        status: 'aberto',
+        conta_id: contaPadrao?.id || null,
+        forma_pagamento: 'Boleto'
+      };
+    });
+
+    setPreviewMensalidadesData(preview);
+    setIsPreviewMensalidadesOpen(true);
+  }
+
+  const handleConfirmGerarMensalidades = async (selected: any[]) => {
+    const res = await insertLoteLancamentosAction(selected)
+    if (res.error) {
+      alert(`Erro: ${res.error}`)
+    } else {
+      alert(`${res.count} mensalidades lançadas com sucesso.`)
+      setIsPreviewMensalidadesOpen(false)
+      refresh()
     }
   }
 
@@ -1497,6 +1550,10 @@ Diretoria / Secretaria ACPROBEC`
             <Zap size={14} className={isSyncing ? 'animate-pulse' : ''} />
             Lançar Adesões
           </button>
+          <button onClick={handleGerarMensalidades} disabled={isSyncing} className="btn-secondary text-[10px] uppercase font-black px-4 py-2.5 flex items-center gap-2 bg-indigo-50 text-indigo-700 border-none hover:bg-indigo-100">
+            <Zap size={14} className={isSyncing ? 'animate-pulse' : ''} />
+            Lançar Mensalidades
+          </button>
 
           {(criar || isAdmin) && (
             <button onClick={() => { setEditingItem(null); setIsModalOpen(true) }} className="btn-primary text-[10px] uppercase font-black px-5 py-2.5 flex items-center gap-2">
@@ -2295,6 +2352,13 @@ Diretoria / Secretaria ACPROBEC`
         </div>
       )}
       {/* Modal de Preview de Adesões */}
+      <PreviewMensalidadesModal 
+        isOpen={isPreviewMensalidadesOpen}
+        onClose={() => setIsPreviewMensalidadesOpen(false)}
+        previewData={previewMensalidadesData}
+        associados={associados}
+        onConfirm={handleConfirmGerarMensalidades}
+      />
       <PreviewAdesoesModal 
         isOpen={isPreviewAdesoesOpen}
         onClose={() => setIsPreviewAdesoesOpen(false)}
