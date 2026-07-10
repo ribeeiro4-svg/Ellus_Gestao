@@ -374,6 +374,16 @@ export default function DiretoriaTab() {
           </div>
           <div class="content">
             ${html.replace(/<h2 style="font-size: 14px; text-transform: uppercase; color: #64748b;">/g, '<h2 class="section-title">')}
+            <div style="margin-top: 80px; display: flex; justify-content: space-around; text-align: center; page-break-inside: avoid;">
+              <div style="width: 35%;">
+                <div style="border-top: 1px solid #94a3b8; margin-bottom: 8px;"></div>
+                <div class="font-bold" style="font-size: 11px; color: #0E2D22;">PRESIDENTE</div>
+              </div>
+              <div style="width: 35%;">
+                <div style="border-top: 1px solid #94a3b8; margin-bottom: 8px;"></div>
+                <div class="font-bold" style="font-size: 11px; color: #0E2D22;">TESOUREIRO</div>
+              </div>
+            </div>
             <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ACPROBEC</div>
           </div>
         </body>
