@@ -25,6 +25,7 @@ import CrudModal from '@/components/ui/CrudModal'
 import KpiCard from '@/components/ui/KpiCard'
 import DataTable from '@/components/ui/DataTable'
 import FichaDiretorModal from './FichaDiretorModal'
+import AdiantamentosTab from './AdiantamentosTab'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
 
 export default function DiretoriaTab() {
@@ -48,6 +49,8 @@ export default function DiretoriaTab() {
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string>('all')
   const [periodosMember, setPeriodosMember] = useState<Diretor | null>(null)
   const [tempPeriodos, setTempPeriodos] = useState<any[]>([])
+
+  const [activeTab, setActiveTab] = useState<'cadastro' | 'adiantamentos'>('cadastro')
 
   const handleImprimirRelatorio = (tipo: string) => {
     let titulo = ""
@@ -622,22 +625,48 @@ export default function DiretoriaTab() {
   ]
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800 tracking-tight flex items-center gap-2">
-            <ShieldCheck className="text-indigo-600" size={20} /> Gestão da Diretoria
-          </h2>
-          <p className="text-xs text-gray-500 font-medium mt-1">Configure os membros oficiais e seus respectivos pró-labores para simulações e termos.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <button 
-              onClick={() => setShowReportMenu(!showReportMenu)}
-              className="bg-indigo-50 text-indigo-600 px-5 py-2.5 rounded-2xl font-bold text-xs hover:bg-indigo-100 transition-all border border-indigo-100 flex items-center gap-2"
-            >
-              <Printer size={16} /> Relatórios <ChevronDown size={14} className={`transition-transform ${showReportMenu ? 'rotate-180' : ''}`} />
-            </button>
+    <div className="space-y-6">
+      {/* ─── NAVEGAÇÃO DE ABAS ─── */}
+      <div className="flex items-center gap-4 border-b border-slate-200 pb-2">
+        <button 
+          onClick={() => setActiveTab('cadastro')}
+          className={`pb-2 px-1 text-sm font-bold uppercase tracking-wider transition-colors ${
+            activeTab === 'cadastro' 
+              ? 'text-indigo-600 border-b-2 border-indigo-600' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Cadastro & Pró-labore
+        </button>
+        <button 
+          onClick={() => setActiveTab('adiantamentos')}
+          className={`pb-2 px-1 text-sm font-bold uppercase tracking-wider transition-colors ${
+            activeTab === 'adiantamentos' 
+              ? 'text-indigo-600 border-b-2 border-indigo-600' 
+              : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          Adiantamentos & Empréstimos
+        </button>
+      </div>
+
+      {activeTab === 'cadastro' && (
+        <div className="space-y-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
+            <div>
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                <ShieldCheck className="text-indigo-600" size={28} />
+                Diretoria & Conselho
+              </h2>
+              <p className="text-sm font-medium text-slate-500 mt-1 ml-10">Gestão de membros oficiais, mandatos e pró-labores.</p>
+            </div>
+            <div className="flex items-center gap-3 w-full md:w-auto relative">
+              <button 
+                onClick={() => setShowReportMenu(!showReportMenu)}
+                className="bg-indigo-50 text-indigo-600 px-5 py-2.5 rounded-2xl font-bold text-xs hover:bg-indigo-100 transition-all border border-indigo-100 flex items-center gap-2"
+              >
+                <Printer size={16} /> Relatórios <ChevronDown size={14} className={`transition-transform ${showReportMenu ? 'rotate-180' : ''}`} />
+              </button>
             {showReportMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowReportMenu(false)}></div>
@@ -679,7 +708,6 @@ export default function DiretoriaTab() {
             <Plus size={16} strokeWidth={3} /> Novo Membro
           </button>
         </div>
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <KpiCard title="Membros Ativos" value={totalAtivos} icon={<Users size={20} />} category="info" trendLabel="Diretores oficiais" />
@@ -1041,6 +1069,18 @@ export default function DiretoriaTab() {
           </div>
         </div>
       )}
+
+        </div>
+      )}
+
+      {activeTab === 'adiantamentos' && (
+        <div className="animate-in fade-in zoom-in-95 duration-300">
+           <AdiantamentosTab />
+        </div>
+      )}
+
     </div>
   )
 }
+
+

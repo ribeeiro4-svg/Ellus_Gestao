@@ -441,3 +441,53 @@ export interface Resolucao {
   created_at: string
   updated_at: string
 }
+
+// ─── Adiantamentos e Empréstimos ──────────────────────────────────────────
+export type StatusAdiantamento = 'SOLICITADO' | 'APROVADO' | 'RECUSADO' | 'PAGO' | 'DESCONTADO' | 'CANCELADO'
+export type TipoAdiantamento = 'ADIANTAMENTO' | 'EMPRESTIMO'
+
+export interface Adiantamento {
+  id: string
+  tenant_id: string
+  diretor_id: string
+  numero: number
+  tipo: TipoAdiantamento
+  valor: number
+  parcelas: number
+  valor_parcela?: number
+  motivo?: string
+  observacao?: string
+  data_solicitacao: string
+  data_aprovacao?: string
+  data_pagamento?: string
+  data_prevista_desconto?: string
+  status: StatusAdiantamento
+  aprovado_por?: string
+  forma_pagamento?: string
+  conta_financeira_id?: string
+  lancamento_financeiro_id?: string
+  recibo_emitido: boolean
+  guia_emitida: boolean
+  created_at: string
+  updated_at: string
+  created_by?: string
+  updated_by?: string
+  // Virtual UI
+  diretor_nome?: string
+}
+
+export interface DiretoriaConfig {
+  tenant_id: string
+  max_percent_adiantamento: number
+  permitir_emprestimo: boolean
+  max_valor_emprestimo?: number
+  exigir_aprovacao_presidencia: boolean
+  exigir_aprovacao_tesouraria: boolean
+  permitir_parcelamento: boolean
+  max_parcelas: number
+  categoria_adiantamento: string
+  categoria_emprestimo: string
+  modelo_guia?: string
+  modelo_recibo?: string
+  updated_at: string
+}
