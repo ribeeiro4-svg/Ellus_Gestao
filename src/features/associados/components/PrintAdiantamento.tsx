@@ -36,7 +36,7 @@ const htmlBase = (titulo: string, content: string, logoUrl?: string) => `
           <p>ACPROBEC — ASSOCIAÇÃO COLABORATIVA</p>
           <h1>${titulo}</h1>
         </div>
-        ${logoUrl ? \`<img src="\${logoUrl}" class="header-logo" onerror="this.style.display='none'" />\` : ''}
+        ${logoUrl ? `<img src="${logoUrl}" class="header-logo" onerror="this.style.display='none'" />` : ''}
       </div>
       <div class="content">
         ${content}
