@@ -137,15 +137,16 @@ export default function DiretoriaTab() {
           </thead>
           <tbody>
             ${ativos.length === 0 ? '<tr><td colspan="5" class="text-center">Nenhum membro encontrado.</td></tr>' : ativos.map(d => {
+              const isento = d.cargo?.includes('[ISENTO INSS]')
               const bruto = d.pro_labore_base || 0
-              const inss = bruto * 0.11
+              const inss = isento ? 0 : (bruto * 0.11)
               const liquido = bruto - inss
               return `
                 <tr>
                   <td><div class="font-bold">${d.nome}</div><div style="font-size:8px; color:#64748b; text-transform: uppercase;">${d.cargo}</div></td>
                   <td>${d.cpf || '-'}</td>
                   <td class="text-right">${fmtR(bruto)}</td>
-                  <td class="text-right text-rose-600">${fmtR(inss)}</td>
+                  <td class="text-right ${isento ? 'text-slate-400' : 'text-rose-600'}">${isento ? 'ISENTO' : fmtR(inss)}</td>
                   <td class="text-right font-black text-emerald-600">${fmtR(liquido)}</td>
                 </tr>
               `
@@ -155,8 +156,8 @@ export default function DiretoriaTab() {
             <tr class="bg-slate-50 font-black">
               <td colspan="2" class="text-right">TOTAIS DA COMPETÊNCIA</td>
               <td class="text-right">${fmtR(ativos.reduce((acc, d) => acc + (d.pro_labore_base || 0), 0))}</td>
-              <td class="text-right text-rose-600">${fmtR(ativos.reduce((acc, d) => acc + ((d.pro_labore_base || 0) * 0.11), 0))}</td>
-              <td class="text-right text-emerald-600">${fmtR(ativos.reduce((acc, d) => acc + ((d.pro_labore_base || 0) * 0.89), 0))}</td>
+              <td class="text-right text-rose-600">${fmtR(ativos.reduce((acc, d) => acc + (d.cargo?.includes('[ISENTO INSS]') ? 0 : ((d.pro_labore_base || 0) * 0.11)), 0))}</td>
+              <td class="text-right text-emerald-600">${fmtR(ativos.reduce((acc, d) => acc + ((d.pro_labore_base || 0) - (d.cargo?.includes('[ISENTO INSS]') ? 0 : ((d.pro_labore_base || 0) * 0.11))), 0))}</td>
             </tr>
           </tfoot>
         </table>
