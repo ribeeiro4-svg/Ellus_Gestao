@@ -47,6 +47,7 @@ const MENU = [
     section: 'Gente & Atendimentos', 
     items: [
       { href: '/associados', icon: Users, label: 'Cadastro de Vidas' },
+      { href: '/membros-diretoria', icon: ShieldCheck, label: 'Membros da Diretoria' },
       { href: '/atendimentos', icon: Calendar, label: 'Agenda & Atendimentos' },
       { href: '/recrutamento', icon: BarChart3, label: 'Recrutamento & Seleção' },
     ]
@@ -163,6 +164,7 @@ export default function Sidebar() {
 
     const routeToModuleMap: Record<string, string> = {
       '/associados': 'socios',
+      '/membros-diretoria': 'socios',
       '/financeiro': 'financeiro',
       '/fechamento': 'fechamento',
       '/planejamento': 'planejamento',
