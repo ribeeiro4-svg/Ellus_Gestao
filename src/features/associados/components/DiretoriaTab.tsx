@@ -344,31 +344,38 @@ export default function DiretoriaTab() {
           <title>${titulo} — ACPROBEC</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
-            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            body { font-family: 'Inter', sans-serif; padding: 0; margin: 0; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .content { padding: 40px; }
+            .header-banner { background-color: #0E2D22; padding: 25px 40px; color: white; margin-bottom: 30px; }
+            .header-banner p { margin: 0; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: rgba(255,255,255,0.7); }
+            .header-banner h1 { margin: 5px 0 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+            h2.section-title { font-size: 13px; color: #0E2D22; text-transform: uppercase; border-bottom: 2px solid #10B981; padding-bottom: 5px; margin-bottom: 15px; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { background: #f8fafc; color: #64748b; text-transform: uppercase; padding: 12px 10px; text-align: left; border-bottom: 2px solid #e2e8f0; font-size: 9px; font-weight: 900; }
-            td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 10px; text-align: left; vertical-align: middle; }
+            th { background: white; color: #0E2D22; text-transform: uppercase; padding: 12px 10px; text-align: left; border-bottom: 2px solid #10B981; font-size: 10px; font-weight: 900; }
+            td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 10px; text-align: left; vertical-align: middle; color: #1e293b; }
             .text-right { text-align: right; }
             .text-center { text-align: center; }
             .font-black { font-weight: 900; }
             .font-bold { font-weight: 700; }
-            .text-emerald-600 { color: #059669; }
+            .text-emerald-600 { color: #10B981; }
             .text-rose-600 { color: #e11d48; }
             .bg-slate-50 { background-color: #f8fafc; }
-            .footer { margin-top: 40px; text-align: right; font-size: 8px; color: #94a3b8; }
-            @media print { @page { size: A4 portrait; margin: 1.5cm; } }
+            .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; border-top: 1px solid #f3f4f6; padding-top: 10px; }
+            @media print { 
+              @page { size: A4 portrait; margin: 0; }
+              body { padding: 0; }
+            }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>ACPROBEC — ${titulo.toUpperCase()}</h1>
-            <p>GESTÃO DE ENTIDADES | DIRETORIA E CONSELHO</p>
+          <div class="header-banner">
+            <p>ACPROBEC — ASSOCIAÇÃO COLABORATIVA</p>
+            <h1>${titulo.toUpperCase()}</h1>
           </div>
-          ${html}
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
+          <div class="content">
+            ${html.replace(/<h2 style="font-size: 14px; text-transform: uppercase; color: #64748b;">/g, '<h2 class="section-title">')}
+            <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ACPROBEC</div>
+          </div>
         </body>
       </html>
     `)
