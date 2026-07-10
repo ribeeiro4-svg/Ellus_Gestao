@@ -402,8 +402,7 @@ export default function DiretoriaTab() {
         status: 'aberto',
         competencia_mes: competenciaMes,
         competencia_ano: competenciaAno,
-        diretor_id: d.id,
-        conta_origem_id: 'default' // O sistema deve tratar ou o usuário ajustar depois
+        diretor_id: d.id
       })
       
       // 2. INSS (11%) - Apenas se selecionado
@@ -417,8 +416,7 @@ export default function DiretoriaTab() {
           status: 'aberto',
           competencia_mes: competenciaMes,
           competencia_ano: competenciaAno,
-          diretor_id: d.id,
-          conta_origem_id: 'default'
+          diretor_id: d.id
         })
       }
     })
