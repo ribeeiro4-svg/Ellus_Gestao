@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useAdiantamentos } from '@/lib/hooks/useAdiantamentos'
 import { useDiretoria } from '@/lib/hooks/useDiretoria'
+import { useTenant } from '@/lib/hooks/useTenant'
 import { Adiantamento, StatusAdiantamento } from '@/lib/types'
 import { fmtR } from '@/lib/utils/formatters'
 import { Plus, Settings, Printer, CheckCircle, XCircle, CreditCard } from 'lucide-react'
@@ -21,17 +22,18 @@ const STATUS_COLORS: Record<string, string> = {
 export default function AdiantamentosTab() {
   const { adiantamentos, loading, config, atualizarStatus, efetuarPagamentoFinanceiro } = useAdiantamentos()
   const { diretoria } = useDiretoria()
+  const { tenant } = useTenant()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedAdiantamento, setSelectedAdiantamento] = useState<Adiantamento | null>(null)
 
   const handlePrintGuia = (item: Adiantamento) => {
     const diretor = diretoria.find(d => d.id === item.diretor_id)
-    ImprimirGuia(item, diretor)
+    ImprimirGuia(item, diretor, tenant?.logo_url)
   }
 
   const handlePrintRecibo = (item: Adiantamento) => {
     const diretor = diretoria.find(d => d.id === item.diretor_id)
-    ImprimirRecibo(item, diretor)
+    ImprimirRecibo(item, diretor, tenant?.logo_url)
   }
 
   const handleAprovar = async (item: Adiantamento) => {

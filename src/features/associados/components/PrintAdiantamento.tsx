@@ -2,7 +2,7 @@ import { Adiantamento } from '@/lib/types'
 import { Diretor } from '@/lib/hooks/useDiretoria'
 import { fmtR } from '@/lib/utils/formatters'
 
-const htmlBase = (titulo: string, content: string) => `
+const htmlBase = (titulo: string, content: string, logoUrl?: string) => `
 <html>
   <head>
     <title>${titulo}</title>
@@ -11,9 +11,12 @@ const htmlBase = (titulo: string, content: string) => `
       body { font-family: 'Inter', sans-serif; padding: 0; margin: 0; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       @page { size: A4 portrait; margin: 10mm; }
       .container { width: 100%; max-width: 800px; margin: 0 auto; }
-      .header { background-color: #064e3b; color: white; padding: 30px; text-align: center; border-bottom: 6px solid #10b981; }
-      .header h1 { margin: 0; font-size: 24px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
-      .header p { margin: 5px 0 0 0; font-size: 12px; opacity: 0.8; }
+      .header { background-color: #0e2d22; color: white; padding: 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 6px solid #10b981; }
+      .header-text { text-align: left; }
+      .header-text p { margin: 0; font-size: 14px; font-weight: bold; letter-spacing: 1px; opacity: 0.9; text-transform: uppercase; margin-bottom: 5px; }
+      .header-text h1 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+      .header-logo { max-height: 80px; object-fit: contain; }
+      .footer-logo { height: 40px; margin-bottom: 10px; opacity: 0.8; }
       .content { padding: 40px 30px; }
       .section-title { font-size: 14px; text-transform: uppercase; color: #064e3b; border-bottom: 2px solid #10b981; padding-bottom: 5px; margin-bottom: 20px; font-weight: 900; }
       .row { display: flex; margin-bottom: 15px; }
@@ -29,19 +32,25 @@ const htmlBase = (titulo: string, content: string) => `
   <body>
     <div class="container">
       <div class="header">
-        <h1>ACPROBEC</h1>
-        <p>Associação Colaborativa de Profissionais Liberais, Comércio e Setor da Beleza</p>
+        <div class="header-text">
+          <p>ACPROBEC — ASSOCIAÇÃO COLABORATIVA</p>
+          <h1>${titulo}</h1>
+        </div>
+        ${logoUrl ? \`<img src="\${logoUrl}" class="header-logo" onerror="this.style.display='none'" />\` : ''}
       </div>
       <div class="content">
         ${content}
-        <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} pelo Sistema ACPROBEC</div>
+        <div class="footer">
+          <img src="/ellus_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+          Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo Sistema Éllus Gestão Estratégica
+        </div>
       </div>
     </div>
   </body>
 </html>
 `
 
-export function ImprimirGuia(item: Adiantamento, diretor?: Diretor) {
+export function ImprimirGuia(item: Adiantamento, diretor?: Diretor, logoUrl?: string) {
   const content = `
     <h2 class="section-title">GUIA DE SOLICITAÇÃO - Nº ${String(item.numero || 0).padStart(4, '0')}</h2>
     
@@ -92,7 +101,7 @@ export function ImprimirGuia(item: Adiantamento, diretor?: Diretor) {
 
   const win = window.open('', '_blank')
   if (win) {
-    win.document.write(htmlBase('Guia de Solicitação', content))
+    win.document.write(htmlBase('GUIA DE SOLICITAÇÃO', content, logoUrl))
     win.document.close()
     setTimeout(() => {
       win.print()
@@ -100,7 +109,7 @@ export function ImprimirGuia(item: Adiantamento, diretor?: Diretor) {
   }
 }
 
-export function ImprimirRecibo(item: Adiantamento, diretor?: Diretor) {
+export function ImprimirRecibo(item: Adiantamento, diretor?: Diretor, logoUrl?: string) {
   const content = `
     <h2 class="section-title">RECIBO - Nº ${String(item.numero || 0).padStart(4, '0')}</h2>
     
@@ -130,7 +139,7 @@ export function ImprimirRecibo(item: Adiantamento, diretor?: Diretor) {
 
   const win = window.open('', '_blank')
   if (win) {
-    win.document.write(htmlBase('Recibo', content))
+    win.document.write(htmlBase('RECIBO DE PAGAMENTO', content, logoUrl))
     win.document.close()
     setTimeout(() => {
       win.print()
