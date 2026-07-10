@@ -47,7 +47,10 @@ export default function AdiantamentoFormModal({ isOpen, onClose, diretoria, conf
       status: 'SOLICITADO'
     })
 
-    if (error) alert('Erro ao salvar solicitação')
+    if (error) {
+      console.error('ERRO SUPABASE:', error)
+      alert(`Erro ao salvar solicitação: ${error.message || JSON.stringify(error)}`)
+    }
     else onClose()
   }
 
