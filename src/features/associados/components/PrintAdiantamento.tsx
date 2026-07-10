@@ -30,7 +30,7 @@ const htmlBase = (titulo: string, content: string) => `
     <div class="container">
       <div class="header">
         <h1>ACPROBEC</h1>
-        <p>Associação de Proteção aos Beneficiários do Caminho</p>
+        <p>Associação Colaborativa de Profissionais Liberais, Comércio e Setor da Beleza</p>
       </div>
       <div class="content">
         ${content}
@@ -105,8 +105,9 @@ export function ImprimirRecibo(item: Adiantamento, diretor?: Diretor) {
     <h2 class="section-title">RECIBO - Nº ${String(item.numero || 0).padStart(4, '0')}</h2>
     
     <div style="font-size: 16px; line-height: 2; text-align: justify; margin: 40px 0;">
-      Recebi da <strong>ACPROBEC - Associação de Proteção aos Beneficiários do Caminho</strong>, 
-      o valor de <strong class="highlight">${fmtR(item.valor)}</strong>, referente a <strong>${item.tipo}</strong>, 
+      <p>
+      Recebi da <strong>ACPROBEC - Associação Colaborativa de Profissionais Liberais, Comércio e Setor da Beleza</strong>, 
+      a importância de <strong>R$ ${Number(item.valor).toFixed(2).replace('.', ',')}</strong>, <strong>${item.tipo}</strong>, 
       a ser descontado em ${item.parcelas} parcela(s).
     </div>
 
