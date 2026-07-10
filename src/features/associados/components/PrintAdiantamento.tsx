@@ -51,8 +51,9 @@ const htmlBase = (titulo: string, content: string, logoUrl?: string) => `
 `
 
 export function ImprimirGuia(item: Adiantamento, diretor?: Diretor, logoUrl?: string) {
+  const tituloGuia = item.tipo === 'EMPRESTIMO' ? 'SOLICITAÇÃO DE EMPRÉSTIMO' : 'SOLICITAÇÃO DE ADIANTAMENTO'
   const content = `
-    <h2 class="section-title">GUIA DE SOLICITAÇÃO - Nº ${String(item.numero || 0).padStart(4, '0')}</h2>
+    <h2 class="section-title">${tituloGuia} - Nº ${String(item.numero || 0).padStart(4, '0')}</h2>
     
     <div class="row">
       <div class="label">Diretor(a)</div>
@@ -101,7 +102,7 @@ export function ImprimirGuia(item: Adiantamento, diretor?: Diretor, logoUrl?: st
 
   const win = window.open('', '_blank')
   if (win) {
-    win.document.write(htmlBase('GUIA DE SOLICITAÇÃO', content, logoUrl))
+    win.document.write(htmlBase(tituloGuia, content, logoUrl))
     win.document.close()
     setTimeout(() => {
       win.print()
