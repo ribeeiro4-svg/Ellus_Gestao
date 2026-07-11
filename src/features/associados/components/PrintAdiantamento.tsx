@@ -15,7 +15,7 @@ const htmlBase = (titulo: string, content: string, logoUrl?: string) => `
       .header-text { text-align: left; }
       .header-text p { margin: 0; font-size: 14px; font-weight: bold; letter-spacing: 1px; opacity: 0.9; text-transform: uppercase; margin-bottom: 5px; }
       .header-text h1 { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
-      .header-logo { max-height: 80px; object-fit: contain; }
+      .header-logo { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; background-color: #fdfaf6; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
       .footer-logo { height: 40px; margin-bottom: 10px; opacity: 0.8; }
       .content { padding: 40px 30px; }
       .section-title { font-size: 14px; text-transform: uppercase; color: #064e3b; border-bottom: 2px solid #10b981; padding-bottom: 5px; margin-bottom: 20px; font-weight: 900; }
