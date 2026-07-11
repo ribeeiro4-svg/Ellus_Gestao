@@ -23,7 +23,7 @@ const htmlBase = (titulo: string, content: string, logoUrl?: string) => `
       .label { font-weight: bold; width: 150px; color: #64748b; font-size: 12px; text-transform: uppercase; }
       .value { flex: 1; font-size: 14px; font-weight: 700; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; }
       .signatures { margin-top: 80px; display: flex; justify-content: space-around; text-align: center; }
-      .sig-line { border-top: 1px solid #1e293b; width: 200px; padding-top: 5px; font-weight: bold; font-size: 12px; }
+      .sig-line { border-top: 1px solid #1e293b; width: 220px; padding-top: 5px; font-weight: bold; font-size: 11px; white-space: nowrap; }
       .sig-title { font-size: 10px; color: #64748b; text-transform: uppercase; }
       .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; }
       .highlight { color: #064e3b; font-size: 18px; }
@@ -61,7 +61,11 @@ export function ImprimirGuia(item: Adiantamento, diretor?: Diretor, logoUrl?: st
     </div>
     <div class="row">
       <div class="label">Cargo</div>
-      <div class="value">${diretor?.cargo || '-'}</div>
+      <div class="value">${(diretor?.cargo || '-').replace(' [ISENTO INSS]', '').replace('[ISENTO INSS]', '').trim()}</div>
+    </div>
+    <div class="row">
+      <div class="label">CPF</div>
+      <div class="value">${diretor?.cpf || '-'}</div>
     </div>
     <div class="row">
       <div class="label">Tipo</div>
@@ -80,9 +84,21 @@ export function ImprimirGuia(item: Adiantamento, diretor?: Diretor, logoUrl?: st
       <div class="value">${item.motivo || '-'}</div>
     </div>
     <div class="row">
-      <div class="label">Data</div>
+      <div class="label">Data de Solicitação</div>
       <div class="value">${new Date(item.data_solicitacao).toLocaleDateString('pt-BR')}</div>
     </div>
+    ${['APROVADO', 'PAGO', 'DESCONTADO'].includes(item.status) ? `
+    <div style="margin-top: 20px; padding: 15px; border: 2px solid #064e3b; background-color: #f8fafc; border-radius: 8px;">
+      <div class="row" style="margin-bottom: 10px;">
+        <div class="label" style="color: #064e3b; width: 180px;">Data de Aprovação</div>
+        <div class="value" style="color: #064e3b; font-weight: 900;">${item.data_aprovacao ? new Date(item.data_aprovacao).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</div>
+      </div>
+      <div class="row" style="margin-bottom: 0;">
+        <div class="label highlight" style="width: 180px;">Data de Pagamento</div>
+        <div class="value highlight">${item.data_pagamento ? new Date(item.data_pagamento).toLocaleDateString('pt-BR') : '____ / ____ / ________'}</div>
+      </div>
+    </div>
+    ` : ''}
 
     <div class="signatures">
       <div>
