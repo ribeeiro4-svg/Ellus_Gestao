@@ -152,7 +152,7 @@ export function useAdiantamentos() {
         categoria: categoria,
         tipo: 'despesa',
         valor: valorPorParcela,
-        status: isPrimeira ? 'pago' : 'pendente', // 1ª parcela já fica paga, as demais pendentes
+        status: isPrimeira ? 'pago' : 'aberto', // 1ª parcela já fica paga, as demais abertas
         forma_pagamento: formaPagamento,
         conta_id: conta_id,
         diretor_id: adiantamento.diretor_id
