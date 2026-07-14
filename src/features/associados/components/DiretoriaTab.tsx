@@ -458,7 +458,8 @@ export default function DiretoriaTab() {
       if (isInss) {
         finalLote.push({
            ...lancamento,
-           status: 'aberto'
+           status: 'aberto',
+           force_create: true
         })
       } else {
          if (parcelas === 1) {
@@ -467,7 +468,8 @@ export default function DiretoriaTab() {
                status: 'pago',
                data: dataInicio,
                conta_id: contaId,
-               forma_pagamento: formaPagamento
+               forma_pagamento: formaPagamento,
+               force_create: true
             })
          } else {
             const valorParcela = lancamento.valor / parcelas
@@ -481,7 +483,8 @@ export default function DiretoriaTab() {
                   status: i === 0 ? 'pago' : 'aberto',
                   data: dataParcela.toISOString().split('T')[0],
                   conta_id: contaId,
-                  forma_pagamento: formaPagamento
+                  forma_pagamento: formaPagamento,
+                  force_create: true
                })
             }
          }
