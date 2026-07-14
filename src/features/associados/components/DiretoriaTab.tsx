@@ -26,6 +26,7 @@ import KpiCard from '@/components/ui/KpiCard'
 import DataTable from '@/components/ui/DataTable'
 import FichaDiretorModal from './FichaDiretorModal'
 import AdiantamentosTab from './AdiantamentosTab'
+import PagamentoProlaboreModal from './PagamentoProlaboreModal'
 import { fmtR, fmtData, MESES } from '@/lib/utils/formatters'
 
 export default function DiretoriaTab() {
@@ -49,6 +50,7 @@ export default function DiretoriaTab() {
   const [selectedMemberFilter, setSelectedMemberFilter] = useState<string>('all')
   const [periodosMember, setPeriodosMember] = useState<Diretor | null>(null)
   const [tempPeriodos, setTempPeriodos] = useState<any[]>([])
+  const [pagamentoLoteOpen, setPagamentoLoteOpen] = useState(false)
 
   const [activeTab, setActiveTab] = useState<'cadastro' | 'adiantamentos'>('cadastro')
 
@@ -445,15 +447,55 @@ export default function DiretoriaTab() {
     setPreviewLote(newEntries)
   }
 
-  const handleConfirmarLote = async () => {
+  const handleConfirmarLote = async (formaPagamento: string, parcelas: number, contaId: string, dataInicio: string) => {
     if (!previewLote) return
-    const res = await inserirBulk(previewLote)
+
+    const finalLote: any[] = []
+    
+    previewLote.forEach(lancamento => {
+      const isInss = lancamento.categoria === 'INSS'
+      
+      if (isInss) {
+        finalLote.push({
+           ...lancamento,
+           status: 'aberto'
+        })
+      } else {
+         if (parcelas === 1) {
+            finalLote.push({
+               ...lancamento,
+               status: 'pago',
+               data: dataInicio,
+               conta_id: contaId,
+               forma_pagamento: formaPagamento
+            })
+         } else {
+            const valorParcela = lancamento.valor / parcelas
+            for (let i = 0; i < parcelas; i++) {
+               const dataParcela = new Date(dataInicio + 'T12:00:00')
+               dataParcela.setMonth(dataParcela.getMonth() + i)
+               finalLote.push({
+                  ...lancamento,
+                  descricao: `${lancamento.descricao} (Parcela ${i + 1}/${parcelas})`,
+                  valor: valorParcela,
+                  status: i === 0 ? 'pago' : 'aberto',
+                  data: dataParcela.toISOString().split('T')[0],
+                  conta_id: contaId,
+                  forma_pagamento: formaPagamento
+               })
+            }
+         }
+      }
+    })
+
+    const res = await inserirBulk(finalLote)
     if (res.error) {
       alert(`Erro ao lançar: ${typeof res.error === 'object' ? (res.error as any).message : String(res.error)}`)
     } else {
-      alert('Pró-labores provisionados com sucesso no financeiro!')
+      alert('Pró-labores e pagamentos lançados com sucesso no financeiro!')
       setSelectedIds([])
       setPreviewLote(null)
+      setPagamentoLoteOpen(false)
     }
   }
 
@@ -1060,14 +1102,24 @@ export default function DiretoriaTab() {
             <div className="p-6 bg-white border-t border-slate-100 flex gap-3">
                <button onClick={() => setPreviewLote(null)} className="flex-1 py-3 bg-slate-100 text-slate-500 font-bold rounded-2xl text-xs hover:bg-slate-200 transition-colors">Cancelar</button>
                <button 
-                 onClick={handleConfirmarLote}
+                 onClick={() => setPagamentoLoteOpen(true)}
                  className="flex-[2] py-3 bg-indigo-600 text-white font-black rounded-2xl text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
                >
-                 Confirmar e Lançar ({previewLote.length} registros)
+                 Confirmar Pagamento e Lançar
                </button>
             </div>
           </div>
         </div>
+      )}
+
+      {pagamentoLoteOpen && previewLote && (
+        <PagamentoProlaboreModal
+           qtdDiretores={selectedIds.length}
+           totalLiquido={previewLote.filter(l => l.categoria !== 'INSS').reduce((acc, curr) => acc + curr.valor, 0)}
+           totalInss={previewLote.filter(l => l.categoria === 'INSS').reduce((acc, curr) => acc + curr.valor, 0)}
+           onClose={() => setPagamentoLoteOpen(false)}
+           onSuccess={handleConfirmarLote}
+        />
       )}
 
         </div>
