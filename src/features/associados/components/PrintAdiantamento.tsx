@@ -27,9 +27,11 @@ const htmlBase = (titulo: string, content: string, logoUrl?: string) => `
       .sig-title { font-size: 10px; color: #64748b; text-transform: uppercase; }
       .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; }
       .highlight { color: #064e3b; font-size: 18px; }
+      .page-break { page-break-after: always; }
     </style>
   </head>
   <body>
+    ${Array.isArray(content) ? content.join('\n<div class="page-break"></div>\n') : `
     <div class="container">
       <div class="header">
         <div class="header-text">
@@ -46,6 +48,7 @@ const htmlBase = (titulo: string, content: string, logoUrl?: string) => `
         </div>
       </div>
     </div>
+    `}
   </body>
 </html>
 `
@@ -126,37 +129,67 @@ export function ImprimirGuia(item: Adiantamento, diretor?: Diretor, logoUrl?: st
   }
 }
 
-export function ImprimirRecibo(item: Adiantamento, diretor?: Diretor, logoUrl?: string) {
-  const content = `
-    <h2 class="section-title">RECIBO - Nº ${String(item.numero || 0).padStart(4, '0')}</h2>
-    
-    <div style="font-size: 16px; line-height: 2; text-align: justify; margin: 40px 0;">
-      <p>
-      Recebi da <strong>ACPROBEC - Associação Colaborativa de Profissionais Liberais, Comércio e Setor da Beleza</strong>, 
-      a importância de <strong>R$ ${Number(item.valor).toFixed(2).replace('.', ',')}</strong>, <strong>${item.tipo}</strong>, 
-      a ser descontado em ${item.parcelas} parcela(s).
-    </div>
+export function ImprimirRecibo(item: Adiantamento, diretor?: Diretor, logoUrl?: string, parcelasPgto: number = 1, dataInicioPgto?: string) {
+  const contents = []
+  const dataBase = dataInicioPgto ? new Date(dataInicioPgto) : new Date(item.data_pagamento || new Date())
+  const valorParcela = (item.valor / parcelasPgto).toFixed(2).replace('.', ',')
 
-    <div class="row">
-      <div class="label">Forma de pagamento</div>
-      <div class="value">${item.forma_pagamento || 'Conta Bancária / PIX'}</div>
-    </div>
-    <div class="row">
-      <div class="label">Data de Pagamento</div>
-      <div class="value">${item.data_pagamento ? new Date(item.data_pagamento).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</div>
-    </div>
+  for (let i = 0; i < parcelasPgto; i++) {
+    const dataVencimento = new Date(dataBase.getFullYear(), dataBase.getMonth() + i, dataBase.getDate()).toLocaleDateString('pt-BR')
+    const referParcela = parcelasPgto > 1 ? `<br/><small>Referente à parcela de pagamento ${i + 1}/${parcelasPgto}</small>` : ''
 
-    <div class="signatures">
-      <div>
-        <div class="sig-line">${diretor?.nome || 'Assinatura'}</div>
-        <div class="sig-title">${diretor?.cpf ? 'CPF: ' + diretor.cpf : 'Recebedor'}</div>
+    const contentStr = `
+    <div class="container">
+      <div class="header">
+        <div class="header-text">
+          <p>ACPROBEC — ASSOCIAÇÃO COLABORATIVA</p>
+          <h1>RECIBO DE PAGAMENTO</h1>
+        </div>
+        ${logoUrl ? \`<img src="\${logoUrl}" class="header-logo" onerror="this.style.display='none'" />\` : ''}
+      </div>
+      <div class="content">
+        <h2 class="section-title">RECIBO - Nº ${String(item.numero || 0).padStart(4, '0')} ${parcelasPgto > 1 ? `- Parcela ${i + 1}/${parcelasPgto}` : ''}</h2>
+        
+        <div style="font-size: 16px; line-height: 2; text-align: justify; margin: 40px 0;">
+          <p>
+          Recebi da <strong>ACPROBEC - Associação Colaborativa de Profissionais Liberais, Comércio e Setor da Beleza</strong>, 
+          a importância de <strong>R$ ${valorParcela}</strong>, referente a <strong>${item.tipo}</strong>${referParcela}. 
+          <br/>A ser descontado integralmente em ${item.parcelas} parcela(s).
+        </div>
+
+        <div class="row">
+          <div class="label">Forma de pagamento</div>
+          <div class="value">${item.forma_pagamento || 'Conta Bancária / PIX'}</div>
+        </div>
+        <div class="row">
+          <div class="label">Data de Pagamento</div>
+          <div class="value">${dataVencimento}</div>
+        </div>
+
+        <div class="signatures">
+          <div>
+            <div class="sig-line">${diretor?.nome || 'Assinatura'}</div>
+            <div class="sig-title">${diretor?.cpf ? 'CPF: ' + diretor.cpf : 'Recebedor (Beneficiário)'}</div>
+          </div>
+          <div>
+            <div class="sig-line">Tesouraria / Presidência</div>
+            <div class="sig-title">ACPROBEC</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <img src="/ellus_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+          Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo Sistema Éllus Gestão Estratégica
+        </div>
       </div>
     </div>
-  `
+    `
+    contents.push(contentStr)
+  }
 
   const win = window.open('', '_blank')
   if (win) {
-    win.document.write(htmlBase('RECIBO DE PAGAMENTO', content, logoUrl))
+    win.document.write(htmlBase('RECIBO DE PAGAMENTO', contents as any, logoUrl))
     win.document.close()
     setTimeout(() => {
       win.print()

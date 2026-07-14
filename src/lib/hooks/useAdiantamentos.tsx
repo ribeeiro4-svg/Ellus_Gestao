@@ -126,36 +126,49 @@ export function useAdiantamentos() {
   }
 
   // Integração com Financeiro
-  const efetuarPagamentoFinanceiro = async (adiantamento: Adiantamento, conta_id: string) => {
+  const efetuarPagamentoFinanceiro = async (adiantamento: Adiantamento, conta_id: string, qtdParcelas: number = 1, dataInicio: string = new Date().toISOString().split('T')[0], formaPagamento: string = 'PIX') => {
     if (!tenantId) return { error: 'Tenant não identificado' }
     if (!config) return { error: 'Configuração não carregada' }
 
     const categoria = adiantamento.tipo === 'ADIANTAMENTO' ? config.categoria_adiantamento : config.categoria_emprestimo
-    const descricao = `${adiantamento.tipo} - ${adiantamento.diretor_nome || 'Diretor'} - Parcela 1/${adiantamento.parcelas || 1}`
+    const valorPorParcela = adiantamento.valor / qtdParcelas
 
-    // 1. Criar Lançamento no Financeiro
-    const { data: lanc, error: errLanc } = await sb
-      .from('lancamentos')
-      .insert([{
+    // 1. Criar Lançamentos no Financeiro
+    const lancamentosInsert = []
+    const dataBase = new Date(dataInicio)
+    
+    for (let i = 0; i < qtdParcelas; i++) {
+      const isPrimeira = i === 0
+      const descParcela = qtdParcelas > 1 ? ` - Pagamento Parcela ${i + 1}/${qtdParcelas}` : ''
+      const descricao = `${adiantamento.tipo} - ${adiantamento.diretor_nome || 'Diretor'}${descParcela}`
+
+      // Adiciona i meses à data inicial
+      const dataVenc = new Date(dataBase.getFullYear(), dataBase.getMonth() + i, dataBase.getDate())
+      
+      lancamentosInsert.push({
         tenant_id: tenantId,
-        data: new Date().toISOString().split('T')[0],
+        data: dataVenc.toISOString().split('T')[0],
         descricao: descricao,
         categoria: categoria,
         tipo: 'despesa',
-        valor: adiantamento.valor,
-        status: 'pago',
-        forma_pagamento: adiantamento.forma_pagamento || 'PIX',
+        valor: valorPorParcela,
+        status: isPrimeira ? 'pago' : 'pendente', // 1ª parcela já fica paga, as demais pendentes
+        forma_pagamento: formaPagamento,
         conta_id: conta_id,
         diretor_id: adiantamento.diretor_id
-      }])
-      .select()
-      .single()
+      })
+    }
 
-    if (errLanc) return { error: errLanc }
+    const { data: lancs, error: errLanc } = await sb
+      .from('lancamentos')
+      .insert(lancamentosInsert)
+      .select()
+
+    if (errLanc) return { error: errLanc.message }
 
     // 2. Atualizar o adiantamento como PAGO
     const { error: errUpdate } = await atualizarStatus(adiantamento.id, 'PAGO', {
-      lancamento_financeiro_id: lanc.id,
+      lancamento_financeiro_id: lancs?.[0]?.id,
       conta_financeira_id: conta_id
     })
 

@@ -7,6 +7,7 @@ import { Adiantamento, StatusAdiantamento } from '@/lib/types'
 import { fmtR } from '@/lib/utils/formatters'
 import { Plus, Settings, Printer, CheckCircle, XCircle, CreditCard } from 'lucide-react'
 import AdiantamentoFormModal from './AdiantamentoFormModal'
+import PagamentoAdiantamentoModal from './PagamentoAdiantamentoModal'
 import { ImprimirRecibo, ImprimirGuia } from './PrintAdiantamento'
 import DataTable from '@/components/ui/DataTable'
 
@@ -24,6 +25,7 @@ export default function AdiantamentosTab() {
   const { diretoria } = useDiretoria()
   const { tenant } = useTenant()
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [pagamentoModalOpen, setPagamentoModalOpen] = useState<Adiantamento | null>(null)
   const [selectedAdiantamento, setSelectedAdiantamento] = useState<Adiantamento | null>(null)
 
   const handlePrintGuia = (item: Adiantamento) => {
@@ -43,11 +45,18 @@ export default function AdiantamentosTab() {
   }
 
   const handlePagar = async (item: Adiantamento) => {
-    if (confirm('Deseja gerar o lançamento financeiro e marcar como PAGO?')) {
-      // Simplificado - o ideal seria um modal para escolher a conta bancária
-      const result = await efetuarPagamentoFinanceiro(item, '') 
-      if (result.error) alert('Erro ao efetuar pagamento')
-    }
+    setPagamentoModalOpen(item)
+  }
+
+  const confirmPagamento = async (formaPagamento: string, parcelas: number, contaId: string, dataInicio: string) => {
+    if (!pagamentoModalOpen) return
+    const result = await efetuarPagamentoFinanceiro(pagamentoModalOpen, contaId, parcelas, dataInicio, formaPagamento)
+    if (result.error) throw new Error(result.error)
+    
+    // Sucesso, fecha modal e imprime recibos (os recibos consideram as parcelas geradas)
+    setPagamentoModalOpen(null)
+    const diretor = diretoria.find(d => d.id === pagamentoModalOpen.diretor_id)
+    ImprimirRecibo({ ...pagamentoModalOpen, forma_pagamento: formaPagamento }, diretor, tenant?.logo_url, parcelas, dataInicio)
   }
 
   const handleDescontar = async (item: Adiantamento) => {
@@ -168,6 +177,13 @@ export default function AdiantamentosTab() {
         diretoria={diretoria}
         config={config}
       />
+      {pagamentoModalOpen && (
+        <PagamentoAdiantamentoModal
+          adiantamento={pagamentoModalOpen}
+          onClose={() => setPagamentoModalOpen(null)}
+          onSuccess={confirmPagamento}
+        />
+      )}
     </div>
   )
 }
