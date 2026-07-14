@@ -145,7 +145,7 @@ export function ImprimirRecibo(item: Adiantamento, diretor?: Diretor, logoUrl?: 
           <p>ACPROBEC — ASSOCIAÇÃO COLABORATIVA</p>
           <h1>RECIBO DE PAGAMENTO</h1>
         </div>
-        ${logoUrl ? \`<img src="\${logoUrl}" class="header-logo" onerror="this.style.display='none'" />\` : ''}
+        ${logoUrl ? `<img src="${logoUrl}" class="header-logo" onerror="this.style.display='none'" />` : ''}
       </div>
       <div class="content">
         <h2 class="section-title">RECIBO - Nº ${String(item.numero || 0).padStart(4, '0')} ${parcelasPgto > 1 ? `- Parcela ${i + 1}/${parcelasPgto}` : ''}</h2>

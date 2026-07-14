@@ -51,7 +51,7 @@ export default function AdiantamentosTab() {
   const confirmPagamento = async (formaPagamento: string, parcelas: number, contaId: string, dataInicio: string) => {
     if (!pagamentoModalOpen) return
     const result = await efetuarPagamentoFinanceiro(pagamentoModalOpen, contaId, parcelas, dataInicio, formaPagamento)
-    if (result.error) throw new Error(result.error)
+    if (result.error) throw new Error(typeof result.error === 'string' ? result.error : (result.error as any).message || 'Erro ao pagar')
     
     // Sucesso, fecha modal e imprime recibos (os recibos consideram as parcelas geradas)
     setPagamentoModalOpen(null)

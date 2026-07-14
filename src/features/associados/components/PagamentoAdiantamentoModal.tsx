@@ -25,7 +25,7 @@ export default function PagamentoAdiantamentoModal({ adiantamento, onClose, onSu
   // Conta padrão
   useEffect(() => {
     if (contas.length > 0 && !contaId) {
-      const padrao = contas.find(c => c.padrao) || contas[0]
+      const padrao = contas[0]
       if (padrao) setContaId(padrao.id)
     }
   }, [contas, contaId])
