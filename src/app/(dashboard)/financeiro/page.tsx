@@ -1339,9 +1339,13 @@ function FinanceiroPageContent() {
                   setIsReconciliarModalOpen(true);
                   document.body.click()
                 }} 
-                className="flex items-center gap-3 w-full px-3 py-2 text-left text-[11px] font-bold text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
+                className={`flex items-center gap-3 w-full px-3 py-2 text-left text-[11px] font-bold ${!i.associado_id ? 'text-indigo-600 hover:bg-indigo-50' : 'text-orange-600 hover:bg-orange-50'} rounded-lg transition-all`}
               >
-                <RefreshCw size={14} /> Transferir Vínculo
+                {!i.associado_id ? (
+                  <><RefreshCw size={14} /> Reconciliar</>
+                ) : (
+                  <><RefreshCw size={14} /> Transferir Vínculo</>
+                )}
               </button>
             )}
             {(editar || isAdmin) && (
@@ -2101,10 +2105,14 @@ function FinanceiroPageContent() {
           onSelect={async (assoc: any, newLancamento: any) => {
             setIsReconciliarModalOpen(false)
             try {
-              // 1. Atualizar o novo lançamento
+              const cat = newLancamento.categoria || (newLancamento.tipo === 'receita' ? 'Mensalidades' : 'Outros');
+              const nome = assoc.nome || '';
+              const desc = newLancamento.tipo === 'despesa' ? `PGTO DE ${cat.toUpperCase()} - ${nome.toUpperCase()}` : `RECEB. DE ${cat.toUpperCase()} - ${nome.toUpperCase()}`;
+
               await atualizar(newLancamento.id, {
                 status: 'pago',
                 conciliado: true,
+                descricao: desc,
                 data: selectedLancamentoParaReconciliar.data_conciliacao || selectedLancamentoParaReconciliar.data,
                 data_conciliacao: selectedLancamentoParaReconciliar.data_conciliacao || selectedLancamentoParaReconciliar.data,
                 banco_transacao_id: selectedLancamentoParaReconciliar.banco_transacao_id,

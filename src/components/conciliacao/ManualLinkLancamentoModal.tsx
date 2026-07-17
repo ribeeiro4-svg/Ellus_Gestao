@@ -27,9 +27,11 @@ export default function ManualLinkLancamentoModal({
   // Filtro de associados
   const filteredAssocs = useMemo(() => {
     if (!search) return []
+    const lowerSearch = search.toLowerCase()
     return associados.filter(a => 
-      a.nome.toLowerCase().includes(search.toLowerCase()) || 
-      (a.cpf && a.cpf.includes(search))
+      a.nome.toLowerCase().includes(lowerSearch) || 
+      (a.cpf && a.cpf.includes(search)) ||
+      (a.email && a.email.toLowerCase().includes(lowerSearch))
     ).slice(0, 10)
   }, [associados, search])
 
