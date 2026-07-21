@@ -233,6 +233,7 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
               </button>
             </div>
           </div>
+        )}
       </div>
     </div>
   )
