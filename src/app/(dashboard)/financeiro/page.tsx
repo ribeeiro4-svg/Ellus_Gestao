@@ -36,7 +36,7 @@ import ConciliacaoToolbar from '@/features/conciliacao/components/ConciliacaoToo
 import { useFechamento } from '@/lib/hooks/useFechamento'
 import { useSearchParams } from 'next/navigation'
 import { fmtR, fmtData, fmtHora, safeSum, safeDiff, getDiaIdx, getMesIdx, getAnoIdx, MESES } from '@/lib/utils/formatters'
-import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, FileText, CloudLightning, Trash2, Target, ArrowRightLeft, ArrowUpRight, ArrowDownRight, AlertTriangle, MoreVertical, CheckCircle2, MessageCircle, Calendar as CalendarIcon, ClipboardList, HandCoins } from 'lucide-react'
+import { Plus, Pencil, BarChart2, RefreshCw, Search, XCircle, FileCheck, FileText, CloudLightning, Trash2, Target, ArrowRightLeft, ArrowUpRight, ArrowDownRight, AlertTriangle, MoreVertical, CheckCircle2, MessageCircle, Calendar as CalendarIcon, ClipboardList, HandCoins, Unlink } from 'lucide-react'
 import { processFinancialSubmit } from '@/features/financeiro/utils/processFinancialSubmit'
 import FinancialKpiGrid from '@/features/financeiro/components/FinancialKpiGrid'
 import BatchActionBar from '@/components/ui/BatchActionBar'
@@ -332,6 +332,50 @@ function FinanceiroPageContent() {
     }
     return t.bank.memo;
   }
+
+  // ─── Desvincular Lançamento ───────────────────────────────────────────────
+  // Separa um lançamento que acumula vínculo OFX + associada em dois registros
+  // independentes, sem excluir nada e sem prejuízo a nenhum dos lados.
+  const desvincularLancamento = async (lancamento: any) => {
+    const memoOriginal = lancamento.banco_original_memo || lancamento.descricao;
+
+    // Passo 1: criar lançamento OFX puro (sem associada) com descrição original do extrato
+    await inserir({
+      tipo: lancamento.tipo,
+      descricao: memoOriginal,
+      banco_original_memo: memoOriginal,
+      categoria: lancamento.categoria,
+      conta_id: lancamento.conta_id,
+      valor: lancamento.valor,
+      data: lancamento.data,
+      status: 'pago',
+      conciliado: true,
+      data_conciliacao: lancamento.data_conciliacao,
+      data_caixa: lancamento.data_caixa,
+      banco_transacao_id: lancamento.banco_transacao_id,
+      forma_pagamento: lancamento.forma_pagamento,
+      associado_id: null,
+      fornecedor_id: null,
+      diretor_id: null,
+      competencia_mes: lancamento.competencia_mes,
+      competencia_ano: lancamento.competencia_ano,
+      conta_debito_id: lancamento.conta_debito_id ?? null,
+      conta_credito_id: lancamento.conta_credito_id ?? null,
+    } as any);
+
+    // Passo 2: reverter o lançamento original da associada (sem OFX, de volta a em aberto)
+    await atualizar(lancamento.id, {
+      banco_transacao_id: null as any,
+      cora_id: null as any,
+      banco_original_memo: null as any,
+      conciliado: false,
+      data_conciliacao: null as any,
+      status: 'aberto',
+    } as any);
+
+    refresh();
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   const handleProcessarLote = async () => {
     const itemsToProcess = filteredItemsConciliacao.filter((t: any) => !ignoredMatches.has(t.bank.fitid) && !existingTxIds.has(t.bank.fitid) && !processedIds.has(t.bank.fitid))
@@ -1346,6 +1390,30 @@ function FinanceiroPageContent() {
                 ) : (
                   <><RefreshCw size={14} /> Transferir Vínculo</>
                 )}
+              </button>
+            )}
+            {(editar || isAdmin) && i.banco_transacao_id && i.associado_id && i.conciliado && (
+              <button
+                onClick={async () => {
+                  document.body.click();
+                  const nomeAssoc = associados.find((a: any) => a.id === i.associado_id)?.nome || 'a associada';
+                  const confirmar = confirm(
+                    `Desvincular este lançamento?\n\n` +
+                    `• O recebimento OFX continuará no financeiro com a descrição original do extrato e sem vínculo de associada.\n` +
+                    `• O lançamento de "${nomeAssoc}" voltará para "Em Aberto" sem tag OFX e sem data de conciliação.\n\n` +
+                    `Nenhum dado será excluído. Confirma?`
+                  );
+                  if (!confirmar) return;
+                  try {
+                    await desvincularLancamento(i);
+                    alert('Lançamento desvinculado com sucesso! O recebimento OFX e o lançamento da associada agora estão separados.');
+                  } catch (err: any) {
+                    alert('Erro ao desvincular: ' + (err?.message || String(err)));
+                  }
+                }}
+                className="flex items-center gap-3 w-full px-3 py-2 text-left text-[11px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+              >
+                <Unlink size={14} /> Desvincular Lançamento
               </button>
             )}
             {(editar || isAdmin) && (
