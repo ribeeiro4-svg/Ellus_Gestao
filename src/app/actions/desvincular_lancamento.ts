@@ -89,7 +89,6 @@ export async function desvincularLancamentoAction(
     .from('lancamentos')
     .update({
       banco_transacao_id: null,
-      cora_id: null,
       banco_original_memo: null,
       conciliado: false,
       data_conciliacao: null,
