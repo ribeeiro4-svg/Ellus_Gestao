@@ -442,7 +442,11 @@ function FinanceiroPageContent() {
       })
 
       if (toUpdate.length > 0) {
-        await Promise.all(toUpdate.map(u => atualizar(u.id, u.data)))
+        const results = await Promise.all(toUpdate.map(u => atualizar(u.id, u.data)))
+        const errors = results.filter(r => r && r.error)
+        if (errors.length > 0) {
+          alert('Atenção: Alguns itens não foram atualizados. Erro: ' + errors[0].error)
+        }
       }
 
       if (toInsert.length > 0) {
@@ -622,7 +626,11 @@ function FinanceiroPageContent() {
       })
 
       if (toUpdate.length > 0) {
-        await Promise.all(toUpdate.map(u => atualizar(u.id, u.data)))
+        const results = await Promise.all(toUpdate.map(u => atualizar(u.id, u.data)))
+        const errors = results.filter(r => r && r.error)
+        if (errors.length > 0) {
+          alert('Atenção: Alguns itens não foram atualizados. Erro: ' + errors[0].error)
+        }
       }
 
       if (toInsert.length > 0) {
