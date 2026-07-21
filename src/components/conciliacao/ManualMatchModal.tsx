@@ -45,7 +45,7 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
     const tipoDesejado = extrato.bank?.type === 'CREDIT' ? 'receita' : 'despesa'
     return lancamentos.filter(l => 
       l.associado_id === selectedAssoc.id && 
-      l.status === 'aberto' && 
+      (l.status === 'aberto' || l.status === 'atrasado') && 
       l.tipo === tipoDesejado
     ).sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
   }, [selectedAssoc, lancamentos, extrato])
