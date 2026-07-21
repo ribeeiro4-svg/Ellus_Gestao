@@ -42,6 +42,7 @@ interface MatchItemProps {
   onEditCategory?: (newCat: string) => void;
   warning?: string;
   existingMatch?: any;
+  existingMatches?: any[];
   onSearchEntries?: () => void;
   onClearMatch?: () => void;
   isSelected?: boolean;
@@ -69,6 +70,7 @@ export default function MatchItem({
   onEditCategory,
   warning,
   existingMatch,
+  existingMatches,
   onSearchEntries,
   onClearMatch,
   isSelected,
@@ -302,8 +304,39 @@ export default function MatchItem({
                 </div>
               )}
 
-              {/* Detalhes do Lançamento Existente no Financeiro */}
-              {existingMatch && (
+              {/* Detalhes do Lançamento Existente no Financeiro (Múltiplos ou Único) */}
+              {(existingMatches && existingMatches.length > 0) ? (
+                <div className={`mt-3 p-3 rounded-xl border space-y-2 ${isIncome ? 'bg-emerald-100/30 border-emerald-200/30' : 'bg-rose-100/30 border-rose-200/30'}`}>
+                  <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest opacity-70 ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <AlertCircle size={10} /> {existingMatches.length > 1 ? `${existingMatches.length} Cadastros no Financeiro` : 'Cadastro Original no Financeiro'}
+                  </div>
+                  <div className="space-y-3">
+                    {existingMatches.map((em: any, idx: number) => (
+                      <div key={em.id || idx} className="space-y-1">
+                        <p className={`text-[11px] font-bold leading-tight ${isIncome ? 'text-emerald-900' : 'text-rose-900'}`}>
+                          "{em.descricao}"
+                        </p>
+                        <div className="flex items-center gap-3">
+                           <span className={`text-[10px] font-medium ${isIncome ? 'text-emerald-700/70' : 'text-rose-700/70'}`}>
+                            Vencimento: <span className="font-black">{fmtData(em.data)}</span>
+                           </span>
+                           <span className={`text-[10px] font-medium ${isIncome ? 'text-emerald-700/70' : 'text-rose-700/70'}`}>
+                            Valor: <span className="font-black">{fmtR(em.valor)}</span>
+                           </span>
+                        </div>
+                      </div>
+                    ))}
+                    {existingMatches.length > 1 && (
+                      <div className={`pt-2 border-t ${isIncome ? 'border-emerald-200/30' : 'border-rose-200/30'} flex justify-between items-center`}>
+                        <span className={`text-[10px] font-black uppercase ${isIncome ? 'text-emerald-800' : 'text-rose-800'}`}>Total Vinculado:</span>
+                        <span className={`text-xs font-black ${isIncome ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          {fmtR(existingMatches.reduce((acc: number, curr: any) => acc + Number(curr.valor), 0))}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : existingMatch && (
                 <div className={`mt-3 p-3 rounded-xl border space-y-2 ${isIncome ? 'bg-emerald-100/30 border-emerald-200/30' : 'bg-rose-100/30 border-rose-200/30'}`}>
                   <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest opacity-70 ${isIncome ? 'text-emerald-600' : 'text-rose-600'}`}>
                     <AlertCircle size={10} /> Cadastro Original no Financeiro

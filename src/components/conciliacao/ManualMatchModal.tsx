@@ -9,7 +9,7 @@ interface ManualMatchModalProps {
   isOpen: boolean
   onClose: () => void
   extrato: any
-  onSelect: (assoc: any, existingMatch?: any) => void
+  onSelect: (assoc: any, existingMatch?: any | any[]) => void
 }
 
 export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }: ManualMatchModalProps) {
@@ -17,6 +17,16 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
   const { lancamentos } = useFinanceiro()
   const [search, setSearch] = useState('')
   const [selectedAssoc, setSelectedAssoc] = useState<any>(null)
+  const [selectedProvisoes, setSelectedProvisoes] = useState<any[]>([])
+
+  const toggleProvisao = (l: any) => {
+    setSelectedProvisoes(prev => {
+      if (prev.find(p => p.id === l.id)) {
+        return prev.filter(p => p.id !== l.id)
+      }
+      return [...prev, l]
+    })
+  }
 
   const filtered = useMemo(() => {
     if (!search) return []
@@ -42,6 +52,7 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
 
   const handleClose = () => {
     setSelectedAssoc(null)
+    setSelectedProvisoes([])
     setSearch('')
     onClose()
   }
@@ -127,7 +138,7 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
               </div>
             </>
           ) : (
-            <div className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar animate-in slide-in-from-right-4">
+            <div className="flex flex-col gap-3 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar animate-in slide-in-from-right-4 pb-20">
               <button 
                 onClick={() => {
                   onSelect(selectedAssoc, null)
@@ -144,42 +155,48 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
               {associadoLancamentos.length > 0 && (
                 <div className="my-2 border-t border-gray-100 relative">
                   <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-white px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    Ou vincule a um existente
+                    Ou selecione para vincular
                   </span>
                 </div>
               )}
 
-              {associadoLancamentos.map(l => (
-                <button
-                  key={l.id}
-                  onClick={() => {
-                    onSelect(selectedAssoc, l)
-                    handleClose()
-                  }}
-                  className="flex flex-col p-4 bg-white border border-gray-200 rounded-2xl hover:border-emerald-300 hover:bg-emerald-50/50 transition-all group text-left relative overflow-hidden"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-xs font-black text-gray-800 uppercase leading-tight pr-6 group-hover:text-emerald-900">{l.descricao}</h3>
-                    <CheckCircle2 size={16} className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-all absolute right-4 top-4" />
-                  </div>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-gray-500">
-                      <Calendar size={12} className="text-gray-400" />
-                      Vence: {fmtData(l.data)}
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
-                      <DollarSign size={10} />
-                      {fmtR(l.valor)}
-                    </span>
-                  </div>
-                  {l.categoria && (
-                    <div className="mt-2 flex items-center gap-1 text-[9px] font-bold text-gray-400 uppercase bg-gray-50 self-start px-2 py-0.5 rounded-md">
-                      <Tag size={10} />
-                      {l.categoria}
+              {associadoLancamentos.map(l => {
+                const isSelected = selectedProvisoes.some(p => p.id === l.id)
+                return (
+                  <button
+                    key={l.id}
+                    onClick={() => toggleProvisao(l)}
+                    className={`flex flex-col p-4 border rounded-2xl transition-all group text-left relative overflow-hidden ${
+                      isSelected ? 'bg-emerald-50 border-emerald-400 shadow-sm' : 'bg-white border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className={`text-xs font-black uppercase leading-tight pr-8 ${isSelected ? 'text-emerald-900' : 'text-gray-800 group-hover:text-emerald-900'}`}>
+                        {l.descricao}
+                      </h3>
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center absolute right-4 top-4 transition-all ${isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-300 group-hover:border-emerald-400'}`}>
+                        <CheckCircle2 size={14} className={`text-white transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                      </div>
                     </div>
-                  )}
-                </button>
-              ))}
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className={`flex items-center gap-1 text-[10px] font-bold ${isSelected ? 'text-emerald-700' : 'text-gray-500'}`}>
+                        <Calendar size={12} className={isSelected ? 'text-emerald-500' : 'text-gray-400'} />
+                        Vence: {fmtData(l.data)}
+                      </span>
+                      <span className={`flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-lg ${isSelected ? 'text-emerald-800 bg-emerald-200/50' : 'text-emerald-600 bg-emerald-50'}`}>
+                        <DollarSign size={10} />
+                        {fmtR(l.valor)}
+                      </span>
+                    </div>
+                    {l.categoria && (
+                      <div className={`mt-2 flex items-center gap-1 text-[9px] font-bold uppercase self-start px-2 py-0.5 rounded-md ${isSelected ? 'text-emerald-700 bg-emerald-100' : 'text-gray-400 bg-gray-50'}`}>
+                        <Tag size={10} />
+                        {l.categoria}
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
 
               {associadoLancamentos.length === 0 && (
                 <div className="py-8 flex flex-col items-center justify-center text-gray-400 text-center">
@@ -189,6 +206,33 @@ export default function ManualMatchModal({ isOpen, onClose, extrato, onSelect }:
             </div>
           )}
         </div>
+
+        {/* Rodapé Fixo para Confirmação Múltipla */}
+        {selectedAssoc && selectedProvisoes.length > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] animate-in slide-in-from-bottom-full duration-300">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{selectedProvisoes.length} ite{selectedProvisoes.length > 1 ? 'ns' : 'm'} selecionado{selectedProvisoes.length > 1 ? 's' : ''}</span>
+                <span className="text-sm font-black text-emerald-600 flex items-center gap-1">
+                  Total: {fmtR(selectedProvisoes.reduce((acc, curr) => acc + Number(curr.valor), 0))}
+                </span>
+                {extrato?.bank?.amount && (
+                  <span className="text-[9px] font-bold text-gray-400 uppercase flex items-center gap-1">
+                    Valor Banco: {fmtR(Math.abs(extrato.bank.amount))}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  onSelect(selectedAssoc, selectedProvisoes)
+                  handleClose()
+                }}
+                className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-emerald-500/30"
+              >
+                Confirmar <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
       </div>
     </div>
   )

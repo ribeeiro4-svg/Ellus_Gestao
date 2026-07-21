@@ -356,41 +356,64 @@ function FinanceiroPageContent() {
       const toInsert: any[] = []
 
       itemsToProcess.forEach((t: any) => {
-        if (t.existingMatch) {
-          const bankVal = Math.abs(t.bank.amount);
-          const existVal = Math.abs(t.existingMatch.valor);
+        const matchesArray = t.existingMatches && t.existingMatches.length > 0 
+          ? t.existingMatches 
+          : (t.existingMatch ? [t.existingMatch] : []);
 
-          toUpdate.push({
-            id: t.existingMatch.id,
-            data: {
-              valor: bankVal,
-              status: 'pago',
-              conciliado: true,
-              data_conciliacao: new Date().toISOString(),
-              data_caixa: t.bank.date,
-              banco_transacao_id: t.bank.fitid,
-              banco_original_memo: t.bank.memo,
-              forma_pagamento: t.bank.metodo_inferido || 'Transferência'
+        if (matchesArray.length > 0) {
+          if (matchesArray.length === 1) {
+            const singleMatch = matchesArray[0];
+            const bankVal = Math.abs(t.bank.amount);
+            const existVal = Math.abs(singleMatch.valor);
+
+            toUpdate.push({
+              id: singleMatch.id,
+              data: {
+                valor: bankVal,
+                status: 'pago',
+                conciliado: true,
+                data_conciliacao: new Date().toISOString(),
+                data_caixa: t.bank.date,
+                banco_transacao_id: t.bank.fitid,
+                banco_original_memo: t.bank.memo,
+                forma_pagamento: t.bank.metodo_inferido || 'Transferência'
+              }
+            })
+
+            if (bankVal < existVal) {
+              toInsert.push({
+                tipo: singleMatch.tipo,
+                descricao: `${singleMatch.descricao} [PARCIAL]`,
+                categoria: singleMatch.categoria,
+                conta_id: singleMatch.conta_id || selectedContaId,
+                valor: parseFloat((existVal - bankVal).toFixed(2)),
+                data: singleMatch.data,
+                status: 'aberto',
+                forma_pagamento: singleMatch.forma_pagamento,
+                associado_id: singleMatch.associado_id,
+                fornecedor_id: singleMatch.fornecedor_id,
+                diretor_id: singleMatch.diretor_id,
+                competencia_mes: singleMatch.competencia_mes,
+                competencia_ano: singleMatch.competencia_ano,
+                conta_debito_id: singleMatch.conta_debito_id,
+                conta_credito_id: singleMatch.conta_credito_id
+              })
             }
-          })
-
-          if (bankVal < existVal) {
-            toInsert.push({
-              tipo: t.existingMatch.tipo,
-              descricao: `${t.existingMatch.descricao} [PARCIAL]`,
-              categoria: t.existingMatch.categoria,
-              conta_id: t.existingMatch.conta_id || selectedContaId,
-              valor: parseFloat((existVal - bankVal).toFixed(2)),
-              data: t.existingMatch.data,
-              status: 'aberto',
-              forma_pagamento: t.existingMatch.forma_pagamento,
-              associado_id: t.existingMatch.associado_id,
-              fornecedor_id: t.existingMatch.fornecedor_id,
-              diretor_id: t.existingMatch.diretor_id,
-              competencia_mes: t.existingMatch.competencia_mes,
-              competencia_ano: t.existingMatch.competencia_ano,
-              conta_debito_id: t.existingMatch.conta_debito_id,
-              conta_credito_id: t.existingMatch.conta_credito_id
+          } else {
+            // Múltiplos vínculos (desmembramento)
+            matchesArray.forEach((m: any) => {
+              toUpdate.push({
+                id: m.id,
+                data: {
+                  status: 'pago',
+                  conciliado: true,
+                  data_conciliacao: new Date().toISOString(),
+                  data_caixa: t.bank.date,
+                  banco_transacao_id: t.bank.fitid,
+                  banco_original_memo: t.bank.memo,
+                  forma_pagamento: t.bank.metodo_inferido || 'Transferência'
+                }
+              })
             })
           }
         } else {
@@ -429,7 +452,8 @@ function FinanceiroPageContent() {
 
       // Logar pagamento na ficha do associado
       itemsToProcess.forEach((t: any) => {
-         const assocId = t.assocMatch?.id || t.existingMatch?.associado_id;
+         const firstMatch = (t.existingMatches && t.existingMatches.length > 0) ? t.existingMatches[0] : t.existingMatch;
+         const assocId = t.assocMatch?.id || firstMatch?.associado_id;
          if (assocId && t.bank.type === 'CREDIT') {
             fetch(`/api/cobranca/associado/${assocId}/acao`, {
                method: 'POST',
@@ -452,7 +476,7 @@ function FinanceiroPageContent() {
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         associado: t.assocMatch?.nome,
         status: 'sucesso',
-        mensagem: t.existingMatch ? 'Conciliado com lançamento existente' : 'Novo lançamento criado',
+        mensagem: (t.existingMatches && t.existingMatches.length > 0) || t.existingMatch ? 'Conciliado com lançamento existente' : 'Novo lançamento criado',
         id_bancario: t.bank.fitid,
         atualizou_cpf: t.needsUpdate && !!t.newDocument,
         novo_cpf: t.newDocument
@@ -491,7 +515,7 @@ function FinanceiroPageContent() {
       tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
       associado: t.assocMatch?.nome,
       status: 'sucesso' as const,
-      mensagem: t.existingMatch ? 'Vínculo Identificado' : 'Aguardando Lançamento',
+      mensagem: (t.existingMatches && t.existingMatches.length > 0) || t.existingMatch ? 'Vínculo Identificado' : 'Aguardando Lançamento',
       id_bancario: t.bank.fitid,
       atualizou_cpf: t.needsUpdate && !!t.newDocument,
       novo_cpf: t.newDocument
@@ -512,41 +536,64 @@ function FinanceiroPageContent() {
       const toInsert: any[] = []
 
       rowsToProcess.forEach((t: any) => {
-        if (t.existingMatch) {
-          const bankVal = Math.abs(t.bank.amount);
-          const existVal = Math.abs(t.existingMatch.valor);
+        const matchesArray = t.existingMatches && t.existingMatches.length > 0 
+          ? t.existingMatches 
+          : (t.existingMatch ? [t.existingMatch] : []);
 
-          toUpdate.push({
-            id: t.existingMatch.id,
-            data: {
-              valor: bankVal,
-              status: 'pago',
-              conciliado: true,
-              data_conciliacao: new Date().toISOString(),
-              data_caixa: t.bank.date,
-              banco_transacao_id: t.bank.fitid,
-              banco_original_memo: t.bank.memo,
-              forma_pagamento: t.bank.metodo_inferido || 'Transferência'
+        if (matchesArray.length > 0) {
+          if (matchesArray.length === 1) {
+            const singleMatch = matchesArray[0];
+            const bankVal = Math.abs(t.bank.amount);
+            const existVal = Math.abs(singleMatch.valor);
+
+            toUpdate.push({
+              id: singleMatch.id,
+              data: {
+                valor: bankVal,
+                status: 'pago',
+                conciliado: true,
+                data_conciliacao: new Date().toISOString(),
+                data_caixa: t.bank.date,
+                banco_transacao_id: t.bank.fitid,
+                banco_original_memo: t.bank.memo,
+                forma_pagamento: t.bank.metodo_inferido || 'Transferência'
+              }
+            })
+
+            if (bankVal < existVal) {
+              toInsert.push({
+                tipo: singleMatch.tipo,
+                descricao: `${singleMatch.descricao} [PARCIAL]`,
+                categoria: singleMatch.categoria,
+                conta_id: singleMatch.conta_id || selectedContaId,
+                valor: parseFloat((existVal - bankVal).toFixed(2)),
+                data: singleMatch.data,
+                status: 'aberto',
+                forma_pagamento: singleMatch.forma_pagamento,
+                associado_id: singleMatch.associado_id,
+                fornecedor_id: singleMatch.fornecedor_id,
+                diretor_id: singleMatch.diretor_id,
+                competencia_mes: singleMatch.competencia_mes,
+                competencia_ano: singleMatch.competencia_ano,
+                conta_debito_id: singleMatch.conta_debito_id,
+                conta_credito_id: singleMatch.conta_credito_id
+              })
             }
-          })
-
-          if (bankVal < existVal) {
-            toInsert.push({
-              tipo: t.existingMatch.tipo,
-              descricao: `${t.existingMatch.descricao} [PARCIAL]`,
-              categoria: t.existingMatch.categoria,
-              conta_id: t.existingMatch.conta_id || selectedContaId,
-              valor: parseFloat((existVal - bankVal).toFixed(2)),
-              data: t.existingMatch.data,
-              status: 'aberto',
-              forma_pagamento: t.existingMatch.forma_pagamento,
-              associado_id: t.existingMatch.associado_id,
-              fornecedor_id: t.existingMatch.fornecedor_id,
-              diretor_id: t.existingMatch.diretor_id,
-              competencia_mes: t.existingMatch.competencia_mes,
-              competencia_ano: t.existingMatch.competencia_ano,
-              conta_debito_id: t.existingMatch.conta_debito_id,
-              conta_credito_id: t.existingMatch.conta_credito_id
+          } else {
+            // Múltiplos vínculos (desmembramento)
+            matchesArray.forEach((m: any) => {
+              toUpdate.push({
+                id: m.id,
+                data: {
+                  status: 'pago',
+                  conciliado: true,
+                  data_conciliacao: new Date().toISOString(),
+                  data_caixa: t.bank.date,
+                  banco_transacao_id: t.bank.fitid,
+                  banco_original_memo: t.bank.memo,
+                  forma_pagamento: t.bank.metodo_inferido || 'Transferência'
+                }
+              })
             })
           }
         } else {
@@ -585,7 +632,8 @@ function FinanceiroPageContent() {
 
       // Logar pagamento na ficha do associado
       rowsToProcess.forEach((t: any) => {
-         const assocId = t.assocMatch?.id || t.existingMatch?.associado_id;
+         const firstMatch = (t.existingMatches && t.existingMatches.length > 0) ? t.existingMatches[0] : t.existingMatch;
+         const assocId = t.assocMatch?.id || firstMatch?.associado_id;
          if (assocId && t.bank.type === 'CREDIT') {
             fetch(`/api/cobranca/associado/${assocId}/acao`, {
                method: 'POST',
@@ -610,7 +658,7 @@ function FinanceiroPageContent() {
         tipo: t.bank.type === 'CREDIT' ? 'receita' : 'despesa',
         associado: t.assocMatch?.nome,
         status: 'sucesso',
-        mensagem: t.existingMatch ? 'Conciliado com provisão existente' : 'Novo lançamento via Cora',
+        mensagem: (t.existingMatches && t.existingMatches.length > 0) || t.existingMatch ? 'Conciliado com provisão existente' : 'Novo lançamento via Cora',
         id_bancario: t.bank.fitid,
         atualizou_cpf: t.needsUpdate && !!t.newDocument,
         novo_cpf: t.newDocument
@@ -2250,13 +2298,14 @@ function FinanceiroPageContent() {
         isOpen={isManualLinkModalOpen} 
         onClose={() => setIsManualLinkModalOpen(false)} 
         extrato={selectedExtrato} 
-        onSelect={(assoc: any) => { 
+        onSelect={(assoc: any, existingMatch?: any | any[]) => { 
           const tf = selectedExtrato.bank.fitid; 
           setEditedMemos(prev => ({ ...prev, [tf]: enhanceMemo(assoc.nome, selectedExtrato.bank.memo) })); 
+          const existingArray = Array.isArray(existingMatch) ? existingMatch : (existingMatch ? [existingMatch] : undefined);
           if (conciliacaoSubTab === 'ofx') {
-            setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades' } : item)); 
+            setExtrato(prev => prev.map((item: any) => item.fitid === tf ? { ...item, assocMatch: assoc, existingMatches: existingArray, forMatch: null, suggestedCategory: 'Mensalidades' } : item)); 
           } else {
-            setCoraItems?.(prev => prev.map((item: any) => (item.cora_id || item.id) === tf ? { ...item, assocMatch: assoc, forMatch: null, suggestedCategory: 'Mensalidades' } : item));
+            setCoraItems?.(prev => prev.map((item: any) => (item.cora_id || item.id) === tf ? { ...item, assocMatch: assoc, existingMatches: existingArray, forMatch: null, suggestedCategory: 'Mensalidades' } : item));
           }
           setClearedMatches(prev => { const n = new Set(prev); n.delete(tf); return n; });
           setIsManualLinkModalOpen(false); 
