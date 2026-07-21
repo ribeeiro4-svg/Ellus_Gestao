@@ -48,6 +48,7 @@ const InadimplenciaTab = dynamic(() => import('@/features/financeiro/components/
 import IndicarCompetenciaModal from '@/components/ui/IndicarCompetenciaModal'
 import { cleanupDuplicateMensalidadesAction, cleanupConciliacaoDuplicatesAction, cleanupWrongMensalidadePatternAction } from '@/app/actions/financeiro_cleanup'
 import { trackIrregularitiesAction, auditRecorrenciaFaltantesAction } from '@/app/actions/financeiro_irregularities'
+import { desvincularLancamentoAction } from '@/app/actions/desvincular_lancamento'
 import FichaAssociadoModal from '@/features/associados/components/ficha-associado/FichaAssociadoModal'
 import RemanejarModal from '@/components/ui/RemanejarModal'
 import ConciliacaoLogModal from '@/components/conciliacao/ConciliacaoLogModal'
@@ -334,46 +335,12 @@ function FinanceiroPageContent() {
   }
 
   // ─── Desvincular Lançamento ───────────────────────────────────────────────
-  // Separa um lançamento que acumula vínculo OFX + associada em dois registros
-  // independentes, sem excluir nada e sem prejuízo a nenhum dos lados.
+  // Usa Server Action com service role para bypassar bloqueio de período fechado.
   const desvincularLancamento = async (lancamento: any) => {
-    const memoOriginal = lancamento.banco_original_memo || lancamento.descricao;
-
-    // Passo 1: criar lançamento OFX puro (sem associada) com descrição original do extrato
-    await inserir({
-      tipo: lancamento.tipo,
-      descricao: memoOriginal,
-      banco_original_memo: memoOriginal,
-      categoria: lancamento.categoria,
-      conta_id: lancamento.conta_id,
-      valor: lancamento.valor,
-      data: lancamento.data,
-      status: 'pago',
-      conciliado: true,
-      data_conciliacao: lancamento.data_conciliacao,
-      data_caixa: lancamento.data_caixa,
-      banco_transacao_id: lancamento.banco_transacao_id,
-      forma_pagamento: lancamento.forma_pagamento,
-      associado_id: null,
-      fornecedor_id: null,
-      diretor_id: null,
-      competencia_mes: lancamento.competencia_mes,
-      competencia_ano: lancamento.competencia_ano,
-      conta_debito_id: lancamento.conta_debito_id ?? null,
-      conta_credito_id: lancamento.conta_credito_id ?? null,
-    } as any);
-
-    // Passo 2: reverter o lançamento original da associada (sem OFX, de volta a em aberto)
-    await atualizar(lancamento.id, {
-      banco_transacao_id: null as any,
-      cora_id: null as any,
-      banco_original_memo: null as any,
-      conciliado: false,
-      data_conciliacao: null as any,
-      status: 'aberto',
-    } as any);
-
-    refresh();
+    if (!tenantId) throw new Error('Tenant ID não identificado.')
+    const res = await desvincularLancamentoAction(lancamento.id, tenantId)
+    if (res.error) throw new Error(res.error)
+    refresh()
   };
   // ─────────────────────────────────────────────────────────────────────────
 
