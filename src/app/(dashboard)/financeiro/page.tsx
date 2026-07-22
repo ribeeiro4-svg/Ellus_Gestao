@@ -2455,7 +2455,7 @@ function FinanceiroPageContent() {
             valor: Number(estornoTarget.valor),
             status: 'pago',
             banco_original_memo: `Recebedor: ${data.nome_recebedor} | Motivo: ${data.motivo_estorno}`,
-            forma_pagamento: data.forma_pagamento,
+            forma_pagamento: data.forma_pagamento as any,
             conta_id: data.conta_id
           })
         }}
