@@ -10,6 +10,7 @@ interface BatchActionBarAssociadosProps {
   onClear: () => void
   contas: { id: string; nome: string }[]
   onGerarMensalidades?: () => void
+  onGerarAdesao?: () => void
 }
 
 export default function BatchActionBarAssociados({ 
@@ -18,7 +19,8 @@ export default function BatchActionBarAssociados({
   onUpdate, 
   onClear,
   contas,
-  onGerarMensalidades
+  onGerarMensalidades,
+  onGerarAdesao
 }: BatchActionBarAssociadosProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -51,6 +53,15 @@ export default function BatchActionBarAssociados({
                   <Zap size={14} />
                   Mensalidades
                 </button>
+                {onGerarAdesao && (
+                  <button 
+                    onClick={onGerarAdesao}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 hover:text-orange-300 rounded-xl transition-all font-black uppercase tracking-widest text-[10px] active:scale-95 whitespace-nowrap"
+                  >
+                    <Zap size={14} />
+                    Adesão
+                  </button>
+                )}
               </div>
             )}
             

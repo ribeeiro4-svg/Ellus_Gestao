@@ -131,12 +131,13 @@ export default function InadimplenciaTab({
         const y = getAnoIdx(l.data)
         const matchPeriod = (filterMonth === -1 || m === filterMonth) && (filterYear === -1 || y === filterYear)
 
-        const searchLower = searchTerm.toLowerCase()
+        const normalizeStr = (str: string) => str ? String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : ""
+        const searchLower = normalizeStr(searchTerm)
         const assoc = associados.find(a => a.id === l.associado_id)
         const matchSearch = (!searchTerm || 
-                l.descricao.toLowerCase().includes(searchLower) ||
-                (l.status_cobranca && l.status_cobranca.toLowerCase().includes(searchLower)) ||
-                (assoc?.nome && assoc.nome.toLowerCase().includes(searchLower)))
+                normalizeStr(l.descricao).includes(searchLower) ||
+                (l.status_cobranca && normalizeStr(l.status_cobranca).includes(searchLower)) ||
+                (assoc?.nome && normalizeStr(assoc.nome).includes(searchLower)))
 
         const matchCobranca = filterStatusCobranca === 'ALL' || 
                              (filterStatusCobranca === 'PENDENTE' ? !l.status_cobranca : l.status_cobranca === filterStatusCobranca)

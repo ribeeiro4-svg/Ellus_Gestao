@@ -91,6 +91,7 @@ function AssociadosContent() {
   const [recurrenceTarget, setRecurrenceTarget] = useState<any>(null)
   const [expandedChart, setExpandedChart] = useState<any>(null)
   const [isBatchRecurrenceModalOpen, setIsBatchRecurrenceModalOpen] = useState(false)
+  const [isBatchAdesaoModalOpen, setIsBatchAdesaoModalOpen] = useState(false)
   const [associadosLogs, setAssociadosLogs] = useState<AssociadoLogEntry[]>([])
   const [isLogModalOpen, setIsLogModalOpen] = useState(false)
   const [logModalTitle, setLogModalTitle] = useState('Relatório de Auditoria')
@@ -1070,6 +1071,75 @@ Diretoria / Secretaria ACPROBEC`
     }
   }
 
+  const handleConfirmBatchAdesao = async (p: any) => {
+    setIsUpdatingBulk(true)
+    const allLancs: any[] = []
+    const logs: AssociadoLogEntry[] = []
+    let skipped = 0
+    let processed = 0
+
+    try {
+      for (const assocId of selectedIds) {
+        const assoc = associados.find((a: any) => a.id === assocId)
+        if (!assoc) continue
+
+        const jaExiste = lancamentos.some(l =>
+          l.associado_id === assoc.id &&
+          (l.categoria?.toUpperCase().includes('ADESÃO') || l.categoria?.toUpperCase().includes('ADESAO') || l.descricao?.toUpperCase().includes('ADESÃO'))
+        )
+
+        if (jaExiste) {
+          skipped++
+          logs.push({
+            data: p.data_vencimento,
+            descricao: 'Geração de Adesão',
+            associado: assoc.nome,
+            status: 'erro',
+            mensagem: `Já existe uma adesão lançada`
+          })
+          continue
+        }
+
+        const valorAdesao = Number(p.valor) > 0 ? Number(p.valor) : (assoc.mensalidade || 50);
+
+        allLancs.push({
+          associado_id: assoc.id,
+          descricao: `${p.descricao_padrao.toUpperCase()} - ${assoc.nome.toUpperCase()}`,
+          valor: valorAdesao,
+          tipo: 'receita',
+          categoria: p.categoria || 'Adesão',
+          status: 'aberto',
+          data: p.data_vencimento,
+          forma_pagamento: p.forma_pagamento,
+          conta_id: p.conta_id,
+          tenant_id: assoc.tenant_id
+        })
+        processed++
+        logs.push({
+          data: p.data_vencimento,
+          descricao: 'Geração de Adesão',
+          associado: assoc.nome,
+          valor: valorAdesao,
+          status: 'sucesso',
+          mensagem: `Adesão gerada com sucesso`
+        })
+      }
+
+      if (allLancs.length > 0) {
+        await inserirBulk(allLancs)
+      }
+      
+      setAssociadosLogs(logs)
+      setLogModalTitle('Geração em Lote: Adesão')
+      setIsLogModalOpen(true)
+      
+      setIsBatchAdesaoModalOpen(false)
+      setSelectedIds([])
+    } finally {
+      setIsUpdatingBulk(false)
+    }
+  }
+
   const handleDownloadTermo = async (item: any) => {
     if (!tenant?.zapsign_token || !item.zapsign_doc_token) return
     setDownloadingDoc(item.id)
@@ -1757,6 +1827,7 @@ Diretoria / Secretaria ACPROBEC`
         onDelete={(excluir || isAdmin) ? handleBulkDelete : undefined}
         onUpdate={handleBulkEdit}
         onGerarMensalidades={() => setIsBatchRecurrenceModalOpen(true)}
+        onGerarAdesao={() => setIsBatchAdesaoModalOpen(true)}
         contas={contas}
       />
 
@@ -1943,6 +2014,70 @@ Diretoria / Secretaria ACPROBEC`
           { 
             name: 'conta_id', 
             label: 'Conta', 
+            type: 'select', 
+            required: true, 
+            options: contas.map(c => ({ value: c.id, label: c.nome.toUpperCase() })) 
+          }
+        ]}
+      />
+
+      <CrudModal 
+        isOpen={isBatchAdesaoModalOpen} 
+        onClose={() => setIsBatchAdesaoModalOpen(false)} 
+        title={`GERAR ADESÃO EM LOTE`}
+        onSubmit={handleConfirmBatchAdesao}
+        loading={isUpdatingBulk}
+        fields={[
+          { 
+            name: 'publico_alvo', 
+            label: 'Público Alvo', 
+            type: 'text', 
+            defaultValue: `${selectedIds.length} Associados Selecionados` 
+          },
+          { 
+            name: 'descricao_padrao', 
+            label: 'Descrição Base', 
+            type: 'text', 
+            required: true, 
+            defaultValue: 'TAXA DE ADESÃO' 
+          },
+          { 
+            name: 'categoria', 
+            label: 'Categoria', 
+            type: 'select', 
+            required: true, 
+            defaultValue: categoriasContabeis.find(c => c.nome.toLowerCase().includes('ades'))?.nome || 'Adesão', 
+            options: categoriasContabeis.map(c => ({ value: c.nome, label: c.nome.toUpperCase() })) 
+          },
+          { 
+            name: 'valor', 
+            label: 'Valor (Opcional - Vazio usa mensalidade individual)', 
+            type: 'number', 
+            defaultValue: '' 
+          },
+          { 
+            name: 'data_vencimento', 
+            label: 'Data de Vencimento', 
+            type: 'date', 
+            required: true, 
+            defaultValue: new Date().toISOString().split('T')[0] 
+          },
+          { 
+            name: 'forma_pagamento', 
+            label: 'Forma Padrão', 
+            type: 'select', 
+            required: true, 
+            defaultValue: 'Boleto', 
+            options: [
+              { value: 'Boleto', label: 'Boleto' },
+              { value: 'PIX', label: 'PIX' },
+              { value: 'Cartão', label: 'Cartão' },
+              { value: 'Dinheiro', label: 'Dinheiro' }
+            ] 
+          },
+          { 
+            name: 'conta_id', 
+            label: 'Conta Destino', 
             type: 'select', 
             required: true, 
             options: contas.map(c => ({ value: c.id, label: c.nome.toUpperCase() })) 

@@ -12,6 +12,7 @@ import OFXUpload from '@/components/conciliacao/OFXUpload'
 import * as XLSX from 'xlsx'
 import { fmtR } from '@/lib/utils/formatters'
 import ImportacaoHGUTab from './ImportacaoHGUTab'
+import MesesFaltantesTab from './MesesFaltantesTab'
 
 const extrairTaxa = (desc: string) => {
   if (!desc) return 0;
@@ -19,7 +20,7 @@ const extrairTaxa = (desc: string) => {
   return match ? parseFloat(match[1].replace(/\./g, '').replace(',', '.')) : 0;
 }
 
-type AuditTab = 'adesoes' | 'extratos' | 'sem_vinculo' | 'importacao_hgu'
+type AuditTab = 'adesoes' | 'extratos' | 'sem_vinculo' | 'importacao_hgu' | 'meses_faltantes'
 type OFXAuditStatus = 'ok' | 'valor_divergente' | 'manual' | 'manual_outra_conta' | 'nao_encontrado' | 'duplicata' | 'data_divergente' | 'status_aberto' | 'tipo_divergente'
 
 export default function AuditoriaFinanceiraTab() {
@@ -1096,11 +1097,23 @@ export default function AuditoriaFinanceiraTab() {
           <Download size={16} />
           Inadimplência HGU
         </button>
+        <button
+          onClick={() => setActiveTab('meses_faltantes')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${activeTab === 'meses_faltantes' ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100/50'}`}
+        >
+          <AlertCircle size={16} />
+          Meses Faltantes
+        </button>
       </div>
 
       {/* CONTENT: IMPORTAÇÃO HGU */}
       {activeTab === 'importacao_hgu' && (
         <ImportacaoHGUTab />
+      )}
+
+      {/* CONTENT: MESES FALTANTES */}
+      {activeTab === 'meses_faltantes' && (
+        <MesesFaltantesTab />
       )}
 
       {/* CONTENT: ADESÕES */}

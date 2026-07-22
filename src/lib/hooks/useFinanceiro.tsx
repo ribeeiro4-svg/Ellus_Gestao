@@ -297,7 +297,10 @@ function useFinanceiroInternal() {
     }
     
     const hasLocked = items.some(i => isPeriodoBloqueado(i.data))
-    if (hasLocked) return { error: 'Alguns itens do lote pertencem a períodos fechados.' }
+    if (hasLocked) {
+      const pass = window.prompt('Alguns itens do lote pertencem a períodos fechados.\\nInsira a senha do tesoureiro para forçar a inserção:')
+      if (pass !== '19072425') return { error: 'Acesso negado: Alguns itens do lote pertencem a períodos fechados e exigem senha do tesoureiro.' }
+    }
 
     // Auditoria: Verifica duplicatas no banco antes de inserir (mesmo tenant, data, valor e descrição)
     const { data: existing } = await sb.from('lancamentos')

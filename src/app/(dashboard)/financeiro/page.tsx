@@ -66,6 +66,7 @@ import ManualLinkLancamentoModal from '@/components/conciliacao/ManualLinkLancam
 import { usePermissions } from '@/lib/hooks/usePermissions'
 import AuditRecorrenciaModal from '@/components/ui/AuditRecorrenciaModal'
 import RecebimentoManualModal from '@/components/financeiro/RecebimentoManualModal'
+import EstornoModal from '@/components/financeiro/EstornoModal'
 import { gerarPdfRecibo } from '@/features/financeiro/utils/gerarPdfRecibo'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler)
@@ -251,6 +252,8 @@ function FinanceiroPageContent() {
   const [cobrancaDateTarget, setCobrancaDateTarget] = useState<string[]>([])
   const [isAuditRecorrenciaModalOpen, setIsAuditRecorrenciaModalOpen] = useState(false)
   const [isRecebimentoManualModalOpen, setIsRecebimentoManualModalOpen] = useState(false)
+  const [isEstornoModalOpen, setIsEstornoModalOpen] = useState(false)
+  const [estornoTarget, setEstornoTarget] = useState<any>(null)
   const [recebimentoManualTarget, setRecebimentoManualTarget] = useState<any>(null)
   
   const [isObsModalOpen, setIsObsModalOpen] = useState(false)
@@ -1300,6 +1303,19 @@ function FinanceiroPageContent() {
                 className="flex items-center gap-3 w-full px-3 py-2 text-left text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
               >
                 <HandCoins size={14} /> Receber Manualmente
+              </button>
+            )}
+            {i.status === 'pago' && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEstornoTarget(i);
+                  setIsEstornoModalOpen(true);
+                  document.body.click();
+                }} 
+                className="flex items-center gap-3 w-full px-3 py-2 text-left text-[11px] font-bold text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+              >
+                <RefreshCw size={14} /> Estornar
               </button>
             )}
             {i.tipo === 'receita' && i.associado_id && (
@@ -2419,10 +2435,32 @@ function FinanceiroPageContent() {
             alert('Erro ao criar tarefa: ' + (error.message || 'Erro desconhecido'))
           } else {
             setIsTarefaModalOpen(false)
-            alert('Tarefa criada com sucesso!')
+            console.log('Recebimento manual processado com sucesso')
           }
         }}
       />
+
+      <EstornoModal
+        isOpen={isEstornoModalOpen}
+        onClose={() => { setIsEstornoModalOpen(false); setEstornoTarget(null); }}
+        lancamento={estornoTarget}
+        contas={contas}
+        onConfirm={async (data) => {
+          if (!estornoTarget) return
+          await inserir({
+            data: data.data_estorno,
+            descricao: `ESTORNO DE (${estornoTarget.descricao})`,
+            categoria: estornoTarget.categoria || 'Estorno',
+            tipo: 'despesa', // Lançamento de saída
+            valor: Number(estornoTarget.valor),
+            status: 'pago',
+            banco_original_memo: `Recebedor: ${data.nome_recebedor} | Motivo: ${data.motivo_estorno}`,
+            forma_pagamento: data.forma_pagamento,
+            conta_id: data.conta_id
+          })
+        }}
+      />
+
       {/* Ficha do Associado */}
       <FichaAssociadoModal
         isOpen={isFichaOpen}

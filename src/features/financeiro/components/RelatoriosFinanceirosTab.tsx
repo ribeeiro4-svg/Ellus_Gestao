@@ -262,9 +262,11 @@ export default function RelatoriosFinanceirosTab({
         matchPeriod = itemDate >= limit && itemDate <= new Date()
       }
 
-      const matchSearch = item.descricao.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (item.categoria || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          getLinkedName(item)?.toLowerCase().includes(searchTerm.toLowerCase())
+      const normalizeStr = (str: string) => str ? String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : ""
+      const searchLower = normalizeStr(searchTerm)
+      const matchSearch = normalizeStr(item.descricao).includes(searchLower) || 
+                          normalizeStr(item.categoria || '').includes(searchLower) ||
+                          normalizeStr(getLinkedName(item) || '').includes(searchLower)
 
       let matchType = true
       if (selectedReport === 'hoje') matchType = true
