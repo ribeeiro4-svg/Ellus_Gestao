@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react'
 import { 
   Target, CheckCircle2, Save, TrendingUp, Activity,
-  ArrowUpCircle, ArrowDownCircle, Trash2, Calendar, ArrowRightLeft, Users
+  ArrowUpCircle, ArrowDownCircle, Trash2, Calendar, ArrowRightLeft, Users, Star
 } from 'lucide-react'
 import KpiCard from '@/components/ui/KpiCard'
 import ChartCard from '@/components/ui/ChartCard'
@@ -51,7 +51,7 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurrenceMonths, setRecurrenceMonths] = useState(12)
 
-  const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, selectedMes, selectedAno)
+  const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, [selectedMes], selectedAno)
 
   // Gerenciamento de Períodos ProLabore
   const [periodosMember, setPeriodosMember] = useState<any | null>(null)
@@ -61,6 +61,33 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
   React.useEffect(() => {
     refetchFin(selectedAno)
   }, [selectedAno, refetchFin])
+
+  const [favorites, setFavorites] = useState<string[]>([])
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false)
+  const [launchDays, setLaunchDays] = useState<Record<string, number>>({})
+
+  React.useEffect(() => {
+    const savedFavs = localStorage.getItem('planejamento_favorites_acprobec')
+    if (savedFavs) setFavorites(JSON.parse(savedFavs))
+    
+    const savedDays = localStorage.getItem('planejamento_dias_acprobec')
+    if (savedDays) setLaunchDays(JSON.parse(savedDays))
+  }, [])
+
+  const toggleFavorite = (categoria: string) => {
+    const newFavs = favorites.includes(categoria) 
+      ? favorites.filter(f => f !== categoria) 
+      : [...favorites, categoria]
+    setFavorites(newFavs)
+    localStorage.setItem('planejamento_favorites_acprobec', JSON.stringify(newFavs))
+  }
+
+  const handleLaunchDayChange = (categoria: string, day: number) => {
+    const validDay = Math.min(Math.max(day, 1), 31)
+    const newDays = { ...launchDays, [categoria]: validDay }
+    setLaunchDays(newDays)
+    localStorage.setItem('planejamento_dias_acprobec', JSON.stringify(newDays))
+  }
 
   const totalProLabore = useMemo(() => {
     return diretoria.filter(d => d.status === 'ativo').reduce((s, d) => {
@@ -121,13 +148,18 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
       const numMonths = isRecurring ? Math.max(1, recurrenceMonths) : 1
       
       for (let i = 0; i < numMonths; i++) {
-        const targetDate = new Date(selectedAno, selectedMes + i, 10)
+        const targetDate = new Date(selectedAno, selectedMes + i, 1)
         const tMes = targetDate.getMonth()
         const tAno = targetDate.getFullYear()
         const mm = String(tMes + 1).padStart(2, '0')
-        const dateStr = `${tAno}-${mm}-10`
 
         itemsToLanch.forEach(item => {
+          const catDay = launchDays[item.categoria] || 10
+          const maxDayInMonth = new Date(tAno, tMes + 1, 0).getDate()
+          const safeDay = Math.min(catDay, maxDayInMonth)
+          const dd = String(safeDay).padStart(2, '0')
+          const dateStr = `${tAno}-${mm}-${dd}`
+
           batchFinanceiro.push({
             tipo: item.tipo,
             descricao: `PLANEJAMENTO - ${mm}/${tAno} - ${item.categoria}`,
@@ -147,12 +179,17 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
           })
         })
 
+        const reservaDay = launchDays['RESERVA DE EMERGÊNCIA'] || 10
+        const maxDayInMonth = new Date(tAno, tMes + 1, 0).getDate()
+        const safeReservaDay = Math.min(reservaDay, maxDayInMonth)
+        const reservaDateStr = `${tAno}-${mm}-${String(safeReservaDay).padStart(2, '0')}`
+
         const reservaIdeal = Math.round((totals.planejadoDespesa * reservaMeses) * 100) / 100
         batchFinanceiro.push({
           tipo: 'despesa',
           descricao: `PLANEJAMENTO - ${mm}/${tAno} - RESERVA DE EMERGÊNCIA`,
           valor: reservaIdeal,
-          data: dateStr,
+          data: reservaDateStr,
           status: 'aberto',
           categoria: 'RESERVA DE EMERGÊNCIA',
           competencia_mes: tMes,
@@ -182,7 +219,39 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
   }
 
   const columns = useMemo(() => [
-    { header: 'Categoria', key: 'categoria', render: (i: any) => <span className="text-xs font-bold text-slate-700">{i.categoria}</span> },
+    { 
+      header: 'Categoria', 
+      key: 'categoria', 
+      render: (i: any) => (
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => toggleFavorite(i.categoria)}
+            className={`transition-colors flex-shrink-0 ${favorites.includes(i.categoria) ? 'text-amber-400 hover:text-amber-500' : 'text-slate-200 hover:text-amber-400'}`}
+            title="Favoritar"
+          >
+            <Star size={14} fill={favorites.includes(i.categoria) ? 'currentColor' : 'none'} />
+          </button>
+          <span className="text-xs font-bold text-slate-700">{i.categoria}</span>
+        </div>
+      ) 
+    },
+    { 
+      header: 'Tipo', 
+      key: 'tipo', 
+      render: (i: any) => (
+        <div className="flex items-center gap-1.5">
+          {i.tipo === 'receita' ? (
+            <span className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg" title="Ingresso (Receita)">
+              <ArrowUpCircle size={12} /> Ingresso
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] font-black uppercase text-rose-600 bg-rose-50 px-2 py-1 rounded-lg" title="Dispêndio (Despesa)">
+              <ArrowDownCircle size={12} /> Dispêndio
+            </span>
+          )}
+        </div>
+      )
+    },
     { 
       header: 'Planejado', 
       key: 'planejado', 
@@ -198,6 +267,21 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
         </div>
       )
     },
+    { 
+      header: 'Dia Lanç.', 
+      key: 'dia_lanc', 
+      render: (i: any) => (
+        <input 
+          type="number" 
+          min={1} 
+          max={31} 
+          value={launchDays[i.categoria] || 10} 
+          onChange={(e) => handleLaunchDayChange(i.categoria, Number(e.target.value))}
+          className="w-16 px-2 py-1.5 rounded-xl text-xs font-black outline-none bg-slate-50 text-slate-700 focus:bg-white focus:ring-2 ring-emerald-100 text-center"
+          title="Dia do mês para o lançamento"
+        />
+      )
+    },
     { header: 'Lançamentos', key: 'provisionado', render: (i: any) => <span className={`text-xs font-black ${i.provisionado > 0 ? 'text-amber-500' : 'text-slate-400'}`}>{fmtR(i.provisionado)}</span> },
     { header: 'Realizado', key: 'realizado', render: (i: any) => <span className={`text-xs font-black ${i.tipo === 'receita' ? 'text-emerald-600' : 'text-slate-600'}`}>{fmtR(i.realizado)}</span> },
     { 
@@ -208,7 +292,13 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
         return <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>{diff > 0 ? '+' : ''}{fmtR(Math.round(diff * 100) / 100)}</span>
       }
     }
-  ], [editValues, selectedCategories])
+  ], [editValues, selectedCategories, favorites, launchDays])
+
+  const filteredComparativo = useMemo(() => {
+    return showOnlyFavorites 
+      ? comparativo.filter(c => favorites.includes(c.categoria))
+      : comparativo
+  }, [comparativo, showOnlyFavorites, favorites])
 
   const receitasChartData = { labels: comparativo.filter(c => c.tipo === 'receita').map(c => c.categoria), datasets: [{ label: 'Planejado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.planejado), backgroundColor: 'rgba(59, 130, 246, 0.4)', borderRadius: 4 }, { label: 'Realizado', data: comparativo.filter(c => c.tipo === 'receita').map(c => c.realizado), backgroundColor: '#10b981', borderRadius: 4 }] }
   
@@ -244,43 +334,52 @@ export default function MetasTab({ selectedMes, selectedAno, reservaMeses }: Met
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="flex flex-col gap-6">
-          <ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado">
-            <div className="h-[210px] mt-4">
-              <Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} />
-            </div>
-          </ChartCard>
-          
-          <ChartCard title="📉 Impacto nos Ingressos" subtitle="Consumo do Faturamento por Categoria">
-            <div className="h-[260px] mt-4">
-              {totals.planejadoDespesa > 0 ? (
-                <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }} />
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
-                  <Activity size={32} className="opacity-20" />
-                  <span className="text-xs font-bold uppercase tracking-widest">Nenhum dispêndio planejado</span>
-                </div>
-              )}
-            </div>
-          </ChartCard>
-        </div>
+      {/* Gráficos no topo */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ChartCard title="Metas Financeiras" subtitle="Realizado vs Planejado">
+          <div className="h-[320px] mt-4">
+            <Bar data={receitasChartData} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { font: { size: 9 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }} />
+          </div>
+        </ChartCard>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
-              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Superávit Projetado (%)</span>
-              {selectedCategories.length > 0 && (
-                <button onClick={() => setIsConfirmLancarOpen(true)} className="flex items-center gap-2 text-[9px] font-black text-white bg-emerald-500 px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
-                  <TrendingUp size={14} /> LANÇAR PLANEJAMENTO ({selectedCategories.length})
-                </button>
-              )}
-            </div>
+        <ChartCard title="📉 Impacto nos Ingressos" subtitle="Consumo do Faturamento por Categoria">
+          <div className="h-[320px] mt-4">
+            {totals.planejadoDespesa > 0 ? (
+              <Doughnut data={expenseImpactData} options={{ responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels: { padding: 12, boxWidth: 10, font: { size: 9, weight: 'bold' } } } } }} />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-300 gap-2 italic">
+                <Activity size={32} className="opacity-20" />
+                <span className="text-xs font-bold uppercase tracking-widest">Nenhum dispêndio planejado</span>
+              </div>
+            )}
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Tabela de Orçamento abaixo */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento Mensal</h3>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Superávit Projetado (%)</span>
+            {selectedCategories.length > 0 && (
+              <button onClick={() => setIsConfirmLancarOpen(true)} className="flex items-center gap-2 text-[9px] font-black text-white bg-emerald-500 px-4 py-2 rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-200">
+                <TrendingUp size={14} /> LANÇAR PLANEJAMENTO ({selectedCategories.length})
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowOnlyFavorites(!showOnlyFavorites)}
+              className={`flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-xl transition-all ${showOnlyFavorites ? 'bg-amber-50 text-amber-600 border border-amber-200/50' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+            >
+              <Star size={12} fill={showOnlyFavorites ? 'currentColor' : 'none'} />
+              {showOnlyFavorites ? 'FAVORITAS' : 'TODAS'}
+            </button>
             <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-1 text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl hover:bg-emerald-100 transition-all">+ CATEGORIA</button>
           </div>
-          <DataTable columns={columns} data={comparativo} loading={loadFin || loadOrc} selectedIds={selectedCategories} onSelectChange={setSelectedCategories} idKey="categoria" />
         </div>
+        <DataTable columns={columns} data={filteredComparativo} loading={loadFin || loadOrc} selectedIds={selectedCategories} onSelectChange={setSelectedCategories} idKey="categoria" />
       </div>
 
       {/* Modais */}

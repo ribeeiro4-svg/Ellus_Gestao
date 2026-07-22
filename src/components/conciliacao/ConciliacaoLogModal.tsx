@@ -108,7 +108,7 @@ export default function ConciliacaoLogModal({ isOpen, onClose, logs }: Conciliac
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onClose} />
       
       <div className="relative bg-white w-full max-w-4xl rounded-[40px] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
@@ -207,7 +207,7 @@ export default function ConciliacaoLogModal({ isOpen, onClose, logs }: Conciliac
         {/* Footer */}
         <div className="p-8 bg-white border-t border-slate-100 flex items-center justify-between shrink-0">
           <p className="text-xs font-bold text-slate-400 italic flex items-center gap-2">
-            <ShieldCheck size={14} className="text-emerald-500" /> Relatório auditado pelo Inovacont ACPROBEC
+            <ShieldCheck size={14} className="text-emerald-500" /> Relatório auditado pelo ÁUREA Tech ACPROBEC
           </p>
           <div className="flex items-center gap-4">
             <button 

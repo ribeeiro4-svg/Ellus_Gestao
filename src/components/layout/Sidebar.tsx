@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useTenant } from '@/lib/hooks/useTenant'
+import LogoV2 from '@/components/ui/LogoV2'
 import { 
   Home,
   BarChart3, 
@@ -25,79 +27,190 @@ import {
   FileText,
   BookOpen,
   ChevronLeft,
-  Menu
+  ChevronDown,
+  ChevronUp,
+  Menu,
+  ClipboardList,
+  BookMarked,
+  Monitor,
+  RefreshCw
 } from 'lucide-react'
 
 const MENU = [
   { 
-    section: 'Principal', 
+    section: 'Início', 
     items: [
-      { href: '/', icon: Home, label: 'Início (Site)' },
-      { href: '/resumo', icon: BarChart3, label: 'Dashboard' },
+      { href: '/resumo', icon: BarChart3, label: 'Visão Geral' },
+    ]
+  },
+  { 
+    section: 'Gente & Atendimentos', 
+    items: [
+      { href: '/associados', icon: Users, label: 'Cadastro de Vidas' },
+      { href: '/membros-diretoria', icon: ShieldCheck, label: 'Membros da Diretoria' },
+      { href: '/atendimentos', icon: Calendar, label: 'Agenda & Atendimentos' },
+      { href: '/recrutamento', icon: BarChart3, label: 'Recrutamento & Seleção' },
     ]
   },
   { 
     section: 'Financeiro', 
     items: [
-      { href: '/financeiro', icon: Wallet, label: 'Financeiro' },
-      { href: '/planejamento', icon: Target, label: 'Planejamento' },
+      { href: '/financeiro', icon: Wallet, label: 'Gestão Financeira' },
+      { href: '/conciliacao', icon: RefreshCw, label: 'Conciliador' },
+      { href: '/cobrancas', icon: AlertTriangle, label: 'Cobranças' },
+      { href: '/planejamento', icon: Target, label: 'Planejamento Orçamentário' },
+    ]
+  },
+  { 
+    section: 'Gestão Estratégica', 
+    items: [
+      { href: '/estrategia', icon: Target, label: 'Metas & Projetos' },
+      { href: '/gestao-tarefas', icon: ClipboardList, label: 'Painel de Tarefas' },
+      { href: '/bens-duraveis', icon: Briefcase, label: 'Gestão de Ativos' },
+      { href: '/pop', icon: BookMarked, label: 'Processos Operacionais' },
+      { href: '/diretoria', icon: Monitor, label: 'Apresentar Resultados' },
+    ]
+  },
+  { 
+    section: 'Controladoria', 
+    items: [
       { href: '/fechamento', icon: Lock, label: 'Fechamento Mensal' },
+      { href: '/fiscal', icon: FileText, label: 'Rotinas Fiscais' },
+      { href: '/contabil', icon: BookOpen, label: 'Contabilidade Geral' },
+      { href: '/auditoria-financeira', icon: ShieldCheck, label: 'Auditoria Financeira' },
     ]
   },
   { 
-    section: 'Entidades', 
+    section: 'Inteligência Executiva (EIP)', 
     items: [
-      { href: '/associados', icon: Users, label: 'Gestão Geral' },
-    ]
-  },
-  { 
-    section: 'Gerencial', 
-    items: [
-      { href: '/estrategia', icon: Target, label: 'Estratégia' },
-      { href: '/bens-duraveis', icon: Briefcase, label: 'Bens Duráveis' },
-    ]
-  },
-  { 
-    section: 'Recrutamento', 
-    items: [
-      { href: '/recrutamento', icon: BarChart3, label: 'Recrutamento' },
-    ]
-  },
-  { 
-    section: 'Fiscal & Contábil', 
-    items: [
-      { href: '/fiscal', icon: FileText, label: 'Escrituração Fiscal' },
-      { href: '/contabil', icon: BookOpen, label: 'Contabilidade' },
-    ]
-  },
-  { 
-    section: 'Dados', 
-    items: [
-      { href: '/importar', icon: Download, label: 'Importar Dados' },
-      { href: '/configuracoes', icon: Settings, label: 'Configurações' },
+      { href: '/relatorios', icon: BarChart3, label: 'Central de Relatórios' },
     ]
   },
 ]
+
 
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const sb = createClient()
+  const { tenant } = useTenant()
   
-  const [customLogo, setCustomLogo] = useState<string | null>(null)
-  const [customName, setCustomName] = useState('Gestão Áurea')
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [permissoes, setPermissoes] = useState<Record<string, any>>({})
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [userName, setUserName] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    const initialState: Record<string, boolean> = {}
+    MENU.forEach(m => {
+      if (m.section === 'Início' || m.section === 'Controladoria') {
+        initialState[m.section] = true
+      } else {
+        initialState[m.section] = false
+      }
+    })
+    return initialState
+  })
+
+  const toggleSection = (section: string) => {
+    if (isCollapsed) return
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+
+  const allExpanded = MENU.every(m => !collapsedSections[m.section])
+
+  const toggleAllSections = () => {
+    const newState: Record<string, boolean> = {}
+    const targetState = allExpanded ? true : false
+    MENU.forEach(m => {
+      newState[m.section] = targetState
+    })
+    setCollapsedSections(newState)
+  }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedLogo = localStorage.getItem('acprobec_custom_logo')
-      const savedName = localStorage.getItem('acprobec_user_name')
       const savedCollapse = localStorage.getItem('acprobec_sidebar_collapsed')
-      if (savedLogo) setCustomLogo(savedLogo)
-      if (savedName) setCustomName(savedName)
       if (savedCollapse === 'true') setIsCollapsed(true)
+      
+      try {
+        const profileRaw = localStorage.getItem('user_profile')
+        const permsRaw = localStorage.getItem('user_permissions')
+        if (profileRaw) {
+          const profile = JSON.parse(profileRaw)
+          if (profile.perfil_id === 1) setIsAdmin(true)
+          if (profile.nome) setUserName(profile.nome)
+          if (profile.perfil) setUserRole(profile.perfil)
+        }
+        if (permsRaw) {
+          setPermissoes(JSON.parse(permsRaw))
+        }
+      } catch (e) {}
     }
+    
+    // Mobile event listener
+    const handleToggleMobile = () => setIsMobileOpen(prev => !prev)
+    window.addEventListener('toggleMobileSidebar', handleToggleMobile)
+    return () => window.removeEventListener('toggleMobileSidebar', handleToggleMobile)
   }, [])
+
+  const canSee = (href: string) => {
+    if (isAdmin) return true
+    if (href === '/' || href === '/resumo') return true
+
+    const routeToModuleMap: Record<string, string> = {
+      '/associados': 'socios',
+      '/membros-diretoria': 'socios',
+      '/financeiro': 'financeiro',
+      '/fechamento': 'fechamento',
+      '/planejamento': 'planejamento',
+      '/bens-duraveis': 'bens_duraveis',
+      '/cobranca': 'cobrancas',
+      '/atendimentos': 'atendimentos',
+      '/auditoria': 'auditoria',
+      '/auditoria-financeira': 'auditoria',
+      '/estrategia': 'estrategia',
+      '/gestao-tarefas': 'gestao_tarefas',
+      '/recrutamento': 'recrutamento',
+      '/fiscal': 'fiscal',
+      '/contabil': 'contabil',
+      '/importar': 'importar',
+    }
+
+    if (href === '/configuracoes' || href === '/pop') return true // Sempre visível para a aba Minha Conta e Manuais
+
+    // Apresentar Resultados: apenas Admin ou perfil de Tesoureiro (financeiro.ver)
+    if (href === '/diretoria') {
+      return isAdmin || permissoes['financeiro']?.ver === true
+    }
+
+    const moduloName = routeToModuleMap[href]
+    if (moduloName) {
+      return permissoes[moduloName]?.ver === true
+    }
+
+    // Se não tiver módulo mapeado, permite acesso por padrão ou 
+    // podemos considerar que 'estrategia', 'recrutamento' são módulos que não implementamos o mapeamento, então deixamos visível.
+    return true
+  }
+
+  const customLogo = (tenant?.logo_url && tenant.logo_url.startsWith('http')) ? tenant.logo_url : '/ellus_logo_dark.svg'
+  const customName = tenant?.nome || 'Éllus'
+
+  useEffect(() => {
+    if (tenant) {
+      console.log('[Sidebar] Tenant Data:', {
+        nome: tenant.nome,
+        logo: tenant.logo_url,
+        hasLogo: !!customLogo,
+        id: tenant.id
+      })
+    }
+  }, [tenant, customLogo])
 
   const toggleCollapse = () => {
     const next = !isCollapsed
@@ -106,58 +219,86 @@ export default function Sidebar() {
   }
 
   const logout = async () => {
+    // Chama o endpoint para excluir o cookie HttpOnly (rbac_token)
+    await fetch('/api/auth/logout', { method: 'POST' })
+    // Limpa a sessão do Supabase
     await sb.auth.signOut()
-    router.push('/login')
+    // Limpa o localStorage das permissões
+    localStorage.removeItem('user_profile')
+    localStorage.removeItem('user_permissions')
+    localStorage.removeItem('rbac_token_raw')
+    // Força recarga completa para o middleware limpar o estado do cookie
+    window.location.href = '/login'
   }
 
   const isActive = (path: string) => pathname === path
 
   return (
     <div className="relative z-[60]">
+      {/* Overlay for mobile */}
+      <div 
+        className={`sidebar-overlay md:hidden ${isMobileOpen ? 'mobile-open' : ''}`}
+        onClick={() => setIsMobileOpen(false)}
+      />
+
       <button 
         onClick={toggleCollapse}
-        className="absolute -right-3 top-10 w-6 h-6 bg-[#2d8c6f] text-white rounded-full flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3)] border border-white/20 z-[70] hover:scale-110 transition-transform cursor-pointer"
+        className="absolute -right-3 top-10 w-6 h-6 bg-[#2d8c6f] text-white rounded-full md:flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.3)] border border-white/20 z-[70] hover:scale-110 transition-transform cursor-pointer hidden"
         title={isCollapsed ? 'Expandir' : 'Recolher'}
       >
         {isCollapsed ? <Menu size={12} /> : <ChevronLeft size={12} />}
       </button>
 
-      <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'}`}>
-        <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'p-6 items-center text-center'}`}>
-          <div className={`logo-badge flex transition-all ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center gap-2 mb-2'}`}>
-            <div className="logo-icon w-10 h-10 rounded-xl flex items-center justify-center text-white text-[18px] font-bold bg-gradient-to-br from-[#2d8c6f] to-[#34d399] overflow-hidden shrink-0 shadow-lg">
-              {customLogo ? (
-                <img src={customLogo} alt="Logo" className="w-full h-full object-cover" />
-              ) : (
-                'AC'
-              )}
+      <aside className={`sidebar h-screen sticky top-0 left-0 z-50 flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isCollapsed ? 'w-[70px]' : 'w-[260px]'} ${isMobileOpen ? 'mobile-open' : ''}`}>
+        <div className={`sidebar-logo border-b border-white/5 relative flex flex-col transition-all duration-300 ${isCollapsed ? 'p-4 items-center' : 'py-4 px-6 items-center text-center'}`}>
+          <div className={`logo-badge flex transition-all w-full ${isCollapsed ? 'flex-row justify-center' : 'flex-col items-center mb-2'}`}>
+            <div 
+              onClick={() => router.push('/resumo')}
+              className={`cursor-pointer hover:opacity-85 transition-opacity w-full flex items-center justify-center ${isCollapsed ? 'h-10 px-1 scale-110' : 'h-20 px-0 scale-[1.6]'}`}
+            >
+              <LogoV2 variant="white" className="w-full h-full object-contain" />
             </div>
-            {!isCollapsed && <div className="logo-title text-[17px] font-extrabold text-white tracking-tight animate-in fade-in slide-in-from-bottom-2 duration-300">ACPROBEC</div>}
           </div>
-          {!isCollapsed && <div className="logo-sub text-[10px] text-white/40 tracking-[1.2px] font-bold uppercase animate-in fade-in slide-in-from-bottom-2 duration-300">GESTÃO INTELIGENTE</div>}
-          {!isCollapsed && (
-            <div className="logo-divider w-full flex items-center gap-2 mt-4 text-[9px] text-white/15 tracking-[1.5px] font-black after:flex-1 after:h-[1px] after:bg-white/5 before:flex-1 before:h-[1px] before:bg-white/5 animate-in fade-in duration-500">
-              INOVACONT
-            </div>
-          )}
         </div>
 
-      <nav className="flex-1 py-4 overflow-y-auto scrollbar-none">
-        {MENU.map(({ section, items }) => (
-          <div key={section} className={`sidebar-section py-2 transition-all ${isCollapsed ? 'px-0' : ''}`}>
-            {!isCollapsed && (
-              <div className="sidebar-label text-[9.5px] font-bold text-white/20 tracking-[1.4px] uppercase px-5 pb-2 animate-in fade-in duration-300">
-                {section}
-              </div>
-            )}
-            <div className="space-y-0.5">
-              {items.map(({ href, icon: Icon, label }) => {
+      <nav className="flex-1 py-2 overflow-y-auto scrollbar-none">
+        {!isCollapsed && (
+          <div className="px-5 mb-4 mt-2 flex justify-center animate-in fade-in duration-300">
+            <button
+              onClick={toggleAllSections}
+              className="text-[9px] text-emerald-400/50 hover:text-emerald-400 transition-colors uppercase tracking-widest font-bold cursor-pointer"
+            >
+              {allExpanded ? 'Recolher Todos' : 'Expandir Todos'}
+            </button>
+          </div>
+        )}
+        {MENU.map(({ section, items }) => {
+          const visivelItems = items.filter(i => canSee(i.href))
+          if (visivelItems.length === 0) return null
+
+          return (
+            <div key={section} className={`sidebar-section py-2 transition-all ${isCollapsed ? 'px-0' : ''}`}>
+              {!isCollapsed && (
+                <div 
+                  onClick={() => toggleSection(section)}
+                  className="sidebar-label text-[13px] font-bold text-white/50 tracking-[1.4px] uppercase px-5 pb-2 animate-in fade-in duration-300 flex items-center justify-between cursor-pointer hover:text-white transition-colors"
+                >
+                  <span>{section}</span>
+                  {collapsedSections[section] ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                </div>
+              )}
+              {(!collapsedSections[section] || isCollapsed) && (
+                <div className="space-y-0.5 animate-in slide-in-from-top-2 fade-in duration-200">
+                  {visivelItems.map(({ href, icon: Icon, label }) => {
                 const active = isActive(href)
                 const IconComponent = Icon as any
                 return (
                   <div
                     key={href}
-                    onClick={() => router.push(href)}
+                    onClick={() => {
+                      router.push(href)
+                      setIsMobileOpen(false)
+                    }}
                     title={isCollapsed ? label : ''}
                     className={`nav-item flex items-center gap-[10px] py-2.5 cursor-pointer transition-all text-[12.5px] relative 
                       ${isCollapsed ? 'px-0 justify-center' : 'px-5'}
@@ -170,26 +311,26 @@ export default function Sidebar() {
                     {active && !isCollapsed && <div className="absolute inset-[0_8px] rounded-lg -z-10 bg-white/10" />}
                     {active && isCollapsed && <div className="absolute inset-[4px_8px] rounded-lg -z-10 bg-white/10" />}
                   </div>
-                )
-              })}
+                )})}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
-      </nav>
+          )})}
+        </nav>
 
-      <div className={`sidebar-footer mt-auto border-t border-white/5 relative z-10 flex flex-col gap-4 transition-all ${isCollapsed ? 'p-3 items-center' : 'p-5'}`}>
+      <div className={`sidebar-footer mt-auto border-t border-white/5 relative z-10 flex flex-col gap-3 transition-all ${isCollapsed ? 'p-4 items-center' : 'py-4 px-6'}`}>
         <div className={`flex items-center gap-3 transition-all ${isCollapsed ? 'flex-col gap-4' : ''}`}>
-          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white/40 overflow-hidden shrink-0">
-             {customLogo ? (
-               <img src={customLogo} alt="Logo" className="w-full h-full object-cover opacity-60" />
+          <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 overflow-hidden shrink-0 shadow-lg">
+             {tenant?.logo_url && tenant.logo_url.startsWith('http') ? (
+               <img src={tenant.logo_url} alt="Logo" className="w-full h-full object-cover" />
              ) : (
-               <Users size={16} />
+               <Users size={18} />
              )}
           </div>
           {!isCollapsed && (
             <div className="flex-1 overflow-hidden animate-in fade-in slide-in-from-left-2 duration-300">
                <p className="text-[11px] font-bold text-white/80 truncate">{customName}</p>
-               <p className="text-[9px] text-white/20 uppercase tracking-tighter">Administrador</p>
+               <p className="text-[9px] text-white/20 uppercase tracking-tighter">{userName || 'Administrador'}</p>
             </div>
           )}
           <div className={`flex items-center gap-2 ${isCollapsed ? 'flex-col' : ''}`}>
@@ -201,12 +342,6 @@ export default function Sidebar() {
             </button>
           </div>
         </div>
-        {!isCollapsed && (
-          <div className="animate-in fade-in duration-500">
-             <p className="text-[10px] text-white/25 font-medium">© 2024 ACPROBEC</p>
-             <p className="text-[8px] text-white/10 mt-0.5">ESTRUTURA SaaS PROFISSIONAL</p>
-          </div>
-        )}
       </div>
     </aside>
   </div>

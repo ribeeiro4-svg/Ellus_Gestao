@@ -27,8 +27,8 @@ export default function PaymentBadge({ method, size = 'sm' }: PaymentBadgeProps)
 
   const icon = ICONS[method] || '💳'
   const colors = COLORS[method] || { bg: 'var(--surface3)', color: 'var(--text3)' }
-  const padding = size === 'sm' ? '2px 8px' : '4px 12px'
-  const fontSize = size === 'sm' ? 11 : 12
+  const padding = size === 'sm' ? '1px 6px' : '3px 10px'
+  const fontSize = size === 'sm' ? 9 : 11
 
   return (
     <span

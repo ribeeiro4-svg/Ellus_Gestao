@@ -86,6 +86,7 @@ export function useNFe() {
       let query = sb.from('nfe_entradas')
         .select('*')
         .eq('tenant_id', tenantId)
+        .is('deleted_at', null)
         .order('data_emissao', { ascending: false })
 
       if (periodo) {
@@ -251,14 +252,14 @@ export function useNFe() {
   }
 
   const remover = async (id: string) => {
-    const { error } = await sb.from('nfe_entradas').delete().eq('id', id)
+    const { error } = await sb.from('nfe_entradas').update({ deleted_at: new Date().toISOString() }).eq('id', id)
     if (!error) await fetch(filterPeriodo)
     return { error }
   }
 
   const removerLote = async (ids: string[]) => {
     if (!ids.length) return { error: null }
-    const { error } = await sb.from('nfe_entradas').delete().in('id', ids)
+    const { error } = await sb.from('nfe_entradas').update({ deleted_at: new Date().toISOString() }).in('id', ids)
     if (!error) await fetch(filterPeriodo)
     return { error }
   }

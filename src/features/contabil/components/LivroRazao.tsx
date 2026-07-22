@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { Book, Printer, Loader2, Search } from 'lucide-react'
+import { useTenant } from '@/lib/hooks/useTenant'
 
 const fmtR = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
 const fmtData = (d: string) => {
@@ -14,6 +15,7 @@ const fmtData = (d: string) => {
 export default function LivroRazao({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
   const { contas } = planoHook
   const { calcularRazao, periodo } = lancHook
+  const { tenant } = useTenant()
   
   const [loading, setLoading] = useState(false)
   const [contaSelecionada, setContaSelecionada] = useState<string>('all')
@@ -50,9 +52,13 @@ export default function LivroRazao({ lancHook, planoHook }: { lancHook: any; pla
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
-            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            
+            .header { background-color: #0b2218; display: flex; align-items: center; justify-content: flex-start; padding: 25px 35px; margin-bottom: 30px; border-radius: 12px; }
+            .header-logo { max-height: 45px; margin-right: 20px; border-radius: 8px; object-fit: contain; }
+            .header-info { text-align: left; }
+            .header h1 { margin: 0; font-size: 20px; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+            .header p { margin: 6px 0 0; font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+            
             table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 30px; }
             th, td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-size: 10px; text-align: left; }
             th { background-color: #f8fafc; font-weight: 900; text-transform: uppercase; color: #475569; }
@@ -67,18 +73,33 @@ export default function LivroRazao({ lancHook, planoHook }: { lancHook: any; pla
             .text-rose-600 { color: #e11d48; }
             .text-slate-500 { color: #64748b; }
             .text-slate-800 { color: #1e293b; }
-            .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; }
+            
+            .footer { margin-top: 60px; background-color: #ffffff; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; padding-bottom: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer-logo { height: 50px; margin-bottom: 10px; }
+            
             .account-header { background-color: #eef2ff; padding: 10px; margin-top: 20px; font-weight: 900; font-size: 12px; color: #4338ca; border-left: 4px solid #4f46e5; }
-            @media print { @page { size: A4 portrait; margin: 1.5cm; } }
+            
+            @media print { 
+              @page { size: A4 portrait; margin: 1.5cm; } 
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .account-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>ACPROBEC — LIVRO RAZÃO ANALÍTICO</h1>
-            <p>CONFORMIDADE ITG 2002 (R1) | PERÍODO: ${currentPeriod === 'all' ? 'Exercício ' + ano : currentPeriod} | CONTA: ${contaSelecionada === 'all' ? 'TODAS AS CONTAS' : contas.find((c: any) => c.id === contaSelecionada)?.codigo}</p>
+            ${tenant?.logo_url ? `<img src="${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />` : ''}
+            <div class="header-info">
+              <h1>${tenant?.nome || 'Associação'}</h1>
+              <p>LIVRO RAZÃO ANALÍTICO | PERÍODO: ${currentPeriod === 'all' ? 'Exercício ' + ano : currentPeriod} | CONTA: ${contaSelecionada === 'all' ? 'TODAS AS CONTAS' : contas.find((c: any) => c.id === contaSelecionada)?.codigo}</p>
+            </div>
           </div>
           ${conteudo.innerHTML}
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">
+            <img src="/ellus_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllus Gestão
+          </div>
         </body>
       </html>
     `)
@@ -93,7 +114,7 @@ export default function LivroRazao({ lancHook, planoHook }: { lancHook: any; pla
   }
 
   // Filtrar contas que têm movimento e são sintéticas/analíticas relevantes
-  const contasExibir = contas.filter((c: any) => contasComMovimento.has(c.id)).sort((a: any, b: any) => a.codigo.localeCompare(b.codigo))
+  const contasExibir = contas.filter((c: any) => contasComMovimento.has(c.id)).sort((a: any, b: any) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
@@ -153,7 +174,7 @@ export default function LivroRazao({ lancHook, planoHook }: { lancHook: any; pla
               const sInicial = razaoData.saldosIniciais[conta.id] || { debitos: 0, creditos: 0 }
               
               // Determinar natureza para cálculo do saldo (Devedora: D-C, Credora: C-D)
-              const natureza = conta.codigo.startsWith('1') || conta.codigo.startsWith('4') ? 'D' : 'C'
+              const natureza = conta.natureza === 'devedora' ? 'D' : 'C'
               
               let saldoAtual = natureza === 'D' ? sInicial.debitos - sInicial.creditos : sInicial.creditos - sInicial.debitos
               

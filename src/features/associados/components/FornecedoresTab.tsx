@@ -1,21 +1,64 @@
 'use client'
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
+import { useCategorias } from '@/lib/hooks/useCategorias'
 import DataTable from '@/components/ui/DataTable'
 import StatusBadge from '@/components/ui/StatusBadge'
 import CrudModal from '@/components/ui/CrudModal'
-import { Plus, Mail, Phone, Trash2, Search, HardDrive, ShoppingCart, Link, CheckCircle2, Loader2 } from 'lucide-react'
+import { Plus, Mail, Phone, Trash2, Search, HardDrive, ShoppingCart, Link, CheckCircle2, Loader2, Activity } from 'lucide-react'
 import { usePlanoContas } from '@/features/contabil/hooks/usePlanoContas'
 import { fmtR } from '@/lib/utils/formatters'
+import { createClient } from '@/lib/supabase/client'
+import { useTenantId } from '@/lib/hooks/useTenantId'
 
 export default function FornecedoresTab() {
   const { fornecedores, loading, inserir, atualizar, excluir } = useFornecedores()
+  const { categorias: sysCategorias } = useCategorias()
+  const tenantId = useTenantId()
   const planoHook = usePlanoContas()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [generatingId, setGeneratingId] = useState<string | null>(null)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [searchQ, setSearchQ] = useState('')
   const [filterCategory, setFilterCategory] = useState<string>('todas')
+  const [accountsWithEntries, setAccountsWithEntries] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [batchProcessing, setBatchProcessing] = useState(false)
+
+  // Carregar contas que possuem movimentação contábil
+  useEffect(() => {
+    async function checkEntries() {
+      if (!tenantId) return
+      try {
+        const sb = createClient()
+        // Busca a partir da tabela de lançamentos onde o tenant_id é garantido
+        const { data, error } = await sb.from('lancamentos_contabeis')
+          .select('lancamentos_partidas(conta:conta_id(codigo))')
+          .eq('tenant_id', tenantId)
+          .limit(3000)
+        
+        if (error) {
+          console.error('Erro ao buscar movimentação:', error)
+          return
+        }
+
+        if (data) {
+          const codes = new Set<string>()
+          data.forEach((l: any) => {
+            if (l.lancamentos_partidas) {
+              l.lancamentos_partidas.forEach((p: any) => {
+                if (p.conta?.codigo) codes.add(p.conta.codigo)
+              })
+            }
+          })
+          setAccountsWithEntries(codes)
+        }
+      } catch (err) {
+        console.error('Falha na verificação de lançamentos:', err)
+      }
+    }
+    checkEntries()
+  }, [tenantId])
 
   const categorias = useMemo(() => {
     return [...new Set(fornecedores.map(f => f.categoria_padrao || 'GERAL'))].sort()
@@ -67,63 +110,218 @@ export default function FornecedoresTab() {
   }
 
   const handleGerarConta = async (fornecedor: any) => {
-    if (fornecedor.conta_contabil_id) return
+    if (fornecedor.id === 'generating') return
     setGeneratingId(fornecedor.id)
     
     try {
-      // 1. Achar a conta pai (Fornecedores - 2.1.3)
-      const pai = planoHook.contas.find(c => c.codigo === '2.1.3')
+      const sb = createClient()
+      const parentCodigo = '2.1.2'
+      
+      // 1. Garantir conta pai (2.1.2)
+      let { data: pai } = await sb.from('plano_contas').select('*').eq('tenant_id', tenantId).eq('codigo', parentCodigo).maybeSingle()
+      
       if (!pai) {
-        alert('Conta pai "2.1.3 - FORNECEDORES" não encontrada no Plano de Contas.')
-        return
+        const { data: novaPai, error: errPai } = await sb.from('plano_contas').insert({
+          tenant_id: tenantId, codigo: parentCodigo, descricao: 'FORNECEDORES',
+          nivel: 3, tipo: 'sintetica', natureza: 'credora', classificacao: 'passivo', aceita_lancamentos: false, ativa: true
+        }).select().single()
+        if (errPai) throw new Error(`Erro ao criar conta pai: ${errPai.message}`)
+        pai = novaPai
+      } else if (pai.tipo === 'analitica') {
+        const { error: errUp } = await sb.from('plano_contas').update({ tipo: 'sintetica', aceita_lancamentos: false }).eq('id', pai.id)
+        if (errUp) throw new Error(`Erro ao converter conta pai: ${errUp.message}`)
       }
 
-      // 2. Achar o próximo código disponível
-      const filhos = planoHook.contas.filter(c => c.conta_pai_id === pai.id)
-      const codigosExistentes = filhos.map(f => {
-        const partes = f.codigo.split('.')
-        return parseInt(partes[partes.length - 1])
-      })
-      const proximoNum = codigosExistentes.length > 0 ? Math.max(...codigosExistentes) + 1 : 1
-      const novoCodigo = `${pai.codigo}.${proximoNum.toString().padStart(2, '0')}`
+      // 2. Achar o próximo código disponível (Busca por "buracos" para evitar erro de duplicidade)
+      const { data: todas } = await sb.from('plano_contas')
+        .select('codigo')
+        .eq('tenant_id', tenantId)
+        .like('codigo', `${parentCodigo}.%`)
 
-      // 3. Criar a conta
-      const { error: createError } = await planoHook.adicionarConta({
+      const codigosExistentes = new Set(todas?.map(c => c.codigo) || [])
+      let nextSeq = 1
+      let novoCodigo = ''
+      
+      while (true) {
+        const candidate = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
+        // Checa tanto o formato com zero (001) quanto o sem zero (1) para segurança total
+        const candidateAlt = `${parentCodigo}.${nextSeq}`
+        
+        if (!codigosExistentes.has(candidate) && !codigosExistentes.has(candidateAlt)) {
+          novoCodigo = candidate
+          break
+        }
+        nextSeq++
+        if (nextSeq > 999) throw new Error('Limite de subcontas atingido (999).')
+      }
+
+      // 3. Criar a conta do fornecedor
+      const { data: novaConta, error: createError } = await sb.from('plano_contas').insert({
+        tenant_id: tenantId,
         codigo: novoCodigo,
-        descricao: `FORN: ${fornecedor.nome.toUpperCase()}`,
+        descricao: `FORNECEDOR: ${fornecedor.nome.toUpperCase()}`,
         nivel: 4,
         tipo: 'analitica',
         natureza: 'credora',
         classificacao: 'passivo',
         aceita_lancamentos: true,
         ativa: true,
-        conta_pai_id: pai.id
-      })
+        conta_pai_id: pai?.id
+      }).select().single()
 
       if (createError) throw new Error(createError.message)
 
-      // 4. Buscar a conta recém criada para pegar o ID e vincular
-      await planoHook.refresh()
-      
-      const { createClient } = await import('@/lib/supabase/client')
-      const sb = createClient()
-      const { data: contaCriada } = await sb.from('plano_contas')
-        .select('id')
-        .eq('codigo', novoCodigo)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (contaCriada) {
-        await atualizar(fornecedor.id, { conta_contabil_id: contaCriada.id })
+      // 4. Vincular ao fornecedor
+      if (novaConta) {
+        const { error: updateErr } = await atualizar(fornecedor.id, { conta_contabil_id: novaConta.id })
+        if (updateErr) throw new Error(`Erro ao vincular conta: ${typeof updateErr === 'string' ? updateErr : (updateErr as any).message}`)
+        
+        await planoHook.refresh()
+        alert(`Conta ${novoCodigo} gerada e vinculada com sucesso!`)
       }
 
-      alert(`Conta ${novoCodigo} gerada e vinculada com sucesso!`)
     } catch (err: any) {
+      console.error('Erro detalhado:', err)
       alert(`Erro ao gerar conta: ${err.message}`)
     } finally {
       setGeneratingId(null)
     }
+  }
+
+  const handleGerarLote = async () => {
+    console.log('Botão Gerar Lote clicado. Selecionados:', selectedIds)
+    if (selectedIds.length === 0) {
+      alert('Nenhum fornecedor selecionado.')
+      return
+    }
+    
+    // Filtra apenas quem REALMENTE precisa de conta (mesma lógica da seleção)
+    const alvosReais = selectedIds.filter(id => {
+      const f = fornecedores.find(item => item.id === id)
+      if (!f) return false
+      
+      // 1. Checa se tem ID vinculado e se ele é válido
+      if (f.conta_contabil_id) {
+         const existe = planoHook.contas.some(c => c.id === f.conta_contabil_id)
+         if (existe) return false
+      }
+      
+      // 2. Checa se existe conta com a descrição padrão
+      const descBuscada = `FORNECEDOR: ${f.nome.toUpperCase()}`
+      const descBuscadaLegada = `FORN: ${f.nome.toUpperCase()}`
+      const existePorDesc = planoHook.contas.some(c => 
+        c.descricao.toUpperCase() === descBuscada || 
+        c.descricao.toUpperCase() === descBuscadaLegada
+      )
+      
+      return !existePorDesc
+    })
+
+    if (alvosReais.length === 0) {
+      alert('Os fornecedores selecionados já possuem contas válidas ou identificadas.')
+      setSelectedIds([])
+      return
+    }
+
+    if (!confirm(`Gerar conta contábil para ${alvosReais.length} fornecedores?`)) return
+    
+    setBatchProcessing(true)
+    let sucessos = 0
+    let erros = 0
+
+    try {
+      const sb = createClient()
+      const parentCodigo = '2.1.2'
+      
+      // 1. Garantir conta pai
+      let { data: pai } = await sb.from('plano_contas').select('*').eq('tenant_id', tenantId).eq('codigo', parentCodigo).maybeSingle()
+      if (!pai) {
+        const { data: nP } = await sb.from('plano_contas').insert({
+          tenant_id: tenantId, codigo: parentCodigo, descricao: 'FORNECEDORES',
+          nivel: 3, tipo: 'sintetica', natureza: 'credora', classificacao: 'passivo', aceita_lancamentos: false, ativa: true
+        }).select().single()
+        pai = nP
+      } else if (pai.tipo === 'analitica') {
+        await sb.from('plano_contas').update({ tipo: 'sintetica', aceita_lancamentos: false }).eq('id', pai.id)
+      }
+
+      for (const id of alvosReais) {
+        const f = fornecedores.find(item => item.id === id)
+        if (!f) continue
+
+        try {
+          const { data: todas } = await sb.from('plano_contas').select('codigo').eq('tenant_id', tenantId).like('codigo', `${parentCodigo}.%`)
+          const codigosExistentes = new Set(todas?.map(c => c.codigo) || [])
+          
+          let nextSeq = 1
+          let novoCodigo = ''
+          while (true) {
+            const candidate = `${parentCodigo}.${String(nextSeq).padStart(3, '0')}`
+            const candidateAlt = `${parentCodigo}.${nextSeq}`
+            if (!codigosExistentes.has(candidate) && !codigosExistentes.has(candidateAlt)) {
+              novoCodigo = candidate
+              break
+            }
+            nextSeq++
+          }
+
+          const { data: nC, error: cErr } = await sb.from('plano_contas').insert({
+            tenant_id: tenantId,
+            codigo: novoCodigo,
+            descricao: `FORNECEDOR: ${f.nome.toUpperCase()}`,
+            nivel: 4,
+            tipo: 'analitica',
+            natureza: 'credora',
+            classificacao: 'passivo',
+            aceita_lancamentos: true,
+            ativa: true,
+            conta_pai_id: pai?.id
+          }).select().single()
+
+          if (!cErr && nC) {
+            await atualizar(f.id, { conta_contabil_id: nC.id })
+            sucessos++
+          } else {
+            erros++
+          }
+        } catch (e) {
+          erros++
+        }
+      }
+      
+      await planoHook.refresh()
+      setSelectedIds([])
+      alert(`Processamento concluído!\nSucessos: ${sucessos}\nFalhas: ${erros}`)
+    } finally {
+      setBatchProcessing(false)
+    }
+  }
+
+  const selecionarSemConta = () => {
+    console.log('Botão Selecionar Sem Conta clicado')
+    const alvos = filtrados.filter(f => {
+      // 1. Checa se tem ID vinculado
+      if (f.conta_contabil_id) {
+         const existe = planoHook.contas.some(c => c.id === f.conta_contabil_id)
+         if (existe) return false
+      }
+      
+      // 2. Checa se existe conta com a descrição padrão
+      const descBuscada = `FORNECEDOR: ${f.nome.toUpperCase()}`
+      const descBuscadaLegada = `FORN: ${f.nome.toUpperCase()}`
+      const existePorDesc = planoHook.contas.some(c => 
+        c.descricao.toUpperCase() === descBuscada || 
+        c.descricao.toUpperCase() === descBuscadaLegada
+      )
+      
+      return !existePorDesc
+    }).map(f => f.id)
+    
+    console.log('Alvos encontrados:', alvos.length)
+    if (alvos.length === 0) {
+      alert('Todos os fornecedores filtrados já possuem conta contábil (ou vínculo identificado).')
+    }
+    setSelectedIds(alvos)
   }
 
   const columns = [
@@ -166,10 +364,14 @@ export default function FornecedoresTab() {
         // 1. Busca direta pelo ID vinculado
         let conta = planoHook.contas.find(c => c.id === i.conta_contabil_id)
         
-        // 2. Busca inteligente pela descrição (caso o ID esteja vazio)
+        // 2. Busca inteligente pela descrição (caso o ID esteja vazio ou inválido)
         if (!conta) {
-          const descBuscada = `FORN: ${i.nome.toUpperCase()}`
-          conta = planoHook.contas.find(c => c.descricao.toUpperCase() === descBuscada)
+          const descBuscada = `FORNECEDOR: ${i.nome.toUpperCase()}`
+          const descBuscadaLegada = `FORN: ${i.nome.toUpperCase()}`
+          conta = planoHook.contas.find(c => 
+            c.descricao.toUpperCase() === descBuscada || 
+            c.descricao.toUpperCase() === descBuscadaLegada
+          )
         }
 
         if (conta) {
@@ -189,6 +391,36 @@ export default function FornecedoresTab() {
             {generatingId === i.id ? <Loader2 size={12} className="animate-spin" /> : <Link size={12} />}
             Gerar Conta
           </button>
+        )
+      }
+    },
+    {
+      header: 'Movimentação', key: 'movimentacao',
+      render: (i: any) => {
+        let conta = planoHook.contas.find(c => c.id === i.conta_contabil_id)
+        if (!conta) {
+          const descBuscada = `FORNECEDOR: ${i.nome.toUpperCase()}`
+          const descBuscadaLegada = `FORN: ${i.nome.toUpperCase()}`
+          conta = planoHook.contas.find(c => 
+            c.descricao.toUpperCase() === descBuscada || 
+            c.descricao.toUpperCase() === descBuscadaLegada
+          )
+        }
+
+        const hasEntries = conta && accountsWithEntries.has(conta.codigo)
+        
+        if (hasEntries) {
+          return (
+            <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 w-fit" title="Já possui lançamentos contábeis">
+              <Activity size={12} />
+              <span className="text-[10px] font-bold uppercase">Com Lançamentos</span>
+            </div>
+          )
+        }
+        return (
+          <div className="flex items-center gap-1.5 text-slate-400 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 w-fit" title="Sem movimentação contábil até o momento">
+            <span className="text-[10px] font-bold uppercase tracking-tight">Sem Movimento</span>
+          </div>
         )
       }
     },
@@ -259,13 +491,37 @@ export default function FornecedoresTab() {
         { (searchQ || filterCategory !== 'todas') && (
           <button onClick={() => { setSearchQ(''); setFilterCategory('todas') }} className="text-[10px] font-black uppercase text-slate-400 hover:text-rose-500 transition-colors">Limpar Filtros</button>
         )}
+        
+        <div className="flex-1"></div>
+        
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={selecionarSemConta}
+            className="px-3 py-2 text-[10px] font-bold text-slate-500 hover:text-indigo-600 transition-colors uppercase tracking-tight"
+          >
+            Selecionar s/ Conta
+          </button>
+          
+          {selectedIds.length > 0 && (
+            <button 
+              onClick={handleGerarLote}
+              disabled={batchProcessing}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-black text-[10px] flex items-center gap-2 transition-all shadow-md disabled:opacity-50"
+            >
+              {batchProcessing ? <Loader2 size={14} className="animate-spin" /> : <Link size={14} />}
+              Gerar {selectedIds.length} Contas
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
         <DataTable 
           columns={columns} 
           data={filtrados} 
-          loading={loading}
+          loading={loading || batchProcessing}
+          selectedIds={selectedIds}
+          onSelectChange={setSelectedIds}
         />
       </div>
 
@@ -280,7 +536,12 @@ export default function FornecedoresTab() {
           { name: 'cpf_cnpj', label: 'CPF ou CNPJ', type: 'text' },
           { name: 'email', label: 'E-mail', type: 'text' },
           { name: 'telefone', label: 'Telefone / WhatsApp', type: 'text' },
-          { name: 'categoria_padrao', label: 'Categoria de Despesa (ex: Energia, Aluguel, Serviços)', type: 'text' },
+          { 
+            name: 'categoria_padrao', 
+            label: 'Categoria de Despesa', 
+            type: 'select', 
+            options: sysCategorias.map(c => ({ value: c.nome.toUpperCase(), label: c.nome.toUpperCase() }))
+          },
         ]}
       />
     </div>

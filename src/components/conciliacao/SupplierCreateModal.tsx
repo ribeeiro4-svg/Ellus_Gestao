@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { useFornecedores } from '@/lib/hooks/useFornecedores'
+import { useCategorias } from '@/lib/hooks/useCategorias'
 import CrudModal from '@/components/ui/CrudModal'
 
 interface SupplierCreateModalProps {
@@ -12,6 +13,8 @@ interface SupplierCreateModalProps {
 }
 
 export default function SupplierCreateModal({ isOpen, onClose, memo, onSuccess, inserir }: SupplierCreateModalProps) {
+  const { categorias } = useCategorias()
+  const categoriasOptions = categorias.map(c => ({ value: c.nome.toUpperCase(), label: c.nome.toUpperCase() }))
   const [isFetchingCnpj, setIsFetchingCnpj] = useState(false)
   const [apiData, setApiData] = useState<any>(null)
 
@@ -81,7 +84,7 @@ export default function SupplierCreateModal({ isOpen, onClose, memo, onSuccess, 
         { name: 'cpf_cnpj', label: 'CPF ou CNPJ', type: 'text', defaultValue: apiData?.cpf_cnpj || extractedDoc },
         { name: 'email', label: 'E-mail', type: 'text', defaultValue: apiData?.email || '' },
         { name: 'telefone', label: 'Telefone / WhatsApp', type: 'text', defaultValue: apiData?.telefone || '' },
-        { name: 'categoria_padrao', label: 'Categoria de Despesa', type: 'text', placeholder: 'Ex: Energia, Serviços, Aluguel' },
+        { name: 'categoria_padrao', label: 'Categoria de Despesa', type: 'select', options: categoriasOptions },
       ]}
     />
   )

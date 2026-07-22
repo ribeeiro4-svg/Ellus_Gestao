@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { X, FileText, Layout, DollarSign, Users, Target, Clipboard, BarChart3, Download, Info, Loader2 } from 'lucide-react'
 import { generateReportHtml } from '@/lib/services/reportGenerator'
 import { MESES } from '@/lib/utils/formatters'
+import { useTenant } from '@/lib/hooks/useTenant'
 
 interface ExportReportModalProps {
   isOpen: boolean
@@ -16,6 +17,7 @@ interface ExportReportModalProps {
 }
 
 export default function ExportReportModal({ isOpen, onClose, data }: ExportReportModalProps) {
+  const { tenant } = useTenant()
   const [sections, setSections] = useState<string[]>(['dashboard', 'financeiro', 'associados', 'planejamento', 'projecoes', 'graficos'])
   const [title, setTitle] = useState('Relatório Gerencial — ACPROBEC')
   const [period, setPeriod] = useState(`Período: ${MESES[new Date().getMonth()]} ${new Date().getFullYear()}`)
@@ -58,6 +60,7 @@ export default function ExportReportModal({ isOpen, onClose, data }: ExportRepor
         treasurer,
         sections,
         charts,
+        logoUrl: tenant?.logo_url || undefined,
         data
       })
 

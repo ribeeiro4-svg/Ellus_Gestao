@@ -149,10 +149,11 @@ export async function fetchZapSignAssociatesAction(apiToken: string) {
           categoria: 'ZapSign',
           mensalidade: 50,
           status: sysStatus,
-          data_ingresso: signer.signed_at ? signer.signed_at.split('T')[0] : new Date().toISOString().split('T')[0],
+          data_ingresso: (signer.signed_at ? signer.signed_at.split('T')[0] : undefined) as any,
           codigo: stableKey,
           zapsign_doc_token: doc.token,
-          zapsign_signers: normalizedSigners
+          zapsign_signers: normalizedSigners,
+          data_assinatura: signer.signed_at ? signer.signed_at.split('T')[0] : undefined
         })
       }
     }
@@ -205,8 +206,13 @@ export async function tempFixDatabaseAction() {
     -- 1. Garantir Coluna
     ALTER TABLE associados ADD COLUMN IF NOT EXISTS zapsign_doc_token TEXT;
 
-    -- 3. Coluna para Histórico Bancário Oculto
+    -- 3. Coluna para Histórico Bancário Oculto e Encontro de Contas
     ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS banco_original_memo TEXT;
+    ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS is_ec_destino BOOLEAN DEFAULT false;
+    ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS id_origem UUID;
+    ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS valor_pago_ec NUMERIC(12,2) DEFAULT 0;
+    ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS conta_debito_id UUID;
+    ALTER TABLE lancamentos ADD COLUMN IF NOT EXISTS conta_credito_id UUID;
 
     -- 4. Tabela de Histórico de Conciliação
     CREATE TABLE IF NOT EXISTS conciliacao_logs (
@@ -399,9 +405,20 @@ export async function tempFixDatabaseAction() {
 }
 
 /**
+ * Normalização de strings para comparação robusta
+ */
+function normalizar(str: string): string {
+  return (str || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+/**
  * Verifica e lança a ADESÃO financeira para associados ativos vindos do ZapSign
  */
-export async function syncAdesaoFinanceiraAction(associados: any[], tenantId: string) {
+export async function syncAdesaoFinanceiraAction(associados: any[], tenantId: string, previewOnly = false) {
   const { createServerSupabase } = await import('@/lib/supabase/server')
   const sb = await createServerSupabase()
 
@@ -409,13 +426,38 @@ export async function syncAdesaoFinanceiraAction(associados: any[], tenantId: st
   const { data: lancamentosExistentes } = await sb.from('lancamentos')
     .select('associado_id, categoria, descricao')
     .eq('tenant_id', tenantId)
-    .or('categoria.eq.ADESÃO,descricao.ilike.%ADESÃO%')
+    .or('categoria.ilike.%ADESÃO%,descricao.ilike.%ADESÃO%')
 
-  const associadosComAdesao = new Set(lancamentosExistentes?.map(l => l.associado_id).filter(Boolean))
+  // Criamos dois sets para busca rápida: por ID e por Nome Normalizado
+  const idsComAdesao = new Set<string>()
+  const nomesComAdesao = new Set<string>()
+
+  lancamentosExistentes?.forEach(l => {
+    if (l.associado_id) idsComAdesao.add(l.associado_id)
+    
+    // Tenta extrair o nome da descrição (Padrão: "ADESÃO DE ASSOCIADO - NOME")
+    if (l.descricao) {
+      const partes = l.descricao.split(' - ')
+      let nomeExtraido = partes.length > 1 ? partes[1] : l.descricao
+      
+      // Remove informações extras como [ENCONTRO DE CONTAS]
+      nomeExtraido = nomeExtraido.split('[')[0].split('(')[0].trim()
+      nomesComAdesao.add(normalizar(nomeExtraido))
+    }
+  })
+
   const paraLancamento = []
 
   for (const assoc of associados) {
-    if (assoc.status === 'ativo' && !associadosComAdesao.has(assoc.id)) {
+    if ((assoc.status || '').toLowerCase() !== 'ativo') continue
+
+    const nomeNorm = normalizar(assoc.nome)
+    
+    // Verifica se JÁ EXISTE adesão por ID ou por Nome na descrição
+    const jaExistePorId = idsComAdesao.has(assoc.id)
+    const jaExistePorNome = nomesComAdesao.has(nomeNorm)
+
+    if (!jaExistePorId && !jaExistePorNome) {
       paraLancamento.push({
         tenant_id: tenantId,
         associado_id: assoc.id,
@@ -424,13 +466,17 @@ export async function syncAdesaoFinanceiraAction(associados: any[], tenantId: st
         categoria: 'ADESÃO',
         valor: assoc.mensalidade || 50,
         status: 'aberto',
-        data: assoc.data_ingresso || new Date().toISOString().split('T')[0],
+        data: assoc.data_ingresso || assoc.data_assinatura || new Date().toISOString().split('T')[0],
         forma_pagamento: 'Boleto'
       })
     }
   }
 
   if (paraLancamento.length > 0) {
+    if (previewOnly) {
+      return { preview: paraLancamento }
+    }
+
     const { error } = await sb.from('lancamentos').insert(paraLancamento)
     if (error) {
       console.error('[ZapSignAction] Erro ao lançar adesões:', error)
@@ -439,5 +485,14 @@ export async function syncAdesaoFinanceiraAction(associados: any[], tenantId: st
     return { count: paraLancamento.length }
   }
 
-  return { count: 0 }
+  return { count: 0, preview: [] }
+}
+
+export async function insertLoteLancamentosAction(lancamentos: any[]) {
+  if (!lancamentos || lancamentos.length === 0) return { count: 0 }
+  const { createServerSupabase } = await import('@/lib/supabase/server')
+  const sb = await createServerSupabase()
+  const { error } = await sb.from('lancamentos').insert(lancamentos)
+  if (error) return { error: error.message }
+  return { count: lancamentos.length }
 }

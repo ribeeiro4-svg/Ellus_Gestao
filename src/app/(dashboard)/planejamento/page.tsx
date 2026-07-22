@@ -32,7 +32,7 @@ export default function PlanejamentoHubPage() {
   const { lancamentos } = useFinanceiro()
   const { associados } = useAssociados()
   const { orcamentos } = useOrcamentos(selectedMes, selectedAno)
-  const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, selectedMes, selectedAno)
+  const metrics = useDashboardMetrics(lancamentos, associados, orcamentos, [selectedMes], selectedAno)
 
   const tabs = [
     { id: 'metas' as TabID, label: 'Metas', icon: TargetIcon, color: 'indigo' },
@@ -40,80 +40,92 @@ export default function PlanejamentoHubPage() {
     { id: 'evolucao' as TabID, label: 'Análise Histórica', icon: BarChart3, color: 'blue' },
   ]
 
-  const getActiveColor = () => {
-    if (activeTab === 'metas') return 'bg-indigo-600'
-    if (activeTab === 'simulador') return 'bg-[#2d8c6f]'
-    return 'bg-blue-600'
+  const getActiveIcon = () => {
+    const tab = tabs.find(t => t.id === activeTab)
+    const Icon = (tab as any)?.icon || TargetIcon
+    return <Icon size={22} />
   }
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-700">
-      {/* Header Hub Unificado */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-white/60 backdrop-blur-md p-6 rounded-[32px] border border-white shadow-xl shadow-slate-200/50">
-        <div className="flex items-center gap-5">
-          <div className={`w-14 h-14 rounded-2xl ${getActiveColor()} flex items-center justify-center text-white shadow-lg transition-all duration-500`}>
-             {activeTab === 'metas' && <Target size={28} />}
-             {activeTab === 'simulador' && <Activity size={28} />}
-             {activeTab === 'evolucao' && <BarChart3 size={28} />}
+    <div className="flex flex-col gap-3 animate-in fade-in duration-700">
+      {/* Header Centralizado - Estilo Hub Premium */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white/40 backdrop-blur-md py-3.5 px-6 rounded-2xl border border-white/60 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-[#0e2d22] flex items-center justify-center text-white shadow-lg shadow-emerald-900/20 transition-all duration-500">
+            {getActiveIcon()}
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight">Estratégia & Planejamento</h1>
-            <div className="flex items-center gap-2 mt-1">
-              {tabs.map((tab) => (
-                <React.Fragment key={tab.id}>
-                  <button 
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`text-[10px] font-black px-2 py-0.5 rounded-md transition-all tracking-widest uppercase ${activeTab === tab.id ? `${getActiveColor()} text-white shadow-lg` : 'text-slate-400 hover:text-slate-600 bg-slate-50'}`}
-                  >
-                    {tab.label}
-                  </button>
-                  {tab.id !== 'evolucao' && <span className="text-slate-200 text-[10px]">/</span>}
-                </React.Fragment>
-              ))}
-            </div>
+            <h1 className="text-xl font-black text-slate-800 tracking-tight leading-tight">Planejamento Estratégico</h1>
+            <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest opacity-70">Metas, Simuladores e Evolução — ACPROBEC</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          {activeTab !== 'evolucao' && (
-            <>
-              <div className="flex items-center gap-3 bg-slate-50/80 border border-slate-100 p-2 rounded-2xl">
-                <div className="pl-3 py-1 flex flex-col">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider leading-none">Reserva</span>
-                  <span className="text-[9px] font-bold text-slate-300 mt-1">Meses</span>
-                </div>
-                <div className="flex items-center bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                   <button onClick={() => { setReservaMeses(Math.max(1, reservaMeses - 1)); setIsSaved(false); }} className="p-3 hover:bg-slate-50 text-slate-400">－</button>
-                   <input type="number" value={reservaMeses} onChange={e => { setReservaMeses(Number(e.target.value)); setIsSaved(false); }} className="w-10 text-center font-black text-slate-700 bg-transparent outline-none" />
-                   <button onClick={() => { setReservaMeses(reservaMeses + 1); setIsSaved(false); }} className="p-3 hover:bg-slate-50 border-r border-slate-100 text-slate-400">＋</button>
-                   <button 
-                     onClick={() => {
-                       localStorage.setItem('reserva_meses_acprobec', reservaMeses.toString())
-                       setIsSaved(true)
-                       setTimeout(() => setIsSaved(false), 2000)
-                     }} 
-                     className={`p-3 transition-all ${isSaved ? 'bg-emerald-50 text-emerald-600' : 'hover:bg-slate-50 text-slate-400'}`}
-                     title="Salvar padrão"
-                   >
-                     {isSaved ? <CheckCircle2 size={16} /> : <Save size={16} />}
-                   </button>
-                </div>
-              </div>
+          {/* Tab Switcher - Premium Interaction */}
+          <div className="bg-slate-100/60 p-1.5 rounded-[22px] flex items-center gap-1 border border-slate-200/40 backdrop-blur-sm shadow-inner">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id
+              const Icon = tab.icon
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
+                    flex items-center gap-2 px-4 py-2.5 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-500
+                    ${isActive 
+                      ? 'bg-white text-[#0e2d22] shadow-md border border-slate-200/50 scale-105' 
+                      : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'}
+                  `}
+                >
+                  <Icon size={14} />
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
 
-              <div className="flex items-center bg-white border border-slate-200 p-1 rounded-2xl gap-1 shadow-sm h-14">
-                <button onClick={() => setSelectedMes(m => m === 0 ? 11 : m - 1)} className="p-3 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"><ChevronLeft size={20} /></button>
-                <div className="flex items-center gap-3 px-6 min-w-[170px] justify-center border-x border-slate-100">
-                  <Calendar size={18} className="text-slate-400" />
-                  <span className="text-sm font-black text-slate-700 uppercase tracking-widest">{MESES[selectedMes]} {selectedAno}</span>
+          <div className="flex flex-wrap items-center gap-4">
+            {activeTab !== 'evolucao' && (
+              <>
+                <div className="flex items-center gap-3 bg-white/40 border border-white/60 p-2 rounded-2xl backdrop-blur-md">
+                  <div className="pl-3 py-1 flex flex-col">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Reserva</span>
+                    <span className="text-[8px] font-bold text-slate-300 mt-1 uppercase">Meses</span>
+                  </div>
+                  <div className="flex items-center bg-white/60 rounded-xl shadow-inner border border-slate-100 overflow-hidden">
+                    <button onClick={() => { setReservaMeses(Math.max(1, reservaMeses - 1)); setIsSaved(false); }} className="p-2.5 hover:bg-white text-slate-400">－</button>
+                    <input type="number" value={reservaMeses} onChange={e => { setReservaMeses(Number(e.target.value)); setIsSaved(false); }} className="w-8 text-center font-black text-[11px] text-slate-700 bg-transparent outline-none" />
+                    <button onClick={() => { setReservaMeses(reservaMeses + 1); setIsSaved(false); }} className="p-2.5 hover:bg-white border-r border-slate-100 text-slate-400">＋</button>
+                    <button 
+                      onClick={() => {
+                        localStorage.setItem('reserva_meses_acprobec', reservaMeses.toString())
+                        setIsSaved(true)
+                        setTimeout(() => setIsSaved(false), 2000)
+                      }} 
+                      className={`p-2.5 transition-all ${isSaved ? 'bg-emerald-50 text-emerald-600' : 'hover:bg-white text-slate-400'}`}
+                      title="Salvar padrão"
+                    >
+                      {isSaved ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                    </button>
+                  </div>
                 </div>
-                <button onClick={() => setSelectedMes(m => m === 11 ? 0 : m + 1)} className="p-3 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"><ChevronRight size={20} /></button>
-              </div>
-            </>
-          )}
-          
-          <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-3 h-14 px-8 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
-            <FileText size={18} /> Exportar
-          </button>
+
+                <div className="flex items-center bg-white/40 border border-white/60 p-1.5 rounded-2xl gap-1 shadow-sm backdrop-blur-md">
+                  <button onClick={() => setSelectedMes(m => m === 0 ? 11 : m - 1)} className="p-2 hover:bg-white rounded-xl transition-colors text-slate-400"><ChevronLeft size={18} /></button>
+                  <div className="flex items-center gap-3 px-4 min-w-[150px] justify-center border-x border-slate-100/50">
+                    <Calendar size={14} className="text-slate-400" />
+                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">{MESES[selectedMes]} {selectedAno}</span>
+                  </div>
+                  <button onClick={() => setSelectedMes(m => m === 11 ? 0 : m + 1)} className="p-2 hover:bg-white rounded-xl transition-colors text-slate-400"><ChevronRight size={18} /></button>
+                </div>
+              </>
+            )}
+            
+            <button onClick={() => setIsExportModalOpen(true)} className="flex items-center gap-3 px-6 py-3.5 bg-[#0e2d22] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-emerald-900/20">
+              <FileText size={16} /> Exportar
+            </button>
+          </div>
         </div>
       </div>
 

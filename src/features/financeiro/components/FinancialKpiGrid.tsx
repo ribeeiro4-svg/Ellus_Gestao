@@ -1,51 +1,116 @@
 import React from 'react'
 import { fmtR } from '@/lib/utils/formatters'
-import { Plus } from 'lucide-react'
+import { Plus, ArrowUpCircle, ArrowDownCircle, Wallet, Banknote, Target, TrendingUp } from 'lucide-react'
 
 interface FinancialKpiGridProps {
   kpis: any
-  onNewIngresso: () => void
-  onNewDespesa: () => void
+  onNewIngresso?: () => void
+  onNewDespesa?: () => void
+  cashReservePercentage: number
+  onCashReservePercentageChange: (val: number) => void
+  hasReserveAccount: boolean
+  onFixAccount: () => void
+  regime?: 'caixa' | 'competencia'
 }
 
-export default function FinancialKpiGrid({ kpis, onNewIngresso, onNewDespesa }: FinancialKpiGridProps) {
+export default function FinancialKpiGrid({ 
+  kpis, 
+  onNewIngresso, 
+  onNewDespesa,
+  cashReservePercentage,
+  onCashReservePercentageChange,
+  hasReserveAccount,
+  onFixAccount,
+  regime = 'competencia'
+}: FinancialKpiGridProps) {
+  // Cálculo de percentuais para as barras de progresso
+  const percRec = kpis.receitaProjetada > 0 ? (kpis.pInc / kpis.receitaProjetada) * 100 : 0
+  const percDesp = kpis.despesaProjetada > 0 ? (kpis.pExp / kpis.despesaProjetada) * 100 : 0
+  const percProv = kpis.despesaProjetada > 0 ? (kpis.provisionado / kpis.despesaProjetada) * 100 : 0
+
+  const availability = kpis.saldoCaixa + kpis.saldoBanco
+  const fundoCaixaReal = kpis.saldoFundo || 0
+  const fundoCaixaMeta = (kpis.receitaProjetada * cashReservePercentage) / 100
+
+  const isCaixa = regime === 'caixa'
+
   const cards = [
-    { label: `📥 Ingressos`, value: fmtR(kpis.pInc), color: 'text-emerald-600' },
-    { label: `📈 Ingr. Projetado`, value: fmtR(kpis.receitaProjetada), color: 'text-emerald-400' },
-    { label: `📤 Dispêndios`, value: fmtR(kpis.pExp), color: 'text-rose-600' },
-    { label: `📅 Disp. Prov.`, value: fmtR(kpis.provisionado), color: 'text-amber-500' },
-    { label: `💰 Superávit/Déficit`, value: fmtR(kpis.realizado), color: kpis.realizado >= 0 ? 'text-indigo-600' : 'text-red-600' },
-    { label: `📟 Em Caixa`, value: fmtR(kpis.saldoCaixa), color: 'text-amber-600' },
-    { label: `🏦 Em Banco`, value: fmtR(kpis.saldoBanco), color: 'text-indigo-600' },
-    { label: `📊 Projetado`, value: fmtR(kpis.projetado), color: 'text-indigo-900', isMain: true },
+    { 
+      label: 'Entradas Efetivadas', 
+      value: fmtR(kpis.pInc), 
+      color: 'text-emerald-600',
+      icon: <ArrowUpCircle size={14} />,
+      detail: regime === 'caixa' ? `Projetado: ${fmtR(kpis.receitaProjetada)}` : `Faturamento Total: ${fmtR(kpis.receitaProjetada)} (Prov: ${fmtR(kpis.provisaoEntrada)})`,
+      progress: percRec,
+      progressColor: 'bg-emerald-500',
+      secondaryProgress: kpis.receitaProjetada > 0 ? (kpis.provisaoEntrada / kpis.receitaProjetada) * 100 : 0,
+      secondaryColor: 'bg-amber-400'
+    },
+    { 
+      label: 'Saídas Efetivadas', 
+      value: fmtR(kpis.pExp), 
+      color: 'text-rose-600',
+      icon: <ArrowDownCircle size={14} />,
+      detail: regime === 'caixa' ? `Projetado: ${fmtR(kpis.despesaProjetada)}` : `Total a Pagar: ${fmtR(kpis.despesaProjetada)} (Prov: ${fmtR(kpis.provisionado)})`,
+      progress: percDesp,
+      progressColor: 'bg-rose-500',
+      secondaryProgress: percProv,
+      secondaryColor: 'bg-amber-400'
+    },
+    { 
+      label: 'Resultado (Liquidez)', 
+      value: fmtR(kpis.realizado), 
+      color: kpis.realizado >= 0 ? 'text-indigo-600' : 'text-red-600',
+      icon: <Target size={14} />,
+      detail: `Resultado Projetado: ${fmtR(kpis.projetado)}`,
+      isMain: true 
+    },
+    { 
+      label: 'Disponibilidade', 
+      value: fmtR(availability), 
+      color: 'text-slate-700',
+      icon: <Wallet size={14} />,
+      detail: `${fmtR(kpis.saldoCaixa)} Espécie / ${fmtR(kpis.saldoBanco)} Banco`
+    },
   ]
 
   return (
-    <div className="flex items-center gap-3 mb-8 w-full">
-      <div className="flex flex-wrap items-stretch gap-2 flex-1">
+    <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-8 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 flex-1">
         {cards.map(k => (
-          <div key={k.label} className={`bg-white border border-slate-100 rounded-2xl p-4 flex-1 min-w-[140px] shadow-sm transition-all hover:shadow-md ${k.isMain ? 'ring-2 ring-indigo-50 border-indigo-200 bg-indigo-50/10' : ''}`}>
-            <div className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-wider">{k.label}</div>
-            <div className={`text-base font-black ${k.color}`}>{k.value}</div>
+          <div 
+            key={k.label} 
+            className={`bg-white border border-slate-100 rounded-[24px] p-5 flex flex-col justify-between shadow-sm transition-all hover:shadow-md hover:border-slate-200 group ${k.isMain ? 'ring-2 ring-indigo-500/5' : ''}`}
+          >
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <span className="text-slate-300 group-hover:text-slate-500 transition-colors">{k.icon}</span>
+                  {k.label}
+                </div>
+                {k.progress !== undefined && (
+                   <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full">{Math.round(k.progress)}%</span>
+                )}
+
+              </div>
+              <div className={`text-xl font-black tracking-tight ${k.color}`}>{k.value}</div>
+            </div>
+
+            <div className="mt-4">
+              {k.progress !== undefined && (
+                <div className="w-full h-1.5 bg-slate-100 rounded-full mb-2 overflow-hidden flex">
+                  <div className={`h-full ${k.progressColor} transition-all duration-1000`} style={{ width: `${k.progress}%` }} />
+                  {k.secondaryProgress !== undefined && (
+                     <div className={`h-full ${k.secondaryColor} opacity-50 transition-all duration-1000`} style={{ width: `${k.secondaryProgress}%` }} />
+                  )}
+                </div>
+              )}
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight flex items-center justify-between">
+                {k.detail}
+              </div>
+            </div>
           </div>
         ))}
-      </div>
-      
-      <div className="flex flex-col gap-2 self-stretch min-w-[130px]">
-        <button 
-          onClick={onNewIngresso} 
-          style={{ backgroundColor: '#10b981' }}
-          className="flex-1 px-4 py-3 text-white rounded-xl font-black text-[11px] uppercase tracking-[1.5px] hover:brightness-110 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
-        >
-          <Plus size={16} strokeWidth={4} /> Ingresso
-        </button>
-        <button 
-          onClick={onNewDespesa} 
-          style={{ backgroundColor: '#e11d48' }}
-          className="flex-1 px-4 py-3 text-white rounded-xl font-black text-[11px] uppercase tracking-[1.5px] hover:brightness-110 transition-all shadow-lg shadow-rose-900/30 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
-        >
-          <Plus size={16} strokeWidth={4} /> Dispêndio
-        </button>
       </div>
     </div>
   )

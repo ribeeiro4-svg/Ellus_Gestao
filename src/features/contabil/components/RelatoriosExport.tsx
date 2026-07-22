@@ -7,8 +7,10 @@ import LivroDiario from './LivroDiario'
 import LivroRazao from './LivroRazao'
 import Imobilizado from './Imobilizado'
 import ExecucaoRubrica from './ExecucaoRubrica'
+import { useTenant } from '@/lib/hooks/useTenant'
 
 export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: any; planoHook: any }) {
+  const { tenant } = useTenant()
   
   const handleImprimir = (id: string, titulo: string) => {
     const conteudo = document.getElementById(id)
@@ -30,9 +32,13 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; }
-            .header { text-align: center; border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 18px; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px; }
-            .header p { margin: 5px 0 0; font-size: 10px; color: #64748b; font-weight: bold; }
+            
+            .header { background-color: #0b2218; display: flex; align-items: center; justify-content: flex-start; padding: 25px 35px; margin-bottom: 30px; border-radius: 12px; }
+            .header-logo { max-height: 45px; margin-right: 20px; border-radius: 8px; object-fit: contain; }
+            .header-info { text-align: left; }
+            .header h1 { margin: 0; font-size: 20px; color: #ffffff; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+            .header p { margin: 6px 0 0; font-size: 10px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+            
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             th, td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 10px; text-align: left; }
             .text-right { text-align: right; }
@@ -41,20 +47,35 @@ export default function RelatoriosExport({ lancHook, planoHook }: { lancHook: an
             .font-bold { font-weight: 700; }
             .bg-slate-50, .bg-indigo-50, .bg-blue-50, .bg-emerald-50, .bg-rose-50, .bg-amber-50 { background-color: #f8fafc !important; }
             .indent { padding-left: 30px !important; }
-            .footer { margin-top: 40px; text-align: right; font-size: 9px; color: #94a3b8; }
+            
+            .footer { margin-top: 60px; background-color: #ffffff; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; padding-bottom: 20px; font-weight: 600; letter-spacing: 0.5px; }
+            .footer-logo { height: 50px; margin-bottom: 10px; }
+            
             button, .no-print, .actions, select, .flex-wrap { display: none !important; }
-            @media print { @page { size: A4 landscape; margin: 1cm; } }
+            
+            @media print { 
+              @page { size: A4 landscape; margin: 1cm; } 
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .bg-slate-50, .bg-indigo-50, .bg-blue-50, .bg-emerald-50, .bg-rose-50, .bg-amber-50 { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>ACPROBEC — ${titulo.toUpperCase()}</h1>
-            <p>CONFORMIDADE ITG 2002 (R1) | RELATÓRIO OFICIAL</p>
+            ${tenant?.logo_url ? `<img src="${tenant.logo_url}" class="header-logo" onerror="this.style.display='none'" />` : ''}
+            <div class="header-info">
+              <h1>${tenant?.nome || 'Associação'}</h1>
+              <p>${titulo.toUpperCase()} | CONFORMIDADE ITG 2002 (R1) | RELATÓRIO OFICIAL</p>
+            </div>
           </div>
           <div style="zoom: 0.9">
             ${conteudo.innerHTML}
           </div>
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">
+            <img src="/ellus_logo_v2.svg" class="footer-logo" onerror="this.style.display='none'" /><br/>
+            Documento gerado eletronicamente em ${new Date().toLocaleString('pt-BR')} pelo sistema Éllus Gestão
+          </div>
         </body>
       </html>
     `)

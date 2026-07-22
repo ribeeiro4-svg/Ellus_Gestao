@@ -21,8 +21,11 @@ export function useImportProcessor(associadosAtuais: any[]) {
         status: String(row.Status || 'aberto').toLowerCase() as any,
         forma_pagamento: row['Forma Pagamento'] || 'PIX',
         valor_recebido: Number(row['Valor Recebido'] || 0),
-        troco_via_pix: String(row['Troco via PIX']).toLowerCase() === 'sim',
-        recorrencia_ativa: String(row['Recorrência Ativa']).toLowerCase() === 'sim',
+        troco_via_pix: String(row['Troco via PIX'] || '').toLowerCase() === 'sim',
+        recorrencia_ativa: String(row['Recorrência Ativa'] || '').toLowerCase() === 'sim',
+        competencia_mes: row['Competência Mês'] ? Number(row['Competência Mês']) : undefined,
+        competencia_ano: row['Competência Ano'] ? Number(row['Competência Ano']) : undefined,
+        taxa: row.Taxa ? Number(row.Taxa) : 0,
         conciliado: false
       }))
       setPreview({ type: 'financeiro', data: mapped })
@@ -41,9 +44,14 @@ export function useImportProcessor(associadosAtuais: any[]) {
             cpf: row['CPF / CNPJ'] || '',
             categoria: row.Categoria || 'Pleno',
             email: row.Email || '',
+            telefone: row.Telefone || '',
             data_ingresso: parseExcelDate(row['Data Ingresso']),
             mensalidade: Number(row.Mensalidade || 0),
-            status: String(row.Status || 'ativo').toLowerCase() as any
+            status: String(row.Status || 'ativo').toLowerCase() as any,
+            vencimento_dia: row['Vencimento Dia'] ? Number(row['Vencimento Dia']) : 10,
+            recorrencia_ativa: String(row['Recorrência Ativa'] || '').toLowerCase() === 'sim',
+            plano_saude: row['Plano de Saúde'] || 'Não Possui',
+            termo_status: row['Status Termo'] || 'Pendente'
           })
         }
       })

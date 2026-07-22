@@ -129,7 +129,7 @@ export default function Imobilizado({ planoHook }: { planoHook: any }) {
               `).join('')}
             </tbody>
           </table>
-          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Inovacont ACPROBEC</div>
+          <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | ÁUREA Tech ACPROBEC</div>
         </body>
       </html>
     `

@@ -15,8 +15,16 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard — ACPROBEC · INOVACONT",
-  description: "Sistema de gestão inteligente. Especialista em gestão de associações e benefícios. [Build v1.1.2]",
+  title: "Dashboard — Éllus · ÁUREA Tech",
+  description: "Sistema de gestão inteligente. Especialista em gestão de associações e benefícios. [Build v2.0]",
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

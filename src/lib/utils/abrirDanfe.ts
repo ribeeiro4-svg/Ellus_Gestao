@@ -149,3 +149,90 @@ export function abrirDanfeInterno(nfe: any, itens?: any[]) {
   `)
   printWindow.document.close()
 }
+
+export function abrirDanfseInterno(nfse: any) {
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) return
+
+  const retencoesHtml = `
+    <div class="grid" style="grid-template-columns: repeat(5, 1fr); margin-top: 5px;">
+      <div><span class="label">PIS</span><span class="value">${fmtR(nfse.valor_pis)}</span></div>
+      <div><span class="label">COFINS</span><span class="value">${fmtR(nfse.valor_cofins)}</span></div>
+      <div><span class="label">CSLL</span><span class="value">${fmtR(nfse.valor_csll)}</span></div>
+      <div><span class="label">IRRF</span><span class="value">${fmtR(nfse.valor_irrf)}</span></div>
+      <div><span class="label">ISS RETIDO</span><span class="value">${nfse.iss_retido ? 'SIM' : 'NÃO'}</span></div>
+    </div>
+  `
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>DANFSE - NFS-e ${nfse.numero_nfse}</title>
+        <style>
+          @page { size: A4 portrait; margin: 1cm; }
+          body { font-family: 'Arial Narrow', Arial, sans-serif; margin: 0; padding: 0; font-size: 10px; color: #333; }
+          .box { border: 1px solid #000; padding: 5px; margin-bottom: 5px; }
+          .label { font-size: 7px; font-weight: bold; text-transform: uppercase; color: #666; display: block; margin-bottom: 2px; }
+          .value { font-size: 10px; font-weight: bold; color: #000; }
+          .grid { display: grid; border-top: 1px solid #000; border-left: 1px solid #000; }
+          .grid > div { border-right: 1px solid #000; border-bottom: 1px solid #000; padding: 4px; }
+          .header { display: flex; gap: 5px; margin-bottom: 10px; }
+          .title { font-size: 14px; font-weight: bold; text-align: center; }
+          .subtitle { font-size: 9px; text-align: center; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div style="flex: 2; border: 1px solid #000; padding: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <div class="title">${nfse.prestador_nome || nfse.prestador?.nome || 'PRESTADOR DE SERVIÇOS'}</div>
+            <div class="subtitle">CNPJ: ${nfse.prestador_cnpj || nfse.prestador?.cpf_cnpj || '--'}</div>
+          </div>
+          <div style="flex: 1; border: 1px solid #000; padding: 10px; text-align: center;">
+            <div class="title">DANFSE</div>
+            <div class="subtitle">Documento Auxiliar da Nota Fiscal de Serviço Eletrônica</div>
+            <div style="margin-top: 10px; font-size: 12px; font-weight: bold;">Nº ${nfse.numero_nfse}</div>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="label">Chave de Acesso / Código de Verificação</div>
+          <div class="value" style="font-size: 12px; letter-spacing: 1px;">${nfse.chave_nacional || nfse.codigo_verificacao || '--'}</div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 3px;">TOMADOR DO SERVIÇO</div>
+          <div class="grid" style="grid-template-columns: 2fr 1fr 1fr;">
+            <div><span class="label">NOME / RAZÃO SOCIAL</span><span class="value">${nfse.tomador_nome || 'CONSUMIDOR FINAL'}</span></div>
+            <div><span class="label">CNPJ/CPF</span><span class="value">${nfse.tomador_cnpj || '--'}</span></div>
+            <div><span class="label">DATA EMISSÃO</span><span class="value">${fmtData(nfse.data_emissao)}</span></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 3px;">DESCRIÇÃO DOS SERVIÇOS</div>
+          <div style="border: 1px solid #000; padding: 10px; min-height: 250px; font-size: 11px; line-height: 1.4; white-space: pre-wrap;">
+            ${nfse.descricao_servico || 'Serviços Prestados.'}
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="background: #eee; border: 1px solid #000; font-size: 8px; font-weight: bold; padding: 3px;">VALORES E RETENÇÕES</div>
+          <div class="grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div><span class="label">VALOR BRUTO</span><span class="value">${fmtR(nfse.valor_bruto)}</span></div>
+            <div><span class="label">VALOR ISS</span><span class="value">${fmtR(nfse.valor_iss)}</span></div>
+            <div><span class="label">OUTRAS RETENÇÕES</span><span class="value">${fmtR((nfse.valor_pis || 0) + (nfse.valor_cofins || 0) + (nfse.valor_csll || 0) + (nfse.valor_irrf || 0))}</span></div>
+            <div><span class="label">VALOR LÍQUIDO</span><span class="value" style="font-size: 14px;">${fmtR(nfse.valor_liquido || nfse.valor_bruto)}</span></div>
+          </div>
+          ${retencoesHtml}
+        </div>
+
+        <div style="border: 1px solid #000; padding: 5px; font-size: 8px; color: #666; text-align: center;">
+          Este documento é uma representação auxiliar de uma NFS-e. A autenticidade pode ser verificada no portal da prefeitura correspondente.
+        </div>
+
+        <script>window.print();</script>
+      </body>
+    </html>
+  `)
+  printWindow.document.close()
+}

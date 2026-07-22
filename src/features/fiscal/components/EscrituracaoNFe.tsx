@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { Save, CheckCircle, AlertTriangle, ChevronDown, Loader2, FileText, Copy, X } from 'lucide-react'
+import { Save, CheckCircle, AlertTriangle, ChevronDown, Loader2, FileText, Copy, X, Printer } from 'lucide-react'
 import { TABELA_CFOP, buscarCFOP } from '@/features/fiscal/utils/tabelasCFOP'
 import { CST_ICMS_TRIBUTACAO, CST_IPI_ENTRADA, CST_PIS_COFINS, DESTINACOES_ITEM } from '@/features/fiscal/utils/tabelasCST'
 import { usePlanoContas } from '@/features/contabil/hooks/usePlanoContas'
@@ -204,6 +204,9 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
         numero_nfse: nfeSelecionada.numero_nf, // Adaptado para o modal reutilizado
         valor_liquido: nfeSelecionada.valor_total,
         data_emissao: nfeSelecionada.data_emissao,
+        data_entrada: nfeSelecionada.data_entrada,
+        data_escrituracao: nfeSelecionada.data_escrituracao,
+        status_escrituracao: nfeSelecionada.status_escrituracao,
         prestador_id: resFor.data.id,
         descricao_servico: `NF-e ${nfeSelecionada.numero_nf} - ${nfeSelecionada.nome_emitente}`
       },
@@ -222,8 +225,13 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
       const saveRes = await salvarClassificacao(selectedNfeId, itens)
       if (saveRes.error) throw new Error(saveRes.error)
 
-      // Depois integra com o financeiro selecionado e passa a data efetiva
-      const result = await integracaoHook.finalizarEscrituracao(selectedNfeId, payload.financeiroId, payload.dataEfetiva)
+      // Depois integra com o financeiro selecionado e passa a data efetiva e escrituração
+      const result = await integracaoHook.finalizarEscrituracao(
+        selectedNfeId, 
+        payload.financeiroId, 
+        payload.dataEfetiva, 
+        payload.dataEscrituracao
+      )
       
       if (result.error) alert(`Erro na integração: ${result.error}`)
       else {
@@ -293,7 +301,7 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
         </div>
 
         {nfeSelecionada && (
-          <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="mt-4 grid grid-cols-4 gap-3">
             <div className="bg-slate-50 rounded-xl p-3">
               <p className="text-[9px] text-slate-400 font-bold uppercase">Emitente</p>
               <p className="text-xs font-black text-slate-700 truncate">{nfeSelecionada.nome_emitente}</p>
@@ -310,6 +318,19 @@ export default function EscrituracaoNFe({ nfeHook, nfeIdInicial }: { nfeHook: an
               <div className="h-1 bg-slate-200 rounded-full mt-1">
                 <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
               </div>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3 flex flex-col justify-between">
+              <p className="text-[9px] text-slate-400 font-black uppercase">Documento</p>
+              <button 
+                onClick={async () => {
+                  const { abrirDanfeInterno } = await import('@/lib/utils/abrirDanfe')
+                  const itensNota = await buscarItens(selectedNfeId)
+                  abrirDanfeInterno(nfeSelecionada, itensNota || [])
+                }}
+                className="flex items-center gap-2 mt-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black rounded-lg transition-all shadow-sm shadow-indigo-100"
+              >
+                <Printer size={12} /> VISUALIZAR DANFE
+              </button>
             </div>
           </div>
         )}

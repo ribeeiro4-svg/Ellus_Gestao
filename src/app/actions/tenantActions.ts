@@ -38,7 +38,7 @@ export async function getMyTenantIdAction() {
     if (metaTenant) return metaTenant
   }
 
-  // Fallback final: ACPROBEC - Associação Colaborativa (ID: 971f92af-...)
-  // Este é o tenant onde os dados financeiros (lancamentos) foram encontrados via probe.
+  // Fallback final: ACPROBEC - Associação Colaborativa
+  console.log('[Tenant] Usando Fallback Final')
   return '971f92af-a72b-4bc4-a8e0-333d712ce6a7'
 }

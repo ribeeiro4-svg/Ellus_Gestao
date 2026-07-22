@@ -86,7 +86,7 @@ export default function SplashScreen() {
              )}
            </div>
            <h1 className="text-3xl font-bold text-white tracking-widest">ACPROBEC</h1>
-           <p className="text-[10px] text-[rgba(255,255,255,0.3)] tracking-[0.3em] font-medium mt-2 uppercase">Gestão Inteligente INOVACONT</p>
+           <p className="text-[10px] text-[rgba(255,255,255,0.3)] tracking-[0.3em] font-medium mt-2 uppercase">Gestão Inteligente ÁUREA Tech</p>
         </div>
 
         {/* Content Wrapper for Progress/Button */}

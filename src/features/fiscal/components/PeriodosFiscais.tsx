@@ -1,6 +1,8 @@
 'use client'
-import React, { useState } from 'react'
-import { Calendar, Lock, CheckCircle, AlertTriangle, Clock, FileDown } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Calendar, Lock, CheckCircle, AlertTriangle, Clock, FileDown, Unlock, Loader2 } from 'lucide-react'
+import { useTenantId } from '@/lib/hooks/useTenantId'
+import { getPeriodosFiscaisAction, fecharPeriodoFiscalAction, reabrirPeriodoFiscalAction, bloquearPeriodoFiscalAction } from '@/features/fiscal/actions/periodoFiscalActions'
 
 const fmtData = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
 
@@ -9,15 +11,59 @@ const STATUS_CFG: Record<string, { label: string; color: string; bg: string; ico
   em_escrituracao: { label: 'Em Escrituração', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100', icon: Clock },
   fechado: { label: 'Fechado', color: 'text-slate-600', bg: 'bg-slate-50 border-slate-200', icon: Lock },
   transmitido: { label: 'Transmitido', color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100', icon: CheckCircle },
+  bloqueado: { label: 'Bloqueado', color: 'text-red-600', bg: 'bg-red-50 border-red-100', icon: Lock },
 }
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 export default function PeriodosFiscais({ nfeHook }: { nfeHook: any }) {
+  const tenantId = useTenantId()
   const { nfes } = nfeHook
   const ano = new Date().getFullYear()
 
-  // Construir períodos do ano atual
+  const [periodosBd, setPeriodosBd] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({})
+
+  const loadPeriodos = async () => {
+    if (!tenantId) return
+    setLoading(true)
+    const { data } = await getPeriodosFiscaisAction(tenantId)
+    setPeriodosBd(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    loadPeriodos()
+  }, [tenantId])
+
+  const handleAction = async (competencia: string, acao: 'fechar' | 'reabrir' | 'bloquear') => {
+    if (!tenantId) return
+    
+    let motivo = ''
+    if (acao === 'reabrir') {
+      motivo = prompt('Motivo da reabertura (mínimo 20 caracteres):') || ''
+      if (motivo.length < 20) return alert('Motivo inválido.')
+    }
+    if (acao === 'bloquear') {
+      if (!confirm('ATENÇÃO: O bloqueio é IRREVERSÍVEL. Usar apenas após transmitir o SPED. Confirma?')) return
+    }
+
+    setActionLoading(prev => ({ ...prev, [competencia]: true }))
+    try {
+      let res: any
+      if (acao === 'fechar') res = await fecharPeriodoFiscalAction(competencia, tenantId)
+      if (acao === 'reabrir') res = await reabrirPeriodoFiscalAction(competencia, tenantId, motivo)
+      if (acao === 'bloquear') res = await bloquearPeriodoFiscalAction(competencia, tenantId)
+      
+      if (res?.error) alert(`Erro: ${res.error}`)
+      else await loadPeriodos()
+    } finally {
+      setActionLoading(prev => ({ ...prev, [competencia]: false }))
+    }
+  }
+
+  // Construir períodos do ano atual mesclando com o banco
   const periodos = Array.from({ length: 12 }, (_, i) => {
     const mes = i + 1
     const competencia = `${ano}-${mes.toString().padStart(2, '0')}-01`
@@ -32,6 +78,14 @@ export default function PeriodosFiscais({ nfeHook }: { nfeHook: any }) {
     const isPast = mes < new Date().getMonth() + 1
     const isCurrent = mes === new Date().getMonth() + 1
 
+    const bdPeriod = periodosBd.find(p => p.competencia === competencia)
+    let finalStatus = bdPeriod?.status || 'aberto'
+
+    // Lógica fallback se não tiver no banco ainda
+    if (!bdPeriod) {
+      finalStatus = isPast && total > 0 && escrituradas === total ? 'em_escrituracao' : isCurrent ? 'em_escrituracao' : 'aberto'
+    }
+
     return {
       competencia,
       mes: MESES[i],
@@ -39,8 +93,9 @@ export default function PeriodosFiscais({ nfeHook }: { nfeHook: any }) {
       nfesTotal: total,
       nfesEscrituradas: escrituradas,
       valorTotal,
-      pct: total > 0 ? Math.round(escrituradas / total * 100) : 0,
-      status: isPast && total > 0 && escrituradas === total ? 'fechado' : isCurrent ? 'em_escrituracao' : isPast ? 'aberto' : 'aberto',
+      pct: total > 0 ? Math.round((escrituradas / total) * 100) : 0,
+      status: finalStatus,
+      bdPeriod,
     }
   })
 
@@ -132,6 +187,44 @@ export default function PeriodosFiscais({ nfeHook }: { nfeHook: any }) {
                   <p className="text-xs text-slate-300 font-bold">Sem NF-e neste período</p>
                 </div>
               )}
+
+              {/* Botões de Ação do Período */}
+              <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
+                {p.status === 'aberto' || p.status === 'em_escrituracao' ? (
+                  <button 
+                    disabled={actionLoading[p.competencia] || p.pct < 100}
+                    onClick={() => handleAction(p.competencia, 'fechar')}
+                    className="flex-1 px-3 py-1.5 text-[10px] font-black bg-slate-800 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:bg-slate-300 transition-all flex justify-center items-center gap-1"
+                  >
+                    {actionLoading[p.competencia] ? <Loader2 size={12} className="animate-spin" /> : <Lock size={12} />}
+                    FECHAR PERÍODO
+                  </button>
+                ) : p.status === 'fechado' ? (
+                  <>
+                    <button 
+                      disabled={actionLoading[p.competencia]}
+                      onClick={() => handleAction(p.competencia, 'reabrir')}
+                      className="flex-1 px-3 py-1.5 text-[10px] font-black bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 disabled:opacity-50 transition-all flex justify-center items-center gap-1"
+                    >
+                      {actionLoading[p.competencia] ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />}
+                      REABRIR
+                    </button>
+                    <button 
+                      disabled={actionLoading[p.competencia]}
+                      onClick={() => handleAction(p.competencia, 'bloquear')}
+                      className="flex-1 px-3 py-1.5 text-[10px] font-black bg-red-100 text-red-700 rounded-lg hover:bg-red-200 disabled:opacity-50 transition-all flex justify-center items-center gap-1"
+                      title="Bloquear pós-transmissão SPED"
+                    >
+                      {actionLoading[p.competencia] ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                      BLOQUEAR SPED
+                    </button>
+                  </>
+                ) : p.status === 'bloqueado' ? (
+                   <div className="w-full text-center px-3 py-1.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-lg flex justify-center items-center gap-1">
+                      <Lock size={12} className="text-red-500" /> PERMANENTEMENTE BLOQUEADO
+                   </div>
+                ) : null}
+              </div>
 
               {isCurrentMonth && (
                 <div className="mt-3 p-2 bg-blue-50 rounded-xl">

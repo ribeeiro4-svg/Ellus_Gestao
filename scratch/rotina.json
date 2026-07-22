@@ -1,0 +1,1360 @@
+{
+  "Capa": [
+    [
+      "ROTINA DO TESOUREIRO — ACPROBEC"
+    ],
+    [
+      null,
+      "Organização da rotina, calendário mensal e controle financeiro com base no Organograma de Governança da ACPROBEC"
+    ],
+    [],
+    [],
+    [
+      null,
+      "RESPONSÁVEL E ESCOPO DO CARGO"
+    ],
+    [
+      null,
+      "Responsável",
+      "Bruno Ribeiro Santos de Matos"
+    ],
+    [
+      null,
+      "Cargo",
+      "Tesoureiro — Diretoria Executiva"
+    ],
+    [
+      null,
+      "Horário de trabalho no cargo",
+      "Terça a Sexta-feira, 08:30 às 13:30 (5h/dia)"
+    ],
+    [
+      null,
+      "Reunião financeira mensal com a Diretoria",
+      "Dia fixo: todo dia 5 de cada mês"
+    ],
+    [
+      null,
+      "Base normativa",
+      "Organograma de Governança da ACPROBEC, item 7 (Tesoureiro) e item 9 (Centro de Custo)"
+    ],
+    [],
+    [
+      null,
+      "GUIA DAS ABAS DESTE ARQUIVO"
+    ],
+    [
+      null,
+      "Rotina Semanal",
+      "Distribuição das atividades diárias do Tesoureiro (Ter–Sex, 08:30–13:30), conforme deveres do Art. 7.2 e Tabela de Atividades Diárias."
+    ],
+    [
+      null,
+      "Calendário Mensal",
+      "Calendário do mês com marcação dos dias de trabalho, vencimentos, conciliação, fechamento e a reunião de Diretoria (dia 5)."
+    ],
+    [
+      null,
+      "Apresentação Financeira",
+      "Modelo de apresentação mensal à Diretoria: receitas, despesas, inadimplência, conciliação e indicadores — Art. 7.2 'g' e 'n'."
+    ],
+    [
+      null,
+      "Provisionamento",
+      "Provisionamento de recebimentos e despesas do mês corrente e do mês seguinte (fluxo de caixa projetado) — Art. 7.2 'h' e 'q'."
+    ],
+    [
+      null,
+      "Controle de Despesas",
+      "Centro de custo mensal e controle de despesas fixas/variáveis sob responsabilidade do Tesoureiro."
+    ],
+    [
+      null,
+      "Inadimplência",
+      "Acompanhamento da régua de cobrança dos associados — Art. 7.2 'c' e 'l'."
+    ],
+    [
+      null,
+      "Conciliação Bancária",
+      "Checklist e controle da conciliação bancária periódica (Cora) — Art. 7.2 'f'."
+    ],
+    [
+      null,
+      "Outras Atribuições",
+      "Demais deveres do Tesoureiro previstos no documento que não são diários, mas recorrentes ou eventuais."
+    ],
+    [
+      null,
+      "Prestação de Contas",
+      "Modelo de prestação de contas do cargo à Diretoria, conforme item 12 do documento."
+    ],
+    [],
+    [
+      null,
+      "PRINCÍPIOS APLICADOS (LIMITES DE ATUAÇÃO DO TESOUREIRO)"
+    ],
+    [
+      null,
+      "•  Não decide isoladamente sobre exclusão de associado, alteração de benefício, contratação relevante, remuneração ou obrigação financeira não aprovada pela Diretoria (Art. 7.3)."
+    ],
+    [
+      null,
+      "•  Despesa ordinária já prevista no orçamento: aprovação Tesoureiro + Presidente."
+    ],
+    [
+      null,
+      "•  Despesa fora do orçamento, contrato novo ou pagamento a diretor/empresa vinculada: aprovação da Diretoria Executiva, com registro em ata."
+    ],
+    [
+      null,
+      "•  Alerta a Diretoria antes de aprovar despesas que comprometam caixa ou reserva financeira (Art. 7.2 'q')."
+    ],
+    [
+      null,
+      "•  Mantém sigilo sobre dados financeiros e presta contas à Diretoria e ao Conselho Fiscal quando solicitado."
+    ]
+  ],
+  "Rotina Semanal": [
+    [
+      "ROTINA SEMANAL DO TESOUREIRO  (Terça a Sexta-feira | 08:30 às 13:30)"
+    ],
+    [
+      null,
+      "Baseada no Art. 7.2 (Deveres do Tesoureiro) e na Tabela de Atividades Diárias e Responsáveis do Organograma de Governança"
+    ],
+    [],
+    [
+      "TERÇA-FEIRA"
+    ],
+    [
+      "Hora",
+      "Bloco",
+      "Atividade",
+      "Responsável / Apoio",
+      "Base no documento",
+      "Observação"
+    ],
+    [
+      "08:30 – 08:45",
+      "Abertura financeira do dia",
+      "Verificar extrato bancário (Cora) e caixa; checar pagamentos e recebimentos das últimas 24h",
+      "Tesoureiro",
+      "Art. 7.2 'a' 'f' / Tabela ativ. 16",
+      "Primeiro contato do dia com o financeiro antes de qualquer outra tarefa"
+    ],
+    [
+      "08:45 – 09:30",
+      "Receitas e cobrança",
+      "Conferir mensalidades e contribuições recebidas; atualizar planilha de inadimplência do dia",
+      "Tesoureiro | Apoio: Secretário, Coordenador",
+      "Art. 7.2 'a' 'c' / Tabela ativ. 16-17",
+      "Registrar pagamentos via Pix/boleto e marcar pendências"
+    ],
+    [
+      "09:30 – 10:15",
+      "Despesas e compromissos",
+      "Conferir vencimentos do dia/semana; programar pagamentos autorizados pela Diretoria",
+      "Tesoureiro | Apoio: Presidente",
+      "Art. 7.2 'b' 'd' / Tabela ativ. 18",
+      "Pagamento deve ter aprovação e registro formal (Regra de aprovação de despesas)"
+    ],
+    [
+      "10:15 – 11:00",
+      "Conciliação bancária",
+      "Realizar conciliação bancária periódica (extrato Cora x registros internos)",
+      "Tesoureiro",
+      "Art. 7.2 'f'",
+      "Ver checklist completo na aba 'Conciliação Bancária'"
+    ],
+    [
+      "11:00 – 11:15",
+      "Pausa",
+      "Intervalo curto",
+      "—",
+      "—"
+    ],
+    [
+      "11:15 – 12:15",
+      "Documentação financeira",
+      "Organizar comprovantes, recibos, notas fiscais e extratos da semana",
+      "Tesoureiro",
+      "Art. 7.2 'e' 'r'",
+      "Manter pasta organizada para fiscalização e contabilidade"
+    ],
+    [
+      "12:15 – 13:30",
+      "Planejamento da semana",
+      "Atualizar provisionamento de recebimentos e despesas (mês corrente e seguinte)",
+      "Tesoureiro",
+      "Art. 7.2 'h' 'p' 'q'",
+      "Atualizar aba 'Provisionamento'"
+    ],
+    [],
+    [
+      "QUARTA-FEIRA"
+    ],
+    [
+      "Hora",
+      "Bloco",
+      "Atividade",
+      "Responsável / Apoio",
+      "Base no documento",
+      "Observação"
+    ],
+    [
+      "08:30 – 08:45",
+      "Abertura financeira do dia",
+      "Verificar extrato bancário (Cora) e caixa; checar pagamentos e recebimentos das últimas 24h",
+      "Tesoureiro",
+      "Art. 7.2 'a' 'f' / Tabela ativ. 16",
+      "Primeiro contato do dia com o financeiro antes de qualquer outra tarefa"
+    ],
+    [
+      "08:45 – 09:30",
+      "Receitas e cobrança",
+      "Conferir mensalidades e contribuições recebidas; atualizar planilha de inadimplência do dia",
+      "Tesoureiro | Apoio: Secretário, Coordenador",
+      "Art. 7.2 'a' 'c' / Tabela ativ. 16-17",
+      "Registrar pagamentos via Pix/boleto e marcar pendências"
+    ],
+    [
+      "09:30 – 10:15",
+      "Despesas e compromissos",
+      "Conferir vencimentos do dia/semana; programar pagamentos autorizados pela Diretoria",
+      "Tesoureiro | Apoio: Presidente",
+      "Art. 7.2 'b' 'd' / Tabela ativ. 18",
+      "Pagamento deve ter aprovação e registro formal (Regra de aprovação de despesas)"
+    ],
+    [
+      "10:15 – 11:00",
+      "Benefícios e impacto financeiro",
+      "Verificar inclusões/exclusões de associados em benefícios com impacto financeiro (plano de saúde HGU)",
+      "Tesoureiro | Apoio: Secretário, Coordenador",
+      "Art. 7.2 'i' 'j' 'k' / Fluxo HGU",
+      "Tesoureiro entra no fluxo HGU na etapa 'Verificação de impactos financeiros'"
+    ],
+    [
+      "11:00 – 11:15",
+      "Pausa",
+      "Intervalo curto",
+      "—",
+      "—"
+    ],
+    [
+      "11:15 – 12:15",
+      "Despesas fixas e variáveis",
+      "Atualizar controle de despesas fixas, variáveis e obrigações futuras (Centro de Custo)",
+      "Tesoureiro",
+      "Art. 7.2 'p'",
+      "Atualizar aba 'Controle de Despesas'"
+    ],
+    [
+      "12:15 – 13:30",
+      "Pró-labores e repasses",
+      "Confirmar pró-labores, reembolsos e repasses aprovados; checar documentação de aprovação",
+      "Tesoureiro | Apoio: Diretoria",
+      "Art. 7.2 'm' / Item 13",
+      "Pró-labore só é pago vinculado ao efetivo exercício do cargo e prestação de contas"
+    ],
+    [],
+    [
+      "QUINTA-FEIRA"
+    ],
+    [
+      "Hora",
+      "Bloco",
+      "Atividade",
+      "Responsável / Apoio",
+      "Base no documento",
+      "Observação"
+    ],
+    [
+      "08:30 – 08:45",
+      "Abertura financeira do dia",
+      "Verificar extrato bancário (Cora) e caixa; checar pagamentos e recebimentos das últimas 24h",
+      "Tesoureiro",
+      "Art. 7.2 'a' 'f' / Tabela ativ. 16",
+      "Primeiro contato do dia com o financeiro antes de qualquer outra tarefa"
+    ],
+    [
+      "08:45 – 09:30",
+      "Receitas e cobrança",
+      "Conferir mensalidades e contribuições recebidas; atualizar planilha de inadimplência do dia",
+      "Tesoureiro | Apoio: Secretário, Coordenador",
+      "Art. 7.2 'a' 'c' / Tabela ativ. 16-17",
+      "Registrar pagamentos via Pix/boleto e marcar pendências"
+    ],
+    [
+      "09:30 – 10:15",
+      "Despesas e compromissos",
+      "Conferir vencimentos do dia/semana; programar pagamentos autorizados pela Diretoria",
+      "Tesoureiro | Apoio: Presidente",
+      "Art. 7.2 'b' 'd' / Tabela ativ. 18",
+      "Pagamento deve ter aprovação e registro formal (Regra de aprovação de despesas)"
+    ],
+    [
+      "10:15 – 11:00",
+      "Inadimplência e régua de cobrança",
+      "Revisar régua de cobrança; identificar inadimplentes recorrentes e risco de suspensão de benefício",
+      "Tesoureiro | Apoio: Secretário, Coordenador",
+      "Art. 7.2 'c' 'l'",
+      "Atualizar aba 'Inadimplência'"
+    ],
+    [
+      "11:00 – 11:15",
+      "Pausa",
+      "Intervalo curto",
+      "—",
+      "—"
+    ],
+    [
+      "11:15 – 12:15",
+      "Riscos financeiros",
+      "Avaliar risco financeiro: queda de receita, inadimplência elevada, insuficiência de caixa",
+      "Tesoureiro",
+      "Art. 7.2 'h' 'q'",
+      "Se houver risco relevante, comunicar formalmente a Diretoria"
+    ],
+    [
+      "12:15 – 13:30",
+      "Preparação para o Conselho Fiscal",
+      "Organizar documentos financeiros que possam ser solicitados pelo Conselho Fiscal",
+      "Tesoureiro",
+      "Art. 7.2 'n' 'r'",
+      "Documentos sempre disponíveis e organizados, mesmo sem solicitação"
+    ],
+    [],
+    [
+      "SEXTA-FEIRA"
+    ],
+    [
+      "Hora",
+      "Bloco",
+      "Atividade",
+      "Responsável / Apoio",
+      "Base no documento",
+      "Observação"
+    ],
+    [
+      "08:30 – 08:45",
+      "Abertura financeira do dia",
+      "Verificar extrato bancário (Cora) e caixa; checar pagamentos e recebimentos das últimas 24h",
+      "Tesoureiro",
+      "Art. 7.2 'a' 'f' / Tabela ativ. 16",
+      "Primeiro contato do dia com o financeiro antes de qualquer outra tarefa"
+    ],
+    [
+      "08:45 – 09:30",
+      "Receitas e cobrança",
+      "Conferir mensalidades e contribuições recebidas; atualizar planilha de inadimplência do dia",
+      "Tesoureiro | Apoio: Secretário, Coordenador",
+      "Art. 7.2 'a' 'c' / Tabela ativ. 16-17",
+      "Registrar pagamentos via Pix/boleto e marcar pendências"
+    ],
+    [
+      "09:30 – 10:15",
+      "Despesas e compromissos",
+      "Conferir vencimentos do dia/semana; programar pagamentos autorizados pela Diretoria",
+      "Tesoureiro | Apoio: Presidente",
+      "Art. 7.2 'b' 'd' / Tabela ativ. 18",
+      "Pagamento deve ter aprovação e registro formal (Regra de aprovação de despesas)"
+    ],
+    [
+      "10:15 – 11:00",
+      "Fechamento semanal financeiro",
+      "Consolidar receitas e despesas da semana; conferir saldo final de caixa/banco",
+      "Tesoureiro",
+      "Art. 7.2 'a' 'b'",
+      "Base para o relatório financeiro mensal"
+    ],
+    [
+      "11:00 – 11:15",
+      "Pausa",
+      "Intervalo curto",
+      "—",
+      "—"
+    ],
+    [
+      "11:15 – 12:15",
+      "Atualização do relatório financeiro mensal",
+      "Atualizar dados parciais do mês na aba 'Apresentação Financeira' (receitas, despesas, indicadores)",
+      "Tesoureiro",
+      "Art. 7.2 'g'",
+      "Deixar pronto incrementalmente, não acumular para o fim do mês"
+    ],
+    [
+      "12:15 – 13:30",
+      "Encerramento e prestação de contas da semana",
+      "Revisar pendências da semana; preparar pontos para comunicar à Diretoria",
+      "Tesoureiro",
+      "Item 12",
+      "Se dia 5 cair próximo, revisar pauta da reunião financeira mensal"
+    ]
+  ],
+  "Calendário Mensal": [
+    [
+      "CALENDÁRIO MENSAL — ROTINA E EVENTOS FINANCEIROS"
+    ],
+    [
+      null,
+      "Preencha o Mês/Ano em B5 e D5 — o calendário e as marcações são gerados automaticamente"
+    ],
+    [],
+    [
+      null,
+      "Mês (1-12):",
+      6,
+      "Ano:",
+      2026
+    ],
+    [],
+    [
+      null,
+      "LEGENDA"
+    ],
+    [
+      null,
+      "  ",
+      "Dia de trabalho (Ter-Sex)",
+      "  ",
+      "Reunião financeira c/ Diretoria (dia 5)",
+      "  ",
+      "Fim de semana / Segunda (fora do cargo)"
+    ],
+    [],
+    [],
+    [
+      null,
+      "CALENDÁRIO"
+    ],
+    [
+      null,
+      "Seg",
+      "Ter",
+      "Qua",
+      "Qui",
+      "Sex",
+      "Sáb",
+      "Dom"
+    ],
+    [
+      null,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    [
+      null,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    [
+      null,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21
+    ],
+    [
+      null,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28
+    ],
+    [
+      null,
+      29,
+      30,
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      null,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [],
+    [
+      null,
+      "Dias úteis de Terça a Sexta = rotina do Tesoureiro (08:30–13:30). Dia 5 = Apresentação Financeira Mensal à Diretoria."
+    ]
+  ],
+  "Apresentação Financeira": [
+    [
+      "APRESENTAÇÃO FINANCEIRA MENSAL À DIRETORIA"
+    ],
+    [
+      null,
+      "Reunião fixa: todo dia 5 do mês  |  Base: Art. 7.2 'g' (relatório financeiro mensal) e 'n' (prestação de contas)"
+    ],
+    [],
+    [
+      null,
+      "Mês de referência:",
+      "Sivan/Monday"
+    ],
+    [],
+    [
+      "1. RESUMO DE RECEITAS"
+    ],
+    [
+      "Item",
+      "Previsto (R$)",
+      "Realizado (R$)",
+      "Variação (R$)"
+    ],
+    [
+      null,
+      "Mensalidades de associados",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Contribuições / taxas",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Repasses",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Outros recebimentos",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "TOTAL DE RECEITAS",
+      0,
+      0,
+      0
+    ],
+    [],
+    [
+      "2. RESUMO DE DESPESAS"
+    ],
+    [
+      "Item",
+      "Previsto (R$)",
+      "Realizado (R$)",
+      "Variação (R$)"
+    ],
+    [
+      null,
+      "Estrutura administrativa (aluguel, internet, energia, etc.)",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Contabilidade e obrigações legais",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Pró-labore — Diretoria Executiva",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Operação e atendimento aos associados",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Marketing e comunicação",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Plano de saúde / benefícios (custos adicionais)",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "Serviços de terceiros / apoio eventual",
+      0,
+      0,
+      0
+    ],
+    [
+      null,
+      "TOTAL DE DESPESAS",
+      0,
+      0,
+      0
+    ],
+    [],
+    [
+      "3. RESULTADO DO MÊS"
+    ],
+    [
+      null,
+      "Saldo do mês (Receitas - Despesas)",
+      "Previsto",
+      "Realizado"
+    ],
+    [
+      null,
+      "Resultado líquido",
+      0,
+      0
+    ],
+    [],
+    [
+      "4. INDICADORES E ALERTAS (Art. 7.2 'h')"
+    ],
+    [
+      null,
+      "Inadimplência do mês (ver aba Inadimplência)"
+    ],
+    [
+      null,
+      "Saldo de caixa/banco ao final do mês"
+    ],
+    [
+      null,
+      "Reserva financeira disponível"
+    ],
+    [
+      null,
+      "Risco identificado (queda de receita, despesa incompatível, insuficiência de caixa)"
+    ],
+    [],
+    [
+      "5. PAUTA DA REUNIÃO (dia 5)"
+    ],
+    [
+      null,
+      "1. Apresentação de receitas e despesas do mês (previsto x realizado)"
+    ],
+    [
+      null,
+      "2. Situação da inadimplência e ações de cobrança"
+    ],
+    [
+      null,
+      "3. Provisionamento do mês seguinte (recebimentos e despesas)"
+    ],
+    [
+      null,
+      "4. Pagamentos, contratos ou pró-labores pendentes de aprovação"
+    ],
+    [
+      null,
+      "5. Riscos financeiros identificados e medidas propostas"
+    ],
+    [
+      null,
+      "6. Documentos disponíveis para o Conselho Fiscal"
+    ]
+  ],
+  "Provisionamento": [
+    [
+      "PROVISIONAMENTO DE RECEBIMENTOS E DESPESAS"
+    ],
+    [
+      null,
+      "Mês corrente e mês seguinte — Art. 7.2 'h' (riscos financeiros) e 'q' (alertar antes de novas despesas)"
+    ],
+    [],
+    [
+      "MÊS CORRENTE"
+    ],
+    [
+      "Item",
+      "Data prevista",
+      "Recebimento (R$)",
+      "Despesa (R$)"
+    ],
+    [
+      null,
+      "Mensalidades a receber (associados em dia)",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Mensalidades a receber (em atraso, com previsão de regularização)",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Repasses previstos",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Aluguel / estrutura administrativa",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Contabilidade",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Pró-labore — Diretoria Executiva",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Fornecedores / serviços de terceiros",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Outras despesas previstas",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "TOTAL",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Saldo provisionado (Recebimentos - Despesas)",
+      null,
+      0
+    ],
+    [],
+    [
+      "MÊS SEGUINTE"
+    ],
+    [
+      "Item",
+      "Data prevista",
+      "Recebimento (R$)",
+      "Despesa (R$)"
+    ],
+    [
+      null,
+      "Mensalidades a receber (associados em dia)",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Mensalidades a receber (em atraso, com previsão de regularização)",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Repasses previstos",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Aluguel / estrutura administrativa",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Contabilidade",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Pró-labore — Diretoria Executiva",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Fornecedores / serviços de terceiros",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Outras despesas previstas",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "TOTAL",
+      null,
+      0,
+      0
+    ],
+    [
+      null,
+      "Saldo provisionado (Recebimentos - Despesas)",
+      null,
+      0
+    ]
+  ],
+  "Controle de Despesas": [
+    [
+      "CONTROLE DE DESPESAS — CENTRO DE CUSTO MENSAL"
+    ],
+    [
+      null,
+      "Replica o Centro de Custo Mensal do Organograma de Governança — controle sob responsabilidade do Tesoureiro"
+    ],
+    [],
+    [
+      null,
+      "Código",
+      "Centro de Custo",
+      "Item",
+      "Valor mensal sugerido (R$)",
+      "Pago no mês?",
+      "Responsável pelo controle"
+    ],
+    [
+      null,
+      "01",
+      "Estrutura Administrativa",
+      "Aluguel",
+      1000,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "01",
+      "Estrutura Administrativa",
+      "Internet",
+      100,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "01",
+      "Estrutura Administrativa",
+      "Energia",
+      300,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "01",
+      "Estrutura Administrativa",
+      "Limpeza",
+      200,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "01",
+      "Estrutura Administrativa",
+      "Água do escritório",
+      100,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "01",
+      "Estrutura Administrativa",
+      "Ferramentas / sistemas",
+      500,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "02",
+      "Contabilidade e Obrigações Legais",
+      "Contabilidade",
+      850,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "03",
+      "Diretoria Executiva / Pró-labore",
+      "Presidente",
+      3500,
+      null,
+      "Diretoria / Tesoureiro"
+    ],
+    [
+      null,
+      "03",
+      "Diretoria Executiva / Pró-labore",
+      "Vice-Presidente",
+      2000,
+      null,
+      "Diretoria / Tesoureiro"
+    ],
+    [
+      null,
+      "03",
+      "Diretoria Executiva / Pró-labore",
+      "Tesoureiro",
+      2300,
+      null,
+      "Diretoria / Tesoureiro"
+    ],
+    [
+      null,
+      "03",
+      "Diretoria Executiva / Pró-labore",
+      "Secretário",
+      2200,
+      null,
+      "Diretoria / Tesoureiro"
+    ],
+    [
+      null,
+      "03",
+      "Diretoria Executiva / Pró-labore",
+      "Coordenador",
+      0,
+      null,
+      "Diretoria / Tesoureiro"
+    ],
+    [
+      null,
+      "04",
+      "Operação e Atendimento aos Associados",
+      "Ajuda combustível",
+      200,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "04",
+      "Operação e Atendimento aos Associados",
+      "Ajuda alimentação",
+      440,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "05",
+      "Marketing e Comunicação",
+      "Marketing",
+      2000,
+      null,
+      "Presidente / Diretoria"
+    ],
+    [
+      null,
+      "06",
+      "Plano de Saúde / Benefícios",
+      "Coleta de declaração de saúde (adicional)",
+      0,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "06",
+      "Plano de Saúde / Benefícios",
+      "Envio de código ao beneficiário (adicional)",
+      0,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "06",
+      "Plano de Saúde / Benefícios",
+      "Solicitação de exclusão (adicional)",
+      0,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "06",
+      "Plano de Saúde / Benefícios",
+      "Notificação formal ao beneficiário (adicional)",
+      0,
+      null,
+      "Tesoureiro"
+    ],
+    [
+      null,
+      "07",
+      "Serviços de Terceiros / Apoio Eventual",
+      "Serviços eventuais, técnicos ou apoio pontual",
+      0,
+      null,
+      "Diretoria Executiva"
+    ],
+    [
+      null,
+      "08",
+      "Reserva Financeira / Contingência",
+      "Reserva sugerida para imprevistos",
+      3000,
+      null,
+      "Presidente / Tesoureiro"
+    ],
+    [
+      null,
+      null,
+      null,
+      "TOTAL FIXO MENSAL (SEM RESERVA)",
+      15690
+    ],
+    [
+      null,
+      null,
+      null,
+      "TOTAL MENSAL COM RESERVA",
+      18690
+    ],
+    [],
+    [],
+    [
+      null,
+      "REGRA DE APROVAÇÃO DE DESPESAS E PAGAMENTOS"
+    ],
+    [
+      null,
+      "Tipo de despesa",
+      "Quem aprova"
+    ],
+    [
+      null,
+      "Despesa ordinária já prevista no orçamento",
+      "Tesoureiro + Presidente"
+    ],
+    [
+      null,
+      "Despesa fora do orçamento",
+      "Diretoria Executiva"
+    ],
+    [
+      null,
+      "Contrato novo",
+      "Diretoria Executiva, com registro em ata"
+    ],
+    [
+      null,
+      "Pagamento a diretor, familiar ou empresa vinculada",
+      "Diretoria, com declaração de conflito e abstenção do interessado"
+    ],
+    [
+      null,
+      "Reajuste de benefício ou mensalidade",
+      "Diretoria e, se necessário, Assembleia"
+    ]
+  ],
+  "Inadimplência": [
+    [
+      "ACOMPANHAMENTO DE INADIMPLÊNCIA — RÉGUA DE COBRANÇA"
+    ],
+    [
+      null,
+      "Art. 7.2 'c' e 'l' — acompanhar inadimplência e organizar a régua de cobrança"
+    ],
+    [],
+    [
+      null,
+      "Associado",
+      "Mês de referência",
+      "Valor devido (R$)",
+      "Dias em atraso",
+      "Status régua de cobrança",
+      "Risco de exclusão de benefício?",
+      "Última ação realizada"
+    ],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      null,
+      "Total em atraso (R$)",
+      null,
+      0
+    ]
+  ],
+  "Conciliação Bancária": [
+    [
+      "CONCILIAÇÃO BANCÁRIA PERIÓDICA (Banco Cora)"
+    ],
+    [
+      null,
+      "Art. 7.2 'f' — realizar conciliação bancária periódica"
+    ],
+    [],
+    [
+      "Etapa do checklist",
+      "Feito?",
+      "Observações"
+    ],
+    [
+      null,
+      "Exportar extrato do Cora do período"
+    ],
+    [
+      null,
+      "Conferir todos os Pix recebidos x planilha interna"
+    ],
+    [
+      null,
+      "Conferir todos os Pix/pagamentos enviados x planilha interna"
+    ],
+    [
+      null,
+      "Identificar lançamentos não registrados internamente"
+    ],
+    [
+      null,
+      "Identificar duplicidades de pagamento ou recebimento"
+    ],
+    [
+      null,
+      "Verificar lançamentos 'Encontro de Contas' com valor zerado"
+    ],
+    [
+      null,
+      "Conferir taxas e encargos bancários do período"
+    ],
+    [
+      null,
+      "Registrar divergências encontradas com valor e data"
+    ],
+    [
+      null,
+      "Corrigir/atualizar planilha interna conforme divergências"
+    ],
+    [
+      null,
+      "Arquivar extrato conciliado com data de conferência"
+    ]
+  ],
+  "Outras Atribuições": [
+    [
+      "OUTRAS ATRIBUIÇÕES DO TESOUREIRO (não diárias)"
+    ],
+    [
+      null,
+      "Deveres do Art. 7.2 com periodicidade variável ou eventual"
+    ],
+    [],
+    [
+      "Atribuição",
+      "Periodicidade sugerida",
+      "Base no documento"
+    ],
+    [
+      null,
+      "Elaborar relatório financeiro mensal para a Diretoria",
+      "Mensal (até dia 5)",
+      "Art. 7.2 'g'"
+    ],
+    [
+      null,
+      "Disponibilizar documentos ao Conselho Fiscal quando solicitado",
+      "Sob demanda",
+      "Art. 7.2 'n'"
+    ],
+    [
+      null,
+      "Propor medidas para preservar a sustentabilidade financeira",
+      "Trimestral / sob demanda",
+      "Art. 7.2 'o'"
+    ],
+    [
+      null,
+      "Comunicar ao Secretário/Coordenador impactos financeiros de inclusão/exclusão",
+      "Conforme ocorrência",
+      "Art. 7.2 'k'"
+    ],
+    [
+      null,
+      "Acompanhar pagamentos e repasses vinculados ao plano de saúde HGU",
+      "Semanal",
+      "Art. 7.2 'j' / Fluxo HGU"
+    ],
+    [
+      null,
+      "Acompanhar casos de inadimplência com risco de suspensão de benefício",
+      "Semanal",
+      "Art. 7.2 'l'"
+    ],
+    [
+      null,
+      "Garantir aprovação e registro de pró-labores, reembolsos e pagamentos a fornecedores",
+      "Conforme ocorrência",
+      "Art. 7.2 'm'"
+    ],
+    [
+      null,
+      "Alertar a Diretoria antes da aprovação de novas despesas que comprometam o caixa",
+      "Conforme ocorrência",
+      "Art. 7.2 'q'"
+    ],
+    [
+      null,
+      "Manter arquivo organizado dos documentos financeiros para fiscalização/contabilidade",
+      "Contínuo",
+      "Art. 7.2 'r'"
+    ],
+    [
+      null,
+      "Participar de reuniões ordinárias e extraordinárias da Diretoria",
+      "Conforme convocação",
+      "Item 3 'c'"
+    ],
+    [
+      null,
+      "Declarar previamente conflito de interesse em decisões financeiras",
+      "Conforme ocorrência",
+      "Item 3 'h'"
+    ],
+    [
+      null,
+      "Comunicar imediatamente riscos financeiros identificados",
+      "Imediato",
+      "Item 3 'n'"
+    ]
+  ],
+  "Prestação de Contas": [
+    [
+      "PRESTAÇÃO DE CONTAS DO TESOUREIRO — MODELO MENSAL"
+    ],
+    [
+      null,
+      "Conforme Item 12 do Organograma de Governança da ACPROBEC"
+    ],
+    [],
+    [
+      null,
+      "Mês de referência"
+    ],
+    [],
+    [
+      null,
+      "a) Atividades realizadas"
+    ],
+    [
+      null,
+      "b) Demandas recebidas"
+    ],
+    [
+      null,
+      "c) Pendências em aberto"
+    ],
+    [
+      null,
+      "d) Prazos vencidos ou próximos do vencimento"
+    ],
+    [
+      null,
+      "e) Problemas identificados"
+    ],
+    [
+      null,
+      "f) Decisões que dependem da Diretoria"
+    ],
+    [
+      null,
+      "g) Documentos organizados"
+    ],
+    [
+      null,
+      "h) Pagamentos ou valores sob responsabilidade do cargo"
+    ],
+    [
+      null,
+      "i) Indicadores da área"
+    ],
+    [
+      null,
+      "j) Recomendações de melhoria"
+    ]
+  ]
+}

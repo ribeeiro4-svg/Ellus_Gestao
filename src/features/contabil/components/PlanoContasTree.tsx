@@ -10,7 +10,7 @@ const CLS_COLOR: Record<string, string> = {
   despesa: 'text-orange-700 bg-orange-50 border-orange-100',
 }
 const CLS_LABEL: Record<string, string> = {
-  ativo: 'Ativo', passivo: 'Passivo', patrimonio_social: 'Patrimônio Social', ingresso: 'Ingresso', despesa: 'Despesa/Dispêndio'
+  ativo: 'Ativo (1)', passivo: 'Passivo (2)', patrimonio_social: 'Patrimônio Social (2.4)', ingresso: 'Ingresso (3)', despesa: 'Despesa (4)'
 }
 const NIVEL_INDENT: Record<number, string> = { 1: '', 2: 'ml-4', 3: 'ml-8', 4: 'ml-12', 5: 'ml-16' }
 
@@ -123,7 +123,7 @@ function imprimirPlanoPDF(contas: any[]) {
   <div class="footer">
     <div>Total de contas: <strong>${contas.length}</strong> | Analíticas: <strong>${contas.filter(c => c.tipo === 'analitica').length}</strong> | Sintéticas: <strong>${contas.filter(c => c.tipo === 'sintetica').length}</strong></div>
     <div class="itg-badge">📘 Norma ITG 2002 (R1) — CFC — Entidades sem Finalidade de Lucro</div>
-    <div>Gerado pelo InovacontACPROBEC</div>
+    <div>Gerado pelo ÁUREA Tech ACPROBEC</div>
   </div>
 </body>
 </html>`
@@ -139,7 +139,7 @@ function imprimirPlanoPDF(contas: any[]) {
 
 export default function PlanoContasTree({ planoHook }: { planoHook: any }) {
   const { contas, loading, inicializarPlanoContas, adicionarConta } = planoHook
-  const [expanded, setExpanded] = useState<Set<string>>(new Set(['1', '2', '3', '4', '5']))
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(['1', '2', '3', '4']))
   const [showAddForm, setShowAddForm] = useState(false)
   const [initing, setIniting] = useState(false)
   const [filterCls, setFilterCls] = useState('ALL')
@@ -159,7 +159,7 @@ export default function PlanoContasTree({ planoHook }: { planoHook: any }) {
   const filtered = filterCls === 'ALL' ? contas : contas.filter((c: any) => c.classificacao === filterCls)
 
   // Agrupar por código raiz
-  const rootCodes = [...new Set(filtered.map((c: any) => c.codigo.split('.')[0] as string))] as string[]
+  const rootCodes = ([...new Set(filtered.map((c: any) => c.codigo.split('.')[0] as string))] as string[]).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
 
   const renderTree = (parentCode: string, level: number) => {
     const prefix = parentCode + '.'
@@ -220,7 +220,7 @@ export default function PlanoContasTree({ planoHook }: { planoHook: any }) {
       {/* Header */}
       <div className="flex items-center gap-3 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex-wrap">
         <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
-          {['ALL', 'ativo', 'passivo', 'patrimonio_social', 'ingresso', 'despesa'].map(cls => (
+          {['ALL', 'ativo', 'passivo', 'ingresso', 'despesa'].map(cls => (
             <button key={cls} onClick={() => setFilterCls(cls)}
               className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${filterCls === cls ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400'}`}>
               {cls === 'ALL' ? 'Todos' : CLS_LABEL[cls]}
@@ -284,9 +284,8 @@ export default function PlanoContasTree({ planoHook }: { planoHook: any }) {
           {[
             { label: 'ATIVO (1)', cls: 'ativo' },
             { label: 'PASSIVO (2)', cls: 'passivo' },
-            { label: 'PATRIMÔNIO SOCIAL (3)', cls: 'patrimonio_social' },
-            { label: 'INGRESSOS (4)', cls: 'ingresso' },
-            { label: 'DESPESAS (5)', cls: 'despesa' },
+            { label: 'INGRESSOS (3)', cls: 'ingresso' },
+            { label: 'DESPESAS (4)', cls: 'despesa' },
           ].map(({ label, cls }) => (
             <span key={cls} className={`px-2 py-1 text-[9px] font-black rounded border ${CLS_COLOR[cls]}`}>{label}</span>
           ))}

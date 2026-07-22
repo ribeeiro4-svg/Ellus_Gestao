@@ -11,7 +11,6 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
   const { contas } = planoHook
   const { configuracoes } = useConfiguracoesContabeis()
   const [gerandoECD, setGerandoECD] = useState(false)
-  const [auditandoContas, setAuditandoContas] = useState(false)
   const ano = new Date().getFullYear()
 
   const handleGerarECD = async () => {
@@ -40,21 +39,6 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
     }
   }
 
-  const handleAuditoriaContas = async () => {
-    setAuditandoContas(true)
-    try {
-      const { createMissingAccountsAction } = await import('@/features/contabil/actions/createMissingAccounts')
-      const res = await createMissingAccountsAction()
-      if (res.success) {
-        alert(`Auditoria de Contas concluída!\n\n🆕 Novas contas criadas: ${res.created}\n✅ Contas já existentes: ${res.skipped}\n\nO Plano de Contas foi atualizado para suportar Provisões, Estagiários e Pró-Labore conforme solicitado.`)
-        planoHook.refresh()
-      }
-    } catch (err) {
-      alert('Erro ao processar auditoria.')
-    } finally {
-      setAuditandoContas(false)
-    }
-  }
 
   const kpis = [
     { label: 'Lançamentos', value: stats.total, sub: 'no livro diário', icon: BookOpen, color: '#6366f1' },
@@ -68,11 +52,10 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
 
   // Resumo por grupo
   const grupos = [
-    { label: 'Contas do Ativo', qty: contas.filter((c: any) => c.classificacao === 'ativo').length, color: 'text-blue-700', bg: 'bg-blue-50' },
-    { label: 'Contas do Passivo', qty: contas.filter((c: any) => c.classificacao === 'passivo').length, color: 'text-rose-700', bg: 'bg-rose-50' },
-    { label: 'Patrimônio Social', qty: contas.filter((c: any) => c.classificacao === 'patrimonio_social').length, color: 'text-purple-700', bg: 'bg-purple-50' },
-    { label: 'Ingressos Mapeados', qty: configuracoes.filter((c: any) => c.tipo === 'ingresso').length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-    { label: 'Dispêndios Mapeados', qty: configuracoes.filter((c: any) => c.tipo === 'dispendio').length, color: 'text-orange-700', bg: 'bg-orange-50' },
+    { label: 'Ativo (1)', qty: contas.filter((c: any) => c.classificacao === 'ativo').length, color: 'text-blue-700', bg: 'bg-blue-50' },
+    { label: 'Passivo (2)', qty: contas.filter((c: any) => c.classificacao === 'passivo' || c.classificacao === 'patrimonio_social').length, color: 'text-rose-700', bg: 'bg-rose-50' },
+    { label: 'Ingressos (3)', qty: contas.filter((c: any) => c.classificacao === 'ingresso').length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+    { label: 'Despesas (4)', qty: contas.filter((c: any) => c.classificacao === 'despesa').length, color: 'text-orange-700', bg: 'bg-orange-50' },
   ]
 
   return (
@@ -98,14 +81,6 @@ export default function ContabilDashboard({ lancHook, planoHook }: { lancHook: a
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-black text-slate-700">🏗️ Plano de Contas ITG 2002</h3>
-            <button 
-              onClick={handleAuditoriaContas}
-              disabled={auditandoContas}
-              className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-all flex items-center gap-1 disabled:opacity-50"
-            >
-              {auditandoContas ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />}
-              {auditandoContas ? 'Verificando...' : 'Verificar Plano'}
-            </button>
           </div>
           {contas.length === 0 ? (
             <div className="flex flex-col items-center py-8 text-slate-300">

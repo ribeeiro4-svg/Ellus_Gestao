@@ -29,7 +29,7 @@ export function usePlanoContas(): {
     despesa: ContaCodigo[]
   }
   inicializarPlanoContas: () => Promise<{ error: string | null }>
-  adicionarConta: (data: Omit<ContaCodigo, 'id'>) => Promise<{ error: any }>
+  adicionarConta: (data: Omit<ContaCodigo, 'id'>) => Promise<{ data: ContaCodigo | null, error: any }>
   editarConta: (id: string, data: Partial<ContaCodigo>) => Promise<{ error: any }>
   desativarConta: (id: string) => Promise<{ error: any }>
   refresh: () => Promise<void>
@@ -43,7 +43,8 @@ export function usePlanoContas(): {
     if (!tenantId) return
     setLoading(true)
     const { data } = await sb.from('plano_contas').select('*').eq('tenant_id', tenantId).eq('ativa', true).order('codigo')
-    setContas(data ?? [])
+    const sortedData = (data ?? []).sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
+    setContas(sortedData)
     setLoading(false)
   }, [tenantId])
 
@@ -90,9 +91,9 @@ export function usePlanoContas(): {
   }
 
   const adicionarConta = async (data: Omit<ContaCodigo, 'id'>) => {
-    const { error } = await sb.from('plano_contas').insert({ ...data, tenant_id: tenantId })
+    const { data: inserted, error } = await sb.from('plano_contas').insert({ ...data, tenant_id: tenantId }).select().single()
     if (!error) fetch()
-    return { error }
+    return { data: inserted, error }
   }
 
   const editarConta = async (id: string, data: Partial<ContaCodigo>) => {

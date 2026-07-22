@@ -1,29 +1,48 @@
-/* Version: 1.0.1 - Design Restoration Support */
+/* Version: 1.0.2 - Design Restoration & Scrollbar Utils */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .custom-scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .h-screen {
+    height: 105.263vh !important;
+  }
+  .min-h-screen {
+    min-height: 105.263vh !important;
+  }
+}
+
 :root {
   --sidebar-w: 260px;
-  --topbar-h: 70px;
-  --navy: #0e2d22;
-  --navy2: #163d2f;
-  --navy3: #1d4f3e;
-  --navy4: #24604c;
-  --accent: #2d8c6f;
-  --accent-glow: rgba(45, 140, 111, .25);
-  --accent2: #34d399;
+  --topbar-h: 48px;
+  --navy: #0A2618;
+  --navy2: #113524;
+  --navy3: #184631;
+  --navy4: #1F563E;
+  --accent: #158A60;
+  --accent-glow: rgba(21, 138, 96, .25);
+  --accent2: #2ECC8F;
   --accent3: #f59e0b;
   --accent4: #f43f5e;
   --surface: #ffffff;
-  --surface2: #f5f7fc;
+  --surface2: #F3F7F5;
   --surface3: #edf0f8;
   --text1: #12172e;
   --text2: #3d4870;
   --text3: #7c87b2;
-  --border: #e0e4f0;
+  --border: #E2ECE7;
   --border2: #c8cde6;
-  --green: #10b981;
+  --green: #158A60;
   --green-light: #d1fae5;
   --green-dark: #065f46;
   --red: #ef4444;
@@ -67,6 +86,7 @@
 /* ── BASE ── */
 html {
   background: var(--surface2);
+  zoom: 0.95;
 }
 
 body {
@@ -75,8 +95,31 @@ body {
   color: var(--text1);
   font-size: 14px;
   overflow-x: hidden;
-  min-height: 100vh;
+  min-height: 105.263vh;
   position: relative;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(45, 140, 111, 0.3);
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 140, 111, 0.7);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 code, .font-mono {
@@ -92,7 +135,7 @@ body::before {
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66z' fill='none' stroke='%232d8c6f' stroke-width='0.8' stroke-opacity='0.28'/%3E%3Cpath d='M28 100L0 84V52l28-16 28 16v32L28 100z' fill='none' stroke='%232d8c6f' stroke-width='0.8' stroke-opacity='0.22'/%3E%3C/svg%3E");
   background-size: 56px 100px;
-  opacity: 1;
+  opacity: 0.7;
 }
 
 /* ── SIDEBAR ── */
@@ -282,7 +325,7 @@ body::before {
   box-shadow: 0 8px 32px rgba(14, 45, 34, 0.05);
   display: flex;
   flex-direction: column;
-  height: 400px !important; /* Increased to fill the page as requested */
+  min-height: 300px;
 }
 
 .chart-card:hover {
@@ -400,5 +443,140 @@ body::before {
   canvas {
     max-width: 100% !important;
     height: auto !important;
+  }
+}
+
+/* ── UTILITIES ── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.custom-scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── RESPONSIVE MOBILE ── */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-w: 0px;
+    --topbar-h: 60px;
+  }
+
+  /* Layout */
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+    width: 280px !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .sidebar-overlay.mobile-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Main content padding */
+  .main-content {
+    padding: 12px !important;
+  }
+
+  /* KPI Cards — reduz texto gigante */
+  .kpi-card h3,
+  .kpi-card .text-2xl,
+  .kpi-card .text-3xl {
+    font-size: 1.25rem !important;
+  }
+
+  /* Grids de 4 colunas → 2 colunas no mobile */
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  /* Grids de 3 colunas → 1 coluna no mobile */
+  .grid-cols-3,
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  /* Grids de 2 colunas — mantém 1 coluna */
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  /* Texto grande em dashboards */
+  .text-4xl { font-size: 1.5rem !important; }
+  .text-5xl { font-size: 1.75rem !important; }
+  .text-6xl { font-size: 2rem !important; }
+
+  /* Tabela — garante scroll horizontal visível e não quebra a tela */
+  .overflow-x-auto {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  /* Compactar tabelas no mobile para caber melhor */
+  .overflow-x-auto table th,
+  .overflow-x-auto table td {
+    padding: 10px 12px !important;
+    font-size: 11px !important;
+  }
+
+  /* Evitar expansão do layout e zoom horizontal */
+  body, .dashboard-layout, .main-content {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Padding interno de cards grandes */
+  .rounded-\[32px\], .rounded-\[24px\] {
+    padding: 16px !important;
+  }
+
+  /* Topbar mobile */
+  .topbar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  /* Flex row → col em containers de filtros/headers */
+  .xl\:flex-row {
+    flex-direction: column !important;
+  }
+
+  /* Botões de ação não ficam cortados */
+  .flex-wrap {
+    flex-wrap: wrap !important;
   }
 }
